@@ -123,8 +123,9 @@ class SolicitudRepository:
                 query_lead = """
                     INSERT INTO tpi.leads 
                         (id_persona, genero_id, estado_civil_id, afp_id, 
-                         saldo_afp, comentarios, estado_lead, created_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                         saldo_afp, comentarios, estado_lead, fecha_ingreso,
+                         origen_lead, fuente_actual, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     RETURNING id_lead
                 """
                 params_lead = (
@@ -135,7 +136,10 @@ class SolicitudRepository:
                     solicitud_data.saldo_afp,
                     solicitud_data.comentarios or "",
                     "pendiente",  # estado inicial
-                    datetime.now(),
+                    datetime.now(),  # fecha_ingreso
+                    "formulario_streamlit",  # origen_lead
+                    "backoffice",  # fuente_actual
+                    datetime.now(),  # created_at
                 )
 
                 with conn.cursor() as cur:
@@ -149,12 +153,13 @@ class SolicitudRepository:
                     # PASO 3: Crear consentimientos
                     query_consent = """
                         INSERT INTO tpi.consentimientos 
-                            (id_lead, acepta_terminos, acepta_politica_privacidad, 
+                            (id_persona, id_lead, acepta_terminos, acepta_politica_privacidad, 
                              finalidad_contacto, created_at)
-                        VALUES (%s, %s, %s, %s, %s)
+                        VALUES (%s, %s, %s, %s, %s, %s)
                         RETURNING id_consentimiento
                     """
                     params_consent = (
+                        str(id_persona),
                         str(id_lead),
                         consentimientos_data.acepta_terminos,
                         consentimientos_data.acepta_politica_privacidad,

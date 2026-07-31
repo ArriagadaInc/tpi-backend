@@ -123,7 +123,7 @@ class Settings(BaseSettings):
         De lo contrario, construye la URL a partir de las variables individuales.
         
         Retorna:
-            URL de conexión en formato: postgresql+psycopg://user:password@host:port/dbname
+            URL de conexión en formato: postgresql://user:password@host:port/dbname
         """
         if self.database_url:
             return self.database_url
@@ -132,13 +132,13 @@ class Settings(BaseSettings):
         if not self.database_password:
             # Conexión sin contraseña (no recomendado en producción)
             return (
-                f"postgresql+psycopg://{self.database_user}@"
+                f"postgresql://{self.database_user}@"
                 f"{self.database_host}:{self.database_port}/{self.database_name}"
             )
         
         # Conexión con contraseña
         return (
-            f"postgresql+psycopg://{self.database_user}:{self.database_password}@"
+            f"postgresql://{self.database_user}:{self.database_password}@"
             f"{self.database_host}:{self.database_port}/{self.database_name}"
         )
     

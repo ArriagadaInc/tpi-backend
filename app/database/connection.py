@@ -10,7 +10,7 @@ from typing import Generator, Optional
 import logging
 
 import psycopg
-from psycopg.pool import ConnectionPool
+from psycopg_pool import ConnectionPool
 from psycopg.rows import dict_row
 
 from app.config.settings import settings
@@ -40,7 +40,6 @@ def initialize_pool() -> None:
             min_size=1,
             max_size=settings.database_pool_size,
             max_idle=settings.database_pool_timeout,
-            row_factory=dict_row,
             open=False,  # Abierto manualmente
         )
         _connection_pool.open()
@@ -83,7 +82,9 @@ def get_connection() -> psycopg.Connection:
     if _connection_pool is None:
         raise RuntimeError("Pool de conexiones no inicializado. Llamar initialize_pool() primero.")
     
-    return _connection_pool.getconn()
+    conn = _connection_pool.getconn()
+    conn.row_factory = dict_row
+    return conn
 
 
 def return_connection(conn: psycopg.Connection) -> None:
