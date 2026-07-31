@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tu-pension-inteligente-backoffice"
+version = "0.1.0"
+description = "MVP Streamlit para captura y consulta de solicitudes de simulación. Prototipo funcional del futuro back-office."
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Tu Pensión Inteligente", email = "dev@tupensioninteligente.cl"}
+]
+
+dependencies = [
+    # Web UI
+    "streamlit>=1.28.0",
+    
+    # Database
+    "psycopg[binary]>=3.1.0",
+    "sqlalchemy>=2.0.0",
+    
+    # Data validation and models
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    
+    # Utilities
+    "python-dotenv>=1.0.0",
+    "pytz>=2023.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.1.0",
+    "black>=23.0.0",
+    "mypy>=1.5.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = [".git", "__pycache__", ".venv", "build", "dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP"]
+ignore = ["E501"]  # Line too long - handled by formatter
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "--strict-markers -v --cov=app --cov-report=term-missing"
+markers = [
+    "unit: Tests de unidad",
+    "integration: Tests de integración con BD",
+    "e2e: Tests end-to-end de Streamlit",
+    "security: Tests de seguridad",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["*/tests/*", "*/__init__.py"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false

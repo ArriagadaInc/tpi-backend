@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: tpi_postgres
+    environment:
+      POSTGRES_USER: tpi_app
+      POSTGRES_PASSWORD: change_me_in_production
+      POSTGRES_DB: tpi_local
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=es_ES.UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tpi_app"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tpi_network
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tpi_streamlit
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: tpi_local
+      DATABASE_USER: tpi_app
+      DATABASE_PASSWORD: change_me_in_production
+      APP_ENV: development
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+    networks:
+      - tpi_network
+    command: streamlit run app/streamlit_app.py
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  tpi_network:
+    driver: bridge
