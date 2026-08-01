@@ -8,8 +8,21 @@ Validación de:
 - Exportación de datos
 """
 
+from datetime import date, datetime
+from decimal import Decimal
+from uuid import UUID
+
 import pytest
 from streamlit.testing.v1 import AppTest
+
+from app.database.connection import get_db_connection
+from app.models.solicitud import (
+    ConsentimientosData,
+    PersonaData,
+    RegistrarSolicitudRequest,
+    SolicitudData,
+)
+from app.services.solicitud_service import SolicitudService
 
 
 @pytest.mark.e2e
@@ -144,6 +157,63 @@ class TestTrazabilidadAnalisis:
 @pytest.mark.e2e
 class TestTrazabilidadDatos:
     """Tests para sección de datos brutos."""
+
+    @pytest.fixture(autouse=True)
+    def seed_synthetic_solicitud(self):
+        """Inserta una solicitud sintética para asegurar que la página renderice los controles."""
+        service = SolicitudService()
+
+        afps = service.get_catalogo_afp()
+        generos = service.get_catalogo_genero()
+        estados = service.get_catalogo_estado_civil()
+        assert afps and generos and estados, "Los catálogos deben estar disponibles para el test"
+
+        suffix = f"{int(datetime.now().timestamp() * 1000) % 10000000:08d}"
+        request = RegistrarSolicitudRequest(
+            persona=PersonaData(
+                rut=f"{suffix}-5",
+                nombre_completo="Trazabilidad Test User",
+                email=f"traceability-{suffix}@example.test",
+                telefono="+56912345678",
+                fecha_nacimiento=date(1990, 1, 1),
+            ),
+            solicitud=SolicitudData(
+                genero_id=UUID(str(generos[0]["id"])),
+                estado_civil_id=UUID(str(estados[0]["id"])),
+                afp_id=UUID(str(afps[0]["id"])),
+                saldo_afp=Decimal("1500000.00"),
+                comentarios="Solicitud sintética para pruebas de trazabilidad",
+            ),
+            consentimientos=ConsentimientosData(
+                acepta_terminos=True,
+                acepta_politica_privacidad=True,
+                finalidad_contacto=True,
+            ),
+        )
+
+        response = service.registrar_solicitud(request)
+        yield response
+
+        try:
+            with get_db_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "DELETE FROM tpi.consentimientos WHERE id_lead = %s",
+                        (str(response.id_lead),),
+                    )
+                    cur.execute(
+                        "DELETE FROM tpi.leads WHERE id_lead = %s",
+                        (str(response.id_lead),),
+                    )
+                    cur.execute(
+                        "DELETE FROM tpi.personas WHERE id_persona = %s",
+                        (str(response.id_persona),),
+                    )
+                    conn.commit()
+        except Exception:
+            # Si el entorno ya tiene dependencias extra sobre el lead, la prueba
+            # sigue siendo válida con los datos insertados; el cleanup es best-effort.
+            pass
 
     @pytest.fixture
     def app(self):
