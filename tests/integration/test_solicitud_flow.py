@@ -39,17 +39,17 @@ class TestSolicitudFlow:
         # Obtener un AFP válido para usar en el test
         afps = service.get_catalogo_afp()
         assert len(afps) > 0, "Debe haber al menos un AFP para el test"
-        afp_id = UUID(str(afps[0]["id_afp"]))
+        afp_id = UUID(str(afps[0]["id"]))
 
         # Obtener un género válido
         generos = service.get_catalogo_genero()
         assert len(generos) > 0, "Debe haber al menos un género para el test"
-        genero_id = UUID(str(generos[0]["id_genero"]))
+        genero_id = UUID(str(generos[0]["id"]))
 
         # Obtener un estado civil válido
         estados = service.get_catalogo_estado_civil()
         assert len(estados) > 0, "Debe haber al menos un estado civil para el test"
-        estado_civil_id = UUID(str(estados[0]["id_estado_civil"]))
+        estado_civil_id = UUID(str(estados[0]["id"]))
 
         # Crear request con datos de test
         request = RegistrarSolicitudRequest(
@@ -89,22 +89,22 @@ class TestSolicitudFlow:
         """Obtiene listado de AFP activos."""
         afps = service.get_catalogo_afp()
         assert len(afps) > 0
-        assert all("id_afp" in afp for afp in afps)
-        assert all("descripcion" in afp for afp in afps)
+        assert all("id" in afp for afp in afps)
+        assert all("nombre" in afp for afp in afps)
 
     def test_get_catalogo_genero(self, service):
         """Obtiene listado de géneros activos."""
         generos = service.get_catalogo_genero()
         assert len(generos) > 0
-        assert all("id_genero" in genero for genero in generos)
-        assert all("descripcion" in genero for genero in generos)
+        assert all("id" in genero for genero in generos)
+        assert all("nombre" in genero for genero in generos)
 
     def test_get_catalogo_estado_civil(self, service):
         """Obtiene listado de estados civiles activos."""
         estados = service.get_catalogo_estado_civil()
         assert len(estados) > 0
-        assert all("id_estado_civil" in estado for estado in estados)
-        assert all("descripcion" in estado for estado in estados)
+        assert all("id" in estado for estado in estados)
+        assert all("nombre" in estado for estado in estados)
 
     def test_get_solicitudes_lista_paginada(self, service):
         """Obtiene lista paginada de solicitudes."""
@@ -242,9 +242,9 @@ class TestValidationRules:
                     fecha_nacimiento=date(1990, 1, 1),
                 ),
                 solicitud=SolicitudData(
-                    genero_id=UUID(str(generos[0]["id_genero"])),
-                    estado_civil_id=UUID(str(estados[0]["id_estado_civil"])),
-                    afp_id=UUID(str(afps[0]["id_afp"])),
+                    genero_id=UUID(str(generos[0]["id"])),
+                    estado_civil_id=UUID(str(estados[0]["id"])),
+                    afp_id=UUID(str(afps[0]["id"])),
                     saldo_afp=Decimal("100000.00"),
                     comentarios="Test",
                 ),

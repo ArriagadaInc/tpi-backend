@@ -72,8 +72,10 @@ class PersonaData(BaseModel):
     @field_validator("nombre_completo", mode="before")
     @classmethod
     def normalize_name(cls, v: str) -> str:
-        """Normalizar nombre: eliminar espacios extra."""
+        """Normalizar nombre: eliminar espacios extra y rechazar bytes nulos."""
         if isinstance(v, str):
+            if "\x00" in v:
+                raise ValueError("El nombre no puede contener bytes nulos")
             # Eliminar espacios iniciales/finales y espacios múltiples
             return " ".join(v.strip().split())
         return v

@@ -71,16 +71,19 @@ def close_pool() -> None:
 def get_connection() -> psycopg.Connection:
     """
     Obtener una conexión del pool.
+
+    Inicializa el pool automáticamente si aún no fue inicializado
+    (necesario para Streamlit, que no llama a initialize_pool() al arrancar).
     
     Retorna:
         Conexión psycopg con row_factory = dict_row
     
     Raises:
-        RuntimeError: Si el pool no está inicializado
         psycopg.OperationalError: Si no se puede conectar a la BD
     """
+    global _connection_pool
     if _connection_pool is None:
-        raise RuntimeError("Pool de conexiones no inicializado. Llamar initialize_pool() primero.")
+        initialize_pool()
     
     conn = _connection_pool.getconn()
     conn.row_factory = dict_row
@@ -127,6 +130,15 @@ def get_db_connection() -> Generator[psycopg.Connection, None, None]:
         raise
     finally:
         if conn:
+            # Cerrar cualquier transacción abierta (p.ej. tras un SELECT sin
+            # commit explícito) antes de devolver la conexión al pool, para
+            # evitar que quede "idle in transaction" y el pool tenga que
+            # hacer rollback por su cuenta en cada checkin.
+            try:
+                if conn.info.transaction_status != psycopg.pq.TransactionStatus.IDLE:
+                    conn.rollback()
+            except Exception:
+                pass
             return_connection(conn)
 
 

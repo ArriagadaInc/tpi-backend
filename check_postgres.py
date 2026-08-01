@@ -1,6 +1,8 @@
 """Script para verificar configuración de PostgreSQL."""
 
+import os
 import psycopg
+from app.config.settings import settings
 
 def check_postgres_users():
     """Ver usuarios de PostgreSQL."""
@@ -9,12 +11,13 @@ def check_postgres_users():
     print("="*70)
     
     try:
-        # Conectar como postgres con contraseña
+        # Conectar usando configuración de settings (variables de entorno)
+        password = settings.database_password or os.environ.get('DATABASE_PASSWORD', '')
         conn = psycopg.connect(
-            host='localhost',
-            port=5432,
-            user='postgres',
-            password='TpiPostgres2026!',
+            host=settings.database_host,
+            port=settings.database_port,
+            user=settings.database_user,
+            password=password,
             dbname='postgres'
         )
         print("✓ Conectado como postgres")

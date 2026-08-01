@@ -37,34 +37,21 @@ def normalize_phone(phone: str) -> str:
     # Eliminar espacios, paréntesis, guiones
     phone = re.sub(r"[\s\(\)\-]", "", phone.strip())
     
-    # Convertir a string
-    phone = str(phone)
+    # Determinar el número local quitando el prefijo de país si viene incluido
+    if phone.startswith("+56"):
+        local = phone[3:]
+    elif phone.startswith("56") and len(phone) > 9:
+        local = phone[2:]
+    elif phone.startswith("0"):
+        local = phone[1:]
+    else:
+        local = phone
     
-    # Validar que solo contenga dígitos (después de procesar)
-    if not re.match(r"^\+?56\d{9,10}$|^\d{9,10}$", phone):
+    # Celular chileno: exactamente 9 dígitos, siempre comienza con 9
+    if not re.fullmatch(r"9\d{8}", local):
         raise InvalidPhoneError("Formato de teléfono inválido")
     
-    # Si empieza con +56, ya está normalizado
-    if phone.startswith("+56"):
-        return phone
-    
-    # Si empieza con 56 (sin +)
-    if phone.startswith("56"):
-        return f"+{phone}"
-    
-    # Si empieza con 0, reemplazar por +56
-    if phone.startswith("0"):
-        return f"+56{phone[1:]}"
-    
-    # Si empieza con 9 (celular sin 0), agregar +56
-    if len(phone) == 9 and phone.startswith("9"):
-        return f"+56{phone}"
-    
-    # Si es un número de 9-10 dígitos sin prefijo
-    if len(phone) in [9, 10]:
-        return f"+56{phone}"
-    
-    raise InvalidPhoneError("No se pudo normalizar el teléfono")
+    return f"+56{local}"
 
 
 def validate_phone(phone: str) -> bool:

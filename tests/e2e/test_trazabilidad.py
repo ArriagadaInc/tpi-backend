@@ -19,7 +19,9 @@ class TestTrazabilidadPage:
     @pytest.fixture
     def app(self):
         """Instancia la página de trazabilidad."""
-        return AppTest.from_file("app/pages/3_trazabilidad.py")
+        app = AppTest.from_file("app/pages/3_trazabilidad.py")
+        app.default_timeout = 15  # pandas/altair cold-import puede tardar > 3s en la primera corrida
+        return app
     
     def test_page_loads_successfully(self, app):
         """Test que página se carga sin errores."""
@@ -41,7 +43,9 @@ class TestTrazabilidadEstadisticas:
     @pytest.fixture
     def app(self):
         """Instancia la página de trazabilidad."""
-        return AppTest.from_file("app/pages/3_trazabilidad.py")
+        app = AppTest.from_file("app/pages/3_trazabilidad.py")
+        app.default_timeout = 15  # pandas/altair cold-import puede tardar > 3s en la primera corrida
+        return app
     
     def test_statistics_displayed(self, app):
         """Test que estadísticas se muestran."""
@@ -76,7 +80,9 @@ class TestTrazabilidadGraficos:
     @pytest.fixture
     def app(self):
         """Instancia la página de trazabilidad."""
-        return AppTest.from_file("app/pages/3_trazabilidad.py")
+        app = AppTest.from_file("app/pages/3_trazabilidad.py")
+        app.default_timeout = 15  # pandas/altair cold-import puede tardar > 3s en la primera corrida
+        return app
     
     def test_charts_rendered(self, app):
         """Test que gráficos se renderizan."""
@@ -108,7 +114,9 @@ class TestTrazabilidadAnalisis:
     @pytest.fixture
     def app(self):
         """Instancia la página de trazabilidad."""
-        return AppTest.from_file("app/pages/3_trazabilidad.py")
+        app = AppTest.from_file("app/pages/3_trazabilidad.py")
+        app.default_timeout = 15  # pandas/altair cold-import puede tardar > 3s en la primera corrida
+        return app
     
     def test_salary_analysis_present(self, app):
         """Test que análisis de saldo está presente."""
@@ -134,7 +142,9 @@ class TestTrazabilidadDatos:
     @pytest.fixture
     def app(self):
         """Instancia la página de trazabilidad."""
-        return AppTest.from_file("app/pages/3_trazabilidad.py")
+        app = AppTest.from_file("app/pages/3_trazabilidad.py")
+        app.default_timeout = 15  # pandas/altair cold-import puede tardar > 3s en la primera corrida
+        return app
     
     def test_data_table_checkbox_present(self, app):
         """Test que checkbox de tabla está presente."""
@@ -169,7 +179,9 @@ class TestTrazabilidadSeguridad:
     @pytest.fixture
     def app(self):
         """Instancia la página de trazabilidad."""
-        return AppTest.from_file("app/pages/3_trazabilidad.py")
+        app = AppTest.from_file("app/pages/3_trazabilidad.py")
+        app.default_timeout = 15  # pandas/altair cold-import puede tardar > 3s en la primera corrida
+        return app
     
     def test_no_sensitive_exposure_in_analysis(self, app):
         """Test que análisis no expone datos sensibles sin autorización."""

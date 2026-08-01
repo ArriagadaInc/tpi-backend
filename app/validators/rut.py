@@ -56,6 +56,10 @@ def normalize_rut(rut: str) -> str:
     if not numero_str.isdigit():
         raise InvalidRUTError("La parte numérica del RUT debe contener solo dígitos")
     
+    # RUT chileno: máximo 8 dígitos (hasta 99.999.999)
+    if len(numero_str) > 8:
+        raise InvalidRUTError("RUT demasiado largo")
+    
     # Validar que el dígito verificador sea válido (K o 0-9)
     if not (dv_input.isdigit() or dv_input == "K"):
         raise InvalidRUTError("Dígito verificador inválido")
@@ -80,8 +84,12 @@ def validate_rut(rut: str) -> bool:
     rut_normalizado = normalize_rut(rut)
     numero_str, dv_input = rut_normalizado.split("-")
     
-    # Calcular dígito verificador correcto
+    # El RUT 0 no existe (los RUT chilenos empiezan en 1)
     numero = int(numero_str)
+    if numero <= 0:
+        return False
+    
+    # Calcular dígito verificador correcto
     dv_calculado = _calculate_dv(numero)
     
     # Comparar
@@ -132,14 +140,15 @@ def format_rut_for_display(rut: str) -> str:
         rut_normalizado = normalize_rut(rut)
         numero, dv = rut_normalizado.split("-")
         
-        # Agregar puntos al número
+        # Agrupar de a 3 dígitos desde la derecha
         numero_rev = numero[::-1]
         partes = [
             numero_rev[0:3][::-1],
             numero_rev[3:6][::-1],
             numero_rev[6:][::-1],
         ]
-        numero_formateado = ".".join(p for p in partes if p)
+        grupos = [p for p in partes if p]
+        numero_formateado = ".".join(reversed(grupos))
         
         return f"{numero_formateado}-{dv}"
     except Exception:

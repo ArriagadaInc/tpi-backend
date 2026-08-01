@@ -79,7 +79,7 @@ class Settings(BaseSettings):
     @classmethod
     def validate_env(cls, v: str) -> str:
         """Validar que el ambiente sea válido."""
-        valid_envs = ["development", "staging", "production"]
+        valid_envs = ["development", "staging", "testing", "production"]
         if v.lower() not in valid_envs:
             raise ValueError(f"APP_ENV debe ser uno de: {valid_envs}")
         return v.lower()

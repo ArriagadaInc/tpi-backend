@@ -31,8 +31,13 @@ def normalize_email(email: str) -> str:
     """
     email = email.strip().lower()
     
-    # Validar estructura básica
-    if not re.match(r"^[a-z0-9][a-z0-9._%-]*@[a-z0-9.-]+\.[a-z]{2,}$", email):
+    # Validar estructura básica: usuario (con . _ % + -) @ dominio con TLD válido.
+    # Cada etiqueta del dominio debe iniciar y terminar con alfanumérico
+    # (evita casos como "user@.example.com" o "user@example..com").
+    if not re.match(
+        r"^[a-z0-9][a-z0-9._%+-]*@([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$",
+        email,
+    ):
         raise InvalidEmailError("Formato de correo electrónico inválido")
     
     # Validar longitud
@@ -82,11 +87,8 @@ def mask_email(email: str) -> str:
         
         usuario, dominio = email.split("@")
         
-        # Mostrar primeros 2 caracteres del usuario
-        if len(usuario) <= 2:
-            usuario_enmascarado = usuario
-        else:
-            usuario_enmascarado = usuario[:2] + "***"
+        # Mostrar primeros 2 caracteres del usuario (o menos si es más corto)
+        usuario_enmascarado = usuario[:2] + "***"
         
         return f"{usuario_enmascarado}@{dominio}"
     except Exception:

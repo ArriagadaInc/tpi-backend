@@ -45,7 +45,7 @@ class TestValidateRut:
         """Valida RUTs correctos."""
         valid_ruts = [
             "12345678-5",
-            "18956325-K",
+            "18956325-6",  # DV real de 18956325 es 6, no K
             "1-9",
         ]
         for rut in valid_ruts:
@@ -55,8 +55,9 @@ class TestValidateRut:
         """Rechaza RUTs incorrectos."""
         invalid_ruts = [
             "12345678-4",  # DV incorrecto
+            "18956325-K",  # DV incorrecto, el correcto es 6
             "18956325-5",  # DV incorrecto
-            "00000000-0",  # RUT inválido
+            "00000000-0",  # RUT 0 no existe
             "9999999-9",   # DV incorrecto
         ]
         for rut in invalid_ruts:
@@ -85,7 +86,7 @@ class TestFormatRutForDisplay:
         assert format_rut_for_display("12345678-5") == "12.345.678-5"
 
     def test_format_rut_with_k(self):
-        """Formatea RUT con dígito K."""
+        """Formatea RUT con dígito K (independiente de si el DV es correcto)."""
         assert format_rut_for_display("18956325-K") == "18.956.325-K"
 
     def test_format_rut_single_digit(self):
@@ -118,9 +119,8 @@ class TestRutModulo11:
 
     def test_known_rut_from_verification(self):
         """Valida RUT verificado en análisis anterior."""
-        # Este es el RUT que verificamos en verify_catalogs.py
-        # Asumiendo que es un RUT válido del sistema
-        valid_rut = "18956325-K"
+        # DV real de 18956325 es 6, no K
+        valid_rut = "18956325-6"
         assert validate_rut(valid_rut) is True
 
     def test_modulo11_calculation(self):
@@ -148,7 +148,7 @@ class TestRutEdgeCases:
         assert normalize_rut("1-9") == "1-9"
 
     def test_very_long_rut(self):
-        """Rechaza RUT muy largo."""
+        """Rechaza RUT muy largo (máximo 8 dígitos en un RUT chileno)."""
         with pytest.raises(InvalidRUTError):
             validate_rut("123456789012-5")
 

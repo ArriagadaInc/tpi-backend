@@ -163,7 +163,8 @@ def main():
             
             # Histograma de saldos
             st.markdown("### Distribución de Saldos")
-            st.histogram(df["saldo_afp"], bins=20, x_label="Saldo AFP (CLP)", y_label="Cantidad")
+            saldo_bins = df["saldo_afp"].astype(float).value_counts(bins=20).sort_index()
+            st.bar_chart(saldo_bins)
         
         # Sección 6: Datos Brutos (para auditoría)
         st.markdown("---")

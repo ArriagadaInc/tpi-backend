@@ -213,16 +213,16 @@ class SolicitudService:
         afps = self.repository.get_active_afp()
 
         # Validar géneros
-        genero_ids = {UUID(str(g["id_genero"])) for g in generos}
+        genero_ids = {UUID(str(g["id"])) for g in generos}
         if genero_id not in genero_ids:
             raise ValueError(f"ID de género inválido: {genero_id}")
 
         # Validar estado civil
-        estado_civil_ids = {UUID(str(ec["id_estado_civil"])) for ec in estados_civiles}
+        estado_civil_ids = {UUID(str(ec["id"])) for ec in estados_civiles}
         if estado_civil_id not in estado_civil_ids:
             raise ValueError(f"ID de estado civil inválido: {estado_civil_id}")
 
         # Validar AFP
-        afp_ids = {UUID(str(a["id_afp"])) for a in afps}
+        afp_ids = {UUID(str(a["id"])) for a in afps}
         if afp_id not in afp_ids:
             raise ValueError(f"ID de AFP inválido: {afp_id}")

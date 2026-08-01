@@ -2,7 +2,7 @@
 
 **Prototipo funcional de captura y consulta de solicitudes de simulación**
 
-> **Estado:** ✅ MVP1 Validado y Listo para Demostración Local (31 Julio 2026)
+> **Estado:** ✅ MVP1 Validado y listo para demostración local (actualizado 1 Agosto 2026)
 
 Este es un MVP (Producto Mínimo Viable) en Streamlit que demuestra la capacidad de:
 - ✅ Registrar solicitudes de simulación desde un formulario web
@@ -29,11 +29,11 @@ Este es un MVP (Producto Mínimo Viable) en Streamlit que demuestra la capacidad
 | Conexión PostgreSQL | ✅ EXITOSA | PostgreSQL 17.6, BD tpi_local |
 | Catálogos (Género, Estado Civil, AFP) | ✅ EXITOSA | Todos disponibles y cargados |
 | Flujo de Registro Completo | ✅ EXITOSO | Persona → Lead → Consentimientos |
-| Suite de Pruebas | ✅ PARCIAL | 44/64 unitarias OK (validadores son secundarios) |
-| Aplicación Streamlit | ✅ FUNCIONAL | 3 páginas operativas |
+| Suite de Pruebas | ✅ EXITOSA | 153/153 pruebas aprobadas, 0 fallos, 0 omitidos |
+| Aplicación Streamlit | ✅ FUNCIONAL | 3 páginas operativas y flujo de registro/listado/persistencia verificado |
 
-**Última validación:** 31 Julio 2026 19:59  
-**Documentación de validación:** Ver [docs/MVP1_VALIDACION.md](docs/MVP1_VALIDACION.md)
+**Última validación:** 1 Agosto 2026  
+**Documentación de validación:** Ver [docs/INFORME_CORRECCION_MVP1.md](docs/INFORME_CORRECCION_MVP1.md)
 
 ---
 
@@ -78,7 +78,8 @@ pip install -e ".[dev]"
 # Copiar archivo de ejemplo
 cp .env.example .env
 
-# Editar .env con tus credenciales de PostgreSQL
+# Editar .env con tus credenciales de PostgreSQL locales
+# Ver archivo .env.example para referencia
 ```
 
 **Valores para desarrollo local (con tpi-data-pipeline ejecutándose):**
@@ -87,10 +88,12 @@ DATABASE_HOST=localhost
 DATABASE_PORT=5432
 DATABASE_NAME=tpi_local
 DATABASE_USER=postgres
-DATABASE_PASSWORD=TpiPostgres2026!
+DATABASE_PASSWORD=<tu_contraseña_postgres>
 DATABASE_SCHEMA=tpi
 APP_ENV=development
 ```
+
+⚠️ **IMPORTANTE:** No commits las credenciales en Git. Usar `git update-index --assume-unchanged .env`
 
 ### 5. Ejecutar la aplicación
 

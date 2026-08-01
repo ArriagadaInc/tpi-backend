@@ -10,11 +10,13 @@ def list_tables():
     print("="*70)
     
     try:
-        conn_str = (
-            f"postgresql://{settings.database_user}:{settings.database_password}@"
-            f"{settings.database_host}:{settings.database_port}/{settings.database_name}"
+        conn = psycopg.connect(
+            host=settings.database_host,
+            port=settings.database_port,
+            user=settings.database_user,
+            password=settings.database_password,
+            dbname=settings.database_name
         )
-        conn = psycopg.connect(conn_str)
         
         query = """
         SELECT table_name FROM information_schema.tables 

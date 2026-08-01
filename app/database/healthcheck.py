@@ -213,11 +213,26 @@ def full_health_check() -> Dict[str, Any]:
     4. Catálogos con datos
     
     Returns:
-        Dict con todos los resultados de los checks
+        Dict con "all_ready" y "connected" a nivel superior (usados por la
+        UI de Streamlit y los tests) además del detalle de cada check.
     """
+    connection = check_database_connection()
+    schema = check_schema_exists()
+    tables = check_required_tables()
+    catalogs = check_catalogs()
+    
+    all_ready = (
+        connection["connected"]
+        and schema["exists"]
+        and tables["all_present"]
+        and catalogs["all_ready"]
+    )
+    
     return {
-        "connection": check_database_connection(),
-        "schema": check_schema_exists(),
-        "tables": check_required_tables(),
-        "catalogs": check_catalogs(),
+        "all_ready": all_ready,
+        "connected": connection["connected"],
+        "connection": connection,
+        "schema": schema,
+        "tables": tables,
+        "catalogs": catalogs,
     }

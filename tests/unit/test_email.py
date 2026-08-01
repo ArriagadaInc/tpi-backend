@@ -64,20 +64,20 @@ class TestValidateEmail:
             assert validate_email(email) is False, f"Email {email} debería ser inválido"
 
     def test_invalid_format_raises_error(self):
-        """Lanza error con formato muy inválido."""
-        # Casos que podrían lanzar excepciones
+        """validate_email retorna False; normalize_email lanza la excepción."""
+        assert validate_email("") is False
         with pytest.raises(InvalidEmailError):
-            validate_email("")
+            normalize_email("")
 
     def test_max_length_email(self):
         """Valida límite máximo de 254 caracteres."""
         # RFC 5321: máximo 254 caracteres
-        # Email válido de máximo permitido
-        long_email = "a" * 243 + "@example.com"  # 254 caracteres
+        domain = "@example.com"  # 12 caracteres
+        long_email = "a" * (254 - len(domain)) + domain  # 254 caracteres exactos
         assert validate_email(long_email) is True
 
         # Email más largo del máximo
-        too_long_email = "a" * 244 + "@example.com"  # 255 caracteres
+        too_long_email = "a" * (255 - len(domain)) + domain  # 255 caracteres
         assert validate_email(too_long_email) is False
 
     def test_validate_after_normalization(self):
@@ -162,11 +162,13 @@ class TestEmailEdgeCases:
         assert validate_email("user@münchen.de") is False
 
     def test_empty_email(self):
-        """Rechaza email vacío."""
+        """validate_email retorna False; normalize_email lanza la excepción."""
+        assert validate_email("") is False
         with pytest.raises(InvalidEmailError):
-            validate_email("")
+            normalize_email("")
 
     def test_only_special_characters(self):
-        """Rechaza solo caracteres especiales."""
+        """validate_email retorna False; normalize_email lanza la excepción."""
+        assert validate_email("@.+-_ ") is False
         with pytest.raises(InvalidEmailError):
-            validate_email("@.+-_ ")
+            normalize_email("@.+-_ ")

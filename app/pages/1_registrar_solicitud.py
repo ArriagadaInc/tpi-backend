@@ -52,9 +52,9 @@ def load_catalogs():
         estados_civiles = service.get_catalogo_estado_civil()
         
         return {
-            "afps": {str(a["id_afp"]): a["descripcion"] for a in afps},
-            "generos": {str(g["id_genero"]): g["descripcion"] for g in generos},
-            "estados_civiles": {str(ec["id_estado_civil"]): ec["descripcion"] for ec in estados_civiles},
+            "afps": {str(a["id"]): a["nombre"] for a in afps},
+            "generos": {str(g["id"]): g["nombre"] for g in generos},
+            "estados_civiles": {str(ec["id"]): ec["nombre"] for ec in estados_civiles},
             "error": None,
         }
     except Exception as e:

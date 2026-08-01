@@ -19,6 +19,7 @@ dependencies = [
     
     # Database
     "psycopg[binary]>=3.1.0",
+    "psycopg-pool>=3.1.0",
     "sqlalchemy>=2.0.0",
     
     # Data validation and models

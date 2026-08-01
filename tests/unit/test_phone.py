@@ -75,9 +75,10 @@ class TestValidatePhone:
             assert validate_phone(phone) is False, f"Teléfono {phone} debería ser inválido"
 
     def test_invalid_format_raises_error(self):
-        """Lanza error con formato inválido."""
+        """validate_phone retorna False; normalize_phone lanza la excepción."""
+        assert validate_phone("ABCDEFGHIJ") is False
         with pytest.raises(InvalidPhoneError):
-            validate_phone("ABCDEFGHIJ")
+            normalize_phone("ABCDEFGHIJ")
 
     def test_validate_after_normalization(self):
         """Valida después de normalización."""
@@ -130,19 +131,22 @@ class TestPhoneEdgeCases:
         assert validate_phone("+56912345678") is True
 
     def test_very_long_phone(self):
-        """Rechaza teléfono muy largo."""
+        """validate_phone retorna False; normalize_phone lanza la excepción."""
+        assert validate_phone("+569123456789123") is False
         with pytest.raises(InvalidPhoneError):
-            validate_phone("+569123456789123")
+            normalize_phone("+569123456789123")
 
     def test_empty_phone(self):
-        """Rechaza teléfono vacío."""
+        """validate_phone retorna False; normalize_phone lanza la excepción."""
+        assert validate_phone("") is False
         with pytest.raises(InvalidPhoneError):
-            validate_phone("")
+            normalize_phone("")
 
     def test_only_special_characters(self):
-        """Rechaza solo caracteres especiales."""
+        """validate_phone retorna False; normalize_phone lanza la excepción."""
+        assert validate_phone("+-() ") is False
         with pytest.raises(InvalidPhoneError):
-            validate_phone("+-() ")
+            normalize_phone("+-() ")
 
     def test_phone_with_mixed_separators(self):
         """Normaliza múltiples separadores."""

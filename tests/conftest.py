@@ -8,11 +8,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-# Configurar variables de entorno para tests
-os.environ["APP_ENV"] = "testing"
-os.environ["DATABASE_HOST"] = os.getenv("DATABASE_HOST", "localhost")
-os.environ["DATABASE_PORT"] = os.getenv("DATABASE_PORT", "5432")
-os.environ["DATABASE_NAME"] = os.getenv("DATABASE_NAME", "tpi_local")
-os.environ["DATABASE_USER"] = os.getenv("DATABASE_USER", "tpi_app")
-os.environ["DATABASE_PASSWORD"] = os.getenv("DATABASE_PASSWORD", "")
-os.environ["DATABASE_SCHEMA"] = os.getenv("DATABASE_SCHEMA", "tpi")
+# Ambiente de pruebas. No forzar credenciales de BD aquí: Settings ya las
+# carga desde .env; sobreescribirlas con valores por defecto incorrectos
+# (p.ej. usuario "tpi_app" inexistente) rompe la conexión real en tests.
+os.environ.setdefault("APP_ENV", "testing")
