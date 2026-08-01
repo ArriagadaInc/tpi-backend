@@ -1,24 +1,24 @@
 """Módulo de validadores."""
 
-from app.validators.rut import (
-    normalize_rut,
-    validate_rut,
-    format_rut_for_display,
-    mask_rut,
-    InvalidRUTError,
-)
-from app.validators.phone import (
-    normalize_phone,
-    validate_phone,
-    format_phone_for_display,
-    mask_phone,
-    InvalidPhoneError,
-)
 from app.validators.email import (
+    InvalidEmailError,
+    mask_email,
     normalize_email,
     validate_email,
-    mask_email,
-    InvalidEmailError,
+)
+from app.validators.phone import (
+    InvalidPhoneError,
+    format_phone_for_display,
+    mask_phone,
+    normalize_phone,
+    validate_phone,
+)
+from app.validators.rut import (
+    InvalidRUTError,
+    format_rut_for_display,
+    mask_rut,
+    normalize_rut,
+    validate_rut,
 )
 
 __all__ = [

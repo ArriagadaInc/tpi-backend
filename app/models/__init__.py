@@ -1,10 +1,10 @@
 """Módulo de modelos de datos."""
 
 from app.models.solicitud import (
-    PersonaData,
-    SolicitudData,
     ConsentimientosData,
+    PersonaData,
     RegistrarSolicitudRequest,
+    SolicitudData,
     SolicitudResponse,
 )
 

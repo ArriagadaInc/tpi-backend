@@ -5,38 +5,43 @@ Proporciona pool de conexiones, manejo de transacciones y contextos
 para asegurar que las conexiones se cierren correctamente.
 """
 
-from contextlib import contextmanager
-from typing import Generator, Optional
 import logging
+from collections.abc import Generator
+from contextlib import contextmanager
+from typing import Any
 
 import psycopg
-from psycopg_pool import ConnectionPool
 from psycopg.rows import dict_row
+from psycopg_pool import ConnectionPool
 
 from app.config.settings import settings
 
 logger = logging.getLogger(__name__)
 
+DbRow = dict[str, Any]
+DbConnection = psycopg.Connection[DbRow]
+
 # Pool global de conexiones
-_connection_pool: Optional[ConnectionPool] = None
+_connection_pool: ConnectionPool[DbConnection] | None = None
 
 
 def initialize_pool() -> None:
     """
     Inicializar el pool de conexiones a PostgreSQL.
-    
+
     Se debe llamar al inicio de la aplicación.
     """
     global _connection_pool
-    
+
     if _connection_pool is not None:
         logger.warning("Pool de conexiones ya inicializado")
         return
-    
+
     try:
         db_url = settings.get_database_url()
         _connection_pool = ConnectionPool(
             db_url,
+            kwargs={"row_factory": dict_row},
             min_size=1,
             max_size=settings.database_pool_size,
             max_idle=settings.database_pool_timeout,
@@ -52,14 +57,14 @@ def initialize_pool() -> None:
 def close_pool() -> None:
     """
     Cerrar el pool de conexiones.
-    
+
     Se debe llamar al terminar la aplicación.
     """
     global _connection_pool
-    
+
     if _connection_pool is None:
         return
-    
+
     try:
         _connection_pool.close()
         _connection_pool = None
@@ -68,32 +73,34 @@ def close_pool() -> None:
         logger.error(f"Error cerrando pool: {e}")
 
 
-def get_connection() -> psycopg.Connection:
+def get_connection() -> DbConnection:
     """
     Obtener una conexión del pool.
 
     Inicializa el pool automáticamente si aún no fue inicializado
     (necesario para Streamlit, que no llama a initialize_pool() al arrancar).
-    
+
     Retorna:
         Conexión psycopg con row_factory = dict_row
-    
+
     Raises:
         psycopg.OperationalError: Si no se puede conectar a la BD
     """
     global _connection_pool
     if _connection_pool is None:
         initialize_pool()
-    
-    conn = _connection_pool.getconn()
-    conn.row_factory = dict_row
-    return conn
+
+    pool = _connection_pool
+    if pool is None:
+        raise RuntimeError("El pool de conexiones no pudo inicializarse")
+
+    return pool.getconn()
 
 
-def return_connection(conn: psycopg.Connection) -> None:
+def return_connection(conn: DbConnection) -> None:
     """
     Devolver una conexión al pool.
-    
+
     Args:
         conn: Conexión a devolver
     """
@@ -101,21 +108,21 @@ def return_connection(conn: psycopg.Connection) -> None:
         if conn:
             conn.close()
         return
-    
+
     _connection_pool.putconn(conn)
 
 
 @contextmanager
-def get_db_connection() -> Generator[psycopg.Connection, None, None]:
+def get_db_connection() -> Generator[DbConnection, None, None]:
     """
     Context manager para obtener una conexión segura del pool.
-    
+
     Uso:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT * FROM table")
                 results = cur.fetchall()
-    
+
     Yields:
         Conexión psycopg
     """
@@ -144,21 +151,21 @@ def get_db_connection() -> Generator[psycopg.Connection, None, None]:
 
 def execute_query(
     query: str,
-    params: Optional[tuple] = None,
+    params: tuple | None = None,
     fetch_one: bool = False,
-) -> Optional[dict]:
+) -> DbRow | list[DbRow] | None:
     """
     Ejecutar una consulta SELECT segura.
-    
+
     Args:
         query: Consulta SQL (usar placeholders %s)
         params: Parámetros de la consulta
         fetch_one: Si True, retorna un registro. Si False, retorna lista.
-    
+
     Returns:
         Un registro (dict) si fetch_one=True
         Una lista de registros (list[dict]) si fetch_one=False
-    
+
     Raises:
         psycopg.Error: Si hay error en la BD
     """
@@ -172,20 +179,20 @@ def execute_query(
 
 def execute_insert(
     query: str,
-    params: Optional[tuple] = None,
+    params: tuple | None = None,
     return_id: bool = False,
-) -> Optional[dict]:
+) -> dict | None:
     """
     Ejecutar un INSERT y opcionalmente retornar el registro insertado.
-    
+
     Args:
         query: INSERT query (preferentemente con RETURNING *)
         params: Parámetros
         return_id: Si True, espera que la query tenga RETURNING
-    
+
     Returns:
         Registro insertado si RETURNING está en la query, None en otro caso
-    
+
     Raises:
         psycopg.Error: Si hay error en la BD
     """

@@ -8,11 +8,11 @@ Ejecuta:
 3. Crea resumen markdown
 """
 
-import subprocess
 import json
+import subprocess
 import sys
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 
 def run_command(cmd: list, description: str) -> tuple[int, str]:
@@ -20,21 +20,21 @@ def run_command(cmd: list, description: str) -> tuple[int, str]:
     print(f"\n{'='*70}")
     print(f"  {description}")
     print(f"{'='*70}")
-    
+
     result = subprocess.run(cmd, capture_output=True, text=True)
     print(result.stdout)
     if result.stderr:
         print("STDERR:", result.stderr)
-    
+
     return result.returncode, result.stdout
 
 
 def generate_coverage_report() -> dict:
     """Genera reporte de cobertura."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("  GENERANDO REPORTE DE COBERTURA")
-    print("="*70)
-    
+    print("=" * 70)
+
     # Ejecutar tests con cobertura
     cmd = [
         "pytest",
@@ -43,28 +43,24 @@ def generate_coverage_report() -> dict:
         "--cov-report=term-missing",
         "--cov-report=json",
         "-v",
-        "--tb=short"
+        "--tb=short",
     ]
-    
+
     returncode, output = run_command(cmd, "Ejecutando Tests con Cobertura")
-    
+
     # Leer reporte JSON
     coverage_json = None
     if Path("coverage.json").exists():
         with open("coverage.json") as f:
             coverage_json = json.load(f)
-    
-    return {
-        "returncode": returncode,
-        "output": output,
-        "json_data": coverage_json
-    }
+
+    return {"returncode": returncode, "output": output, "json_data": coverage_json}
 
 
 def generate_markdown_report(coverage_data: dict) -> str:
     """Genera reporte en markdown."""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
+
     report = f"""# Reporte de Cobertura de Tests
 
 **Generado:** {timestamp}
@@ -73,18 +69,18 @@ def generate_markdown_report(coverage_data: dict) -> str:
 
 ### Estado General
 """
-    
+
     if coverage_data["returncode"] == 0:
         report += "- ✅ **Todos los tests pasaron**\n"
     else:
         report += "- ❌ **Algunos tests fallaron**\n"
-    
+
     # Datos de cobertura JSON
     if coverage_data.get("json_data"):
         total_coverage = coverage_data["json_data"].get("totals", {})
         pct_covered = total_coverage.get("percent_covered", 0)
         report += f"- **Cobertura Total:** {pct_covered:.1f}%\n"
-    
+
     report += """
 ## 📊 Estadísticas de Tests
 
@@ -199,7 +195,7 @@ La aplicación cumple con altos estándares de:
 
 **Generated:** {timestamp}
 """
-    
+
     return report
 
 
@@ -212,32 +208,32 @@ def save_report(report: str):
 
 def main():
     """Función principal."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("  GENERADOR DE REPORTE DE COBERTURA")
-    print("="*70)
-    
+    print("=" * 70)
+
     # Generar cobertura
     coverage_data = generate_coverage_report()
-    
+
     # Generar reporte markdown
     report = generate_markdown_report(coverage_data)
-    
+
     # Guardar reporte
     save_report(report)
-    
+
     # Imprimir resumen
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("  RESUMEN FINAL")
-    print("="*70)
-    print(f"\n✅ Reporte de cobertura generado")
-    print(f"📊 HTML: htmlcov/index.html")
-    print(f"📋 Markdown: docs/TESTING_REPORT.md")
-    
+    print("=" * 70)
+    print("\n✅ Reporte de cobertura generado")
+    print("📊 HTML: htmlcov/index.html")
+    print("📋 Markdown: docs/TESTING_REPORT.md")
+
     if coverage_data["returncode"] == 0:
-        print(f"\n✅ TODOS LOS TESTS PASARON")
+        print("\n✅ TODOS LOS TESTS PASARON")
         return 0
     else:
-        print(f"\n⚠️  Algunos tests fallaron - ver output arriba")
+        print("\n⚠️  Algunos tests fallaron - ver output arriba")
         return 1
 
 

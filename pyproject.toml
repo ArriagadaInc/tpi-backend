@@ -49,6 +49,13 @@ exclude = [".git", "__pycache__", ".venv", "build", "dist"]
 select = ["E", "F", "W", "I", "N", "UP"]
 ignore = ["E501"]  # Line too long - handled by formatter
 
+[tool.ruff.lint.per-file-ignores]
+"app/pages/[0-9]*.py" = ["N999"]  # Streamlit usa prefijos numéricos para ordenar páginas
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
 [tool.pytest.ini_options]
 minversion = "7.0"
 testpaths = ["tests"]

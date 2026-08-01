@@ -1,8 +1,6 @@
 """Script para generar y verificar la estructura del proyecto."""
 
-import os
 from pathlib import Path
-from typing import List, Tuple
 
 # Directorios y archivos esperados
 PROJECT_STRUCTURE = {
@@ -32,7 +30,7 @@ PROJECT_STRUCTURE = {
 }
 
 
-def check_structure(root_path: Path) -> Tuple[bool, List[str]]:
+def check_structure(root_path: Path) -> tuple[bool, list[str]]:
     """
     Verifica que la estructura del proyecto sea correcta.
 
@@ -69,9 +67,7 @@ def check_structure(root_path: Path) -> Tuple[bool, List[str]]:
                     for file_name in files:
                         file_path = subdir_path / file_name
                         if not file_path.exists():
-                            errors.append(
-                                f"❌ Falta archivo: {dir_name}/{subdir_name}/{file_name}"
-                            )
+                            errors.append(f"❌ Falta archivo: {dir_name}/{subdir_name}/{file_name}")
                 else:
                     # Verificar archivos en directorio principal
                     file_path = dir_path / subdir_name
@@ -113,9 +109,7 @@ def print_tree(root_path: Path, prefix: str = "", is_last: bool = True) -> None:
             new_prefix = prefix + ("    " if is_last else "│   ")
 
             if item.is_dir():
-                print(
-                    f"{new_prefix}{'└── ' if is_last_item else '├── '}{item.name}/"
-                )
+                print(f"{new_prefix}{'└── ' if is_last_item else '├── '}{item.name}/")
                 print_dir_contents(item, new_prefix, is_last_item)
             else:
                 print(f"{new_prefix}{'└── ' if is_last_item else '├── '}{item.name}")
@@ -123,9 +117,7 @@ def print_tree(root_path: Path, prefix: str = "", is_last: bool = True) -> None:
         print(f"{prefix}[Permiso denegado]")
 
 
-def print_dir_contents(
-    dir_path: Path, prefix: str = "", parent_is_last: bool = True
-) -> None:
+def print_dir_contents(dir_path: Path, prefix: str = "", parent_is_last: bool = True) -> None:
     """Imprime el contenido de un directorio."""
     try:
         contents = list(dir_path.iterdir())
@@ -178,11 +170,7 @@ def main():
 
     # Contar archivos Python
     py_files = list(project_root.rglob("*.py"))
-    py_files = [
-        f
-        for f in py_files
-        if ".venv" not in str(f) and ".pytest_cache" not in str(f)
-    ]
+    py_files = [f for f in py_files if ".venv" not in str(f) and ".pytest_cache" not in str(f)]
     print(f"Archivos Python: {len(py_files)}")
 
     # Contar líneas de código
@@ -198,9 +186,9 @@ def main():
     # Verificar dependencias
     requirements_file = project_root / "pyproject.toml"
     if requirements_file.exists():
-        print(f"Archivo de dependencias: ✅ pyproject.toml")
+        print("Archivo de dependencias: ✅ pyproject.toml")
     else:
-        print(f"Archivo de dependencias: ❌ NO ENCONTRADO")
+        print("Archivo de dependencias: ❌ NO ENCONTRADO")
 
     # Verificar configuración
     env_example = project_root / ".env.example"

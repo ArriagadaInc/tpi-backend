@@ -8,15 +8,11 @@ Responsabilidades:
 - Retornar DTOs para UI
 """
 
-from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from app.models.solicitud import (
-    ConsentimientosData,
-    PersonaData,
     RegistrarSolicitudRequest,
-    SolicitudData,
     SolicitudResponse,
 )
 from app.repositories import SolicitudRepository
@@ -26,13 +22,11 @@ from app.security.masking import mask_row_for_display
 class SolicitudService:
     """Servicio de negocio para solicitudes de simulación."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Inicializa el servicio con su repositorio."""
         self.repository = SolicitudRepository()
 
-    def registrar_solicitud(
-        self, request: RegistrarSolicitudRequest
-    ) -> SolicitudResponse:
+    def registrar_solicitud(self, request: RegistrarSolicitudRequest) -> SolicitudResponse:
         """
         Registra una nueva solicitud de simulación.
 
@@ -72,7 +66,7 @@ class SolicitudService:
         except Exception as e:
             raise Exception(f"Error al registrar solicitud: {str(e)}") from e
 
-    def get_solicitud_detalle(self, id_lead: UUID) -> Optional[dict[str, Any]]:
+    def get_solicitud_detalle(self, id_lead: UUID) -> dict[str, Any] | None:
         """
         Obtiene los detalles de una solicitud (sin enmascaramiento).
 
@@ -86,7 +80,7 @@ class SolicitudService:
         """
         return self.repository.get_solicitud_by_id(id_lead)
 
-    def get_solicitud_detalle_masked(self, id_lead: UUID) -> Optional[dict[str, Any]]:
+    def get_solicitud_detalle_masked(self, id_lead: UUID) -> dict[str, Any] | None:
         """
         Obtiene los detalles de una solicitud (con enmascaramiento de datos sensibles).
 
@@ -129,9 +123,7 @@ class SolicitudService:
         """
         offset = (page - 1) * page_size
 
-        solicitudes, total = self.repository.get_all_solicitudes(
-            limit=page_size, offset=offset
-        )
+        solicitudes, total = self.repository.get_all_solicitudes(limit=page_size, offset=offset)
 
         # Aplicar enmascaramiento si se solicita
         if masked:
@@ -153,9 +145,7 @@ class SolicitudService:
             "total_pages": total_pages,
         }
 
-    def get_solicitudes_por_rut(
-        self, rut: str, masked: bool = True
-    ) -> list[dict[str, Any]]:
+    def get_solicitudes_por_rut(self, rut: str, masked: bool = True) -> list[dict[str, Any]]:
         """
         Obtiene todas las solicitudes de una persona por RUT.
 
@@ -193,9 +183,7 @@ class SolicitudService:
 
     # ========== Métodos privados de validación ==========
 
-    def _validate_catalogo_ids(
-        self, genero_id: UUID, estado_civil_id: UUID, afp_id: UUID
-    ) -> None:
+    def _validate_catalogo_ids(self, genero_id: UUID, estado_civil_id: UUID, afp_id: UUID) -> None:
         """
         Valida que los IDs de catálogos existan y sean válidos.
 

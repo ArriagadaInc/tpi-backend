@@ -8,8 +8,7 @@ Responsabilidades:
 """
 
 from datetime import datetime
-from decimal import Decimal
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from app.database.connection import get_db_connection
@@ -25,7 +24,7 @@ class SolicitudRepository:
     """Repositorio para operaciones de solicitudes en la BD."""
 
     @staticmethod
-    def get_persona_by_rut(rut: str) -> Optional[dict[str, Any]]:
+    def get_persona_by_rut(rut: str) -> dict[str, Any] | None:
         """
         Obtiene una persona por su RUT.
 
@@ -36,7 +35,7 @@ class SolicitudRepository:
             Dict con datos de persona o None si no existe
         """
         query = """
-            SELECT id_persona, rut, nombre_completo, email, telefono, 
+            SELECT id_persona, rut, nombre_completo, email, telefono,
                    fecha_nacimiento, created_at
             FROM tpi.personas
             WHERE rut = %s
@@ -71,7 +70,7 @@ class SolicitudRepository:
 
         # Insertar nueva persona
         query = """
-            INSERT INTO tpi.personas 
+            INSERT INTO tpi.personas
                 (rut, nombre_completo, email, telefono, fecha_nacimiento, created_at)
             VALUES (%s, %s, %s, %s, %s, %s)
             RETURNING id_persona
@@ -89,8 +88,10 @@ class SolicitudRepository:
             with conn.cursor() as cur:
                 cur.execute(query, params)
                 row = cur.fetchone()
+                if row is None:
+                    raise RuntimeError("PostgreSQL no retornó el ID de la persona")
                 conn.commit()
-                return UUID(str(row["id_persona"])) if row else None
+                return UUID(str(row["id_persona"]))
 
     @staticmethod
     def create_solicitud(
@@ -122,13 +123,13 @@ class SolicitudRepository:
                     query_check = "SELECT id_persona FROM tpi.personas WHERE rut = %s LIMIT 1"
                     cur.execute(query_check, (persona_data.rut,))
                     existing_row = cur.fetchone()
-                    
+
                     if existing_row:
                         id_persona = UUID(str(existing_row["id_persona"]))
                     else:
                         # PASO 1b: Crear nueva persona
                         query_persona = """
-                            INSERT INTO tpi.personas 
+                            INSERT INTO tpi.personas
                                 (rut, nombre_completo, email, telefono, fecha_nacimiento, created_at)
                             VALUES (%s, %s, %s, %s, %s, %s)
                             RETURNING id_persona
@@ -143,15 +144,14 @@ class SolicitudRepository:
                         )
                         cur.execute(query_persona, params_persona)
                         row = cur.fetchone()
-                        id_persona = UUID(str(row["id_persona"])) if row else None
-                        
-                        if not id_persona:
-                            raise Exception("No se pudo crear la persona")
+                        if row is None:
+                            raise RuntimeError("No se pudo crear la persona")
+                        id_persona = UUID(str(row["id_persona"]))
 
                     # PASO 2: Crear lead (solicitud) en la MISMA transacción
                     query_lead = """
-                        INSERT INTO tpi.leads 
-                            (id_persona, genero_id, estado_civil_id, afp_id, 
+                        INSERT INTO tpi.leads
+                            (id_persona, genero_id, estado_civil_id, afp_id,
                              saldo_afp, comentarios, estado_lead, fecha_ingreso,
                              origen_lead, fuente_actual, created_at)
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -173,15 +173,14 @@ class SolicitudRepository:
 
                     cur.execute(query_lead, params_lead)
                     row = cur.fetchone()
-                    id_lead = UUID(str(row["id_lead"])) if row else None
-
-                    if not id_lead:
-                        raise Exception("No se pudo crear el lead")
+                    if row is None:
+                        raise RuntimeError("No se pudo crear el lead")
+                    id_lead = UUID(str(row["id_lead"]))
 
                     # PASO 3: Crear consentimientos en la MISMA transacción
                     query_consent = """
-                        INSERT INTO tpi.consentimientos 
-                            (id_persona, id_lead, acepta_terminos, acepta_politica_privacidad, 
+                        INSERT INTO tpi.consentimientos
+                            (id_persona, id_lead, acepta_terminos, acepta_politica_privacidad,
                              finalidad_contacto, created_at)
                         VALUES (%s, %s, %s, %s, %s, %s)
                         RETURNING id_consentimiento
@@ -219,7 +218,7 @@ class SolicitudRepository:
                 raise Exception(f"Error al crear solicitud (rollback ejecutado): {str(e)}") from e
 
     @staticmethod
-    def get_solicitud_by_id(id_lead: UUID) -> Optional[dict[str, Any]]:
+    def get_solicitud_by_id(id_lead: UUID) -> dict[str, Any] | None:
         """
         Obtiene una solicitud completa (con datos relacionados) por ID.
 
@@ -230,7 +229,7 @@ class SolicitudRepository:
             Dict con datos de solicitud o None si no existe
         """
         query = """
-            SELECT 
+            SELECT
                 l.id_lead,
                 l.id_persona,
                 p.rut,
@@ -268,9 +267,7 @@ class SolicitudRepository:
                 return dict(row) if row else None
 
     @staticmethod
-    def get_all_solicitudes(
-        limit: int = 100, offset: int = 0
-    ) -> tuple[list[dict[str, Any]], int]:
+    def get_all_solicitudes(limit: int = 100, offset: int = 0) -> tuple[list[dict[str, Any]], int]:
         """
         Obtiene todas las solicitudes con paginación.
 
@@ -283,7 +280,7 @@ class SolicitudRepository:
         """
         query_count = "SELECT COUNT(*) as total FROM tpi.leads"
         query_data = """
-            SELECT 
+            SELECT
                 l.id_lead,
                 l.id_persona,
                 p.rut,
@@ -331,7 +328,7 @@ class SolicitudRepository:
             Lista de solicitudes
         """
         query = """
-            SELECT 
+            SELECT
                 l.id_lead,
                 l.id_persona,
                 p.rut,

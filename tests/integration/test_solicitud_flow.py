@@ -1,9 +1,10 @@
 """Pruebas de integración para flujo de solicitudes."""
 
-import pytest
 from datetime import date
 from decimal import Decimal
 from uuid import UUID
+
+import pytest
 
 from app.database.healthcheck import full_health_check
 from app.models.solicitud import (
@@ -193,7 +194,6 @@ class TestValidationRules:
 
     def test_personas_con_rut_duplicado_reutilizan_id(self, service):
         """Test: insertar persona con RUT existente reutiliza ID."""
-        from app.database.connection import get_db_connection
         from app.repositories import SolicitudRepository
 
         # Crear una persona
@@ -233,7 +233,7 @@ class TestValidationRules:
 
         # Crear request SIN aceptar términos (debería fallar en Pydantic)
         with pytest.raises(Exception):  # ValueError de Pydantic
-            request = RegistrarSolicitudRequest(
+            RegistrarSolicitudRequest(
                 persona=PersonaData(
                     rut="18666666-6",
                     nombre_completo="Test",
