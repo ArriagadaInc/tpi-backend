@@ -2,7 +2,12 @@
 
 import pytest
 
-from app.validators.email import InvalidEmailError, mask_email, normalize_email, validate_email
+from app.validators.email import (
+    InvalidEmailError,
+    mask_email,
+    normalize_email,
+    validate_email,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -152,9 +157,10 @@ class TestEmailEdgeCases:
     def test_numeric_domain(self):
         """Valida dominio numérico."""
         # Ejemplo: IP domain
-        assert validate_email("user@123.456.789.012") is False or validate_email(
-            "user@123.456.789.012"
-        ) is True  # Depende de validación
+        assert (
+            validate_email("user@123.456.789.012") is False
+            or validate_email("user@123.456.789.012") is True
+        )  # Depende de validación
 
     def test_internationalized_domain(self):
         """Rechaza dominio internacionalizado (fuera de MVP)."""

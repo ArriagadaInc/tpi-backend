@@ -2,7 +2,13 @@
 
 import pytest
 
-from app.validators.rut import InvalidRUTError, format_rut_for_display, mask_rut, normalize_rut, validate_rut
+from app.validators.rut import (
+    InvalidRUTError,
+    format_rut_for_display,
+    mask_rut,
+    normalize_rut,
+    validate_rut,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -58,7 +64,7 @@ class TestValidateRut:
             "18956325-K",  # DV incorrecto, el correcto es 6
             "18956325-5",  # DV incorrecto
             "00000000-0",  # RUT 0 no existe
-            "9999999-9",   # DV incorrecto
+            "9999999-9",  # DV incorrecto
         ]
         for rut in invalid_ruts:
             assert validate_rut(rut) is False, f"RUT {rut} debería ser inválido"
@@ -74,7 +80,7 @@ class TestValidateRut:
         rut1 = "12.345.678-5"
         rut2 = "123456785"
         rut3 = "12345678-5"
-        
+
         assert validate_rut(rut1) == validate_rut(rut2) == validate_rut(rut3)
 
 

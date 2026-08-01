@@ -2,7 +2,13 @@
 
 import pytest
 
-from app.validators.phone import InvalidPhoneError, format_phone_for_display, mask_phone, normalize_phone, validate_phone
+from app.validators.phone import (
+    InvalidPhoneError,
+    format_phone_for_display,
+    mask_phone,
+    normalize_phone,
+    validate_phone,
+)
 
 pytestmark = pytest.mark.unit
 
