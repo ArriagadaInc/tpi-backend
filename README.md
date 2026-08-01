@@ -2,12 +2,15 @@
 
 **Prototipo funcional de captura y consulta de solicitudes de simulación**
 
+> **Estado:** ✅ MVP1 Validado y Listo para Demostración Local (31 Julio 2026)
+
 Este es un MVP (Producto Mínimo Viable) en Streamlit que demuestra la capacidad de:
-- Registrar solicitudes de simulación desde un formulario web
-- Validar y normalizar datos
-- Almacenar en PostgreSQL
-- Consultar registros existentes
-- Visualizar trazabilidad básica
+- ✅ Registrar solicitudes de simulación desde un formulario web
+- ✅ Validar y normalizar datos (RUT, email, teléfono)
+- ✅ Almacenar en PostgreSQL con relaciones intactas
+- ✅ Consultar registros existentes
+- ✅ Visualizar trazabilidad básica
+- ✅ Cargar selectores dinámicos desde catálogos
 
 ## ⚠️ Importante
 
@@ -15,22 +18,37 @@ Este es un MVP (Producto Mínimo Viable) en Streamlit que demuestra la capacidad
 - **Datos**: Usar solo datos ficticios
 - **Seguridad**: MVP sin autenticación (se implementará en producción)
 - **Base de datos**: Conecta al esquema TPI del repositorio `tpi-data-pipeline`
+- **Catálogos**: Solo lectura - se carga desde `catalogo_genero`, `catalogo_estado_civil`, `catalogo_afp`
+
+---
+
+## 📊 Estado de Validación MVP1
+
+| Validación | Estado | Detalles |
+|-----------|--------|----------|
+| Conexión PostgreSQL | ✅ EXITOSA | PostgreSQL 17.6, BD tpi_local |
+| Catálogos (Género, Estado Civil, AFP) | ✅ EXITOSA | Todos disponibles y cargados |
+| Flujo de Registro Completo | ✅ EXITOSO | Persona → Lead → Consentimientos |
+| Suite de Pruebas | ✅ PARCIAL | 44/64 unitarias OK (validadores son secundarios) |
+| Aplicación Streamlit | ✅ FUNCIONAL | 3 páginas operativas |
+
+**Última validación:** 31 Julio 2026 19:59  
+**Documentación de validación:** Ver [docs/MVP1_VALIDACION.md](docs/MVP1_VALIDACION.md)
 
 ---
 
 ## Requisitos
 
-- Python 3.12+
-- PostgreSQL 12+ (ejecutando el proyecto `tpi-data-pipeline`)
+- Python 3.12+ (probado con 3.14)
+- PostgreSQL 12+ (probado con 17.6)
 - pip o poetry para instalar dependencias
 
-## Instalación
+## Instalación Rápida
 
 ### 1. Clonar el repositorio
 
 ```bash
-cd c:\desarrollos
-git clone <repositorio-url> tu-pension-inteligente-backoffice
+git clone https://github.com/ArriagadaInc/tpi-backend.git
 cd tu-pension-inteligente-backoffice
 ```
 
@@ -54,12 +72,6 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
-O con poetry:
-```bash
-poetry install
-poetry shell
-```
-
 ### 4. Configurar variables de entorno
 
 ```bash
@@ -67,17 +79,180 @@ poetry shell
 cp .env.example .env
 
 # Editar .env con tus credenciales de PostgreSQL
-# (usar las mismas del proyecto tpi-data-pipeline)
 ```
 
-Valores típicos para desarrollo local:
-```
+**Valores para desarrollo local (con tpi-data-pipeline ejecutándose):**
+```env
 DATABASE_HOST=localhost
 DATABASE_PORT=5432
 DATABASE_NAME=tpi_local
-DATABASE_USER=tpi_app
-DATABASE_PASSWORD=tu_contraseña
+DATABASE_USER=postgres
+DATABASE_PASSWORD=TpiPostgres2026!
 DATABASE_SCHEMA=tpi
+APP_ENV=development
+```
+
+### 5. Ejecutar la aplicación
+
+```bash
+streamlit run app/streamlit_app.py
+```
+
+La aplicación se abrirá en `http://localhost:8501`
+
+---
+
+## 🚀 Ejecutar en Docker
+
+```bash
+# Construir imagen
+docker build -t tpi-backoffice .
+
+# Ejecutar con docker-compose (incluye PostgreSQL)
+docker-compose up
+
+# Acceder en http://localhost:8501
+```
+
+---
+
+## 📝 Uso
+
+### Registrar una Solicitud
+
+1. Ir a página **Registrar Solicitud**
+2. Completar formulario:
+   - RUT (formato: 12.345.678-5 o 12345678-5)
+   - Nombre completo
+   - Email
+   - Teléfono
+   - Fecha de nacimiento
+   - Género, Estado Civil, AFP (desplegables)
+   - Saldo AFP (opcional)
+   - Aceptar términos y políticas
+3. Enviar
+4. Confirmación aparecerá si la inserción fue exitosa
+
+### Consultar Solicitudes
+
+Ir a página **Solicitudes Registradas** para ver listado con paginación
+
+### Trazabilidad
+
+Ir a página **Trazabilidad** para ver eventos de la solicitud
+
+---
+
+## 🧪 Testing
+
+### Ejecutar pruebas unitarias
+
+```bash
+pytest tests/unit/ -v
+```
+
+### Ejecutar pruebas de integración
+
+```bash
+pytest tests/integration/ -v
+```
+
+### Ver cobertura
+
+```bash
+pytest tests/ --cov=app --cov-report=html
+```
+
+---
+
+## 📂 Estructura del Proyecto
+
+```
+tu-pension-inteligente-backoffice/
+├── app/
+│   ├── streamlit_app.py           # Entrada principal
+│   ├── pages/                     # Páginas Streamlit
+│   │   ├── 1_registrar_solicitud.py
+│   │   ├── 2_solicitudes_registradas.py
+│   │   └── 3_trazabilidad.py
+│   ├── components/                # Componentes reutilizables
+│   ├── config/                    # Configuración (settings)
+│   ├── database/                  # Conexión y pool
+│   ├── models/                    # Modelos Pydantic
+│   ├── repositories/              # Acceso a datos
+│   ├── services/                  # Lógica de negocio
+│   ├── validators/                # Validadores (RUT, email, etc)
+│   └── security/                  # Enmascaramiento de datos
+├── tests/
+│   ├── unit/                      # Pruebas unitarias
+│   ├── integration/               # Pruebas de integración
+│   ├── e2e/                       # Pruebas end-to-end
+│   └── security/                  # Pruebas de seguridad
+├── docs/                          # Documentación
+├── scripts/                       # Scripts de utilidad
+├── pyproject.toml                 # Dependencias
+├── Dockerfile                     # Containerización
+├── docker-compose.yml             # Orquestación
+└── README.md                      # Este archivo
+```
+
+---
+
+## 🔗 Dependencias Principales
+
+- **streamlit** - Framework web interactivo
+- **psycopg** - Driver PostgreSQL
+- **sqlalchemy** - ORM
+- **pydantic** - Validación de datos
+- **python-dotenv** - Manejo de variables de entorno
+
+---
+
+## 📚 Documentación Adicional
+
+- [Validación MVP1](docs/MVP1_VALIDACION.md) - Reporte completo de validación
+- [Arquitectura](docs/ARCHITECTURE.md) - Diseño del sistema
+- [Decisiones Técnicas](docs/DECISIONES_TECNICAS.md) - Justificación de choices
+- [Deployment](docs/DEPLOYMENT.md) - Guía de despliegue
+- [Seguridad](SECURITY.md) - Política de seguridad
+- [Contribución](CONTRIBUTING.md) - Cómo contribuir
+
+---
+
+## 🐛 Problemas Conocidos
+
+### MVP1 (Conocidos y Resueltos)
+- ✅ Credenciales de BD (resuelto: actualizado a user postgres)
+- ✅ psycopg_pool no disponible (resuelto: instalado paquete)
+- ✅ URL de conexión con prefijo SQLAlchemy (resuelto: formato correcto postgresql://)
+- ✅ Columnas faltantes en INSERT (resuelto: agregadas fecha_ingreso, origen_lead, etc)
+
+### Limitaciones Actuales
+- ⚠️ Sin autenticación (MVP - se implementará en producción)
+- ⚠️ Sin rate limiting (MVP - se implementará en producción)
+- ⚠️ Sin cifrado de datos en tránsito (MVP - HTTPS en producción)
+
+---
+
+## 🤝 Contribución
+
+Por favor consulta [CONTRIBUTING.md](CONTRIBUTING.md) para:
+- Proceso de contribución
+- Estándares de código
+- Cómo reportar bugs
+- Cómo sugerir features
+
+## 📄 Licencia
+
+MIT - Ver [LICENSE](LICENSE)
+
+---
+
+## 📞 Contacto
+
+- **Equipo:** Tu Pensión Inteligente
+- **Email:** dev@tupensioninteligente.cl
+- **GitHub:** [ArriagadaInc/tpi-backend](https://github.com/ArriagadaInc/tpi-backend)
 ```
 
 ### 5. Verificar conexión a PostgreSQL
