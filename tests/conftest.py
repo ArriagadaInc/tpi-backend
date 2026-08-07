@@ -5,11 +5,12 @@ from __future__ import annotations
 
 import os
 import sys
-from pathlib import Path
 
 import pytest
 
-project_root = Path(__file__).parent.parent
+from tests.streamlit_test_utils import PROJECT_ROOT, build_app_test
+
+project_root = PROJECT_ROOT
 sys.path.insert(0, str(project_root))
 
 os.environ.setdefault("APP_ENV", "testing")
@@ -26,3 +27,9 @@ def reset_runtime_state() -> None:
     yield
     reset_pool()
     clear_settings_cache()
+
+
+@pytest.fixture(scope="session")
+def streamlit_app_factory():
+    """Build AppTest instances from repository-relative paths."""
+    return build_app_test

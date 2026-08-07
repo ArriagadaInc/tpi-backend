@@ -8,7 +8,6 @@ Validación de:
 """
 
 import pytest
-from streamlit.testing.v1 import AppTest
 
 
 @pytest.mark.e2e
@@ -16,9 +15,9 @@ class TestStreamlitAppMain:
     """Tests para página principal."""
 
     @pytest.fixture
-    def app(self):
+    def app(self, streamlit_app_factory):
         """Instancia la app principal."""
-        return AppTest.from_file("app/streamlit_app.py")
+        return streamlit_app_factory("app/streamlit_app.py")
 
     def test_app_loads_successfully(self, app):
         """Test que la app se carga sin errores."""
@@ -72,9 +71,9 @@ class TestStreamlitAppSidebar:
     """Tests para sidebar."""
 
     @pytest.fixture
-    def app(self):
+    def app(self, streamlit_app_factory):
         """Instancia la app principal."""
-        return AppTest.from_file("app/streamlit_app.py")
+        return streamlit_app_factory("app/streamlit_app.py")
 
     def test_sidebar_rendered(self, app):
         """Test que sidebar se renderiza."""
@@ -96,9 +95,9 @@ class TestStreamlitAppMetrics:
     """Tests para métricas del dashboard."""
 
     @pytest.fixture
-    def app(self):
+    def app(self, streamlit_app_factory):
         """Instancia la app principal."""
-        return AppTest.from_file("app/streamlit_app.py")
+        return streamlit_app_factory("app/streamlit_app.py")
 
     def test_metrics_rendered(self, app):
         """Test que métricas se renderizan."""
