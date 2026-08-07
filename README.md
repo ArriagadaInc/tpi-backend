@@ -14,7 +14,7 @@ Este es un MVP (Producto Mínimo Viable) en Streamlit que demuestra la capacidad
 
 ## ⚠️ Importante
 
-- **Ambiente**: Demostrativo local únicamente
+- **Ambiente**: Desarrollo local y aws-dev por configuración
 - **Datos**: Usar solo datos ficticios
 - **Seguridad**: MVP sin autenticación (se implementará en producción)
 - **Base de datos**: Conecta al esquema TPI del repositorio `tpi-data-pipeline`
@@ -90,10 +90,13 @@ DATABASE_NAME=tpi_local
 DATABASE_USER=postgres
 DATABASE_PASSWORD=<tu_contraseña_postgres>
 DATABASE_SCHEMA=tpi
-APP_ENV=development
+APP_ENV=local
+DATABASE_SSLMODE=disable
 ```
 
-⚠️ **IMPORTANTE:** No commits las credenciales en Git. Usar `git update-index --assume-unchanged .env`
+⚠️ **IMPORTANTE:** No commits las credenciales en Git. Usar git update-index --assume-unchanged .env`r
+
+Para configurar ws-dev o producción, ver [docs/AWS_RDS_CONNECTION.md](docs/AWS_RDS_CONNECTION.md).
 
 ### 5. Ejecutar la aplicación
 
@@ -142,7 +145,7 @@ Ir a página **Solicitudes Registradas** para ver listado con paginación
 
 ### Trazabilidad
 
-Ir a página **Trazabilidad** para ver eventos de la solicitud
+Ir a página **Trazabilidad** para ver métricas y trazabilidad básica de solicitudes
 
 ---
 
@@ -214,6 +217,7 @@ tu-pension-inteligente-backoffice/
 ## 📚 Documentación Adicional
 
 - [Validación MVP1](docs/MVP1_VALIDACION.md) - Reporte completo de validación
+- [Conexión PostgreSQL y AWS RDS](docs/AWS_RDS_CONNECTION.md) - Configuración por ambiente, SSL, permisos, pruebas y rollback
 - [Arquitectura](docs/ARCHITECTURE.md) - Diseño del sistema
 - [Decisiones Técnicas](docs/DECISIONES_TECNICAS.md) - Justificación de choices
 - [Deployment](docs/DEPLOYMENT.md) - Guía de despliegue
@@ -421,8 +425,8 @@ Teléfono: +56 9 **** 5678
 1. **Sin autenticación** - Acceso abierto (requiere autenticación en producción)
 2. **Sin edición** - Solo registro y consulta
 3. **Sin eliminación** - Registros permanentes
-4. **Sin auditoría de eventos** - Solo metadatos (`created_at`, `estado_lead`)
-5. **Sin integración AWS** - Local únicamente (preparado para migración)
+4. **Sin auditoría operativa expuesta en la UI** - El MVP muestra metadatos básicos (`created_at`, `estado_lead`) aunque el esquema contiene tablas operativas adicionales no consumidas por esta app
+5. **Conexión AWS dev soportada por configuración** - La app puede conectarse a Amazon RDS mediante variables de entorno y SSL; el despliegue productivo sigue pendiente
 6. **Sin envío de correos** - No se implementa notificación
 7. **Solo lectura del detalle** - Vista demostrativa de datos
 
@@ -436,7 +440,7 @@ Teléfono: +56 9 **** 5678
 5. [ ] Auditoría completa de eventos
 
 ### Integración con AWS
-1. [ ] Reemplazar PostgreSQL local con Amazon RDS
+1. [ ] Promover la configuración validada de `aws-dev` a un despliegue administrado
 2. [ ] Usar AWS Secrets Manager para credenciales
 3. [ ] Desplegar con ECS o AppRunner
 4. [ ] Configurar API Gateway

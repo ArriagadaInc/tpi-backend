@@ -68,7 +68,9 @@ def show_loading_spinner(message: str = "Cargando..."):
 
 
 def render_solicitud_table(
-    solicitudes: list[dict[str, Any]], on_select_callback=None
+    solicitudes: list[dict[str, Any]],
+    on_select_callback=None,
+    key_prefix: str = "solicitudes",
 ) -> str | None:
     """
     Renderiza tabla de solicitudes con botones de acción.
@@ -106,6 +108,7 @@ def render_solicitud_table(
 
     for solicitud in solicitudes:
         cols = st.columns([1, 2, 2, 1.5, 1, 1])
+        button_key = f"{key_prefix}_ver_{solicitud.get('id_lead', 'N/A')}"
 
         with cols[0]:
             st.code(solicitud.get("rut", "N/A"), language=None)
@@ -130,7 +133,7 @@ def render_solicitud_table(
                 st.warning(estado)
 
         with cols[5]:
-            if st.button("📋", key=f"ver_{solicitud.get('id_lead', 'N/A')}", help="Ver detalle"):
+            if st.button("\U0001f4cb", key=button_key, help="Ver detalle"):
                 selected_id = solicitud.get("id_lead")
                 if on_select_callback:
                     on_select_callback(selected_id)

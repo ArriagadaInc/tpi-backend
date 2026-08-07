@@ -146,7 +146,7 @@ REGION="us-east-1"
 DB_INSTANCE_ID="tpi-backoffice-prod"
 DB_NAME="tpi_prod"
 DB_USER="tpi_prod_user"
-DB_PASSWORD="GenerarContraseñaSegura123!@#"
+DB_PASSWORD="<inject-at-runtime>"
 
 # Crear instancia
 aws rds create-db-instance \

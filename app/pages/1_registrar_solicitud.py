@@ -21,6 +21,7 @@ from app.components import (
     show_info_message,
     show_success_message,
 )
+from app.database import get_safe_error_message
 from app.models.solicitud import (
     ConsentimientosData,
     PersonaData,
@@ -62,7 +63,7 @@ def load_catalogs():
             "afps": {},
             "generos": {},
             "estados_civiles": {},
-            "error": str(e),
+            "error": get_safe_error_message(e),
         }
 
 
@@ -318,7 +319,7 @@ def main():
             except Exception as e:
                 show_error_message(
                     "Error al Registrar Solicitud",
-                    f"Ocurrió un error inesperado: {str(e)}",
+                    get_safe_error_message(e),
                 )
 
 

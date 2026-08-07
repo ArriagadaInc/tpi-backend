@@ -14,6 +14,7 @@ import pandas as pd
 import streamlit as st
 
 from app.components import show_error_message, show_header
+from app.database import get_safe_error_message
 from app.services.solicitud_service import SolicitudService
 
 st.set_page_config(
@@ -186,7 +187,7 @@ def main():
     except Exception as e:
         show_error_message(
             "Error al Cargar Métricas",
-            f"No se pudieron cargar las estadísticas: {str(e)}",
+            get_safe_error_message(e),
         )
 
 

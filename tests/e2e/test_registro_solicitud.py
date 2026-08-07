@@ -9,7 +9,6 @@ Validación de:
 """
 
 import pytest
-from streamlit.testing.v1 import AppTest
 
 
 @pytest.mark.e2e
@@ -17,9 +16,9 @@ class TestRegistroSolicitudForm:
     """Tests para formulario de registro."""
 
     @pytest.fixture
-    def app(self):
+    def app(self, streamlit_app_factory):
         """Instancia la página de registro."""
-        return AppTest.from_file("app/pages/1_registrar_solicitud.py")
+        return streamlit_app_factory("app/pages/1_registrar_solicitud.py")
 
     def test_page_loads_successfully(self, app):
         """Test que página se carga sin errores."""
@@ -88,9 +87,9 @@ class TestRegistroSolicitudValidation:
     """Tests para validación del formulario."""
 
     @pytest.fixture
-    def app(self):
+    def app(self, streamlit_app_factory):
         """Instancia la página de registro."""
-        return AppTest.from_file("app/pages/1_registrar_solicitud.py")
+        return streamlit_app_factory("app/pages/1_registrar_solicitud.py")
 
     def test_empty_rut_validation(self, app):
         """Test validación de RUT vacío."""
@@ -130,9 +129,9 @@ class TestRegistroSolicitudSubmit:
     """Tests para envío de solicitud."""
 
     @pytest.fixture
-    def app(self):
+    def app(self, streamlit_app_factory):
         """Instancia la página de registro."""
-        return AppTest.from_file("app/pages/1_registrar_solicitud.py")
+        return streamlit_app_factory("app/pages/1_registrar_solicitud.py")
 
     def test_form_renders_without_error(self, app):
         """Test que formulario se renderiza sin error."""
@@ -152,9 +151,9 @@ class TestRegistroSolicitudIntegration:
     """Tests integración con servicio de BD."""
 
     @pytest.fixture
-    def app(self):
+    def app(self, streamlit_app_factory):
         """Instancia la página de registro."""
-        return AppTest.from_file("app/pages/1_registrar_solicitud.py")
+        return streamlit_app_factory("app/pages/1_registrar_solicitud.py")
 
     def test_catalogs_from_database(self, app):
         """Test que catálogos se cargan desde BD."""

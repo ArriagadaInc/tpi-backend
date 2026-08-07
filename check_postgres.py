@@ -1,46 +1,44 @@
-"""Script para verificar configuración de PostgreSQL."""
+"""Administrative PostgreSQL user inspection using shared configuration."""
 
-import os
+from __future__ import annotations
+
 import psycopg
-from app.config.settings import settings
 
-def check_postgres_users():
-    """Ver usuarios de PostgreSQL."""
-    print("\n" + "="*70)
-    print("VERIFICACIÓN: Usuarios de PostgreSQL")
-    print("="*70)
-    
+from app.config import get_settings
+
+
+def check_postgres_users() -> bool:
+    print("\n" + "=" * 70)
+    print("VERIFICACION: Usuarios de PostgreSQL")
+    print("=" * 70)
+
     try:
-        # Conectar usando configuración de settings (variables de entorno)
-        password = settings.database_password or os.environ.get('DATABASE_PASSWORD', '')
-        conn = psycopg.connect(
-            host=settings.database_host,
-            port=settings.database_port,
-            user=settings.database_user,
-            password=password,
-            dbname='postgres'
-        )
-        print("✓ Conectado como postgres")
-        
-        # Ver usuarios
-        result = conn.execute("SELECT usename, usesuper FROM pg_user").fetchall()
-        print(f"\nUsuarios en PostgreSQL ({len(result)} total):")
-        for row in result:
-            super_flag = "SUPERUSER" if row[1] else ""
-            print(f"  - {row[0]} {super_flag}")
-        
-        # Ver bases de datos
-        result = conn.execute("SELECT datname FROM pg_database WHERE datname NOT LIKE 'template%'").fetchall()
-        print(f"\nBases de datos ({len(result)} total):")
-        for row in result:
-            print(f"  - {row[0]}")
-        
-        conn.close()
+        config = get_settings().database_config
+        params = config.connection_parameters()
+        params["dbname"] = "postgres"
+
+        with psycopg.connect(**params) as conn:
+            print("✓ Conexion administrativa exitosa")
+
+            result = conn.execute("SELECT usename, usesuper FROM pg_user ORDER BY usename").fetchall()
+            print(f"\nUsuarios en PostgreSQL ({len(result)} total):")
+            for row in result:
+                super_flag = "SUPERUSER" if row[1] else ""
+                print(f"  - {row[0]} {super_flag}".rstrip())
+
+            result = conn.execute(
+                "SELECT datname FROM pg_database WHERE datname NOT LIKE 'template%' ORDER BY datname"
+            ).fetchall()
+            print(f"\nBases de datos ({len(result)} total):")
+            for row in result:
+                print(f"  - {row[0]}")
+
         return True
-        
-    except Exception as e:
-        print(f"✗ Error: {e}")
+    except Exception as exc:
+        print(f"✗ Error: {exc}")
+        print("  Nota: este script requiere acceso administrativo a la base 'postgres'.")
         return False
+
 
 if __name__ == "__main__":
     check_postgres_users()

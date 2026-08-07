@@ -1,125 +1,158 @@
 """
-Health check y validación de conexión a PostgreSQL.
-
-Verifica que la base de datos esté accesible y que el esquema sea compatible.
+Database health checks for connectivity and application readiness.
 """
+
+from __future__ import annotations
 
 import logging
 from typing import Any
 
 from psycopg import sql
 
-from app.config.settings import settings
+from app.config.settings import get_settings
 from app.database.connection import get_db_connection
+from app.database.errors import DatabaseAppError, classify_database_exception
 
 logger = logging.getLogger(__name__)
 
 
+def _log_health_error(operation: str, error: DatabaseAppError) -> None:
+    logger.error(
+        "Database health check failed | env=%s | operation=%s | code=%s | detail=%s",
+        error.app_env or "unknown",
+        operation,
+        error.code,
+        error.technical_message,
+    )
+
+
 def check_database_connection() -> dict[str, Any]:
     """
-    Verificar que PostgreSQL esté accesible.
-
-    Returns:
-        Dict con keys:
-        - "connected": bool
-        - "message": str (descripción del estado)
-        - "error": str (si connected=False, descripción del error)
-        - "database": str (nombre de la base de datos)
-        - "schema": str (esquema TPI)
-
-    Ejemplo de uso:
-        health = check_database_connection()
-        if health["connected"]:
-            st.success("✅ Base de datos conectada")
-        else:
-            st.error(f"❌ {health['message']}")
+    Verify connectivity, schema visibility, table visibility, and effective user.
     """
-    try:
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                # Query de prueba simple
-                cur.execute("SELECT 1 AS test")
-                result = cur.fetchone()
 
-                if result is None or result.get("test") != 1:
-                    return {
-                        "connected": False,
-                        "message": "Base de datos no disponible",
-                        "error": "Respuesta inesperada del servidor",
-                        "database": settings.database_name,
-                        "schema": settings.database_schema,
-                    }
+    settings = get_settings()
+    schema_name = settings.database_schema
+
+    try:
+        config = settings.database_config
+        with get_db_connection(operation="healthcheck.connection") as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT
+                        1 AS ready,
+                        current_database() AS database_name,
+                        current_user AS effective_user
+                    """)
+                connection_row = cur.fetchone() or {}
+
+                cur.execute(
+                    """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM information_schema.schemata
+                        WHERE schema_name = %s
+                    ) AS schema_exists
+                    """,
+                    (schema_name,),
+                )
+                schema_row = cur.fetchone() or {}
+                schema_accessible = bool(schema_row.get("schema_exists"))
+
+                cur.execute(
+                    "SELECT to_regclass(%s) IS NOT NULL AS table_exists",
+                    (f"{schema_name}.leads",),
+                )
+                leads_row = cur.fetchone() or {}
+                leads_table_present = bool(leads_row.get("table_exists"))
+                leads_accessible = False
+
+                if leads_table_present:
+                    cur.execute(
+                        sql.SQL("SELECT 1 FROM {}.{} WHERE 1 = 0").format(
+                            sql.Identifier(schema_name),
+                            sql.Identifier("leads"),
+                        )
+                    )
+                    leads_accessible = True
 
         return {
-            "connected": True,
+            "connected": connection_row.get("ready") == 1,
             "message": "Base de datos conectada correctamente",
             "error": None,
-            "database": settings.database_name,
-            "schema": settings.database_schema,
+            "error_code": None,
+            "database": connection_row.get("database_name", config.database),
+            "schema": schema_name,
+            "effective_user": connection_row.get("effective_user"),
+            "schema_accessible": schema_accessible,
+            "leads_table_present": leads_table_present,
+            "leads_accessible": leads_accessible,
+            "sslmode": config.sslmode,
         }
 
-    except Exception as e:
-        error_msg = str(e)
-        logger.error(f"Error verificando conexión a BD: {error_msg}")
-
+    except Exception as exc:
+        error = classify_database_exception(
+            exc,
+            operation="healthcheck.connection",
+            app_env=settings.normalized_app_env,
+        )
+        _log_health_error("healthcheck.connection", error)
         return {
             "connected": False,
-            "message": "No fue posible conectar con la base de datos",
-            "error": error_msg,
-            "database": settings.database_name,
-            "schema": settings.database_schema,
+            "message": error.user_message,
+            "error": error.technical_message,
+            "error_code": error.code,
+            "database": None,
+            "schema": schema_name,
+            "effective_user": None,
+            "schema_accessible": False,
+            "leads_table_present": False,
+            "leads_accessible": False,
+            "sslmode": None,
         }
 
 
 def check_schema_exists() -> dict[str, Any]:
-    """
-    Verificar que el esquema TPI exista en PostgreSQL.
+    """Verify that the configured schema exists and contains tables."""
+    settings = get_settings()
 
-    Returns:
-        Dict con keys:
-        - "exists": bool
-        - "message": str
-        - "tables_count": int (cantidad de tablas en el esquema)
-    """
     try:
-        with get_db_connection() as conn:
+        with get_db_connection(operation="healthcheck.schema") as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT COUNT(*) as count FROM information_schema.tables
+                    SELECT COUNT(*) AS count
+                    FROM information_schema.tables
                     WHERE table_schema = %s
                     """,
                     (settings.database_schema,),
                 )
-                result = cur.fetchone()
-                tables_count = result.get("count", 0) if result else 0
+                row = cur.fetchone() or {}
+                tables_count = int(row.get("count", 0))
 
-                return {
-                    "exists": tables_count > 0,
-                    "message": f"Esquema '{settings.database_schema}' con {tables_count} tablas",
-                    "tables_count": tables_count,
-                }
+        return {
+            "exists": tables_count > 0,
+            "message": f"Schema '{settings.database_schema}' with {tables_count} tables",
+            "tables_count": tables_count,
+        }
 
-    except Exception as e:
-        logger.error(f"Error verificando esquema: {e}")
+    except Exception as exc:
+        error = classify_database_exception(
+            exc,
+            operation="healthcheck.schema",
+            app_env=settings.normalized_app_env,
+        )
+        _log_health_error("healthcheck.schema", error)
         return {
             "exists": False,
-            "message": f"Error verificando esquema: {str(e)}",
+            "message": error.user_message,
             "tables_count": 0,
         }
 
 
 def check_required_tables() -> dict[str, Any]:
-    """
-    Verificar que existan las tablas requeridas para el MVP.
-
-    Returns:
-        Dict con keys:
-        - "all_present": bool (todos las tablas requeridas existen)
-        - "required": list[str]
-        - "found": list[str]
-        - "missing": list[str]
-    """
+    """Verify that the MVP-required tables are present."""
+    settings = get_settings()
     required_tables = [
         "personas",
         "leads",
@@ -130,29 +163,37 @@ def check_required_tables() -> dict[str, Any]:
     ]
 
     try:
-        with get_db_connection() as conn:
+        with get_db_connection(operation="healthcheck.required_tables") as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    SELECT table_name FROM information_schema.tables
+                    SELECT table_name
+                    FROM information_schema.tables
                     WHERE table_schema = %s
                     """,
                     (settings.database_schema,),
                 )
                 existing_tables = {row["table_name"] for row in cur.fetchall()}
 
-        found = [t for t in required_tables if t in existing_tables]
-        missing = [t for t in required_tables if t not in existing_tables]
+        found = [table_name for table_name in required_tables if table_name in existing_tables]
+        missing = [
+            table_name for table_name in required_tables if table_name not in existing_tables
+        ]
 
         return {
-            "all_present": len(missing) == 0,
+            "all_present": not missing,
             "required": required_tables,
             "found": found,
             "missing": missing,
         }
 
-    except Exception as e:
-        logger.error(f"Error verificando tablas: {e}")
+    except Exception as exc:
+        error = classify_database_exception(
+            exc,
+            operation="healthcheck.required_tables",
+            app_env=settings.normalized_app_env,
+        )
+        _log_health_error("healthcheck.required_tables", error)
         return {
             "all_present": False,
             "required": required_tables,
@@ -162,44 +203,41 @@ def check_required_tables() -> dict[str, Any]:
 
 
 def check_catalogs() -> dict[str, Any]:
-    """
-    Verificar que los catálogos tengan datos.
+    """Verify that required catalogs contain active data."""
+    settings = get_settings()
 
-    Returns:
-        Dict con keys:
-        - "all_ready": bool
-        - "afp_count": int
-        - "genero_count": int
-        - "estado_civil_count": int
-    """
     try:
-        with get_db_connection() as conn:
+        with get_db_connection(operation="healthcheck.catalogs") as conn:
             with conn.cursor() as cur:
                 catalog_tables = {
                     "afp_count": "catalogo_afp",
                     "genero_count": "catalogo_genero",
                     "estado_civil_count": "catalogo_estado_civil",
                 }
+                results: dict[str, int] = {}
 
-                results = {}
                 for key, table_name in catalog_tables.items():
-                    query = sql.SQL("SELECT COUNT(*) AS cnt FROM {}.{} WHERE activo = TRUE").format(
-                        sql.Identifier(settings.database_schema),
-                        sql.Identifier(table_name),
+                    cur.execute(
+                        sql.SQL("SELECT COUNT(*) AS count FROM {}.{} WHERE activo = TRUE").format(
+                            sql.Identifier(settings.database_schema),
+                            sql.Identifier(table_name),
+                        )
                     )
-                    cur.execute(query)
-                    row = cur.fetchone()
-                    results[key] = row.get("cnt", 0) if row else 0
-
-        all_ready = all(v > 0 for v in results.values())
+                    row = cur.fetchone() or {}
+                    results[key] = int(row.get("count", 0))
 
         return {
-            "all_ready": all_ready,
+            "all_ready": all(value > 0 for value in results.values()),
             **results,
         }
 
-    except Exception as e:
-        logger.error(f"Error verificando catálogos: {e}")
+    except Exception as exc:
+        error = classify_database_exception(
+            exc,
+            operation="healthcheck.catalogs",
+            app_env=settings.normalized_app_env,
+        )
+        _log_health_error("healthcheck.catalogs", error)
         return {
             "all_ready": False,
             "afp_count": 0,
@@ -210,18 +248,9 @@ def check_catalogs() -> dict[str, Any]:
 
 def full_health_check() -> dict[str, Any]:
     """
-    Ejecutar un health check completo de la aplicación.
-
-    Verifica:
-    1. Conexión a PostgreSQL
-    2. Existencia del esquema
-    3. Existencia de tablas requeridas
-    4. Catálogos con datos
-
-    Returns:
-        Dict con "all_ready" y "connected" a nivel superior (usados por la
-        UI de Streamlit y los tests) además del detalle de cada check.
+    Execute a complete health check for the backoffice database dependencies.
     """
+
     connection = check_database_connection()
     schema = check_schema_exists()
     tables = check_required_tables()
@@ -229,6 +258,8 @@ def full_health_check() -> dict[str, Any]:
 
     all_ready = (
         connection["connected"]
+        and connection["schema_accessible"]
+        and connection["leads_accessible"]
         and schema["exists"]
         and tables["all_present"]
         and catalogs["all_ready"]

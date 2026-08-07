@@ -13,7 +13,6 @@ from decimal import Decimal
 from uuid import UUID
 
 import pytest
-from streamlit.testing.v1 import AppTest
 
 from app.database.connection import get_db_connection
 from app.models.solicitud import (
@@ -30,13 +29,9 @@ class TestTrazabilidadPage:
     """Tests para página de trazabilidad."""
 
     @pytest.fixture
-    def app(self):
+    def app(self, streamlit_app_factory):
         """Instancia la página de trazabilidad."""
-        app = AppTest.from_file("app/pages/3_trazabilidad.py")
-        app.default_timeout = (
-            15  # pandas/altair cold-import puede tardar > 3s en la primera corrida
-        )
-        return app
+        return streamlit_app_factory("app/pages/3_trazabilidad.py", default_timeout=15)
 
     def test_page_loads_successfully(self, app):
         """Test que página se carga sin errores."""
@@ -56,13 +51,9 @@ class TestTrazabilidadEstadisticas:
     """Tests para sección de estadísticas."""
 
     @pytest.fixture
-    def app(self):
+    def app(self, streamlit_app_factory):
         """Instancia la página de trazabilidad."""
-        app = AppTest.from_file("app/pages/3_trazabilidad.py")
-        app.default_timeout = (
-            15  # pandas/altair cold-import puede tardar > 3s en la primera corrida
-        )
-        return app
+        return streamlit_app_factory("app/pages/3_trazabilidad.py", default_timeout=15)
 
     def test_statistics_displayed(self, app):
         """Test que estadísticas se muestran."""
@@ -94,13 +85,9 @@ class TestTrazabilidadGraficos:
     """Tests para gráficos."""
 
     @pytest.fixture
-    def app(self):
+    def app(self, streamlit_app_factory):
         """Instancia la página de trazabilidad."""
-        app = AppTest.from_file("app/pages/3_trazabilidad.py")
-        app.default_timeout = (
-            15  # pandas/altair cold-import puede tardar > 3s en la primera corrida
-        )
-        return app
+        return streamlit_app_factory("app/pages/3_trazabilidad.py", default_timeout=15)
 
     def test_charts_rendered(self, app):
         """Test que gráficos se renderizan."""
@@ -130,13 +117,9 @@ class TestTrazabilidadAnalisis:
     """Tests para análisis de datos."""
 
     @pytest.fixture
-    def app(self):
+    def app(self, streamlit_app_factory):
         """Instancia la página de trazabilidad."""
-        app = AppTest.from_file("app/pages/3_trazabilidad.py")
-        app.default_timeout = (
-            15  # pandas/altair cold-import puede tardar > 3s en la primera corrida
-        )
-        return app
+        return streamlit_app_factory("app/pages/3_trazabilidad.py", default_timeout=15)
 
     def test_salary_analysis_present(self, app):
         """Test que análisis de saldo está presente."""
@@ -216,13 +199,9 @@ class TestTrazabilidadDatos:
             pass
 
     @pytest.fixture
-    def app(self):
+    def app(self, streamlit_app_factory):
         """Instancia la página de trazabilidad."""
-        app = AppTest.from_file("app/pages/3_trazabilidad.py")
-        app.default_timeout = (
-            15  # pandas/altair cold-import puede tardar > 3s en la primera corrida
-        )
-        return app
+        return streamlit_app_factory("app/pages/3_trazabilidad.py", default_timeout=15)
 
     def test_data_table_checkbox_present(self, app):
         """Test que checkbox de tabla está presente."""
@@ -254,13 +233,9 @@ class TestTrazabilidadSeguridad:
     """Tests de seguridad para trazabilidad."""
 
     @pytest.fixture
-    def app(self):
+    def app(self, streamlit_app_factory):
         """Instancia la página de trazabilidad."""
-        app = AppTest.from_file("app/pages/3_trazabilidad.py")
-        app.default_timeout = (
-            15  # pandas/altair cold-import puede tardar > 3s en la primera corrida
-        )
-        return app
+        return streamlit_app_factory("app/pages/3_trazabilidad.py", default_timeout=15)
 
     def test_no_sensitive_exposure_in_analysis(self, app):
         """Test que análisis no expone datos sensibles sin autorización."""
