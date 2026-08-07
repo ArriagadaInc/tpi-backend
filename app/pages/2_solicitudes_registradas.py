@@ -1,12 +1,8 @@
 """
-Página para consultar y visualizar solicitudes registradas.
-
-Permite:
-- Buscar por RUT
-- Listar solicitudes con paginación
-- Ver detalles de una solicitud
-- Filtros opcionales
+Page to list and search registered requests.
 """
+
+from __future__ import annotations
 
 from uuid import UUID
 
@@ -19,6 +15,7 @@ from app.components import (
     show_pagination_info,
     show_solicitud_detalle,
 )
+from app.database import get_safe_error_message
 from app.services.solicitud_service import SolicitudService
 
 st.set_page_config(
@@ -30,115 +27,87 @@ st.set_page_config(
 
 @st.cache_resource
 def get_service() -> SolicitudService:
-    """Obtiene instancia del servicio."""
     return SolicitudService()
 
 
-def main():
-    """Función principal."""
+def main() -> None:
     show_header()
 
     st.title("🔍 Solicitudes Registradas")
-
     st.markdown("""
-    Busca y visualiza todas las solicitudes de simulación registradas en el sistema.
-    """)
+        Busca y visualiza todas las solicitudes de simulacion registradas en el sistema.
+        """)
 
-    # Tabs para diferentes vistas
-    tab1, tab2 = st.tabs(["📊 Listar Solicitudes", "🔎 Buscar por RUT"])
+    tab_listado, tab_busqueda = st.tabs(["📊 Listar Solicitudes", "🔎 Buscar por RUT"])
 
-    # TAB 1: Listar Solicitudes
-    with tab1:
+    with tab_listado:
         st.subheader("Todas las Solicitudes")
+        page_size_col, _, _ = st.columns(3)
+        with page_size_col:
+            page_size = st.selectbox("Registros por pagina", options=[5, 10, 20, 50], index=1)
 
-        # Controles de paginación
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            page_size = st.selectbox(
-                "Registros por página",
-                options=[5, 10, 20, 50],
-                index=1,
-            )
-
-        with col2:
-            # Placeholder para filtro de estado (futuro)
-            pass
-
-        with col3:
-            # Placeholder para filtro de rango de fechas (futuro)
-            pass
-
-        # Obtener solicitudes
         try:
             service = get_service()
-
-            # Inicializar sesión si no existe
             if "current_page" not in st.session_state:
                 st.session_state.current_page = 1
 
-            # Obtener datos
             result = service.get_solicitudes_lista(
-                page=st.session_state.current_page, page_size=page_size, masked=True
+                page=st.session_state.current_page,
+                page_size=page_size,
+                masked=True,
             )
-
             solicitudes = result.get("solicitudes", [])
             total = result.get("total", 0)
             total_pages = result.get("total_pages", 0)
 
             if total == 0:
-                st.info("No hay solicitudes registradas aún.")
+                st.info("No hay solicitudes registradas aun.")
             else:
-                # Mostrar información de paginación
                 show_pagination_info(st.session_state.current_page, page_size, total)
 
-                # Renderizar tabla
-                def on_detail_click(id_lead):
+                def on_detail_click(id_lead: str) -> None:
                     st.session_state.selected_solicitud_id = id_lead
                     st.session_state.show_detail = True
 
-                render_solicitud_table(solicitudes, on_select_callback=on_detail_click)
+                render_solicitud_table(
+                    solicitudes,
+                    on_select_callback=on_detail_click,
+                    key_prefix="listado",
+                )
 
-                # Controles de paginación
-                col1, col2, col3, col4, col5 = st.columns(5)
+                nav_col1, nav_col2, nav_col3, nav_col4, nav_col5 = st.columns(5)
+                with nav_col1:
+                    if st.session_state.current_page > 1 and st.button(
+                        "⬅️ Anterior",
+                        use_container_width=True,
+                    ):
+                        st.session_state.current_page -= 1
+                        st.rerun()
 
-                with col1:
-                    if st.session_state.current_page > 1:
-                        if st.button("⬅️ Anterior", use_container_width=True):
-                            st.session_state.current_page -= 1
-                            st.rerun()
+                with nav_col2:
+                    st.caption(f"Pagina {st.session_state.current_page} de {total_pages}")
 
-                with col2:
-                    st.caption(f"Página {st.session_state.current_page} de {total_pages}")
+                with nav_col5:
+                    if st.session_state.current_page < total_pages and st.button(
+                        "Siguiente ➡️",
+                        use_container_width=True,
+                    ):
+                        st.session_state.current_page += 1
+                        st.rerun()
 
-                with col3:
-                    pass
-
-                with col4:
-                    pass
-
-                with col5:
-                    if st.session_state.current_page < total_pages:
-                        if st.button("Siguiente ➡️", use_container_width=True):
-                            st.session_state.current_page += 1
-                            st.rerun()
-
-        except Exception as e:
+        except Exception as exc:
             show_error_message(
                 "Error al Cargar Solicitudes",
-                f"No se pudieron cargar las solicitudes: {str(e)}",
+                get_safe_error_message(exc),
             )
 
-    # TAB 2: Buscar por RUT
-    with tab2:
+    with tab_busqueda:
         st.subheader("Buscar Solicitudes por RUT")
-
         search_rut = st.text_input(
             "Ingresa RUT a buscar",
             placeholder="12345678-5",
             help="Formato: 12345678-5 o 12.345.678-5",
         )
-
         search_button = st.button("🔎 Buscar", use_container_width=True)
 
         if search_button and search_rut:
@@ -151,40 +120,40 @@ def main():
                 else:
                     st.success(f"Se encontraron {len(solicitudes)} solicitud(es)")
 
-                    # Mostrar tabla de resultados
-                    def on_detail_click(id_lead):
+                    def on_detail_click(id_lead: str) -> None:
                         st.session_state.selected_solicitud_id = id_lead
                         st.session_state.show_detail = True
 
-                    render_solicitud_table(solicitudes, on_select_callback=on_detail_click)
+                    render_solicitud_table(
+                        solicitudes,
+                        on_select_callback=on_detail_click,
+                        key_prefix="busqueda",
+                    )
 
-            except Exception as e:
-                show_error_message("Error en la Búsqueda", f"Ocurrió un error: {str(e)}")
+            except Exception as exc:
+                show_error_message("Error en la Busqueda", get_safe_error_message(exc))
 
-    # Mostrar detalle si está seleccionado
     st.markdown("---")
 
     if st.session_state.get("show_detail") and st.session_state.get("selected_solicitud_id"):
         try:
             service = get_service()
             id_lead = st.session_state.selected_solicitud_id
-
-            # Obtener detalle sin enmascaramiento (para admin)
-            # En producción habría que verificar permisos
             solicitud = service.get_solicitud_detalle_masked(UUID(str(id_lead)))
 
             if solicitud:
                 show_solicitud_detalle(solicitud)
-
-                # Botón para cerrar detalle
                 if st.button("✖️ Cerrar Detalle", use_container_width=True):
                     st.session_state.show_detail = False
                     st.rerun()
             else:
-                st.error("No se encontró la solicitud seleccionada")
+                st.error("No se encontro la solicitud seleccionada")
 
-        except Exception as e:
-            show_error_message("Error al Cargar Detalle", f"No se pudo cargar el detalle: {str(e)}")
+        except Exception as exc:
+            show_error_message(
+                "Error al Cargar Detalle",
+                get_safe_error_message(exc),
+            )
 
 
 if __name__ == "__main__":

@@ -161,7 +161,7 @@ DATABASE_PASSWORD=change_me
 
 # DESPUÉS
 DATABASE_USER=postgres
-DATABASE_PASSWORD=TpiPostgres2026!
+DATABASE_PASSWORD=<redacted-rotated-secret>
 ```
 
 **Archivo modificado:** `.env`  

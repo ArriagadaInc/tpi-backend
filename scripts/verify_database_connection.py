@@ -1,123 +1,104 @@
-"""
-Script de verificación de conexión a PostgreSQL.
+"""CLI verification for the configured PostgreSQL connection."""
 
-Ejecutar antes de iniciar la aplicación para verificar que:
-1. PostgreSQL está accesible
-2. El esquema TPI existe
-3. Las tablas requeridas existen
-4. Los catálogos tienen datos
-"""
+from __future__ import annotations
 
 import logging
 import sys
 
-from app.config.settings import settings
-from app.database import (
+from app.config import get_settings
+from app.database import close_pool
+from app.database.errors import DatabaseAppError, classify_database_exception
+from app.database.healthcheck import (
     check_catalogs,
     check_database_connection,
     check_required_tables,
-    check_schema_exists,
-    close_pool,
-    initialize_pool,
 )
 
-# Configurar logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
 )
 logger = logging.getLogger(__name__)
 
 
-def main():
-    """Ejecutar verificación completa."""
+def main() -> bool:
     print("\n" + "=" * 70)
-    print("Tu Pensión Inteligente - Verificación de Base de Datos")
+    print("Tu Pension Inteligente - Verificacion de Base de Datos")
     print("=" * 70)
 
-    # Mostrar configuración (sin credenciales)
-    print("\nConfiguración:")
-    print(f"  Ambiente: {settings.app_env}")
-    print(f"  Base de datos: {settings.database_name}")
-    print(f"  Schema: {settings.database_schema}")
-    print(f"  Host: {settings.database_host}:{settings.database_port}")
-    print()
-
-    # Inicializar pool
     try:
-        initialize_pool()
-    except Exception as e:
-        logger.error(f"Error inicializando pool: {e}")
-        print("\n❌ ERROR: No se pudo inicializar el pool de conexiones")
-        print(f"   {e}")
+        settings = get_settings()
+        config = settings.database_config
+    except Exception as exc:
+        error = classify_database_exception(exc, operation="verify_database_connection")
+        print("\n[FAIL] No se pudo resolver la configuracion de base de datos")
+        print(f"   {error.user_message}")
+        print(f"   Detalle tecnico: {error.technical_message}")
         return False
+
+    print("\nConfiguracion efectiva:")
+    print(f"  Ambiente: {config.app_env}")
+    print(f"  Origen: {config.source}")
+    print(f"  Objetivo: {config.host}:{config.port}/{config.database}")
+    print(f"  Usuario esperado: {config.user}")
+    print(f"  Esquema: {config.schema}")
+    print(f"  SSL: {config.sslmode}")
+    print(f"  Pool: {config.pool_min_size}-{config.pool_max_size}")
 
     all_checks_passed = True
 
-    # 1. Verificar conexión
-    print("1. Verificando conexión a PostgreSQL...")
-    health = check_database_connection()
-    if health["connected"]:
-        print(f"   ✅ {health['message']}")
-    else:
-        print(f"   ❌ {health['message']}")
-        print(f"      Error: {health['error']}")
-        all_checks_passed = False
+    try:
+        print("\n1. Verificando conectividad y acceso...")
+        health = check_database_connection()
+        if health["connected"]:
+            print(f"   [OK] {health['message']}")
+            print(f"   Usuario efectivo: {health['effective_user']}")
+            print(f"   Esquema accesible: {health['schema_accessible']}")
+            print(f"   tpi.leads accesible: {health['leads_accessible']}")
+        else:
+            print(f"   [FAIL] {health['message']}")
+            print(f"   Codigo: {health['error_code']}")
+            print(f"   Detalle tecnico: {health['error']}")
+            all_checks_passed = False
 
-    if not health["connected"]:
+        print("\n2. Verificando tablas requeridas...")
+        tables = check_required_tables()
+        print(f"   Encontradas: {len(tables['found'])}/{len(tables['required'])}")
+        for table_name in tables["found"]:
+            print(f"     [OK] {table_name}")
+        for table_name in tables["missing"]:
+            print(f"     [FAIL] {table_name}")
+            all_checks_passed = False
+
+        print("\n3. Verificando catalogos...")
+        catalogs = check_catalogs()
+        print(f"   AFP activas: {catalogs['afp_count']}")
+        print(f"   Generos activos: {catalogs['genero_count']}")
+        print(f"   Estados civiles activos: {catalogs['estado_civil_count']}")
+        if not catalogs["all_ready"]:
+            all_checks_passed = False
+
+    except DatabaseAppError as error:
+        logger.error(
+            "Verification failed | operation=%s | code=%s | detail=%s",
+            error.operation,
+            error.code,
+            error.technical_message,
+        )
+        print("\n[FAIL] Fallo la verificacion operativa")
+        print(f"   {error.user_message}")
+        print(f"   Detalle tecnico: {error.technical_message}")
+        all_checks_passed = False
+    finally:
         close_pool()
-        return False
 
-    # 2. Verificar esquema
-    print("\n2. Verificando esquema TPI...")
-    schema_check = check_schema_exists()
-    if schema_check["exists"]:
-        print(f"   ✅ {schema_check['message']}")
-    else:
-        print("   ❌ Esquema no encontrado")
-        all_checks_passed = False
-
-    if not schema_check["exists"]:
-        close_pool()
-        return False
-
-    # 3. Verificar tablas requeridas
-    print("\n3. Verificando tablas requeridas...")
-    tables_check = check_required_tables()
-    print(f"   Encontradas: {len(tables_check['found'])}/{len(tables_check['required'])}")
-    for table in tables_check["found"]:
-        print(f"     ✅ {table}")
-    for table in tables_check["missing"]:
-        print(f"     ❌ {table}")
-        all_checks_passed = False
-
-    # 4. Verificar catálogos
-    print("\n4. Verificando catálogos...")
-    catalogs_check = check_catalogs()
-    print(f"   AFP: {catalogs_check['afp_count']} opciones activas", end="")
-    print(" ✅" if catalogs_check["afp_count"] > 0 else " ❌")
-    print(f"   Género: {catalogs_check['genero_count']} opciones activas", end="")
-    print(" ✅" if catalogs_check["genero_count"] > 0 else " ❌")
-    print(
-        f"   Estado Civil: {catalogs_check['estado_civil_count']} opciones activas",
-        end="",
-    )
-    print(" ✅" if catalogs_check["estado_civil_count"] > 0 else " ❌")
-
-    if not catalogs_check["all_ready"]:
-        all_checks_passed = False
-
-    # Resumen
     print("\n" + "=" * 70)
     if all_checks_passed:
-        print("✅ TODAS LAS VERIFICACIONES PASARON CORRECTAMENTE")
-        print("   La aplicación está lista para iniciar.")
+        print("[OK] TODAS LAS VERIFICACIONES PASARON CORRECTAMENTE")
     else:
-        print("❌ ALGUNAS VERIFICACIONES FALLARON")
-        print("   Revisa los errores arriba antes de continuar.")
+        print("[FAIL] ALGUNAS VERIFICACIONES FALLARON")
     print("=" * 70 + "\n")
 
-    close_pool()
     return all_checks_passed
 
 

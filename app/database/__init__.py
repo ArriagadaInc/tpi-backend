@@ -1,11 +1,26 @@
-"""Módulo de base de datos."""
+"""Database layer exports."""
 
 from app.database.connection import (
     close_pool,
     execute_insert,
     execute_query,
+    get_connection,
     get_db_connection,
     initialize_pool,
+    reset_pool,
+)
+from app.database.errors import (
+    DatabaseAppError,
+    DatabaseAuthenticationError,
+    DatabaseConfigurationError,
+    DatabaseDnsError,
+    DatabasePoolExhaustedError,
+    DatabaseQueryError,
+    DatabaseSSLError,
+    DatabaseTimeoutError,
+    DatabaseUnavailableError,
+    classify_database_exception,
+    get_safe_error_message,
 )
 from app.database.healthcheck import (
     check_catalogs,
@@ -16,8 +31,21 @@ from app.database.healthcheck import (
 )
 
 __all__ = [
+    "DatabaseAppError",
+    "DatabaseAuthenticationError",
+    "DatabaseConfigurationError",
+    "DatabaseDnsError",
+    "DatabasePoolExhaustedError",
+    "DatabaseQueryError",
+    "DatabaseSSLError",
+    "DatabaseTimeoutError",
+    "DatabaseUnavailableError",
+    "classify_database_exception",
+    "get_safe_error_message",
     "initialize_pool",
     "close_pool",
+    "reset_pool",
+    "get_connection",
     "get_db_connection",
     "execute_query",
     "execute_insert",

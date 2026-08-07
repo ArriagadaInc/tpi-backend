@@ -1,175 +1,220 @@
 """
-Gestión de conexión a PostgreSQL.
-
-Proporciona pool de conexiones, manejo de transacciones y contextos
-para asegurar que las conexiones se cierren correctamente.
+PostgreSQL connection and pool management.
 """
+
+from __future__ import annotations
 
 import logging
 from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any
+from threading import Lock
+from typing import Any, cast
 
 import psycopg
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
-from app.config.settings import settings
+from app.config.settings import DatabaseConnectionConfig, get_settings
+from app.database.errors import DatabaseAppError, classify_database_exception
 
 logger = logging.getLogger(__name__)
 
 DbRow = dict[str, Any]
 DbConnection = psycopg.Connection[DbRow]
 
-# Pool global de conexiones
 _connection_pool: ConnectionPool[DbConnection] | None = None
+_pool_signature: tuple[str, ...] | None = None
+_pool_lock = Lock()
 
 
-def initialize_pool() -> None:
-    """
-    Inicializar el pool de conexiones a PostgreSQL.
-
-    Se debe llamar al inicio de la aplicación.
-    """
-    global _connection_pool
-
-    if _connection_pool is not None:
-        logger.warning("Pool de conexiones ya inicializado")
-        return
+def _get_database_config() -> DatabaseConnectionConfig:
+    settings = get_settings()
 
     try:
-        db_url = settings.get_database_url()
-        _connection_pool = ConnectionPool(
-            db_url,
-            kwargs={"row_factory": dict_row},
-            min_size=1,
-            max_size=settings.database_pool_size,
-            max_idle=settings.database_pool_timeout,
-            open=False,  # Abierto manualmente
-        )
-        _connection_pool.open()
-        logger.info("Pool de conexiones inicializado exitosamente")
-    except Exception as e:
-        logger.error(f"Error inicializando pool de conexiones: {e}")
-        raise
+        return settings.database_config
+    except Exception as exc:  # pragma: no cover - exercised via callers
+        raise classify_database_exception(
+            exc,
+            operation="database_config",
+            app_env=settings.normalized_app_env,
+        ) from exc
+
+
+def _log_database_error(operation: str, error: DatabaseAppError) -> None:
+    logger.error(
+        "Database operation failed | env=%s | operation=%s | code=%s | detail=%s",
+        error.app_env or "unknown",
+        operation,
+        error.code,
+        error.technical_message,
+    )
+
+
+def _build_pool(config: DatabaseConnectionConfig) -> ConnectionPool[DbConnection]:
+    pool = ConnectionPool(
+        conninfo=config.conninfo(),
+        kwargs={"row_factory": dict_row},
+        min_size=config.pool_min_size,
+        max_size=config.pool_max_size,
+        timeout=float(config.pool_timeout),
+        name=f"tpi-backoffice-{config.app_env}",
+        open=False,
+    )
+    pool.open(wait=True, timeout=float(config.pool_timeout))
+    return cast("ConnectionPool[DbConnection]", pool)
+
+
+def initialize_pool(force: bool = False) -> None:
+    """
+    Initialize the shared connection pool.
+
+    The pool is reused across Streamlit reruns inside the same process.
+    """
+
+    global _connection_pool, _pool_signature
+
+    config = _get_database_config()
+    desired_signature = config.pool_signature()
+
+    with _pool_lock:
+        if _connection_pool is not None and _pool_signature == desired_signature and not force:
+            return
+
+        if _connection_pool is not None:
+            _connection_pool.close()
+            _connection_pool = None
+            _pool_signature = None
+
+        try:
+            _connection_pool = _build_pool(config)
+            _pool_signature = desired_signature
+            logger.info(
+                "Database pool initialized | env=%s | target=%s:%s/%s | sslmode=%s | pool=%s-%s",
+                config.app_env,
+                config.host,
+                config.port,
+                config.database,
+                config.sslmode,
+                config.pool_min_size,
+                config.pool_max_size,
+            )
+        except Exception as exc:
+            error = classify_database_exception(
+                exc,
+                operation="initialize_pool",
+                app_env=config.app_env,
+            )
+            _log_database_error("initialize_pool", error)
+            raise error from exc
 
 
 def close_pool() -> None:
-    """
-    Cerrar el pool de conexiones.
+    """Close the shared connection pool."""
 
-    Se debe llamar al terminar la aplicación.
-    """
-    global _connection_pool
+    global _connection_pool, _pool_signature
 
-    if _connection_pool is None:
-        return
+    with _pool_lock:
+        if _connection_pool is None:
+            return
 
-    try:
         _connection_pool.close()
         _connection_pool = None
-        logger.info("Pool de conexiones cerrado")
-    except Exception as e:
-        logger.error(f"Error cerrando pool: {e}")
+        _pool_signature = None
+        logger.info("Database pool closed")
 
 
-def get_connection() -> DbConnection:
-    """
-    Obtener una conexión del pool.
+def reset_pool() -> None:
+    """Alias used by tests to reset module state."""
+    close_pool()
 
-    Inicializa el pool automáticamente si aún no fue inicializado
-    (necesario para Streamlit, que no llama a initialize_pool() al arrancar).
 
-    Retorna:
-        Conexión psycopg con row_factory = dict_row
+def get_connection(timeout: float | None = None) -> DbConnection:
+    """Acquire a connection from the shared pool."""
 
-    Raises:
-        psycopg.OperationalError: Si no se puede conectar a la BD
-    """
-    global _connection_pool
-    if _connection_pool is None:
-        initialize_pool()
-
+    initialize_pool()
     pool = _connection_pool
-    if pool is None:
-        raise RuntimeError("El pool de conexiones no pudo inicializarse")
 
-    return pool.getconn()
+    if pool is None:
+        raise RuntimeError("The database connection pool is not initialized")
+
+    config = _get_database_config()
+
+    try:
+        return cast("ConnectionPool[DbConnection]", pool).getconn(timeout=timeout)
+    except Exception as exc:
+        error = classify_database_exception(
+            exc,
+            operation="get_connection",
+            app_env=config.app_env,
+        )
+        _log_database_error("get_connection", error)
+        raise error from exc
 
 
 def return_connection(conn: DbConnection) -> None:
-    """
-    Devolver una conexión al pool.
+    """Return a connection to the pool, or close it if the pool no longer exists."""
+    pool = _connection_pool
 
-    Args:
-        conn: Conexión a devolver
-    """
-    if _connection_pool is None:
-        if conn:
-            conn.close()
+    if pool is None:
+        conn.close()
         return
 
-    _connection_pool.putconn(conn)
+    try:
+        pool.putconn(conn)
+    except Exception:
+        conn.close()
+        raise
+
+
+def _reset_connection_state(conn: DbConnection) -> None:
+    try:
+        if conn.info.transaction_status != psycopg.pq.TransactionStatus.IDLE:
+            conn.rollback()
+    except Exception:
+        conn.close()
 
 
 @contextmanager
-def get_db_connection() -> Generator[DbConnection, None, None]:
+def get_db_connection(operation: str = "database_operation") -> Generator[DbConnection, None, None]:
     """
-    Context manager para obtener una conexión segura del pool.
+    Context manager returning a pooled psycopg connection.
 
-    Uso:
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT * FROM table")
-                results = cur.fetchall()
-
-    Yields:
-        Conexión psycopg
+    Any open transaction is rolled back before the connection returns to the pool.
     """
-    conn = None
+
+    conn: DbConnection | None = None
+
     try:
         conn = get_connection()
         yield conn
-    except Exception as e:
-        if conn:
-            conn.rollback()
-        logger.error(f"Error en contexto de BD: {e}")
-        raise
-    finally:
-        if conn:
-            # Cerrar cualquier transacción abierta (p.ej. tras un SELECT sin
-            # commit explícito) antes de devolver la conexión al pool, para
-            # evitar que quede "idle in transaction" y el pool tenga que
-            # hacer rollback por su cuenta en cada checkin.
+    except Exception as exc:
+        if conn is not None:
             try:
-                if conn.info.transaction_status != psycopg.pq.TransactionStatus.IDLE:
-                    conn.rollback()
+                conn.rollback()
             except Exception:
-                pass
+                conn.close()
+
+        error = classify_database_exception(
+            exc,
+            operation=operation,
+            app_env=get_settings().normalized_app_env,
+        )
+        _log_database_error(operation, error)
+        raise error from exc
+    finally:
+        if conn is not None:
+            _reset_connection_state(conn)
             return_connection(conn)
 
 
 def execute_query(
     query: str,
-    params: tuple | None = None,
+    params: tuple[Any, ...] | None = None,
+    *,
     fetch_one: bool = False,
 ) -> DbRow | list[DbRow] | None:
-    """
-    Ejecutar una consulta SELECT segura.
-
-    Args:
-        query: Consulta SQL (usar placeholders %s)
-        params: Parámetros de la consulta
-        fetch_one: Si True, retorna un registro. Si False, retorna lista.
-
-    Returns:
-        Un registro (dict) si fetch_one=True
-        Una lista de registros (list[dict]) si fetch_one=False
-
-    Raises:
-        psycopg.Error: Si hay error en la BD
-    """
-    with get_db_connection() as conn:
+    """Execute a parameterized SELECT statement safely."""
+    with get_db_connection(operation="execute_query") as conn:
         with conn.cursor() as cur:
             cur.execute(query, params or ())
             if fetch_one:
@@ -179,27 +224,14 @@ def execute_query(
 
 def execute_insert(
     query: str,
-    params: tuple | None = None,
+    params: tuple[Any, ...] | None = None,
+    *,
     return_id: bool = False,
-) -> dict | None:
-    """
-    Ejecutar un INSERT y opcionalmente retornar el registro insertado.
-
-    Args:
-        query: INSERT query (preferentemente con RETURNING *)
-        params: Parámetros
-        return_id: Si True, espera que la query tenga RETURNING
-
-    Returns:
-        Registro insertado si RETURNING está en la query, None en otro caso
-
-    Raises:
-        psycopg.Error: Si hay error en la BD
-    """
-    with get_db_connection() as conn:
+) -> DbRow | None:
+    """Execute a parameterized INSERT statement with commit-on-success."""
+    with get_db_connection(operation="execute_insert") as conn:
         with conn.cursor() as cur:
             cur.execute(query, params or ())
-            if return_id:
-                result = cur.fetchone()
+            result = cur.fetchone() if return_id else None
             conn.commit()
-            return result if return_id else None
+            return result

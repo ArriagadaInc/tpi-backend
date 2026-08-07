@@ -1,5 +1,5 @@
-"""
-Capa de acceso a datos para Solicitudes de Simulación.
+﻿"""
+Capa de acceso a datos para Solicitudes de SimulaciÃ³n.
 
 Responsabilidades:
 - Insertar personas, solicitudes y consentimientos
@@ -61,7 +61,7 @@ class SolicitudRepository:
             UUID del id_persona creado o existente
 
         Raises:
-            Exception: Si falla la inserción en BD
+            Exception: Si falla la inserciÃ³n en BD
         """
         # Verificar si persona ya existe
         existing = SolicitudRepository.get_persona_by_rut(persona_data.rut)
@@ -89,7 +89,7 @@ class SolicitudRepository:
                 cur.execute(query, params)
                 row = cur.fetchone()
                 if row is None:
-                    raise RuntimeError("PostgreSQL no retornó el ID de la persona")
+                    raise RuntimeError("PostgreSQL no retornÃ³ el ID de la persona")
                 conn.commit()
                 return UUID(str(row["id_persona"]))
 
@@ -100,10 +100,10 @@ class SolicitudRepository:
         consentimientos_data: ConsentimientosData,
     ) -> SolicitudResponse:
         """
-        Crea una solicitud completa (persona + lead + consentimientos) en transacción ÚNICA.
+        Crea una solicitud completa (persona + lead + consentimientos) en transacciÃ³n ÃšNICA.
 
-        Esta operación es atómica: o se insertan todos los registros, o ninguno.
-        Usa UNA SOLA conexión y UNA SOLA transacción para garantizar consistencia.
+        Esta operaciÃ³n es atÃ³mica: o se insertan todos los registros, o ninguno.
+        Usa UNA SOLA conexiÃ³n y UNA SOLA transacciÃ³n para garantizar consistencia.
 
         Args:
             persona_data: Datos validados de persona
@@ -111,15 +111,15 @@ class SolicitudRepository:
             consentimientos_data: Datos validados de consentimientos
 
         Returns:
-            SolicitudResponse con id_lead y datos de confirmación
+            SolicitudResponse con id_lead y datos de confirmaciÃ³n
 
         Raises:
-            Exception: Si falla cualquier paso de la transacción
+            Exception: Si falla cualquier paso de la transacciÃ³n
         """
         with get_db_connection() as conn:
             try:
                 with conn.cursor() as cur:
-                    # PASO 1: Verificar si persona ya existe (en la misma conexión)
+                    # PASO 1: Verificar si persona ya existe (en la misma conexiÃ³n)
                     query_check = "SELECT id_persona FROM tpi.personas WHERE rut = %s LIMIT 1"
                     cur.execute(query_check, (persona_data.rut,))
                     existing_row = cur.fetchone()
@@ -148,7 +148,7 @@ class SolicitudRepository:
                             raise RuntimeError("No se pudo crear la persona")
                         id_persona = UUID(str(row["id_persona"]))
 
-                    # PASO 2: Crear lead (solicitud) en la MISMA transacción
+                    # PASO 2: Crear lead (solicitud) en la MISMA transacciÃ³n
                     query_lead = """
                         INSERT INTO tpi.leads
                             (id_persona, genero_id, estado_civil_id, afp_id,
@@ -177,7 +177,7 @@ class SolicitudRepository:
                         raise RuntimeError("No se pudo crear el lead")
                     id_lead = UUID(str(row["id_lead"]))
 
-                    # PASO 3: Crear consentimientos en la MISMA transacción
+                    # PASO 3: Crear consentimientos en la MISMA transacciÃ³n
                     query_consent = """
                         INSERT INTO tpi.consentimientos
                             (id_persona, id_lead, acepta_terminos, acepta_politica_privacidad,
@@ -199,7 +199,7 @@ class SolicitudRepository:
                     if not row:
                         raise Exception("No se pudieron crear los consentimientos")
 
-                # COMMIT ÚNICO al salir del context manager after all statements
+                # COMMIT ÃšNICO al salir del context manager after all statements
                 conn.commit()
 
                 # PASO 4: Retornar respuesta exitosa
@@ -213,9 +213,9 @@ class SolicitudRepository:
                     mensaje="Solicitud registrada exitosamente",
                 )
 
-            except Exception as e:
+            except Exception:
                 conn.rollback()
-                raise Exception(f"Error al crear solicitud (rollback ejecutado): {str(e)}") from e
+                raise
 
     @staticmethod
     def get_solicitud_by_id(id_lead: UUID) -> dict[str, Any] | None:
@@ -269,11 +269,11 @@ class SolicitudRepository:
     @staticmethod
     def get_all_solicitudes(limit: int = 100, offset: int = 0) -> tuple[list[dict[str, Any]], int]:
         """
-        Obtiene todas las solicitudes con paginación.
+        Obtiene todas las solicitudes con paginaciÃ³n.
 
         Args:
-            limit: Número máximo de registros
-            offset: Desplazamiento para paginación
+            limit: NÃºmero mÃ¡ximo de registros
+            offset: Desplazamiento para paginaciÃ³n
 
         Returns:
             Tupla (lista de solicitudes, total de registros)
@@ -359,7 +359,7 @@ class SolicitudRepository:
 
     @staticmethod
     def get_active_genero() -> list[dict[str, Any]]:
-        """Obtiene todos los géneros activos."""
+        """Obtiene todos los gÃ©neros activos."""
         query = "SELECT id, nombre FROM tpi.catalogo_genero WHERE activo = TRUE ORDER BY orden_visual, nombre"
         with get_db_connection() as conn:
             with conn.cursor() as cur:

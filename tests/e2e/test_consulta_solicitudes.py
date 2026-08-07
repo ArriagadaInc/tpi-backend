@@ -8,8 +8,12 @@ Validación de:
 - Enmascaramiento de datos
 """
 
+from datetime import datetime
+
 import pytest
 from streamlit.testing.v1 import AppTest
+
+from app.services.solicitud_service import SolicitudService
 
 
 @pytest.mark.e2e
@@ -108,6 +112,63 @@ class TestConsultaSolicitudesBusqueda:
 
         # No debería causar excepción
         assert not app.exception
+
+    def test_search_same_lead_in_list_does_not_show_error(self, monkeypatch):
+        """No debe fallar si el mismo lead aparece en listado y b?squeda."""
+        record = {
+            "id_lead": "11111111-1111-1111-1111-111111111111",
+            "id_persona": "22222222-2222-2222-2222-222222222222",
+            "rut": "12.***.***-5",
+            "nombre_completo": "Lead Sintetico",
+            "email": "te***@example.com",
+            "telefono": "+56 9 **** 5678",
+            "afp": "Habitat",
+            "genero": "Masculino",
+            "estado_civil": "Soltero/a",
+            "saldo_afp": 100000,
+            "estado_lead": "pendiente",
+            "created_at": datetime(2026, 8, 7, 12, 0, 0),
+            "acepta_terminos": True,
+            "acepta_politica_privacidad": True,
+            "finalidad_contacto": True,
+            "comentarios": "Registro sintetico para regresion",
+        }
+
+        monkeypatch.setattr(
+            SolicitudService,
+            "get_solicitudes_lista",
+            lambda self, page=1, page_size=10, masked=True: {
+                "solicitudes": [record],
+                "total": 1,
+                "page": 1,
+                "page_size": page_size,
+                "total_pages": 1,
+            },
+        )
+        monkeypatch.setattr(
+            SolicitudService,
+            "get_solicitudes_por_rut",
+            lambda self, rut, masked=True: [record],
+        )
+        monkeypatch.setattr(
+            SolicitudService,
+            "get_solicitud_detalle_masked",
+            lambda self, id_lead: record,
+        )
+
+        app = AppTest.from_file("app/pages/2_solicitudes_registradas.py")
+        app.run()
+        app.text_input[0].set_value("12345678-5")
+        app.run()
+        app.button[1].click()
+        app.run()
+
+        success_messages = [element.value for element in app.success]
+        error_messages = [element.value for element in app.error]
+
+        assert "Se encontraron 1 solicitud(es)" in success_messages
+        assert not any("Error en la Busqueda" in message for message in error_messages)
+        assert not any("Ocurrio un error inesperado" in message for message in error_messages)
 
     def test_search_with_empty_rut(self, app):
         """Test búsqueda con RUT vacío."""
