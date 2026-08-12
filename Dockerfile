@@ -1,29 +1,30 @@
-# Dockerfile for Tu Pensión Inteligente Back-office
-
 FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    STREAMLIT_SERVER_ADDRESS=0.0.0.0 \
+    STREAMLIT_SERVER_PORT=8501 \
+    STREAMLIT_SERVER_HEADLESS=true \
+    STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
 
 WORKDIR /app
 
-# Instalar dependencias del sistema
-RUN apt-get update && apt-get install -y \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+RUN useradd --create-home --shell /bin/bash appuser
 
-# Copiar archivos de dependencias
-COPY pyproject.toml .
+COPY --chown=appuser:appuser pyproject.toml README.md ./
+COPY --chown=appuser:appuser requirements/runtime.lock ./requirements/runtime.lock
+COPY --chown=appuser:appuser app ./app
+COPY --chown=appuser:appuser scripts ./scripts
+COPY --chown=appuser:appuser .streamlit ./.streamlit
 
-# Instalar dependencias Python
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir --requirement requirements/runtime.lock \
+    && pip install --no-cache-dir --no-deps .
 
-# Copiar código de la aplicación
-COPY app/ ./app/
-
-# Exponer puerto
 EXPOSE 8501
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import sys; sys.exit(0)"
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+    CMD ["python", "-m", "scripts.healthcheck_runtime"]
 
-# Comando por defecto
-CMD ["streamlit", "run", "app/streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+USER appuser
+
+CMD ["streamlit", "run", "app/streamlit_app.py"]

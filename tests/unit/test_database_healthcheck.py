@@ -119,3 +119,26 @@ def test_check_database_connection_returns_safe_error_details(
     assert result["error_code"] == "database_authentication_error"
     assert "credenciales" in result["message"].lower()
     assert "password authentication failed" in result["error"].lower()
+
+
+def test_full_health_check_aggregates_component_results(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        healthcheck,
+        "check_database_connection",
+        lambda: {
+            "connected": True,
+            "schema_accessible": True,
+            "leads_accessible": True,
+        },
+    )
+    monkeypatch.setattr(healthcheck, "check_schema_exists", lambda: {"exists": True})
+    monkeypatch.setattr(healthcheck, "check_required_tables", lambda: {"all_present": True})
+    monkeypatch.setattr(healthcheck, "check_catalogs", lambda: {"all_ready": True})
+
+    result = healthcheck.full_health_check()
+
+    assert result["all_ready"] is True
+    assert result["connected"] is True
+    assert result["connection"]["leads_accessible"] is True

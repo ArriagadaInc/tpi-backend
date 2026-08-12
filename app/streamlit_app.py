@@ -12,6 +12,7 @@ import streamlit as st
 from app.components import show_database_status, show_error_message, show_header
 from app.database import get_safe_error_message
 from app.database.healthcheck import full_health_check
+from app.runtime import initialize_runtime, log_health_status, run_guarded
 from app.services.solicitud_service import SolicitudService
 
 st.set_page_config(
@@ -79,9 +80,11 @@ def get_dashboard_stats() -> dict[str, Any]:
 
 
 def main() -> None:
+    logger = initialize_runtime("app.streamlit_app")
     show_header()
 
     health = check_database_health()
+    log_health_status(health, logger)
     if not health.get("all_ready"):
         show_error_message(
             "Base de Datos No Disponible",
@@ -197,4 +200,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    run_guarded(main, page_name="app.streamlit_app")

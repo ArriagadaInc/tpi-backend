@@ -9,7 +9,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.validators import normalize_email, normalize_phone, normalize_rut
 
@@ -88,10 +88,8 @@ class PersonaData(BaseModel):
 
         return v
 
-    class Config:
-        """Configuración del modelo."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "rut": "12345678-5",
                 "nombre_completo": "Juan Pérez García",
@@ -100,6 +98,7 @@ class PersonaData(BaseModel):
                 "fecha_nacimiento": "1985-06-15",
             }
         }
+    )
 
 
 class SolicitudData(BaseModel):
@@ -144,10 +143,8 @@ class SolicitudData(BaseModel):
             return v
         raise ValueError("Saldo debe ser numérico")
 
-    class Config:
-        """Configuración del modelo."""
-
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "genero_id": "cbfc6550-0873-4f1b-b992-682650aa50b1",
                 "estado_civil_id": "c1b6a6cf-2a60-4781-a0de-f92844ce4608",
@@ -156,6 +153,7 @@ class SolicitudData(BaseModel):
                 "comentarios": "Interesado en simular retiro programado",
             }
         }
+    )
 
 
 class ConsentimientosData(BaseModel):
@@ -179,14 +177,15 @@ class ConsentimientosData(BaseModel):
             raise ValueError("Debes autorizar el contacto para fines comerciales")
         return data
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "acepta_terminos": True,
                 "acepta_politica_privacidad": True,
                 "finalidad_contacto": True,
             }
         }
+    )
 
 
 class RegistrarSolicitudRequest(BaseModel):
@@ -196,10 +195,11 @@ class RegistrarSolicitudRequest(BaseModel):
     solicitud: SolicitudData
     consentimientos: ConsentimientosData
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "description": "Solicitud completa de simulación con persona, datos previsionales y consentimientos"
         }
+    )
 
 
 class SolicitudResponse(BaseModel):
@@ -213,8 +213,8 @@ class SolicitudResponse(BaseModel):
     estado_lead: str = Field(description="Estado inicial de la solicitud: 'recibida'")
     mensaje: str = Field(description="Mensaje de confirmación para el usuario")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id_lead": "550e8400-e29b-41d4-a716-446655440000",
                 "id_persona": "550e8400-e29b-41d4-a716-446655440001",
@@ -225,3 +225,4 @@ class SolicitudResponse(BaseModel):
                 "mensaje": "Solicitud registrada correctamente",
             }
         }
+    )
