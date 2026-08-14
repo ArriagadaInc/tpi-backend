@@ -82,6 +82,34 @@ def test_local_defaults_apply_only_to_local_environment(
     assert config.password is None
 
 
+@pytest.mark.parametrize(
+    ("app_env", "expected"),
+    [
+        ("development", "local"),
+        ("dev", "local"),
+        ("staging", "aws-dev"),
+        ("aws_dev", "aws-dev"),
+    ],
+)
+def test_environment_aliases_are_normalized(
+    monkeypatch: pytest.MonkeyPatch,
+    app_env: str,
+    expected: str,
+) -> None:
+    settings = build_settings(
+        monkeypatch,
+        APP_ENV=app_env,
+        DATABASE_HOST="db.local",
+        DATABASE_PORT="5432",
+        DATABASE_NAME="tpi_test",
+        DATABASE_USER="tpi_app",
+        DATABASE_PASSWORD="secret-value",
+        DATABASE_SSLMODE="disable",
+    )
+
+    assert settings.normalized_app_env == expected
+
+
 def test_missing_required_database_fields_raise_in_non_local_environment(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

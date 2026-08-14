@@ -1,0 +1,37 @@
+# Exact development and CI dependencies. Runtime requirements are included first.
+-r runtime.lock
+
+bandit==1.9.4
+black==26.5.1
+boolean.py==5.0
+CacheControl==0.14.4
+colorama==0.4.6
+coverage==7.15.2
+cyclonedx-python-lib==11.11.1
+defusedxml==0.7.1
+filelock==3.32.2
+iniconfig==2.3.0
+license-expression==30.4.4
+markdown-it-py==4.2.0
+mdurl==0.1.2
+msgpack==1.2.1
+mypy==2.3.0
+mypy_extensions==1.1.0
+packageurl-python==0.17.6
+pathspec==1.1.1
+pip-api==0.0.34
+pip-audit==2.10.1
+pip-requirements-parser==32.0.1
+pluggy==1.6.0
+py-serializable==2.1.0
+Pygments==2.20.0
+pyparsing==3.3.2
+pytest==9.1.1
+pytest-cov==7.1.0
+PyYAML==6.0.3
+rich==15.0.0
+ruff==0.16.1
+sortedcontainers==2.4.0
+stevedore==5.9.0
+tomli==2.4.1
+tomli_w==1.2.0

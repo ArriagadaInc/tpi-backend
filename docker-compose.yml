@@ -1,31 +1,28 @@
-version: "3.8"
-
 services:
   postgres:
     image: postgres:15-alpine
     container_name: tpi_postgres
     environment:
-      POSTGRES_USER: tpi_app
-      POSTGRES_PASSWORD: change_me_local_only
-      POSTGRES_DB: tpi_local
+      POSTGRES_USER: ${TPI_POSTGRES_USER:-tpi_app}
+      POSTGRES_PASSWORD: ${TPI_POSTGRES_PASSWORD:?TPI_POSTGRES_PASSWORD must be set}
+      POSTGRES_DB: ${TPI_POSTGRES_DB:-tpi_local}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=es_ES.UTF-8"
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U tpi_app"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - tpi_network
 
-  streamlit:
+  db-init:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: tpi_streamlit
     depends_on:
       postgres:
         condition: service_healthy
@@ -33,15 +30,39 @@ services:
       APP_ENV: local
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432
-      DATABASE_NAME: tpi_local
-      DATABASE_USER: tpi_app
-      DATABASE_PASSWORD: change_me_local_only
+      DATABASE_NAME: ${TPI_POSTGRES_DB:-tpi_local}
+      DATABASE_USER: ${TPI_POSTGRES_USER:-tpi_app}
+      DATABASE_PASSWORD: ${TPI_POSTGRES_PASSWORD:?TPI_POSTGRES_PASSWORD must be set}
+      DATABASE_SCHEMA: tpi
+      DATABASE_SSLMODE: disable
+    networks:
+      - tpi_network
+    command: python scripts/init_test_database.py
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tpi_streamlit
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      APP_ENV: local
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${TPI_POSTGRES_DB:-tpi_local}
+      DATABASE_USER: ${TPI_POSTGRES_USER:-tpi_app}
+      DATABASE_PASSWORD: ${TPI_POSTGRES_PASSWORD:?TPI_POSTGRES_PASSWORD must be set}
       DATABASE_SCHEMA: tpi
       DATABASE_SSLMODE: disable
       DATABASE_CONNECT_TIMEOUT: 10
       DATABASE_POOL_MIN_SIZE: 1
       DATABASE_POOL_MAX_SIZE: 5
       DATABASE_POOL_TIMEOUT: 30
+      STREAMLIT_SERVER_ADDRESS: 0.0.0.0
+      STREAMLIT_SERVER_PORT: 8501
+      STREAMLIT_SERVER_HEADLESS: "true"
     ports:
       - "8501:8501"
     volumes:
@@ -49,6 +70,12 @@ services:
     networks:
       - tpi_network
     command: streamlit run app/streamlit_app.py
+    healthcheck:
+      test: ["CMD", "python", "-m", "scripts.healthcheck_runtime"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
 volumes:
   postgres_data:

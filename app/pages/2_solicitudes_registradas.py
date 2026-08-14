@@ -16,6 +16,7 @@ from app.components import (
     show_solicitud_detalle,
 )
 from app.database import get_safe_error_message
+from app.runtime import configure_logging, run_guarded
 from app.services.solicitud_service import SolicitudService
 
 st.set_page_config(
@@ -31,6 +32,7 @@ def get_service() -> SolicitudService:
 
 
 def main() -> None:
+    configure_logging()
     show_header()
 
     st.title("🔍 Solicitudes Registradas")
@@ -157,4 +159,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    run_guarded(main, page_name="app.pages.2_solicitudes_registradas")

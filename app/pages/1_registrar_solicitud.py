@@ -28,6 +28,7 @@ from app.models.solicitud import (
     RegistrarSolicitudRequest,
     SolicitudData,
 )
+from app.runtime import configure_logging, run_guarded
 from app.services.solicitud_service import SolicitudService
 
 st.set_page_config(
@@ -69,6 +70,7 @@ def load_catalogs():
 
 def main():
     """Función principal."""
+    configure_logging()
     show_header()
 
     st.title("📝 Registrar Nueva Solicitud")
@@ -324,4 +326,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run_guarded(main, page_name="app.pages.1_registrar_solicitud")

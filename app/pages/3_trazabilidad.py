@@ -15,6 +15,7 @@ import streamlit as st
 
 from app.components import show_error_message, show_header
 from app.database import get_safe_error_message
+from app.runtime import configure_logging, run_guarded
 from app.services.solicitud_service import SolicitudService
 
 st.set_page_config(
@@ -32,6 +33,7 @@ def get_service() -> SolicitudService:
 
 def main():
     """Función principal."""
+    configure_logging()
     show_header()
 
     st.title("📈 Trazabilidad y Métricas")
@@ -192,4 +194,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run_guarded(main, page_name="app.pages.3_trazabilidad")

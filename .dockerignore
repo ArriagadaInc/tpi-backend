@@ -1,5 +1,3 @@
-# .dockerignore
-
 # Python
 __pycache__
 *.pyc
@@ -26,17 +24,18 @@ htmlcov/
 .git
 .gitignore
 
-# Documentation
+# Documentation that is not needed for the runtime image
 docs/
-README.md
 
-# Testing files
+# Testing files are not needed for the runtime image
 tests/
 
 # Environment
 .env
 .env.local
 .env.*.local
+.streamlit/secrets.toml
+.streamlit/*.local.toml
 
 # OS
 .DS_Store

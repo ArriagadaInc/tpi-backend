@@ -59,13 +59,21 @@ htmlcov/
 .tox/
 
 # Streamlit
-.streamlit/
+.streamlit/secrets.toml
+.streamlit/*.local.toml
 .streamlit_cache/
 
 # Base de datos (local)
 *.db
 *.sqlite
 *.sqlite3
+
+# Certificados y llaves locales
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
 
 # Archivos temporales
 tmp/

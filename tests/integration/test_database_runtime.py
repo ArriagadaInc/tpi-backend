@@ -103,6 +103,14 @@ def test_check_database_connection_reports_effective_user() -> None:
     assert health["effective_user"]
 
 
+def test_full_health_check_reports_ready_state() -> None:
+    health = full_health_check()
+
+    assert health["all_ready"] is True
+    assert health["connected"] is True
+    assert health["connection"]["schema_accessible"] is True
+
+
 def test_insert_read_update_and_cleanup(
     service: SolicitudService,
     catalog_ids: dict[str, UUID],
