@@ -1,0 +1,2 @@
+# The Elastic Beanstalk bundle must run the production Dockerfile, not local Compose.
+/docker-compose.yml export-ignore

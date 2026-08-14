@@ -86,6 +86,125 @@ Archivos clave:
 
 ## Historial Incremental
 
+### 2026-08-14 - H2.2 correccion de empaquetado para CI
+
+Contexto:
+
+- El PR H2.2 agrego el directorio declarativo `deployment/`, y setuptools intento descubrirlo como un segundo paquete Python durante la instalacion editable de CI.
+
+Correccion:
+
+- Se declaro `[tool.setuptools.packages.find]` con `include = ["app*"]` en `pyproject.toml`.
+- `deployment/` permanece fuera del paquete distribuible y conserva su funcion de configuracion de Elastic Beanstalk e IAM.
+
+Validacion:
+
+- `python -m pip install --no-deps -e .` completo correctamente.
+- La regresion completa, cobertura, Ruff, Black, MyPy, Bandit, pip-audit y Docker build se ejecutaron sin modificar runtime, reglas de negocio ni infraestructura AWS.
+
+### 2026-08-14 - H2.2 despliegue real Streamlit en AWS DEV
+
+Contexto:
+
+- Se aprobo el pre-flight y se publico el artefacto Streamlit existente en Elastic Beanstalk, sin cambios de negocio.
+
+Tareas realizadas:
+
+- Se creo el SG `tpi-backoffice-dev-sg` con HTTP solo desde la IP autorizada `/32`.
+- Se agrego al SG RDS existente una regla TCP 5432 con origen exclusivo en el SG de aplicacion; la regla administrativa DBeaver se mantuvo intacta.
+- Se crearon los roles IAM de instancia y de servicio para Elastic Beanstalk, con lectura limitada al secreto DEV de base de datos y SSM para diagnostico sin SSH publico.
+- Se creo la aplicacion `tpi-backoffice` y el environment `tpi-backoffice-dev` en Docker Amazon Linux 2023, Single Instance `t3.micro`.
+- Se habilito CloudWatch Logs con retencion de siete dias.
+- Se documento el despliegue, operaciones, costos, troubleshooting y rollback en `docs/H2_2_AWS_DEV_DEPLOYMENT.md`.
+
+Seguridad y decisiones:
+
+- `DATABASE_PASSWORD` se inyecta desde Secrets Manager por Elastic Beanstalk; no se leyo ni versiono su valor.
+- La instancia tiene solo el SG dedicado. Se configuro `DisableDefaultEC2SecurityGroup=true`, no hay SSH ni 8501 expuestos, y RDS no tiene 5432 abierto a Internet.
+- El primer bundle incluyo por error `docker-compose.yml`, por lo que Elastic Beanstalk intento usar servicios locales. Se corrigio con `.gitattributes` y `export-ignore`; el bundle final usa solo el Dockerfile del repositorio.
+
+Resultados:
+
+- Environment `Ready/Green`, instancia `running`, Docker `healthy` y usuario de contenedor `appuser`.
+- `/_stcore/health` y la pagina principal respondieron HTTP 200 desde la IP autorizada.
+- El healthcheck interno confirmo conexion PostgreSQL con SSL, esquema `tpi` y acceso a `tpi.leads`.
+- El CI del PR termino con `194 passed`, 83.42 por ciento de cobertura y seis warnings no bloqueantes. Ruff, Black, MyPy, Bandit, pip-audit y Docker build quedaron verdes.
+
+Riesgos y pendientes:
+
+- El environment es HTTP temporal y Single Instance; autenticacion, HTTPS y alta disponibilidad siguen fuera de H2.2.
+- RDS mantiene `PubliclyAccessible=true` por alcance aprobado; su proteccion efectiva depende del SG restringido.
+- No avanzar a H2.3 sin aprobacion explicita.
+
+### 2026-08-14 - H2.2 pre-flight completado con perfil AWS TPI
+
+Contexto:
+
+- Se autentico el perfil local `tpi-dev` mediante `aws login` para la cuenta TPI y se valido la identidad antes de cualquier cambio AWS.
+
+Hallazgos:
+
+- Cuenta validada: `8216...5812`; region efectiva para H2.2: `us-east-2`.
+- RDS `tpi-postgres-dev` esta `available`, usa PostgreSQL 17.9, base `tpi`, puerto 5432 y cifrado en reposo.
+- El RDS esta en la VPC por defecto `vpc-0f86145db5a906b73`, con tres subredes activas en `us-east-2a`, `us-east-2b` y `us-east-2c`.
+- La VPC tiene DNS habilitado, subredes con asignacion publica y una ruta por defecto hacia Internet Gateway.
+- RDS es publicamente direccionable, pero su Security Group `tpi-postgres-admin-sg` permite PostgreSQL solo desde una IP administrativa individual `/32`; no existe acceso `0.0.0.0/0` a 5432.
+- Backups: un dia de retencion; Multi-AZ: deshabilitado; deletion protection: habilitado; logs PostgreSQL: habilitados.
+
+Decision:
+
+- Es viable crear posteriormente un Security Group de aplicacion Elastic Beanstalk en la misma VPC y autorizarlo como origen TCP 5432 en el Security Group de RDS.
+- La regla administrativa existente se conserva; no se modificaron RDS, VPC, IAM, Secrets Manager ni Security Groups durante este pre-flight.
+
+Riesgos a resolver antes del despliegue:
+
+- RDS es `PubliclyAccessible=true`; H2.2 debe mantener su SG restringido y no agregar reglas publicas para PostgreSQL.
+- La VPC actual es de subredes publicas y Single Instance; es adecuada para DEV de bajo costo, no para un entorno productivo de alta disponibilidad.
+
+### 2026-08-14 - H2.2 pre-flight AWS DEV bloqueado por RDS no localizado
+
+Contexto:
+
+- Se inicio H2.2 para publicar Streamlit en Elastic Beanstalk Single Instance, sin cambios de negocio.
+- Se actualizo `main` y se creo la rama `feat/h2-2-aws-dev-deployment`.
+
+Pre-flight realizado:
+
+- La identidad AWS configurada respondio correctamente y la region activa es `us-east-1`.
+- La CI del commit H2.1 mergeado en `main` finalizo en estado `success`.
+- La consulta no destructiva de RDS en la region activa no encontro la instancia `tpi-postgres-dev` ni otras instancias RDS disponibles.
+
+Decision:
+
+- No se crearon recursos Elastic Beanstalk, IAM, Secrets Manager ni Security Groups.
+- No se modifico RDS ni su red.
+- No se puede continuar sin confirmar la cuenta y region donde existe el RDS DEV o el identificador correcto de la instancia.
+
+Siguiente paso:
+
+- Recibir la cuenta/region autorizada y el identificador RDS correctos, luego repetir el inventario de red antes de cualquier cambio AWS.
+
+### 2026-08-14 - H2.2 pre-flight repetido en us-east-2 confirma cuenta AWS distinta
+
+Contexto:
+
+- Se recibio la correccion de region `us-east-2`, el identificador `tpi-postgres-dev` y su endpoint RDS esperado.
+
+Resultado:
+
+- La identidad AWS activa pertenece a la cuenta enmascarada `0514...8454`; solo existe el perfil local `default` y su region configurada sigue siendo `us-east-1`.
+- La consulta se ejecuto explicitamente con `--region us-east-2` y RDS respondio `DBInstanceNotFound` para `tpi-postgres-dev`.
+- El endpoint proporcionado resuelve DNS en `us-east-2`, por lo que la instancia existe, pero no pertenece a la cuenta AWS activa o no es visible para sus credenciales.
+
+Decision:
+
+- No se puede obtener de manera autorizada el estado, VPC, subnet group, Security Groups, cifrado, backups ni configuracion de red de RDS.
+- No se crearon ni modificaron recursos AWS.
+
+Siguiente paso:
+
+- Configurar o asumir el perfil/rol de la cuenta propietaria de RDS y repetir el pre-flight en `us-east-2` antes de crear Elastic Beanstalk o cualquier regla de red.
+
 ### 2026-08-11 - Cierre tecnico H2.1: gates, lockfiles y compatibilidad Pydantic
 
 Contexto:
