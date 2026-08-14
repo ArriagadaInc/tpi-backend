@@ -128,7 +128,7 @@ Resultados:
 - Environment `Ready/Green`, instancia `running`, Docker `healthy` y usuario de contenedor `appuser`.
 - `/_stcore/health` y la pagina principal respondieron HTTP 200 desde la IP autorizada.
 - El healthcheck interno confirmo conexion PostgreSQL con SSL, esquema `tpi` y acceso a `tpi.leads`.
-- La suite local termino con 194 tests aprobados y 82.86 por ciento de cobertura. Ruff, Black, MyPy, Bandit, pip-audit y Docker build quedaron verdes.
+- El CI del PR termino con `194 passed`, 83.42 por ciento de cobertura y seis warnings no bloqueantes. Ruff, Black, MyPy, Bandit, pip-audit y Docker build quedaron verdes.
 
 Riesgos y pendientes:
 

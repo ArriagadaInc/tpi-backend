@@ -89,13 +89,6 @@ jobs:
           APP_ENV: testing
         run: pytest tests/ --cov=app --cov-report=xml --cov-fail-under=80
       
-      - name: Upload coverage
-        uses: codecov/codecov-action@v5
-        with:
-          files: ./coverage.xml
-          flags: unittests
-          fail_ci_if_error: false
-
   security:
     name: Security Audit
     runs-on: ubuntu-latest
