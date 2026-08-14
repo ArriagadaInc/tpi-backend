@@ -35,6 +35,10 @@ def main() -> None:
     configure_logging()
     show_header()
 
+    cleanup_success_message = st.session_state.pop("test_lead_cleanup_success", None)
+    if cleanup_success_message:
+        st.success(cleanup_success_message)
+
     st.title("🔍 Solicitudes Registradas")
     st.markdown("""
         Busca y visualiza todas las solicitudes de simulacion registradas en el sistema.
@@ -145,6 +149,32 @@ def main() -> None:
 
             if solicitud:
                 show_solicitud_detalle(solicitud)
+                if service.is_test_lead_cleanup_enabled():
+                    st.markdown("---")
+                    st.subheader("Eliminar lead de prueba")
+                    st.warning("Esta accion elimina solo datos ficticios del ambiente DEV.")
+                    confirmed_test_data = st.checkbox(
+                        "Confirmo que este es un dato de prueba",
+                        key=f"delete_test_lead_confirm_{id_lead}",
+                    )
+                    confirmation_text = st.text_input(
+                        "Escribe ELIMINAR para confirmar",
+                        key=f"delete_test_lead_text_{id_lead}",
+                    )
+                    if st.button(
+                        "ELIMINAR LEAD DE PRUEBA",
+                        key=f"delete_test_lead_button_{id_lead}",
+                        type="primary",
+                        disabled=not (confirmed_test_data and confirmation_text == "ELIMINAR"),
+                    ):
+                        cleanup_result = service.delete_test_lead(id_lead)
+                        if cleanup_result.deleted:
+                            st.session_state.test_lead_cleanup_success = cleanup_result.message
+                            st.session_state.pop("selected_solicitud_id", None)
+                            st.session_state.pop("show_detail", None)
+                            st.rerun()
+                        else:
+                            st.error(cleanup_result.message)
                 if st.button("✖️ Cerrar Detalle", use_container_width=True):
                     st.session_state.show_detail = False
                     st.rerun()

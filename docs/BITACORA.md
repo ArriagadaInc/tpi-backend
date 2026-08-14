@@ -86,6 +86,29 @@ Archivos clave:
 
 ## Historial Incremental
 
+### 2026-08-14 - H2.3 limpieza controlada de leads ficticios en AWS DEV
+
+Contexto:
+
+- H2.3 habilita el flujo de datos ficticios crear, consultar y limpiar solo en AWS DEV.
+
+Decisiones y hallazgos:
+
+- La habilitacion exige `APP_ENV=aws-dev` y `DEV_DELETE_ENABLED=true`; cualquier otro ambiente queda denegado en Service.
+- El inventario de RDS encontro referencias a `leads` desde `asignaciones`, `auditoria`, `campanas_atribucion`, `citas`, `consentimientos`, `eventos_lead`, `fichas_diagnosticas` e `ingesta_google_sheets`.
+- `auditoria` tambien referencia `personas`, por lo que H2.3 conserva personas y no concede DELETE sobre esa tabla.
+- La transaccion borra solo consentimientos y el lead. Una FK operacional bloquea la operacion y revierte todo.
+- Los scripts `scripts/sql/dev/002_enable_test_cleanup.sql` y `002_disable_test_cleanup.sql` otorgan y revocan DELETE solo en consentimientos y leads para `tpi_app` en DEV.
+
+Validacion:
+
+- Unit, integration PostgreSQL, E2E y security cubren guard de ambiente, UUID invalido, doble ejecucion, SQL parametrizado, persona compartida y rollback por FK.
+- La UI requiere checkbox y texto `ELIMINAR`, y registra eventos sin PII usando solo el UUID interno del lead.
+
+Pendiente:
+
+- El secreto DEV existente corresponde a `tpi_app`; no existe acceso administrativo versionado para `tpi_admin`. Se requiere acceso aprobado de `tpi_admin` para aplicar el grant, desplegar H2.3, ejecutar el smoke test AWS con datos ficticios y revisar CloudWatch antes de aprobar el hito.
+
 ### 2026-08-14 - H2.2 correccion de empaquetado para CI
 
 Contexto:

@@ -142,6 +142,7 @@ class Settings(BaseSettings):
     app_env: str = Field(default="local", alias="APP_ENV")
     app_name: str = Field(default="Tu Pension Inteligente Back-office", alias="APP_NAME")
     app_debug: bool = Field(default=False, alias="APP_DEBUG")
+    dev_delete_enabled: bool = Field(default=False, alias="DEV_DELETE_ENABLED")
 
     database_url: SecretStr | None = Field(default=None, alias="DATABASE_URL")
     database_host: str | None = Field(default=None, alias="DATABASE_HOST")
@@ -262,6 +263,11 @@ class Settings(BaseSettings):
     @property
     def is_aws(self) -> bool:
         return self.normalized_app_env in {"aws-dev", "production"}
+
+    @property
+    def is_test_lead_cleanup_enabled(self) -> bool:
+        """Allow test-data cleanup only in the explicitly enabled AWS DEV environment."""
+        return self.normalized_app_env == "aws-dev" and self.dev_delete_enabled
 
     @property
     def database_config(self) -> DatabaseConnectionConfig:
