@@ -86,6 +86,29 @@ Archivos clave:
 
 ## Historial Incremental
 
+### 2026-08-14 - H2.2 pre-flight AWS DEV bloqueado por RDS no localizado
+
+Contexto:
+
+- Se inicio H2.2 para publicar Streamlit en Elastic Beanstalk Single Instance, sin cambios de negocio.
+- Se actualizo `main` y se creo la rama `feat/h2-2-aws-dev-deployment`.
+
+Pre-flight realizado:
+
+- La identidad AWS configurada respondio correctamente y la region activa es `us-east-1`.
+- La CI del commit H2.1 mergeado en `main` finalizo en estado `success`.
+- La consulta no destructiva de RDS en la region activa no encontro la instancia `tpi-postgres-dev` ni otras instancias RDS disponibles.
+
+Decision:
+
+- No se crearon recursos Elastic Beanstalk, IAM, Secrets Manager ni Security Groups.
+- No se modifico RDS ni su red.
+- No se puede continuar sin confirmar la cuenta y region donde existe el RDS DEV o el identificador correcto de la instancia.
+
+Siguiente paso:
+
+- Recibir la cuenta/region autorizada y el identificador RDS correctos, luego repetir el inventario de red antes de cualquier cambio AWS.
+
 ### 2026-08-11 - Cierre tecnico H2.1: gates, lockfiles y compatibilidad Pydantic
 
 Contexto:
