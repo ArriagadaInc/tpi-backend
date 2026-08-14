@@ -109,6 +109,27 @@ Siguiente paso:
 
 - Recibir la cuenta/region autorizada y el identificador RDS correctos, luego repetir el inventario de red antes de cualquier cambio AWS.
 
+### 2026-08-14 - H2.2 pre-flight repetido en us-east-2 confirma cuenta AWS distinta
+
+Contexto:
+
+- Se recibio la correccion de region `us-east-2`, el identificador `tpi-postgres-dev` y su endpoint RDS esperado.
+
+Resultado:
+
+- La identidad AWS activa pertenece a la cuenta enmascarada `0514...8454`; solo existe el perfil local `default` y su region configurada sigue siendo `us-east-1`.
+- La consulta se ejecuto explicitamente con `--region us-east-2` y RDS respondio `DBInstanceNotFound` para `tpi-postgres-dev`.
+- El endpoint proporcionado resuelve DNS en `us-east-2`, por lo que la instancia existe, pero no pertenece a la cuenta AWS activa o no es visible para sus credenciales.
+
+Decision:
+
+- No se puede obtener de manera autorizada el estado, VPC, subnet group, Security Groups, cifrado, backups ni configuracion de red de RDS.
+- No se crearon ni modificaron recursos AWS.
+
+Siguiente paso:
+
+- Configurar o asumir el perfil/rol de la cuenta propietaria de RDS y repetir el pre-flight en `us-east-2` antes de crear Elastic Beanstalk o cualquier regla de red.
+
 ### 2026-08-11 - Cierre tecnico H2.1: gates, lockfiles y compatibilidad Pydantic
 
 Contexto:
