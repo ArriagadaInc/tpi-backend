@@ -86,6 +86,40 @@ Archivos clave:
 
 ## Historial Incremental
 
+### 2026-08-14 - H2.2 despliegue real Streamlit en AWS DEV
+
+Contexto:
+
+- Se aprobo el pre-flight y se publico el artefacto Streamlit existente en Elastic Beanstalk, sin cambios de negocio.
+
+Tareas realizadas:
+
+- Se creo el SG `tpi-backoffice-dev-sg` con HTTP solo desde la IP autorizada `/32`.
+- Se agrego al SG RDS existente una regla TCP 5432 con origen exclusivo en el SG de aplicacion; la regla administrativa DBeaver se mantuvo intacta.
+- Se crearon los roles IAM de instancia y de servicio para Elastic Beanstalk, con lectura limitada al secreto DEV de base de datos y SSM para diagnostico sin SSH publico.
+- Se creo la aplicacion `tpi-backoffice` y el environment `tpi-backoffice-dev` en Docker Amazon Linux 2023, Single Instance `t3.micro`.
+- Se habilito CloudWatch Logs con retencion de siete dias.
+- Se documento el despliegue, operaciones, costos, troubleshooting y rollback en `docs/H2_2_AWS_DEV_DEPLOYMENT.md`.
+
+Seguridad y decisiones:
+
+- `DATABASE_PASSWORD` se inyecta desde Secrets Manager por Elastic Beanstalk; no se leyo ni versiono su valor.
+- La instancia tiene solo el SG dedicado. Se configuro `DisableDefaultEC2SecurityGroup=true`, no hay SSH ni 8501 expuestos, y RDS no tiene 5432 abierto a Internet.
+- El primer bundle incluyo por error `docker-compose.yml`, por lo que Elastic Beanstalk intento usar servicios locales. Se corrigio con `.gitattributes` y `export-ignore`; el bundle final usa solo el Dockerfile del repositorio.
+
+Resultados:
+
+- Environment `Ready/Green`, instancia `running`, Docker `healthy` y usuario de contenedor `appuser`.
+- `/_stcore/health` y la pagina principal respondieron HTTP 200 desde la IP autorizada.
+- El healthcheck interno confirmo conexion PostgreSQL con SSL, esquema `tpi` y acceso a `tpi.leads`.
+- La suite local termino con 194 tests aprobados y 82.86 por ciento de cobertura. Ruff, Black, MyPy, Bandit, pip-audit y Docker build quedaron verdes.
+
+Riesgos y pendientes:
+
+- El environment es HTTP temporal y Single Instance; autenticacion, HTTPS y alta disponibilidad siguen fuera de H2.2.
+- RDS mantiene `PubliclyAccessible=true` por alcance aprobado; su proteccion efectiva depende del SG restringido.
+- No avanzar a H2.3 sin aprobacion explicita.
+
 ### 2026-08-14 - H2.2 pre-flight completado con perfil AWS TPI
 
 Contexto:

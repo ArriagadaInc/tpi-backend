@@ -217,6 +217,7 @@ tu-pension-inteligente-backoffice/
 ## 📚 Documentación Adicional
 
 - [Preparación H2.1](docs/H2_1_PREPARACION_DESPLIEGUE.md) - Base técnica para despliegue reproducible en AWS DEV
+- [Despliegue H2.2 AWS DEV](docs/H2_2_AWS_DEV_DEPLOYMENT.md) - Elastic Beanstalk, Docker, RDS, rollback y operación DEV
 - [Validación MVP1](docs/MVP1_VALIDACION.md) - Reporte completo de validación
 - [Conexión PostgreSQL y AWS RDS](docs/AWS_RDS_CONNECTION.md) - Configuración por ambiente, SSL, permisos, pruebas y rollback
 - [Arquitectura](docs/ARCHITECTURE.md) - Diseño del sistema
