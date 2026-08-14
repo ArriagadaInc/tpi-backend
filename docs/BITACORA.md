@@ -86,6 +86,22 @@ Archivos clave:
 
 ## Historial Incremental
 
+### 2026-08-14 - H2.2 correccion de empaquetado para CI
+
+Contexto:
+
+- El PR H2.2 agrego el directorio declarativo `deployment/`, y setuptools intento descubrirlo como un segundo paquete Python durante la instalacion editable de CI.
+
+Correccion:
+
+- Se declaro `[tool.setuptools.packages.find]` con `include = ["app*"]` en `pyproject.toml`.
+- `deployment/` permanece fuera del paquete distribuible y conserva su funcion de configuracion de Elastic Beanstalk e IAM.
+
+Validacion:
+
+- `python -m pip install --no-deps -e .` completo correctamente.
+- La regresion completa, cobertura, Ruff, Black, MyPy, Bandit, pip-audit y Docker build se ejecutaron sin modificar runtime, reglas de negocio ni infraestructura AWS.
+
 ### 2026-08-14 - H2.2 despliegue real Streamlit en AWS DEV
 
 Contexto:
