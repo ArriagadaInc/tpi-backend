@@ -86,6 +86,31 @@ Archivos clave:
 
 ## Historial Incremental
 
+### 2026-08-14 - H2.2 pre-flight completado con perfil AWS TPI
+
+Contexto:
+
+- Se autentico el perfil local `tpi-dev` mediante `aws login` para la cuenta TPI y se valido la identidad antes de cualquier cambio AWS.
+
+Hallazgos:
+
+- Cuenta validada: `8216...5812`; region efectiva para H2.2: `us-east-2`.
+- RDS `tpi-postgres-dev` esta `available`, usa PostgreSQL 17.9, base `tpi`, puerto 5432 y cifrado en reposo.
+- El RDS esta en la VPC por defecto `vpc-0f86145db5a906b73`, con tres subredes activas en `us-east-2a`, `us-east-2b` y `us-east-2c`.
+- La VPC tiene DNS habilitado, subredes con asignacion publica y una ruta por defecto hacia Internet Gateway.
+- RDS es publicamente direccionable, pero su Security Group `tpi-postgres-admin-sg` permite PostgreSQL solo desde una IP administrativa individual `/32`; no existe acceso `0.0.0.0/0` a 5432.
+- Backups: un dia de retencion; Multi-AZ: deshabilitado; deletion protection: habilitado; logs PostgreSQL: habilitados.
+
+Decision:
+
+- Es viable crear posteriormente un Security Group de aplicacion Elastic Beanstalk en la misma VPC y autorizarlo como origen TCP 5432 en el Security Group de RDS.
+- La regla administrativa existente se conserva; no se modificaron RDS, VPC, IAM, Secrets Manager ni Security Groups durante este pre-flight.
+
+Riesgos a resolver antes del despliegue:
+
+- RDS es `PubliclyAccessible=true`; H2.2 debe mantener su SG restringido y no agregar reglas publicas para PostgreSQL.
+- La VPC actual es de subredes publicas y Single Instance; es adecuada para DEV de bajo costo, no para un entorno productivo de alta disponibilidad.
+
 ### 2026-08-14 - H2.2 pre-flight AWS DEV bloqueado por RDS no localizado
 
 Contexto:
