@@ -86,6 +86,34 @@ Archivos clave:
 
 ## Historial Incremental
 
+### 2026-08-15 - H2.5 preflight SimpleDevAuth y Caddy
+
+Contexto:
+
+- Se reemplazo el preflight previo ALB/Cognito por una propuesta temporal y
+  explicitamente DEV ONLY: Caddy HTTPS delante de Streamlit y SimpleDevAuth
+  desacoplado mediante `app/auth/`.
+
+Hallazgos y decision propuesta:
+
+- Elastic Beanstalk Docker puede usar Docker Compose con un proxy propio; Caddy
+  seria el unico contenedor que expone 80/443 y Streamlit quedaria interno en
+  8501.
+- La cuenta AWS no tiene Hosted Zone Route 53. El DNS publico actual delega en
+  DataTecno y no existe el CNAME `dev.tupensioninteligente.cl`; se requiere
+  confirmar control administrativo y aprobar el registro antes de ACME.
+- El secreto propuesto `tpi/dev/auth-users` contiene solo hashes Argon2id y
+  metadata minima. El role EB recibira lectura unicamente sobre su ARN exacto.
+- El modo SimpleDevAuth tendra guard fail-closed, sesion Streamlit sin password
+  ni hash, logout y throttle por sesion. Produccion debera migrar a HTTPS
+  administrado y OIDC con un IdP profesional.
+
+Estado:
+
+- No se crearon ni modificaron recursos, usuarios, secretos, DNS, IAM ni
+  Security Groups. Se requiere aprobacion del preflight y confirmacion DNS.
+- Detalle completo: `docs/H2_5_SIMPLE_DEV_AUTH_PREFLIGHT.md`.
+
 ### 2026-08-15 - H2.4 notificaciones extensibles de leads
 
 Contexto:
