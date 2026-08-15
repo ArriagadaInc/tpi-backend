@@ -92,11 +92,11 @@ Rollback is independent of RDS and Elastic Beanstalk:
 
 Never run either script in staging or production.
 
-At implementation time, AWS Secrets Manager contains only the application
-secret `tpi/dev/database-password`; it does not contain credentials for the
-RDS administrator `tpi_admin`. Do not reset the RDS administrator password or
-reuse the application secret to work around this. The approved administrator
-access is required to apply the DEV-only grant before deployment.
+The DEV-only grant was applied using the existing administrative secret
+`tpi/dev/database-admin-password` from the local `tpi-dev` AWS CLI profile.
+It is used only for temporary `tpi_admin` administration and is not available
+to the Elastic Beanstalk instance role or to `tpi_app`. Do not reset the RDS
+administrator password or reuse the application secret for administration.
 
 ## Access restriction
 
@@ -137,6 +137,27 @@ The Streamlit E2E test exercises opening detail, both confirmations, invoking
 the service, and showing success. AWS smoke testing must use only fictitious
 data and verify creation, lookup, deletion, RDS cleanup, person retention, and
 CloudWatch logs.
+
+## AWS DEV deployment validation
+
+H2.3 was deployed as Elastic Beanstalk version `h2-3-3d5ded341436` to
+`tpi-backoffice-dev`. The versioned configuration still has
+`DEV_DELETE_ENABLED=false`; the environment property was set independently to
+`true` only after the application version reached `Ready/Green`.
+
+The deployed container was validated through SSM without SSH. It is `healthy`,
+runs as `appuser`, has `APP_ENV=aws-dev` and `DEV_DELETE_ENABLED=true`, and its
+runtime health check reports PostgreSQL connectivity, schema access, and
+`tpi.leads` access. The restricted public URL returned HTTP 200 for both `/`
+and `/_stcore/health` (`ok`). Rendering the deployed entrypoint confirmed the
+visible `AMBIENTE DE DESARROLLO` banner.
+
+The real smoke test used a generated fictitious person and completed create,
+consult, delete, lead absence, consent absence, and retained-person checks.
+No lead identifier or test-person data is recorded here. CloudWatch application
+stdout/stderr has seven-day retention; its post-deployment review found no
+password, token, email, phone, or RUT pattern in the application log events
+reviewed.
 
 ## Known limitations
 
