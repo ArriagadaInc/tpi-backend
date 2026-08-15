@@ -9,6 +9,7 @@ from typing import Any
 
 import streamlit as st
 
+from app.auth import require_authenticated_user
 from app.components import show_database_status, show_error_message, show_header
 from app.database import get_safe_error_message
 from app.database.healthcheck import full_health_check
@@ -81,6 +82,7 @@ def get_dashboard_stats() -> dict[str, Any]:
 
 def main() -> None:
     logger = initialize_runtime("app.streamlit_app")
+    require_authenticated_user()
     show_header()
 
     health = check_database_health()

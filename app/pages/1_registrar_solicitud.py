@@ -14,6 +14,7 @@ from uuid import UUID
 
 import streamlit as st
 
+from app.auth import require_authenticated_user
 from app.components import (
     render_form_validation_error,
     show_error_message,
@@ -71,6 +72,7 @@ def load_catalogs():
 def main():
     """Función principal."""
     configure_logging()
+    require_authenticated_user()
     show_header()
 
     st.title("📝 Registrar Nueva Solicitud")

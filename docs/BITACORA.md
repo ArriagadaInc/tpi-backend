@@ -22,6 +22,46 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-08-15 - H2.5 SimpleDevAuth local preparation
+
+Contexto:
+
+- H2.5 approved the DEV-only SimpleDevAuth, Caddy, and Docker Compose design.
+- No AWS, DNS, IAM, Secrets Manager, user, Security Group, or deployment change
+  is authorized until the external DNS CNAME is confirmed.
+
+Tareas realizadas:
+
+- Added the `app/auth` boundary with an immutable user contract, provider
+  protocol, Argon2id SimpleDevAuth adapter, common guards, logout, and
+  per-session throttling.
+- Added safe auth settings with `AUTH_ENABLED=false` as the versioned default
+  and a fail-closed mode for AWS DEV, production, malformed users config, and
+  unknown auth modes.
+- Prepared Docker Compose with Caddy as the only host listener and Streamlit on
+  the internal Docker network.
+- Added an exact-resource IAM policy template, tests, CI Compose validation,
+  CEO validation guide, and development guide.
+
+Seguridad:
+
+- No password, password hash, user, AWS secret, IAM change, or network rule was
+  created or committed.
+- The future runtime secret is `tpi/dev/auth-users`; it will contain Argon2id
+  hashes only and be injected only after explicit infrastructure approval.
+
+Pendiente:
+
+- Confirm control of the DNS zone and create the approved CNAME for
+  `dev.tupensioninteligente.cl` outside this repository.
+- Only then create the auth secret, attach the exact IAM permission, open
+  80/443, deploy Compose, create the approved DEV user, and run the HTTPS smoke
+  test.
+
+Siguiente paso:
+
+- Wait for DNS confirmation; do not perform AWS changes before it arrives.
+
 ## Snapshot Actual
 
 Fecha de referencia: `2026-08-07`

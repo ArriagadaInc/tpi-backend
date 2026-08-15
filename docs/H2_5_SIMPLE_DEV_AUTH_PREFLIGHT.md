@@ -2,11 +2,13 @@
 
 ## Scope and approval gate
 
-This document is a read-only proposal. It does not create or modify AWS
-resources, DNS records, Security Groups, secrets, users, IAM policies, or
-application runtime behavior. SimpleDevAuth is explicitly **DEV ONLY**. It is
-not approved for staging or production, where HTTPS managed by AWS plus OIDC,
-a professional IdP, MFA when appropriate, and RBAC are required.
+This document records the approved preflight and local implementation boundary.
+The repository contains the SimpleDevAuth, Compose, Caddy, tests, and
+documentation preparation, but this work does not create or modify AWS
+resources, DNS records, Security Groups, secrets, users, or IAM policies.
+SimpleDevAuth is explicitly **DEV ONLY**. It is not approved for staging or
+production, where HTTPS managed by AWS plus OIDC, a professional IdP, MFA when
+appropriate, and RBAC are required.
 
 ## A. Proposed Caddy and Elastic Beanstalk topology
 
@@ -28,7 +30,7 @@ mapping. Caddy reverse proxy supports Streamlit WebSockets, redirects HTTP to
 HTTPS, and obtains/renews certificates automatically after DNS and ports are
 valid.
 
-Proposed future files:
+Prepared repository files:
 
 - `docker-compose.yml`: `caddy` and `streamlit` services.
 - `deployment/caddy/Caddyfile`: domain-based reverse proxy only.
@@ -93,7 +95,7 @@ for `tupensioninteligente.cl` delegates to `dns1` through `dns4.datatecno.com`.
 No CNAME was found for the proposed DEV host. AWS cannot create the required
 record from the available account.
 
-Before implementation, the DNS administrator must confirm control of the
+Before AWS implementation, the DNS administrator must confirm control of the
 DataTecno zone and approve this record:
 
 ```text

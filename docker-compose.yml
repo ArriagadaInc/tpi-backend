@@ -1,86 +1,45 @@
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: tpi_postgres
-    environment:
-      POSTGRES_USER: ${TPI_POSTGRES_USER:-tpi_app}
-      POSTGRES_PASSWORD: ${TPI_POSTGRES_PASSWORD:?TPI_POSTGRES_PASSWORD must be set}
-      POSTGRES_DB: ${TPI_POSTGRES_DB:-tpi_local}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=es_ES.UTF-8"
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - tpi_network
-
-  db-init:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      APP_ENV: local
-      DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_NAME: ${TPI_POSTGRES_DB:-tpi_local}
-      DATABASE_USER: ${TPI_POSTGRES_USER:-tpi_app}
-      DATABASE_PASSWORD: ${TPI_POSTGRES_PASSWORD:?TPI_POSTGRES_PASSWORD must be set}
-      DATABASE_SCHEMA: tpi
-      DATABASE_SSLMODE: disable
-    networks:
-      - tpi_network
-    command: python scripts/init_test_database.py
-
   streamlit:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: tpi_streamlit
-    depends_on:
-      db-init:
-        condition: service_completed_successfully
+    build: .
+    expose:
+      - "8501"
     environment:
-      APP_ENV: local
-      DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_NAME: ${TPI_POSTGRES_DB:-tpi_local}
-      DATABASE_USER: ${TPI_POSTGRES_USER:-tpi_app}
-      DATABASE_PASSWORD: ${TPI_POSTGRES_PASSWORD:?TPI_POSTGRES_PASSWORD must be set}
-      DATABASE_SCHEMA: tpi
-      DATABASE_SSLMODE: disable
-      DATABASE_CONNECT_TIMEOUT: 10
-      DATABASE_POOL_MIN_SIZE: 1
-      DATABASE_POOL_MAX_SIZE: 5
-      DATABASE_POOL_TIMEOUT: 30
-      STREAMLIT_SERVER_ADDRESS: 0.0.0.0
-      STREAMLIT_SERVER_PORT: 8501
-      STREAMLIT_SERVER_HEADLESS: "true"
+      APP_ENV: ${APP_ENV:-local}
+      APP_NAME: ${APP_NAME:-Tu Pension Inteligente Back-office}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      DATABASE_HOST: ${DATABASE_HOST:-}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_NAME: ${DATABASE_NAME:-}
+      DATABASE_USER: ${DATABASE_USER:-}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-}
+      DATABASE_SCHEMA: ${DATABASE_SCHEMA:-tpi}
+      DATABASE_SSLMODE: ${DATABASE_SSLMODE:-disable}
+      DATABASE_CONNECT_TIMEOUT: ${DATABASE_CONNECT_TIMEOUT:-10}
+      DATABASE_POOL_MIN_SIZE: ${DATABASE_POOL_MIN_SIZE:-1}
+      DATABASE_POOL_MAX_SIZE: ${DATABASE_POOL_MAX_SIZE:-5}
+      DATABASE_POOL_TIMEOUT: ${DATABASE_POOL_TIMEOUT:-30}
+      DEV_DELETE_ENABLED: ${DEV_DELETE_ENABLED:-false}
+      LEAD_NOTIFICATIONS_ENABLED: ${LEAD_NOTIFICATIONS_ENABLED:-false}
+      LEAD_NOTIFICATION_TOPIC_ARN: ${LEAD_NOTIFICATION_TOPIC_ARN:-}
+      AUTH_ENABLED: ${AUTH_ENABLED:-false}
+      AUTH_MODE: ${AUTH_MODE:-simple-dev}
+      AUTH_USERS_JSON: ${AUTH_USERS_JSON:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+  caddy:
+    image: caddy@sha256:d8c17a862962def15cde69863a3a463f25a2664942eafd7bdbf050e9c3116b83
     ports:
-      - "8501:8501"
+      - "80:80"
+      - "443:443"
+    environment:
+      TPI_DEV_DOMAIN: ${TPI_DEV_DOMAIN:-localhost}
     volumes:
-      - .:/app
-    networks:
-      - tpi_network
-    command: streamlit run app/streamlit_app.py
-    healthcheck:
-      test: ["CMD", "python", "-m", "scripts.healthcheck_runtime"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+      - ./deployment/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - streamlit
 
 volumes:
-  postgres_data:
-    driver: local
-
-networks:
-  tpi_network:
-    driver: bridge
+  caddy_data:
+  caddy_config:

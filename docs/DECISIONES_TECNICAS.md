@@ -4,6 +4,31 @@ Documento que detalla las decisiones arquitectónicas tomadas en la implementaci
 
 ## Decisiones Arquitectónicas
 
+### H2.5. SimpleDevAuth is DEV-only and replaceable
+
+**Decision**: AWS DEV will use an Argon2id-backed `SimpleDevAuth` adapter
+behind `AuthProvider` and `AuthenticatedUser`. It is protected by HTTPS through
+Caddy once DNS is approved. The authentication boundary remains outside
+Streamlit business pages and all services, repositories, PostgreSQL, and SNS
+contracts.
+
+**Justification**:
+- DEV needs a small, low-cost, administratively managed user/password flow.
+- Users and hashes stay in AWS Secrets Manager, not in source, environment
+  files, images, logs, or session state.
+- Pages call a common fail-closed guard, while a future OIDC provider can
+  replace the adapter without changing the business core.
+
+**Rejected alternatives**: hardcoded passwords, Basic Auth as the identity
+architecture, custom password hashing, and an application-specific credential
+store. They either couple infrastructure to identity or create an avoidable
+security maintenance burden.
+
+**Production constraint**: SimpleDevAuth and instance-local Caddy certificate
+state are not approved for production. Production must use managed HTTPS, OIDC,
+a professional identity provider, MFA where appropriate, and authorization
+policy/RBAC.
+
 ### H2.4. Eventos de notificacion post-commit
 
 **Decision**: Publicar `LeadCreatedEvent` mediante una abstraccion de

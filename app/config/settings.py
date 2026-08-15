@@ -147,6 +147,9 @@ class Settings(BaseSettings):
     lead_notification_topic_arn: str | None = Field(
         default=None, alias="LEAD_NOTIFICATION_TOPIC_ARN"
     )
+    auth_enabled: bool = Field(default=False, alias="AUTH_ENABLED")
+    auth_mode: str = Field(default="simple-dev", alias="AUTH_MODE")
+    auth_users_json: SecretStr | None = Field(default=None, alias="AUTH_USERS_JSON")
 
     database_url: SecretStr | None = Field(default=None, alias="DATABASE_URL")
     database_host: str | None = Field(default=None, alias="DATABASE_HOST")
@@ -272,6 +275,32 @@ class Settings(BaseSettings):
     def is_test_lead_cleanup_enabled(self) -> bool:
         """Allow test-data cleanup only in the explicitly enabled AWS DEV environment."""
         return self.normalized_app_env == "aws-dev" and self.dev_delete_enabled
+
+    @property
+    def authentication_required(self) -> bool:
+        """Require auth in deployed environments; local/test remain explicitly controlled."""
+        return (
+            self.normalized_app_env in {"aws-dev", "production"}
+            or self.auth_enabled
+            or self.auth_mode != "simple-dev"
+        )
+
+    def validate_auth_configuration(self) -> None:
+        """Validate auth safely before any protected page accesses application data."""
+        if not self.authentication_required:
+            return
+
+        if self.normalized_app_env == "production":
+            raise ValueError("Production requires an approved OIDC authentication provider")
+
+        if not self.auth_enabled:
+            raise ValueError("AUTH_ENABLED must be true in aws-dev")
+
+        if self.auth_mode != "simple-dev":
+            raise ValueError("AUTH_MODE is not supported")
+
+        if self.auth_users_json is None or not self.auth_users_json.get_secret_value().strip():
+            raise ValueError("AUTH_USERS_JSON must be configured when authentication is enabled")
 
     @property
     def database_config(self) -> DatabaseConnectionConfig:

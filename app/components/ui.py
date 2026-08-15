@@ -4,12 +4,14 @@ from typing import Any
 
 import streamlit as st
 
+from app.auth.guards import render_logout_control
 from app.config import get_settings
 
 
 def show_header():
     """Muestra el header de la aplicación."""
     settings = get_settings()
+    render_logout_control()
     st.markdown("---")
     col1, col2, col3 = st.columns([2, 3, 1])
 

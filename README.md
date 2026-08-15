@@ -114,11 +114,15 @@ La aplicación se abrirá en `http://localhost:8501`
 # Construir imagen
 docker build -t tpi-backoffice .
 
-# Ejecutar con docker-compose (incluye PostgreSQL)
-docker-compose up
-
-# Acceder en http://localhost:8501
+# Validar la topologia declarada de despliegue
+docker compose config --quiet
+docker compose build streamlit
 ```
+
+El Compose versionado prepara Caddy como unico punto de entrada y Streamlit en
+la red interna del contenedor. Para la configuracion local, base de datos,
+quality gates y autenticacion DEV, ver
+[docs/DEVELOPMENT_GUIDE.md](docs/DEVELOPMENT_GUIDE.md).
 
 ---
 

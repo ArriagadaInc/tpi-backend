@@ -33,6 +33,7 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "pytz>=2023.3",
     "boto3>=1.43.72,<2.0",
+    "argon2-cffi>=25.1.0,<26.0",
 ]
 
 [project.optional-dependencies]
