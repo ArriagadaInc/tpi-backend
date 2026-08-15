@@ -8,6 +8,7 @@ from app.models.solicitud import (
     SolicitudResponse,
 )
 from app.models.test_lead_cleanup import TestLeadCleanupResult
+from app.notifications.events import LeadCreatedEvent
 
 __all__ = [
     "PersonaData",
@@ -16,4 +17,5 @@ __all__ = [
     "RegistrarSolicitudRequest",
     "SolicitudResponse",
     "TestLeadCleanupResult",
+    "LeadCreatedEvent",
 ]

@@ -4,6 +4,23 @@ Documento que detalla las decisiones arquitectónicas tomadas en la implementaci
 
 ## Decisiones Arquitectónicas
 
+### H2.4. Eventos de notificacion post-commit
+
+**Decision**: Publicar `LeadCreatedEvent` mediante una abstraccion de
+publisher despues de confirmar PostgreSQL; SNS es solo el primer adapter.
+
+**Justificacion**:
+- Evita notificar leads que no llegaron a commit.
+- Mantiene email, SMS y WhatsApp fuera de `SolicitudService`, Repository y UI.
+- Reduce privacidad por diseno: el contrato tiene solo IDs, timestamp UTC,
+  ambiente y fuente.
+- Permite reemplazar SNS directo por Transactional Outbox sin cambiar el
+  formulario ni el modelo de leads.
+
+**Semantica H2.4**: la persistencia del lead es primaria. Un fallo de SNS se
+registra de forma segura y no revierte el commit. La entrega garantizada,
+reintentos durables y workers quedan para una evolucion posterior.
+
 ### 1. Patrón Repository
 
 **Decisión**: Implementar patrón Repository explícito.

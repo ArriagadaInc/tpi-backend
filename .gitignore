@@ -78,4 +78,5 @@ htmlcov/
 # Archivos temporales
 tmp/
 temp/
+.tmp-tests/
 *.tmp

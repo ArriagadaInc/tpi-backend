@@ -8,7 +8,14 @@ Validación de:
 - Envío de solicitud
 """
 
+from uuid import UUID, uuid4
+
 import pytest
+import streamlit as st
+
+from app.database.connection import get_db_connection
+from app.notifications import LeadCreatedEvent, PublishResult
+from app.services import solicitud_service
 
 
 @pytest.mark.e2e
@@ -178,6 +185,75 @@ class TestRegistroSolicitudIntegration:
         else:
             # Si no hay error, app debería estar lista
             assert not app.exception
+
+
+@pytest.mark.e2e
+class TestRegistroSolicitudNotifications:
+    """The form keeps its success path while the service emits a safe event."""
+
+    def test_successful_form_submission_invokes_publisher(
+        self, streamlit_app_factory, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        class RecordingPublisher:
+            def __init__(self) -> None:
+                self.events: list[LeadCreatedEvent] = []
+
+            def publish(self, event: LeadCreatedEvent) -> PublishResult:
+                self.events.append(event)
+                return PublishResult("published", "fake", "message-123")
+
+        publisher = RecordingPublisher()
+        monkeypatch.setattr(
+            solicitud_service,
+            "build_lead_event_publisher",
+            lambda settings: publisher,
+        )
+        st.cache_resource.clear()
+        try:
+            app = streamlit_app_factory("app/pages/1_registrar_solicitud.py")
+            app.run()
+
+            body = str(10_000_000 + uuid4().int % 80_000_000)
+            total = sum(int(digit) * (2 + index % 6) for index, digit in enumerate(reversed(body)))
+            verifier = 11 - total % 11
+            digit = "0" if verifier == 11 else "K" if verifier == 10 else str(verifier)
+            app.text_input[0].set_value(f"{body}-{digit}")
+            app.text_input[1].set_value("Lead Ficticio E2E")
+            app.text_input[2].set_value("lead.e2e@example.test")
+            app.text_input[3].set_value("+56911112222")
+            for checkbox in app.checkbox:
+                checkbox.set_value(True)
+            app.button[0].click()
+            app.run()
+
+            assert len(publisher.events) == 1
+            assert any(
+                "Solicitud Registrada Exitosamente" in str(item.value) for item in app.success
+            )
+
+            with get_db_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT id_persona FROM tpi.leads WHERE id_lead = %s",
+                        (str(publisher.events[0].lead_id),),
+                    )
+                    row = cur.fetchone()
+                    assert row is not None
+                    id_persona = UUID(str(row["id_persona"]))
+                    cur.execute(
+                        "DELETE FROM tpi.consentimientos WHERE id_lead = %s",
+                        (str(publisher.events[0].lead_id),),
+                    )
+                    cur.execute(
+                        "DELETE FROM tpi.leads WHERE id_lead = %s",
+                        (str(publisher.events[0].lead_id),),
+                    )
+                    cur.execute(
+                        "DELETE FROM tpi.personas WHERE id_persona = %s", (str(id_persona),)
+                    )
+                conn.commit()
+        finally:
+            st.cache_resource.clear()
 
 
 if __name__ == "__main__":

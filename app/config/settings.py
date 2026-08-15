@@ -143,6 +143,10 @@ class Settings(BaseSettings):
     app_name: str = Field(default="Tu Pension Inteligente Back-office", alias="APP_NAME")
     app_debug: bool = Field(default=False, alias="APP_DEBUG")
     dev_delete_enabled: bool = Field(default=False, alias="DEV_DELETE_ENABLED")
+    lead_notifications_enabled: bool = Field(default=False, alias="LEAD_NOTIFICATIONS_ENABLED")
+    lead_notification_topic_arn: str | None = Field(
+        default=None, alias="LEAD_NOTIFICATION_TOPIC_ARN"
+    )
 
     database_url: SecretStr | None = Field(default=None, alias="DATABASE_URL")
     database_host: str | None = Field(default=None, alias="DATABASE_HOST")

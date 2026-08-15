@@ -86,6 +86,38 @@ Archivos clave:
 
 ## Historial Incremental
 
+### 2026-08-15 - H2.4 notificaciones extensibles de leads
+
+Contexto:
+
+- H2.4 introduce una capacidad post-commit para notificar `lead.created` sin
+  acoplar el flujo de negocio a email, SNS ni boto3.
+
+Decisiones y hallazgos:
+
+- `LeadCreatedEvent` es un contrato versionado y sin PII: solo UUIDs,
+  timestamp UTC, ambiente y fuente.
+- `SolicitudService` publica despues del commit del Repository y tolera el
+  fallo del publisher; el lead confirmado nunca se revierte por SNS.
+- SNS Standard usa el topic `tpi-dev-lead-created`. La suscripcion email
+  aprobada no se versiona y permanece pendiente hasta confirmacion manual.
+- El rol EB recibe un inline policy con `sns:Publish` solamente sobre el ARN
+  exacto del topic. El secreto administrativo y PostgreSQL no se modifican.
+
+Validacion:
+
+- Unit e integracion cubren payload sin PII, publisher deshabilitado/fallido,
+  commit antes de publicar y persistencia del lead cuando falla SNS.
+- La regresion local completa paso: 226 tests, cobertura 88.49%, Ruff, Black,
+  MyPy, Bandit y pip-audit verdes. Los seis warnings Altair existentes no son
+  bloqueantes.
+
+Pendiente:
+
+- Confirmar la suscripcion SNS desde el correo aprobado, desplegar H2.4 con la
+  propiedad DEV habilitada y ejecutar el smoke test AWS crear -> email ->
+  eliminar antes de cerrar el hito.
+
 ### 2026-08-14 - H2.3 limpieza controlada de leads ficticios en AWS DEV
 
 Contexto:

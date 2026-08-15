@@ -87,7 +87,7 @@ jobs:
           DATABASE_PASSWORD: test_password
           DATABASE_SCHEMA: tpi
           APP_ENV: testing
-        run: pytest tests/ --cov=app --cov-report=xml --cov-fail-under=80
+        run: pytest tests/ --cov=app --cov-report=xml --cov-fail-under=85
       
   security:
     name: Security Audit
