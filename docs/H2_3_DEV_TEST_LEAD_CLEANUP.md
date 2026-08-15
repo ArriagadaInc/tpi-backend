@@ -30,9 +30,10 @@ DEV_DELETE_ENABLED == true
 
 Every other combination is denied by `SolicitudService`, including
 `production + true` and `local + true`. The button is also absent unless the
-same service guard is effective. H2.3 configures the dedicated AWS DEV
-Elastic Beanstalk environment with `DEV_DELETE_ENABLED=true`; it must never be
-added to a staging or production environment.
+same service guard is effective. The versioned Elastic Beanstalk configuration
+keeps `DEV_DELETE_ENABLED=false`. Set it to `true` only as an environment
+property on `tpi-backoffice-dev` during the approved H2.3 deployment; never
+add it to staging or production.
 
 All pages call the shared header. In `aws-dev` it renders the visible
 `AMBIENTE DE DESARROLLO` banner from `APP_ENV`.
