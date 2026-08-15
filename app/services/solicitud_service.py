@@ -16,6 +16,7 @@ from app.models.solicitud import (
     SolicitudResponse,
 )
 from app.models.test_lead_cleanup import TestLeadCleanupResult
+from app.notifications import LeadCreatedEvent, LeadEventPublisher, build_lead_event_publisher
 from app.repositories import SolicitudRepository
 from app.security.masking import mask_row_for_display
 
@@ -29,9 +30,11 @@ class SolicitudService:
         self,
         repository: SolicitudRepository | None = None,
         settings: Settings | None = None,
+        publisher: LeadEventPublisher | None = None,
     ) -> None:
         self.repository = repository or SolicitudRepository()
         self.settings = settings or get_settings()
+        self.publisher = publisher or build_lead_event_publisher(self.settings)
 
     def registrar_solicitud(self, request: RegistrarSolicitudRequest) -> SolicitudResponse:
         """
@@ -43,17 +46,57 @@ class SolicitudService:
                 estado_civil_id=request.solicitud.estado_civil_id,
                 afp_id=request.solicitud.afp_id,
             )
-            return self.repository.create_solicitud(
+            response = self.repository.create_solicitud(
                 persona_data=request.persona,
                 solicitud_data=request.solicitud,
                 consentimientos_data=request.consentimientos,
             )
+            self._publish_lead_created_event(response)
+            return response
         except DatabaseAppError:
             raise
         except ValueError as exc:
             raise ValueError(f"Validacion de negocio fallida: {exc}") from exc
         except Exception as exc:
             raise RuntimeError("No fue posible registrar la solicitud.") from exc
+
+    def _publish_lead_created_event(self, response: SolicitudResponse) -> None:
+        """Best-effort event publication after the repository has committed the lead."""
+        event = LeadCreatedEvent.create(
+            lead_id=response.id_lead,
+            environment=self.settings.normalized_app_env,
+        )
+        try:
+            result = self.publisher.publish(event)
+        except Exception:
+            logger.error(
+                "event=lead_notification_failed event_id=%s lead_id=%s environment=%s "
+                "provider=unknown result=failed",
+                event.event_id,
+                event.lead_id,
+                event.environment,
+            )
+            return
+
+        if result.status == "published":
+            logger.info(
+                "event=lead_notification_published event_id=%s lead_id=%s environment=%s "
+                "provider=%s result=success message_id=%s",
+                event.event_id,
+                event.lead_id,
+                event.environment,
+                result.provider,
+                result.message_id,
+            )
+        elif result.status == "failed":
+            logger.error(
+                "event=lead_notification_failed event_id=%s lead_id=%s environment=%s "
+                "provider=%s result=failed",
+                event.event_id,
+                event.lead_id,
+                event.environment,
+                result.provider,
+            )
 
     def get_solicitud_detalle(self, id_lead: UUID) -> dict[str, Any] | None:
         return self.repository.get_solicitud_by_id(id_lead)

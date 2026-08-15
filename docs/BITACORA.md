@@ -86,6 +86,49 @@ Archivos clave:
 
 ## Historial Incremental
 
+### 2026-08-15 - H2.4 notificaciones extensibles de leads
+
+Contexto:
+
+- H2.4 introduce una capacidad post-commit para notificar `lead.created` sin
+  acoplar el flujo de negocio a email, SNS ni boto3.
+
+Decisiones y hallazgos:
+
+- `LeadCreatedEvent` es un contrato versionado y sin PII: solo UUIDs,
+  timestamp UTC, ambiente y fuente.
+- `SolicitudService` publica despues del commit del Repository y tolera el
+  fallo del publisher; el lead confirmado nunca se revierte por SNS.
+- SNS Standard usa el topic `tpi-dev-lead-created`. La suscripcion email
+  aprobada no se versiona y fue confirmada manualmente antes del smoke test.
+- El rol EB recibe un inline policy con `sns:Publish` solamente sobre el ARN
+  exacto del topic. El secreto administrativo y PostgreSQL no se modifican.
+
+Validacion:
+
+- Unit e integracion cubren payload sin PII, publisher deshabilitado/fallido,
+  commit antes de publicar y persistencia del lead cuando falla SNS.
+- La regresion local completa paso: 226 tests, cobertura 88.49%, Ruff, Black,
+  MyPy, Bandit y pip-audit verdes. Los seis warnings Altair existentes no son
+  bloqueantes.
+- Se desplego `h2-4-9ea12f10e674` en `tpi-backoffice-dev`, que regreso a
+  `Ready/Green`; contenedor healthy y endpoints raiz y `/_stcore/health` con
+  HTTP 200 desde la IP autorizada.
+- Las propiedades runtime exclusivas de DEV habilitan notificaciones y apuntan
+  al topic SNS; los defaults versionados permanecen apagados.
+- Smoke test real: el lead ficticio se confirmo en RDS, SNS publico el evento
+  sin PII, se recibio el email operacional y el UUID coincidio. La limpieza
+  H2.3 posterior dejo el lead inexistente y cero consentimientos asociados.
+- CloudWatch conserva logs por siete dias. La consulta de conteo de patrones
+  sensibles sobre stdout/stderr no encontro coincidencias en la ventana del
+  deployment; no se registraron secretos ni PII en la evidencia revisada.
+
+Siguiente paso:
+
+- Crear o actualizar el PR draft H2.4 contra `main` y esperar CI verde antes
+  de solicitar revision. La integracion GitHub local no tiene permiso para
+  crear PRs; la rama ya fue publicada.
+
 ### 2026-08-14 - H2.3 limpieza controlada de leads ficticios en AWS DEV
 
 Contexto:
