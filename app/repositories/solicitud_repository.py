@@ -11,7 +11,10 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from psycopg.errors import ForeignKeyViolation
+
 from app.database.connection import get_db_connection
+from app.database.errors import DevLeadCleanupBlockedError
 from app.models.solicitud import (
     ConsentimientosData,
     PersonaData,
@@ -265,6 +268,56 @@ class SolicitudRepository:
                 cur.execute(query, (str(id_lead),))
                 row = cur.fetchone()
                 return dict(row) if row else None
+
+    @staticmethod
+    def test_lead_exists(id_lead: UUID) -> bool:
+        """Return whether a lead exists without exposing its contents."""
+        query = "SELECT 1 FROM tpi.leads WHERE id_lead = %s"
+        with get_db_connection(operation="test_lead_exists") as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (str(id_lead),))
+                return cur.fetchone() is not None
+
+    @staticmethod
+    def delete_test_lead(id_lead: UUID) -> bool:
+        """Delete a DEV test lead and its consent records in one transaction.
+
+        The operation intentionally does not remove personas. RDS DEV has
+        additional foreign keys from operational tables that can reference a
+        persona, and the application role must not receive broad DELETE access.
+        """
+        with get_db_connection(operation="delete_test_lead") as conn:
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT id_persona FROM tpi.leads WHERE id_lead = %s FOR UPDATE",
+                        (str(id_lead),),
+                    )
+                    if cur.fetchone() is None:
+                        return False
+
+                    cur.execute(
+                        "DELETE FROM tpi.consentimientos WHERE id_lead = %s",
+                        (str(id_lead),),
+                    )
+                    cur.execute(
+                        "DELETE FROM tpi.leads WHERE id_lead = %s RETURNING id_lead",
+                        (str(id_lead),),
+                    )
+                    if cur.fetchone() is None:
+                        raise RuntimeError("The test lead disappeared during cleanup")
+
+                conn.commit()
+                return True
+            except ForeignKeyViolation as exc:
+                conn.rollback()
+                raise DevLeadCleanupBlockedError(
+                    "Test lead has operational dependencies",
+                    operation="delete_test_lead",
+                ) from exc
+            except Exception:
+                conn.rollback()
+                raise
 
     @staticmethod
     def get_all_solicitudes(limit: int = 100, offset: int = 0) -> tuple[list[dict[str, Any]], int]:

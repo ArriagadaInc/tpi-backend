@@ -7,6 +7,7 @@ from app.models.solicitud import (
     SolicitudData,
     SolicitudResponse,
 )
+from app.models.test_lead_cleanup import TestLeadCleanupResult
 
 __all__ = [
     "PersonaData",
@@ -14,4 +15,5 @@ __all__ = [
     "ConsentimientosData",
     "RegistrarSolicitudRequest",
     "SolicitudResponse",
+    "TestLeadCleanupResult",
 ]

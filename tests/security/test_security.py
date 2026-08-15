@@ -92,6 +92,17 @@ class TestSQLInjectionPrevention:
             # Es aceptable que sea rechazado
             pass
 
+    def test_test_lead_cleanup_uses_parameterized_sql_and_never_deletes_without_where(self):
+        import inspect
+
+        from app.repositories.solicitud_repository import SolicitudRepository
+
+        source = inspect.getsource(SolicitudRepository.delete_test_lead)
+
+        assert "%s" in source
+        assert "DELETE FROM tpi.consentimientos WHERE id_lead = %s" in source
+        assert "DELETE FROM tpi.leads WHERE id_lead = %s RETURNING id_lead" in source
+
 
 @pytest.mark.security
 class TestXSSPrevention:
@@ -352,6 +363,20 @@ class TestValidationBypass:
         except ValidationError:
             # Es aceptable rechazar
             pass
+
+    def test_production_cannot_enable_test_lead_cleanup(self):
+        from app.config import Settings
+        from app.services.solicitud_service import SolicitudService
+
+        service = SolicitudService(
+            settings=Settings(
+                _env_file=None,
+                APP_ENV="production",
+                DEV_DELETE_ENABLED="true",
+            )
+        )
+
+        assert not service.is_test_lead_cleanup_enabled()
 
 
 @pytest.mark.security

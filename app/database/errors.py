@@ -83,6 +83,13 @@ class DatabaseQueryError(DatabaseAppError):
     default_user_message = "Ocurrio un error al ejecutar la operacion en la base de datos."
 
 
+class DevLeadCleanupBlockedError(DatabaseAppError):
+    """A DEV test lead has operational dependencies that prevent deletion."""
+
+    code = "dev_test_lead_cleanup_blocked"
+    default_user_message = "No fue posible eliminar el lead porque tiene referencias operacionales."
+
+
 def sanitize_exception_message(message: str) -> str:
     """Redact passwords from URLs and conninfo strings before logging."""
     redacted = _DSN_PASSWORD_RE.sub(r"\1***\3", message)

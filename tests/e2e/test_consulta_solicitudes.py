@@ -12,6 +12,7 @@ from datetime import datetime
 
 import pytest
 
+from app.models.test_lead_cleanup import TestLeadCleanupResult
 from app.services.solicitud_service import SolicitudService
 
 
@@ -192,6 +193,86 @@ class TestConsultaSolicitudesDetalle:
 
         # No debería haber error
         assert not app.exception
+
+    def test_dev_cleanup_requires_two_confirmations_and_removes_the_detail(
+        self,
+        monkeypatch,
+        streamlit_app_factory,
+    ):
+        record = {
+            "id_lead": "11111111-1111-1111-1111-111111111111",
+            "id_persona": "22222222-2222-2222-2222-222222222222",
+            "rut": "12.***.***-5",
+            "nombre_completo": "Lead Sintetico",
+            "email": "te***@example.com",
+            "telefono": "+56 9 **** 5678",
+            "afp": "Habitat",
+            "genero": "Masculino",
+            "estado_civil": "Soltero/a",
+            "saldo_afp": 100000,
+            "estado_lead": "pendiente",
+            "created_at": datetime(2026, 8, 7, 12, 0, 0),
+            "acepta_terminos": True,
+            "acepta_politica_privacidad": True,
+            "finalidad_contacto": True,
+            "comentarios": "Registro sintetico para regresion",
+        }
+        state = {"deleted": False}
+
+        monkeypatch.setattr(SolicitudService, "is_test_lead_cleanup_enabled", lambda self: True)
+        monkeypatch.setattr(
+            SolicitudService,
+            "get_solicitudes_lista",
+            lambda self, page=1, page_size=10, masked=True: {
+                "solicitudes": [] if state["deleted"] else [record],
+                "total": 0 if state["deleted"] else 1,
+                "page": 1,
+                "page_size": page_size,
+                "total_pages": 0 if state["deleted"] else 1,
+            },
+        )
+        monkeypatch.setattr(
+            SolicitudService, "get_solicitud_detalle_masked", lambda self, id_lead: record
+        )
+
+        def delete_test_lead(self, id_lead):
+            state["deleted"] = True
+            return TestLeadCleanupResult(
+                status="deleted",
+                message="Lead de prueba eliminado correctamente.",
+            )
+
+        monkeypatch.setattr(SolicitudService, "delete_test_lead", delete_test_lead)
+
+        app = streamlit_app_factory("app/pages/2_solicitudes_registradas.py")
+        app.run()
+        detail_button = next(button for button in app.button if button.label == "📋")
+        detail_button.click()
+        app.run()
+
+        assert any(
+            element.label == "Confirmo que este es un dato de prueba" for element in app.checkbox
+        )
+        assert any(element.label == "Escribe ELIMINAR para confirmar" for element in app.text_input)
+        delete_button = next(
+            button for button in app.button if button.label == "ELIMINAR LEAD DE PRUEBA"
+        )
+        assert delete_button.disabled
+
+        app.checkbox[0].set_value(True)
+        next(
+            element
+            for element in app.text_input
+            if element.label == "Escribe ELIMINAR para confirmar"
+        ).set_value("ELIMINAR")
+        app.run()
+        next(button for button in app.button if button.label == "ELIMINAR LEAD DE PRUEBA").click()
+        app.run()
+
+        assert state["deleted"]
+        assert "Lead de prueba eliminado correctamente." in [
+            element.value for element in app.success
+        ]
 
 
 @pytest.mark.e2e

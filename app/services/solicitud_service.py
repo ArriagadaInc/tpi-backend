@@ -4,23 +4,34 @@ Business service for lead registration and lookup.
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 from uuid import UUID
 
+from app.config import Settings, get_settings
 from app.database import DatabaseAppError
+from app.database.errors import DevLeadCleanupBlockedError
 from app.models.solicitud import (
     RegistrarSolicitudRequest,
     SolicitudResponse,
 )
+from app.models.test_lead_cleanup import TestLeadCleanupResult
 from app.repositories import SolicitudRepository
 from app.security.masking import mask_row_for_display
+
+logger = logging.getLogger(__name__)
 
 
 class SolicitudService:
     """Business service for pension simulation requests."""
 
-    def __init__(self) -> None:
-        self.repository = SolicitudRepository()
+    def __init__(
+        self,
+        repository: SolicitudRepository | None = None,
+        settings: Settings | None = None,
+    ) -> None:
+        self.repository = repository or SolicitudRepository()
+        self.settings = settings or get_settings()
 
     def registrar_solicitud(self, request: RegistrarSolicitudRequest) -> SolicitudResponse:
         """
@@ -107,6 +118,76 @@ class SolicitudService:
 
     def get_catalogo_estado_civil(self) -> list[dict[str, Any]]:
         return self.repository.get_active_estado_civil()
+
+    def is_test_lead_cleanup_enabled(self) -> bool:
+        """Return the effective cleanup capability, never enabled outside AWS DEV."""
+        return self.settings.is_test_lead_cleanup_enabled
+
+    def delete_test_lead(self, id_lead: UUID | str) -> TestLeadCleanupResult:
+        """Safely clean a fictitious lead when AWS DEV explicitly permits it."""
+        if not self.is_test_lead_cleanup_enabled():
+            return TestLeadCleanupResult(
+                status="denied",
+                message="Esta operacion solo esta disponible en el ambiente de desarrollo.",
+            )
+
+        try:
+            lead_id = UUID(str(id_lead))
+        except (TypeError, ValueError, AttributeError):
+            return TestLeadCleanupResult(
+                status="invalid",
+                message="El identificador de la solicitud no es valido.",
+            )
+
+        if not self.repository.test_lead_exists(lead_id):
+            return TestLeadCleanupResult(
+                status="not_found",
+                message="El lead de prueba ya no existe.",
+                lead_id=lead_id,
+            )
+
+        try:
+            deleted = self.repository.delete_test_lead(lead_id)
+        except DevLeadCleanupBlockedError:
+            logger.warning(
+                "event=test_lead_delete_failed environment=%s lead_id=%s result=blocked",
+                self.settings.normalized_app_env,
+                lead_id,
+            )
+            return TestLeadCleanupResult(
+                status="blocked",
+                message="No fue posible eliminar el lead porque tiene referencias operacionales.",
+                lead_id=lead_id,
+            )
+        except (DatabaseAppError, RuntimeError):
+            logger.error(
+                "event=test_lead_delete_failed environment=%s lead_id=%s result=failed",
+                self.settings.normalized_app_env,
+                lead_id,
+            )
+            return TestLeadCleanupResult(
+                status="failed",
+                message="No fue posible eliminar el lead de prueba. Intenta nuevamente.",
+                lead_id=lead_id,
+            )
+
+        if not deleted:
+            return TestLeadCleanupResult(
+                status="not_found",
+                message="El lead de prueba ya no existe.",
+                lead_id=lead_id,
+            )
+
+        logger.info(
+            "event=test_lead_deleted environment=%s lead_id=%s result=success",
+            self.settings.normalized_app_env,
+            lead_id,
+        )
+        return TestLeadCleanupResult(
+            status="deleted",
+            message="Lead de prueba eliminado correctamente.",
+            lead_id=lead_id,
+        )
 
     def _validate_catalogo_ids(self, genero_id: UUID, estado_civil_id: UUID, afp_id: UUID) -> None:
         generos = self.repository.get_active_genero()

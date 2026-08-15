@@ -86,6 +86,34 @@ Archivos clave:
 
 ## Historial Incremental
 
+### 2026-08-14 - H2.3 limpieza controlada de leads ficticios en AWS DEV
+
+Contexto:
+
+- H2.3 habilita el flujo de datos ficticios crear, consultar y limpiar solo en AWS DEV.
+
+Decisiones y hallazgos:
+
+- La habilitacion exige `APP_ENV=aws-dev` y `DEV_DELETE_ENABLED=true`; cualquier otro ambiente queda denegado en Service.
+- El inventario de RDS encontro referencias a `leads` desde `asignaciones`, `auditoria`, `campanas_atribucion`, `citas`, `consentimientos`, `eventos_lead`, `fichas_diagnosticas` e `ingesta_google_sheets`.
+- `auditoria` tambien referencia `personas`, por lo que H2.3 conserva personas y no concede DELETE sobre esa tabla.
+- La transaccion borra solo consentimientos y el lead. Una FK operacional bloquea la operacion y revierte todo.
+- Los scripts `scripts/sql/dev/002_enable_test_cleanup.sql` y `002_disable_test_cleanup.sql` otorgan y revocan DELETE solo en consentimientos y leads para `tpi_app` en DEV.
+
+Validacion:
+
+- Unit, integration PostgreSQL, E2E y security cubren guard de ambiente, UUID invalido, doble ejecucion, SQL parametrizado, persona compartida y rollback por FK.
+- La UI requiere checkbox y texto `ELIMINAR`, y registra eventos sin PII usando solo el UUID interno del lead.
+- Se aplico `002_enable_test_cleanup.sql` desde una conexion administrativa temporal con `tpi_admin`. `tpi_app` quedo sin atributos administrativos, sin DELETE en `personas` ni tablas operacionales, y con DELETE solo en `tpi.leads` y `tpi.consentimientos`.
+- Se desplego `h2-3-3d5ded341436` en `tpi-backoffice-dev`. La configuracion versionada conserva `DEV_DELETE_ENABLED=false`; la propiedad efectiva `true` existe solo en el environment DEV.
+- El contenedor desplegado esta healthy y corre como `appuser`; los checks confirmaron `APP_ENV=aws-dev`, salud PostgreSQL completa, HTTP 200 en raiz y `/_stcore/health`, y banner visible de ambiente DEV.
+- El smoke test AWS con datos sinteticos completo crear, consultar, eliminar y verificar ausencia de lead/consentimiento, conservando la persona. La revision agregada de CloudWatch stdout/stderr no encontro patrones de password, token, email, telefono ni RUT; la retencion es siete dias.
+
+Seguridad y rollback:
+
+- `tpi/dev/database-admin-password` se usa solo desde el perfil local administrativo `tpi-dev`; el rol de Elastic Beanstalk conserva acceso unicamente al secreto de aplicacion. Ningun valor de secreto se versiona ni se registra.
+- Para revertir H2.3: configurar `DEV_DELETE_ENABLED=false` en `tpi-backoffice-dev`, reiniciar o redeployar y ejecutar `scripts/sql/dev/002_disable_test_cleanup.sql` con `tpi_admin`. RDS, H2.2 y los permisos de creacion/consulta permanecen intactos.
+
 ### 2026-08-14 - H2.2 correccion de empaquetado para CI
 
 Contexto:

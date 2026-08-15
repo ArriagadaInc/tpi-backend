@@ -4,9 +4,12 @@ from typing import Any
 
 import streamlit as st
 
+from app.config import get_settings
+
 
 def show_header():
     """Muestra el header de la aplicación."""
+    settings = get_settings()
     st.markdown("---")
     col1, col2, col3 = st.columns([2, 3, 1])
 
@@ -19,6 +22,11 @@ def show_header():
 
     with col3:
         st.caption("v0.1.0 MVP")
+
+    if settings.normalized_app_env == "aws-dev":
+        st.warning("AMBIENTE DE DESARROLLO")
+    else:
+        st.caption(f"Ambiente: {settings.normalized_app_env}")
 
     st.markdown("---")
 
