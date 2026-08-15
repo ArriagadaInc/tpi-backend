@@ -68,8 +68,9 @@ arn:aws:sns:us-east-2:821656895812:tpi-dev-lead-created
 
 The topic name is event-oriented, not email-oriented. The approved email
 subscription is intentionally not recorded in this repository. SNS sends its
-standard confirmation message to that mailbox; it must show `Confirmed` before
-an AWS smoke test can assert email delivery.
+standard confirmation message to that mailbox. The subscription was confirmed
+before the AWS smoke test; its recipient and subscription endpoint are not
+recorded in this repository.
 
 SNS receives `MessageStructure=json` with three PII-free renderings:
 
@@ -157,14 +158,28 @@ publication configuration. The CI gate requires at least 85% coverage.
 
 ## AWS deployment and smoke test
 
-1. Verify the subscription is `Confirmed`.
-2. Deploy the reviewed source bundle to `tpi-backoffice-dev`.
-3. Set the two Elastic Beanstalk properties above only on that environment.
-4. Wait for `Ready` and `Green`.
-5. Register one fictitious lead from the restricted DEV URL.
-6. Verify its row in PostgreSQL and the SNS email lead UUID, with no PII.
-7. Review CloudWatch logs for the safe publication event.
-8. Delete the fictitious lead using the H2.3 guarded cleanup and verify RDS.
+The reviewed bundle `h2-4-9ea12f10e674` was deployed to
+`tpi-backoffice-dev`. The environment returned `Ready/Green`; the application
+container was healthy; the restricted DEV root and `/_stcore/health` both
+returned HTTP 200.
+
+`LEAD_NOTIFICATIONS_ENABLED=true` and the topic ARN were set only as Elastic
+Beanstalk environment properties. Versioned defaults remain disabled.
+
+The smoke test created one fictitious lead through `SolicitudService` on the
+deployed container. It verified the committed row in RDS, emitted a successful
+SNS publication log with only UUIDs and a SNS message ID, and the approved
+recipient confirmed receipt of the operational email with the same lead UUID.
+The message contained no customer PII. The H2.3 guarded cleanup then removed
+the lead; RDS verification confirmed no remaining lead and zero associated
+consents. The conservative H2.3 persona behavior remains unchanged.
+
+CloudWatch log groups for the Elastic Beanstalk environment have a seven-day
+retention. A count-only Logs Insights check of the application stdout/stderr
+group found no events matching configured sensitive-term patterns in the
+deployment window. The smoke command output itself was also reviewed and
+contained only runtime status, resource identifiers, UUIDs, and the SNS message
+ID; it contained no credentials or customer data.
 
 ## Rollback
 
