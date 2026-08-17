@@ -43,14 +43,27 @@ def test_caddy_routes_public_and_private_hosts_to_internal_services() -> None:
 
     assert "{$TPI_PUBLIC_DOMAIN:localhost}" in caddyfile
     assert "backoffice.{$TPI_PUBLIC_DOMAIN:localhost}" in caddyfile
-    assert "reverse_proxy public:8501" in caddyfile
+    assert "handle /api/*" in caddyfile
+    assert "reverse_proxy api:8000" in caddyfile
     assert "reverse_proxy backoffice:8501" in caddyfile
     assert "http://" not in caddyfile
 
 
-def test_public_compose_service_does_not_receive_auth_secret() -> None:
+def test_public_api_compose_service_does_not_receive_auth_secret() -> None:
     compose = (PROJECT_ROOT / "docker-compose.yml").read_text(encoding="utf-8")
     public_section = compose.split("  backoffice:", maxsplit=1)[0]
 
     assert "AUTH_USERS_JSON" not in public_section
     assert "AUTH_USERS_JSON" in compose.split("  backoffice:", maxsplit=1)[1]
+
+
+def test_public_api_does_not_receive_the_admin_database_secret_or_open_cors() -> None:
+    api_files = [
+        PROJECT_ROOT / "app/api/routes.py",
+        PROJECT_ROOT / "app/api/app.py",
+        PROJECT_ROOT / "docker-compose.yml",
+    ]
+
+    contents = "\n".join(path.read_text(encoding="utf-8") for path in api_files)
+    assert "database-admin-password" not in contents
+    assert "CORSMiddleware" not in contents

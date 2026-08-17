@@ -22,6 +22,71 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-08-17 - H2.5C idempotency hardening pending local validation
+
+Contexto:
+
+- The public API remains local only. No AWS, DNS, IAM, Secrets Manager, RDS or
+  deployment change is authorized or executed.
+
+Tareas realizadas:
+
+- Renamed the idempotency HMAC configuration to the dedicated
+  `API_IDEMPOTENCY_HMAC_SECRET` contract. Public API startup fails closed when
+  it is absent and it is explicitly separate from database and auth secrets.
+- Confirmed the PostgreSQL algorithm reserves `idempotency_key` with its primary
+  key plus `INSERT ... ON CONFLICT` in the same transaction as lead creation.
+  A PostgreSQL concurrency test covers two simultaneous equal requests.
+- Updated the short-lived lead FK to `ON DELETE SET NULL` so the approved DEV
+  cleanup path is not blocked. The migration grants only the required table
+  privileges to `tpi_app`; `scripts/sql/003_drop_api_idempotency.sql` is the
+  documented reversal after disabling the public API.
+
+Pendiente:
+
+- Complete quality gates in an environment with normal temporary, Docker and
+  Git permissions before any commit or push.
+
+### 2026-08-16 - H2.5C public static frontend and HTTP API (local only)
+
+Contexto:
+
+- H2.5C replaces the cloned frontend lead transport through WhatsApp with a
+  same-origin, versioned HTTP API. No AWS, DNS, billing, IAM, secret, security
+  group, Route 53 or deployment change is authorized or executed.
+
+Tareas realizadas:
+
+- Versioned `front/`, corrected JPEG extensions/MIME references, removed binary
+  duplicates and added the mandatory synthetic-data DEV banner.
+- Added `app/api` FastAPI adapter with `GET /api/v1/catalogs` and
+  `POST /api/v1/leads`, explicit public-to-application DTO mapping, safe errors,
+  request size limit, security headers, same-origin operation and no CORS.
+- Added PostgreSQL-backed idempotency in `tpi.api_idempotency` through the
+  versioned `scripts/sql/003_create_api_idempotency.sql` migration. It stores no
+  payload or PII and uses a runtime HMAC key.
+- Preserved `SolicitudService` as the only public lead business entrypoint and
+  SNS publication as best effort strictly after commit.
+- Changed local Compose/Caddy topology to static front + API on the public host
+  and Streamlit backoffice on the private hostname.
+
+Validacion local parcial:
+
+- Applied the idempotency schema only to the local test database and passed the
+  new integration cases for replay, conflict and notification failure.
+- No AWS RDS change was made.
+
+Pendiente:
+
+- Complete full quality-gate validation and review before any push or AWS work.
+- The runtime HMAC key must be supplied from a future exact secret; no secret
+  has been created in this iteration.
+
+Siguiente paso:
+
+- Finish local tests, Docker/Compose/Caddy validation and commit the isolated
+  H2.5C changes after review.
+
 ### 2026-08-16 - H2.5 public/private presentation separation
 
 Contexto:

@@ -1,11 +1,11 @@
 services:
-  public:
+  api:
     build: .
     expose:
-      - "8501"
+      - "8000"
     environment:
       APP_ENV: ${APP_ENV:-local}
-      APP_NAME: ${APP_NAME:-Tu Pension Inteligente}
+      APP_NAME: ${APP_NAME:-Tu Pension Inteligente Public API}
       APP_DEBUG: ${APP_DEBUG:-false}
       DATABASE_HOST: ${DATABASE_HOST:-}
       DATABASE_PORT: ${DATABASE_PORT:-5432}
@@ -18,10 +18,15 @@ services:
       DATABASE_POOL_MIN_SIZE: ${DATABASE_POOL_MIN_SIZE:-1}
       DATABASE_POOL_MAX_SIZE: ${DATABASE_POOL_MAX_SIZE:-5}
       DATABASE_POOL_TIMEOUT: ${DATABASE_POOL_TIMEOUT:-30}
+      API_IDEMPOTENCY_HMAC_SECRET: ${API_IDEMPOTENCY_HMAC_SECRET:-}
+      API_MAX_REQUEST_BYTES: ${API_MAX_REQUEST_BYTES:-16384}
+      API_RATE_LIMIT_REQUESTS: ${API_RATE_LIMIT_REQUESTS:-5}
+      API_RATE_LIMIT_WINDOW_SECONDS: ${API_RATE_LIMIT_WINDOW_SECONDS:-600}
+      API_TRUSTED_PROXY_CIDRS: ${API_TRUSTED_PROXY_CIDRS:-}
       LEAD_NOTIFICATIONS_ENABLED: ${LEAD_NOTIFICATIONS_ENABLED:-false}
       LEAD_NOTIFICATION_TOPIC_ARN: ${LEAD_NOTIFICATION_TOPIC_ARN:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-    command: ["streamlit", "run", "app/streamlit_app.py"]
+    command: ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
   backoffice:
     build: .
@@ -52,18 +57,19 @@ services:
     command: ["streamlit", "run", "app/backoffice_app.py"]
 
   caddy:
-    image: caddy@sha256:d8c17a862962def15cde69863a3a463f25a2664942eafd7bdbf050e9c3116b83
+    build:
+      context: .
+      dockerfile: deployment/caddy/Dockerfile
     ports:
       - "80:80"
       - "443:443"
     environment:
       TPI_PUBLIC_DOMAIN: ${TPI_PUBLIC_DOMAIN:-localhost}
     volumes:
-      - ./deployment/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - public
+      - api
       - backoffice
 
 volumes:

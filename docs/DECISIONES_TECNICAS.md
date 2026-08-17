@@ -4,6 +4,34 @@ Documento que detalla las decisiones arquitectónicas tomadas en la implementaci
 
 ## Decisiones Arquitectónicas
 
+### H2.5C. Static frontend uses a versioned HTTP adapter
+
+**Decision**: The public clone in `front/` is served as static content by Caddy
+and submits leads to `POST /api/v1/leads`. FastAPI owns only HTTP concerns and
+maps `PublicLeadCreateRequest` v1 explicitly to the existing
+`RegistrarSolicitudRequest`; `SolicitudService` remains the shared core.
+
+**Justification**:
+- Allows replacement of the static frontend without changing business rules,
+  repositories, PostgreSQL or SNS.
+- Keeps active catalogs authoritative through `GET /api/v1/catalogs` and
+  validates their UUIDs again in the service.
+- Preserves the H2.4 post-commit notification contract.
+
+**Idempotency**: PostgreSQL reserves the UUID key atomically through its primary
+key and `INSERT ... ON CONFLICT`, then creates the lead in the same transaction.
+It stores only a HMAC-SHA256 fingerprint, lead ID and 24-hour expiry in
+`tpi.api_idempotency`; it never stores request payload or PII. The HMAC uses
+the dedicated `API_IDEMPOTENCY_HMAC_SECRET` runtime secret and startup fails
+closed without it. Same key plus same payload returns the existing result;
+changed payload returns `409`. The short-lived FK is `ON DELETE SET NULL` so
+DEV cleanup is not blocked. Expired records are cleaned on a later request to
+avoid a scheduler in DEV.
+
+**Rejected alternatives**: frontend-to-WhatsApp lead transport, frontend SQL,
+routes that call SNS directly, generic payload persistence, and CORS wildcard.
+The initial same-origin Caddy route needs no CORS.
+
 ### H2.5. Public lead capture and private backoffice are separate boundaries
 
 **Decision**: TPI exposes an unauthenticated public landing/form and an

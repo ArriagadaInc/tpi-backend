@@ -80,6 +80,8 @@ jobs:
       
       - name: Run tests
         env:
+          # Deliberately non-production value. CI never reads deployment secrets.
+          API_IDEMPOTENCY_HMAC_SECRET: ci-testing-hmac-secret-not-for-runtime
           DATABASE_HOST: localhost
           DATABASE_PORT: 5432
           DATABASE_NAME: tpi_test
@@ -126,8 +128,8 @@ jobs:
       - name: Validate Docker Compose topology
         run: docker compose config --quiet
 
-      - name: Build public and backoffice Compose services
-        run: docker compose build public backoffice
+      - name: Build complete Compose topology
+        run: docker compose build
 
       - name: Validate Caddy configuration
         run: >-
