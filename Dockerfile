@@ -20,7 +20,7 @@ COPY --chown=appuser:appuser .streamlit ./.streamlit
 RUN pip install --no-cache-dir --requirement requirements/runtime.lock \
     && pip install --no-cache-dir --no-deps .
 
-EXPOSE 8501
+EXPOSE 8000 8501
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
     CMD ["python", "-m", "scripts.healthcheck_runtime"]
