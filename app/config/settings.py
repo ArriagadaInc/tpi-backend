@@ -150,6 +150,13 @@ class Settings(BaseSettings):
     auth_enabled: bool = Field(default=False, alias="AUTH_ENABLED")
     auth_mode: str = Field(default="simple-dev", alias="AUTH_MODE")
     auth_users_json: SecretStr | None = Field(default=None, alias="AUTH_USERS_JSON")
+    api_idempotency_hmac_secret: SecretStr | None = Field(
+        default=None, alias="API_IDEMPOTENCY_HMAC_SECRET"
+    )
+    api_max_request_bytes: int = Field(default=16384, alias="API_MAX_REQUEST_BYTES")
+    api_rate_limit_requests: int = Field(default=5, alias="API_RATE_LIMIT_REQUESTS")
+    api_rate_limit_window_seconds: int = Field(default=600, alias="API_RATE_LIMIT_WINDOW_SECONDS")
+    api_trusted_proxy_cidrs: str = Field(default="", alias="API_TRUSTED_PROXY_CIDRS")
 
     database_url: SecretStr | None = Field(default=None, alias="DATABASE_URL")
     database_host: str | None = Field(default=None, alias="DATABASE_HOST")
@@ -238,6 +245,17 @@ class Settings(BaseSettings):
             raise ValueError("Database timeouts and pool sizes must be positive integers")
         return value
 
+    @field_validator(
+        "api_max_request_bytes",
+        "api_rate_limit_requests",
+        "api_rate_limit_window_seconds",
+    )
+    @classmethod
+    def validate_positive_api_limit(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("API limits must be positive integers")
+        return value
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, value: str) -> str:
@@ -301,6 +319,14 @@ class Settings(BaseSettings):
 
         if self.auth_users_json is None or not self.auth_users_json.get_secret_value().strip():
             raise ValueError("AUTH_USERS_JSON must be configured when authentication is enabled")
+
+    def validate_public_api_configuration(self) -> None:
+        """Fail closed when the public API lacks its dedicated HMAC secret."""
+        if (
+            self.api_idempotency_hmac_secret is None
+            or not self.api_idempotency_hmac_secret.get_secret_value().strip()
+        ):
+            raise ValueError("API_IDEMPOTENCY_HMAC_SECRET must be configured for the public API")
 
     @property
     def database_config(self) -> DatabaseConnectionConfig:

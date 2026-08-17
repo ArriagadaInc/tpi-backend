@@ -98,6 +98,19 @@ CREATE TABLE IF NOT EXISTS tpi.auditoria (
     detalle JSONB
 );
 
+-- Stores no payload or PII: only a keyed fingerprint and the resulting lead id.
+CREATE TABLE IF NOT EXISTS tpi.api_idempotency (
+    idempotency_key UUID PRIMARY KEY,
+    payload_fingerprint CHAR(64) NOT NULL,
+    lead_id UUID REFERENCES tpi.leads(id_lead) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at TIMESTAMPTZ NOT NULL,
+    CHECK (expires_at > created_at)
+);
+
+CREATE INDEX IF NOT EXISTS api_idempotency_expires_at_idx
+    ON tpi.api_idempotency (expires_at);
+
 INSERT INTO tpi.catalogo_genero (codigo, nombre, activo, orden_visual)
 VALUES
     ('FEMENINO', 'Femenino', TRUE, 10),

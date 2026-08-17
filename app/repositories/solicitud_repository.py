@@ -15,6 +15,7 @@ from psycopg.errors import ForeignKeyViolation
 
 from app.database.connection import get_db_connection
 from app.database.errors import DevLeadCleanupBlockedError
+from app.models.idempotency import IdempotencyConflictError, IdempotentSolicitudResult
 from app.models.solicitud import (
     ConsentimientosData,
     PersonaData,
@@ -107,6 +108,8 @@ class SolicitudRepository:
 
         Esta operaciÃ³n es atÃ³mica: o se insertan todos los registros, o ninguno.
         Usa UNA SOLA conexiÃ³n y UNA SOLA transacciÃ³n para garantizar consistencia.
+        Delega las consultas SQL parametrizadas con placeholders ``%s`` al
+        helper transaccional; nunca concatena datos de la solicitud en SQL.
 
         Args:
             persona_data: Datos validados de persona
@@ -119,106 +122,180 @@ class SolicitudRepository:
         Raises:
             Exception: Si falla cualquier paso de la transacciÃ³n
         """
-        with get_db_connection() as conn:
+        with get_db_connection(operation="create_solicitud") as conn:
             try:
                 with conn.cursor() as cur:
-                    # PASO 1: Verificar si persona ya existe (en la misma conexiÃ³n)
-                    query_check = "SELECT id_persona FROM tpi.personas WHERE rut = %s LIMIT 1"
-                    cur.execute(query_check, (persona_data.rut,))
-                    existing_row = cur.fetchone()
-
-                    if existing_row:
-                        id_persona = UUID(str(existing_row["id_persona"]))
-                    else:
-                        # PASO 1b: Crear nueva persona
-                        query_persona = """
-                            INSERT INTO tpi.personas
-                                (rut, nombre_completo, email, telefono, fecha_nacimiento, created_at)
-                            VALUES (%s, %s, %s, %s, %s, %s)
-                            RETURNING id_persona
-                        """
-                        params_persona = (
-                            persona_data.rut,
-                            persona_data.nombre_completo,
-                            persona_data.email,
-                            persona_data.telefono,
-                            persona_data.fecha_nacimiento,
-                            datetime.now(),
-                        )
-                        cur.execute(query_persona, params_persona)
-                        row = cur.fetchone()
-                        if row is None:
-                            raise RuntimeError("No se pudo crear la persona")
-                        id_persona = UUID(str(row["id_persona"]))
-
-                    # PASO 2: Crear lead (solicitud) en la MISMA transacciÃ³n
-                    query_lead = """
-                        INSERT INTO tpi.leads
-                            (id_persona, genero_id, estado_civil_id, afp_id,
-                             saldo_afp, comentarios, estado_lead, fecha_ingreso,
-                             origen_lead, fuente_actual, created_at)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        RETURNING id_lead
-                    """
-                    params_lead = (
-                        str(id_persona),
-                        str(solicitud_data.genero_id),
-                        str(solicitud_data.estado_civil_id),
-                        str(solicitud_data.afp_id),
-                        solicitud_data.saldo_afp,
-                        solicitud_data.comentarios or "",
-                        "pendiente",  # estado inicial
-                        datetime.now(),  # fecha_ingreso
-                        "formulario_streamlit",  # origen_lead
-                        "backoffice",  # fuente_actual
-                        datetime.now(),  # created_at
+                    response = SolicitudRepository._create_solicitud_in_cursor(
+                        cur, persona_data, solicitud_data, consentimientos_data
                     )
-
-                    cur.execute(query_lead, params_lead)
-                    row = cur.fetchone()
-                    if row is None:
-                        raise RuntimeError("No se pudo crear el lead")
-                    id_lead = UUID(str(row["id_lead"]))
-
-                    # PASO 3: Crear consentimientos en la MISMA transacciÃ³n
-                    query_consent = """
-                        INSERT INTO tpi.consentimientos
-                            (id_persona, id_lead, acepta_terminos, acepta_politica_privacidad,
-                             finalidad_contacto, created_at)
-                        VALUES (%s, %s, %s, %s, %s, %s)
-                        RETURNING id_consentimiento
-                    """
-                    params_consent = (
-                        str(id_persona),
-                        str(id_lead),
-                        consentimientos_data.acepta_terminos,
-                        consentimientos_data.acepta_politica_privacidad,
-                        consentimientos_data.finalidad_contacto,
-                        datetime.now(),
-                    )
-                    cur.execute(query_consent, params_consent)
-                    row = cur.fetchone()
-
-                    if not row:
-                        raise Exception("No se pudieron crear los consentimientos")
-
-                # COMMIT ÃšNICO al salir del context manager after all statements
                 conn.commit()
-
-                # PASO 4: Retornar respuesta exitosa
-                return SolicitudResponse(
-                    id_lead=id_lead,
-                    id_persona=id_persona,
-                    rut=persona_data.rut,
-                    nombre_completo=persona_data.nombre_completo,
-                    fecha_creacion=datetime.now(),
-                    estado_lead="pendiente",
-                    mensaje="Solicitud registrada exitosamente",
-                )
-
+                return response
             except Exception:
                 conn.rollback()
                 raise
+
+    @staticmethod
+    def create_solicitud_idempotent(
+        persona_data: PersonaData,
+        solicitud_data: SolicitudData,
+        consentimientos_data: ConsentimientosData,
+        *,
+        idempotency_key: UUID,
+        payload_fingerprint: str,
+        expires_at: datetime,
+    ) -> IdempotentSolicitudResult:
+        """Create one lead per idempotency key in the same database transaction."""
+        with get_db_connection(operation="create_solicitud_idempotent") as conn:
+            try:
+                with conn.cursor() as cur:
+                    # Opportunistic cleanup avoids a scheduler in the DEV single instance.
+                    cur.execute("DELETE FROM tpi.api_idempotency WHERE expires_at <= NOW()")
+                    cur.execute(
+                        """
+                        INSERT INTO tpi.api_idempotency
+                            (idempotency_key, payload_fingerprint, expires_at)
+                        VALUES (%s, %s, %s)
+                        ON CONFLICT (idempotency_key) DO NOTHING
+                        RETURNING idempotency_key
+                        """,
+                        (str(idempotency_key), payload_fingerprint, expires_at),
+                    )
+                    reserved = cur.fetchone()
+                    if reserved is None:
+                        cur.execute(
+                            """
+                            SELECT payload_fingerprint, lead_id
+                            FROM tpi.api_idempotency
+                            WHERE idempotency_key = %s
+                            FOR UPDATE
+                            """,
+                            (str(idempotency_key),),
+                        )
+                        existing = cur.fetchone()
+                        if existing is None:
+                            raise RuntimeError("No fue posible resolver la solicitud repetida")
+                        if existing["payload_fingerprint"] != payload_fingerprint:
+                            raise IdempotencyConflictError(
+                                "La clave de idempotencia ya fue usada con otra solicitud"
+                            )
+                        if existing["lead_id"] is None:
+                            raise RuntimeError("La solicitud repetida todavia esta en proceso")
+                        conn.commit()
+                        return IdempotentSolicitudResult(
+                            lead_id=UUID(str(existing["lead_id"])), created=False
+                        )
+
+                    response = SolicitudRepository._create_solicitud_in_cursor(
+                        cur, persona_data, solicitud_data, consentimientos_data
+                    )
+                    cur.execute(
+                        """
+                        UPDATE tpi.api_idempotency
+                        SET lead_id = %s
+                        WHERE idempotency_key = %s
+                        """,
+                        (str(response.id_lead), str(idempotency_key)),
+                    )
+                conn.commit()
+                return IdempotentSolicitudResult(
+                    lead_id=response.id_lead, created=True, response=response
+                )
+            except Exception:
+                conn.rollback()
+                raise
+
+    @staticmethod
+    def _create_solicitud_in_cursor(
+        cur: Any,
+        persona_data: PersonaData,
+        solicitud_data: SolicitudData,
+        consentimientos_data: ConsentimientosData,
+    ) -> SolicitudResponse:
+        """Persist the shared lead aggregate using the caller's transaction."""
+        cur.execute(
+            "SELECT id_persona FROM tpi.personas WHERE rut = %s LIMIT 1", (persona_data.rut,)
+        )
+        existing_row = cur.fetchone()
+        if existing_row:
+            id_persona = UUID(str(existing_row["id_persona"]))
+        else:
+            cur.execute(
+                """
+                INSERT INTO tpi.personas
+                    (rut, nombre_completo, email, telefono, fecha_nacimiento, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id_persona
+                """,
+                (
+                    persona_data.rut,
+                    persona_data.nombre_completo,
+                    persona_data.email,
+                    persona_data.telefono,
+                    persona_data.fecha_nacimiento,
+                    datetime.now(),
+                ),
+            )
+            row = cur.fetchone()
+            if row is None:
+                raise RuntimeError("No se pudo crear la persona")
+            id_persona = UUID(str(row["id_persona"]))
+
+        cur.execute(
+            """
+            INSERT INTO tpi.leads
+                (id_persona, genero_id, estado_civil_id, afp_id, saldo_afp, comentarios,
+                 estado_lead, fecha_ingreso, origen_lead, fuente_actual, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id_lead
+            """,
+            (
+                str(id_persona),
+                str(solicitud_data.genero_id),
+                str(solicitud_data.estado_civil_id),
+                str(solicitud_data.afp_id),
+                solicitud_data.saldo_afp,
+                solicitud_data.comentarios or "",
+                "pendiente",
+                datetime.now(),
+                "formulario_streamlit",
+                "backoffice",
+                datetime.now(),
+            ),
+        )
+        row = cur.fetchone()
+        if row is None:
+            raise RuntimeError("No se pudo crear el lead")
+        id_lead = UUID(str(row["id_lead"]))
+
+        cur.execute(
+            """
+            INSERT INTO tpi.consentimientos
+                (id_persona, id_lead, acepta_terminos, acepta_politica_privacidad,
+                 finalidad_contacto, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id_consentimiento
+            """,
+            (
+                str(id_persona),
+                str(id_lead),
+                consentimientos_data.acepta_terminos,
+                consentimientos_data.acepta_politica_privacidad,
+                consentimientos_data.finalidad_contacto,
+                datetime.now(),
+            ),
+        )
+        if cur.fetchone() is None:
+            raise RuntimeError("No se pudieron crear los consentimientos")
+
+        return SolicitudResponse(
+            id_lead=id_lead,
+            id_persona=id_persona,
+            rut=persona_data.rut,
+            nombre_completo=persona_data.nombre_completo,
+            fecha_creacion=datetime.now(),
+            estado_lead="pendiente",
+            mensaje="Solicitud registrada exitosamente",
+        )
 
     @staticmethod
     def get_solicitud_by_id(id_lead: UUID) -> dict[str, Any] | None:

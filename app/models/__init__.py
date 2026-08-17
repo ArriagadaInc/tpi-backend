@@ -1,5 +1,6 @@
 """Módulo de modelos de datos."""
 
+from app.models.idempotency import IdempotencyConflictError, IdempotentSolicitudResult
 from app.models.solicitud import (
     ConsentimientosData,
     PersonaData,
@@ -18,4 +19,6 @@ __all__ = [
     "SolicitudResponse",
     "TestLeadCleanupResult",
     "LeadCreatedEvent",
+    "IdempotencyConflictError",
+    "IdempotentSolicitudResult",
 ]

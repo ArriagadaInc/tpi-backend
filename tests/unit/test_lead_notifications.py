@@ -13,6 +13,7 @@ import pytest
 
 from app.config import Settings
 from app.models import ConsentimientosData, PersonaData, RegistrarSolicitudRequest, SolicitudData
+from app.models.idempotency import IdempotentSolicitudResult
 from app.models.solicitud import SolicitudResponse
 from app.notifications import (
     LeadCreatedEvent,
@@ -58,6 +59,10 @@ class FakeRepository:
             estado_lead="pendiente",
             mensaje="Solicitud registrada exitosamente",
         )
+
+    def create_solicitud_idempotent(self, **_: object) -> IdempotentSolicitudResult:
+        response = self.create_solicitud()
+        return IdempotentSolicitudResult(lead_id=response.id_lead, created=True, response=response)
 
 
 class RecordingPublisher:
@@ -152,6 +157,39 @@ def test_database_failure_never_invokes_publisher() -> None:
         service.registrar_solicitud(build_request())
 
     assert not publisher.events
+
+
+def test_idempotent_registration_publishes_only_when_the_lead_is_new() -> None:
+    class ReplayRepository(FakeRepository):
+        def create_solicitud_idempotent(self, **_: object) -> IdempotentSolicitudResult:
+            return IdempotentSolicitudResult(lead_id=LEAD_ID, created=False)
+
+    publisher = RecordingPublisher()
+    service = SolicitudService(ReplayRepository(), build_settings(), publisher)  # type: ignore[arg-type]
+
+    result = service.registrar_solicitud_idempotente(
+        build_request(),
+        idempotency_key=UUID("44444444-4444-4444-4444-444444444444"),
+        payload_fingerprint="a" * 64,
+    )
+
+    assert result.created is False
+    assert result.lead_id == LEAD_ID
+    assert not publisher.events
+
+
+def test_notification_failure_after_idempotent_commit_keeps_successful_result() -> None:
+    publisher = RecordingPublisher(error=RuntimeError("SNS unavailable"))
+    service = SolicitudService(FakeRepository(), build_settings(), publisher)  # type: ignore[arg-type]
+
+    result = service.registrar_solicitud_idempotente(
+        build_request(),
+        idempotency_key=UUID("55555555-5555-5555-5555-555555555555"),
+        payload_fingerprint="b" * 64,
+    )
+
+    assert result.created is True
+    assert result.lead_id == LEAD_ID
 
 
 def test_publisher_failure_keeps_successful_lead_and_hides_internal_details(
