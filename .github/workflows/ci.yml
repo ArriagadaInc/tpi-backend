@@ -126,13 +126,13 @@ jobs:
       - name: Validate Docker Compose topology
         run: docker compose config --quiet
 
-      - name: Build Streamlit Compose service
-        run: docker compose build streamlit
+      - name: Build public and backoffice Compose services
+        run: docker compose build public backoffice
 
       - name: Validate Caddy configuration
         run: >-
           docker run --rm
-          --env TPI_DEV_DOMAIN=dev.example.test
+          --env TPI_PUBLIC_DOMAIN=dev.example.test
           --volume "$GITHUB_WORKSPACE/deployment/caddy/Caddyfile:/etc/caddy/Caddyfile:ro"
           caddy@sha256:d8c17a862962def15cde69863a3a463f25a2664942eafd7bdbf050e9c3116b83
           caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile

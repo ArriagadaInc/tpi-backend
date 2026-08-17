@@ -17,11 +17,33 @@ def test_aws_dev_without_auth_secret_renders_only_safe_access_message(
     clear_settings_cache()
     st.cache_resource.clear()
     try:
-        app = streamlit_app_factory("app/streamlit_app.py")
+        app = streamlit_app_factory("app/backoffice_app.py")
         app.run()
 
         assert any("Acceso temporalmente no disponible" in str(item.value) for item in app.error)
         assert not app.get("metric")
+    finally:
+        clear_settings_cache()
+        st.cache_resource.clear()
+
+
+def test_invalid_auth_configuration_does_not_block_public_landing(
+    streamlit_app_factory, monkeypatch
+) -> None:
+    monkeypatch.setenv("APP_ENV", "aws-dev")
+    monkeypatch.setenv("AUTH_ENABLED", "true")
+    monkeypatch.setenv("AUTH_MODE", "unsupported")
+    monkeypatch.delenv("AUTH_USERS_JSON", raising=False)
+    clear_settings_cache()
+    st.cache_resource.clear()
+    try:
+        app = streamlit_app_factory("app/streamlit_app.py")
+        app.run()
+
+        assert any("Tu Pension Inteligente" in str(item.value) for item in app.title)
+        assert not any(
+            "Acceso temporalmente no disponible" in str(item.value) for item in app.error
+        )
     finally:
         clear_settings_cache()
         st.cache_resource.clear()

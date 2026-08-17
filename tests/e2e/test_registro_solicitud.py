@@ -25,7 +25,7 @@ class TestRegistroSolicitudForm:
     @pytest.fixture
     def app(self, streamlit_app_factory):
         """Instancia la página de registro."""
-        return streamlit_app_factory("app/pages/1_registrar_solicitud.py")
+        return streamlit_app_factory("app/streamlit_app.py")
 
     def test_page_loads_successfully(self, app):
         """Test que página se carga sin errores."""
@@ -79,7 +79,7 @@ class TestRegistroSolicitudForm:
         # Debe haber botón de submit
         buttons = app.button
         # Debería haber al menos 2 botones (enviar y limpiar)
-        assert len(buttons) >= 2, "Falta botón de envío"
+        assert len(buttons) >= 1, "Falta botón de envío"
 
     def test_catalogs_loaded(self, app):
         """Test que catálogos se cargan desde BD."""
@@ -96,7 +96,7 @@ class TestRegistroSolicitudValidation:
     @pytest.fixture
     def app(self, streamlit_app_factory):
         """Instancia la página de registro."""
-        return streamlit_app_factory("app/pages/1_registrar_solicitud.py")
+        return streamlit_app_factory("app/streamlit_app.py")
 
     def test_empty_rut_validation(self, app):
         """Test validación de RUT vacío."""
@@ -138,7 +138,7 @@ class TestRegistroSolicitudSubmit:
     @pytest.fixture
     def app(self, streamlit_app_factory):
         """Instancia la página de registro."""
-        return streamlit_app_factory("app/pages/1_registrar_solicitud.py")
+        return streamlit_app_factory("app/streamlit_app.py")
 
     def test_form_renders_without_error(self, app):
         """Test que formulario se renderiza sin error."""
@@ -160,7 +160,7 @@ class TestRegistroSolicitudIntegration:
     @pytest.fixture
     def app(self, streamlit_app_factory):
         """Instancia la página de registro."""
-        return streamlit_app_factory("app/pages/1_registrar_solicitud.py")
+        return streamlit_app_factory("app/streamlit_app.py")
 
     def test_catalogs_from_database(self, app):
         """Test que catálogos se cargan desde BD."""
@@ -210,7 +210,7 @@ class TestRegistroSolicitudNotifications:
         )
         st.cache_resource.clear()
         try:
-            app = streamlit_app_factory("app/pages/1_registrar_solicitud.py")
+            app = streamlit_app_factory("app/streamlit_app.py")
             app.run()
 
             body = str(10_000_000 + uuid4().int % 80_000_000)
@@ -228,7 +228,7 @@ class TestRegistroSolicitudNotifications:
 
             assert len(publisher.events) == 1
             assert any(
-                "Solicitud Registrada Exitosamente" in str(item.value) for item in app.success
+                "Solicitud registrada correctamente" in str(item.value) for item in app.success
             )
 
             with get_db_connection() as conn:

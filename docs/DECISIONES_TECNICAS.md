@@ -4,6 +4,23 @@ Documento que detalla las decisiones arquitectónicas tomadas en la implementaci
 
 ## Decisiones Arquitectónicas
 
+### H2.5. Public lead capture and private backoffice are separate boundaries
+
+**Decision**: TPI exposes an unauthenticated public landing/form and an
+authenticated backoffice as separate Streamlit entrypoints behind Caddy
+hostname routing. Both call the same `SolicitudService`, repositories, and
+notifications contracts.
+
+**Justification**:
+- Prospect lead capture must not require administrative identity.
+- Operational data, traceability, and DEV cleanup require a fail-closed private
+  boundary.
+- A future public frontend/API or administrative frontend can replace either
+  Streamlit presentation without changing the application core.
+
+**Constraint**: Caddy only terminates TLS and routes hostnames. It does not own
+identity. SimpleDevAuth is consumed only by the private service.
+
 ### H2.5. SimpleDevAuth is DEV-only and replaceable
 
 **Decision**: AWS DEV will use an Argon2id-backed `SimpleDevAuth` adapter

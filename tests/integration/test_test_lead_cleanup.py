@@ -113,8 +113,16 @@ def test_cleanup_rolls_back_when_operational_fk_blocks_lead_deletion() -> None:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "INSERT INTO tpi.auditoria (id_persona, id_lead) VALUES (%s, %s)",
-                    (str(response.id_persona), str(response.id_lead)),
+                    (
+                        "INSERT INTO tpi.auditoria "
+                        "(id_persona, id_lead, accion, tabla_afectada) VALUES (%s, %s, %s, %s)"
+                    ),
+                    (
+                        str(response.id_persona),
+                        str(response.id_lead),
+                        "test_cleanup_rollback",
+                        "leads",
+                    ),
                 )
             conn.commit()
 

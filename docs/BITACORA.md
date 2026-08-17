@@ -22,6 +22,45 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-08-16 - H2.5 public/private presentation separation
+
+Contexto:
+
+- H2.5 was corrected before AWS work: public lead capture must remain available
+  without login, while the backoffice remains private.
+- No AWS, billing-plan, DNS, Route 53, IAM, Secrets Manager, network, or
+  deployment change is authorized in this iteration.
+
+Tareas realizadas:
+
+- Split Streamlit into the public `app/streamlit_app.py` entrypoint and private
+  `app/backoffice_app.py` entrypoint.
+- Reused `SolicitudService`, Pydantic requests, PostgreSQL repositories, and
+  post-commit SNS behavior through a public presentation component.
+- Kept `app/auth` unchanged in responsibility and applied it only to private
+  entrypoints/pages.
+- Changed Compose/Caddy declaration to route proposed public and backoffice
+  hostnames to separate internal Streamlit services.
+- Added public/private boundary tests and updated developer, architecture, CEO,
+  and decision documentation.
+
+Seguridad:
+
+- The public Compose service does not receive `AUTH_USERS_JSON`.
+- Invalid auth configuration remains fail-closed for backoffice and does not
+  prevent public lead capture.
+- Port 8501 remains internal to Compose; no infrastructure rules changed.
+
+Pendiente:
+
+- Run complete local quality gates and review the refactor before any AWS work.
+- After approval, separately decide account upgrade, domain registration,
+  Route 53, auth secret, IAM, Caddy deployment, and access rules.
+
+Siguiente paso:
+
+- Complete local validation only; do not perform AWS operations.
+
 ### 2026-08-15 - H2.5 SimpleDevAuth local preparation
 
 Contexto:

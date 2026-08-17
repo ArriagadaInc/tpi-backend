@@ -17,7 +17,7 @@ class TestStreamlitAppMain:
     @pytest.fixture
     def app(self, streamlit_app_factory):
         """Instancia la app principal."""
-        return streamlit_app_factory("app/streamlit_app.py")
+        return streamlit_app_factory("app/backoffice_app.py")
 
     def test_app_loads_successfully(self, app):
         """Test que la app se carga sin errores."""
@@ -73,7 +73,7 @@ class TestStreamlitAppSidebar:
     @pytest.fixture
     def app(self, streamlit_app_factory):
         """Instancia la app principal."""
-        return streamlit_app_factory("app/streamlit_app.py")
+        return streamlit_app_factory("app/backoffice_app.py")
 
     def test_sidebar_rendered(self, app):
         """Test que sidebar se renderiza."""
@@ -97,7 +97,7 @@ class TestStreamlitAppMetrics:
     @pytest.fixture
     def app(self, streamlit_app_factory):
         """Instancia la app principal."""
-        return streamlit_app_factory("app/streamlit_app.py")
+        return streamlit_app_factory("app/backoffice_app.py")
 
     def test_metrics_rendered(self, app):
         """Test que métricas se renderizan."""

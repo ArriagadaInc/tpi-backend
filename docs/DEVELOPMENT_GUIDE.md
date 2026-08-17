@@ -1,101 +1,100 @@
 # Development Guide
 
-## Purpose
-
-This guide is the starting point for developers maintaining the TPI backoffice.
-It describes the supported local workflow and the boundaries used by AWS DEV.
-Use only synthetic data in local and DEV environments.
-
 ## Architecture
 
+TPI has two presentation surfaces that share the same application core:
+
 ```text
-Streamlit UI -> Services -> Repositories -> PostgreSQL
-                     |
-                     -> Lead event publisher -> SNS
+Public landing/form                 Private backoffice
+app/streamlit_app.py                app/backoffice_app.py
+          |                                  |
+          |                           SimpleDevAuth (DEV only)
+          +---------------+------------------+
+                          |
+                    SolicitudService
+                     |              |
+                Repository       LeadCreatedEvent
+                     |              |
+                PostgreSQL        SNS publisher
 ```
 
-Authentication is an access boundary before Streamlit pages. It does not alter
-services, repositories, database permissions, lead creation, DEV cleanup, or
-lead notifications.
+The public site never imports the authentication boundary. The backoffice calls
+`require_authenticated_user()` before reading or rendering operational data.
+Both presentations use the same Pydantic contracts and `SolicitudService`; no
+Streamlit page accesses PostgreSQL or SNS directly.
 
 ## Local setup
-
-1. Create a Python 3.12 virtual environment.
-2. Install the locked development dependencies:
 
 ```bash
 python -m pip install --requirement requirements/dev.lock
 python -m pip install --no-deps -e .
-```
-
-3. Copy `.env.example` to an untracked `.env` and provide only local database
-configuration.
-4. Run Streamlit:
-
-```bash
 streamlit run app/streamlit_app.py
 ```
 
-`AUTH_ENABLED=false` is the safe versioned default. Local and testing runs do
-not require SimpleDevAuth unless it is explicitly enabled.
+Use an untracked `.env` for local database settings. The public entrypoint is
+available at `http://localhost:8501`. For the local private entrypoint:
 
-## SimpleDevAuth (DEV ONLY)
-
-AWS DEV will use `AUTH_MODE=simple-dev` with `AUTH_ENABLED=true`. The secret
-value is injected at runtime into `AUTH_USERS_JSON`; it is never versioned in
-`.env`, Docker, source code, documentation, or logs.
-
-The secret schema is:
-
-```json
-{
-  "users": [
-    {
-      "subject": "stable-internal-id",
-      "username": "approved-user",
-      "display_name": "Approved User",
-      "role": "tester",
-      "password_hash": "argon2id-hash"
-    }
-  ]
-}
+```bash
+streamlit run app/backoffice_app.py
 ```
 
-Passwords are verified with Argon2id. Session state keeps only an immutable
-`AuthenticatedUser` and local throttle metadata. It never keeps passwords or
-hashes. Missing, malformed, or unsupported auth configuration denies access.
+`APP_ENV=testing` and `AUTH_ENABLED=false` are permitted for automated tests.
+`AUTH_ENABLED=false` remains the versioned runtime default.
 
-Pages call `require_authenticated_user()` and do not depend on a concrete
-identity provider. `AuthProvider` can later be implemented by OIDC without
-changing business layers.
+## Public form
 
-## AWS DEV deployment (pending DNS approval)
+`app/presentation/public/solicitud_form.py` converts bounded UI data into
+`RegistrarSolicitudRequest`. Pydantic, the service, and repository retain all
+server-side validation, normalisation, transactional persistence, and
+post-commit notification behavior. The public form is not an API replacement;
+it is prepared to be replaced later by an HTTP client calling the same
+application contract.
 
-The approved topology is Docker Compose in the existing Elastic Beanstalk
-single-instance environment:
+Before production, add rate limiting and a bot-control adapter at the public
+edge or API boundary. CAPTCHA is not part of DEV.
+
+## Private auth boundary
+
+SimpleDevAuth is **DEV ONLY**. It uses Argon2id hashes supplied at runtime in
+`AUTH_USERS_JSON`; passwords and hashes are never versioned or stored in
+Streamlit session state. The `AuthProvider` protocol and `AuthenticatedUser`
+contract isolate future OIDC/Cognito/Entra adapters.
+
+The private boundary fails closed on absent or malformed auth configuration,
+invalid hashes, unsupported `AUTH_MODE`, missing session, or unknown roles.
+Those failures must not affect the public landing or form.
+
+## Docker and Caddy
+
+Docker Compose runs three services:
 
 ```text
-Internet -> Caddy :80/:443 -> Streamlit :8501 (internal only)
+Caddy :80/:443
+  tpi-dev-lab.com             -> public:8501
+  backoffice.tpi-dev-lab.com  -> backoffice:8501
 ```
 
-Caddy performs HTTP-to-HTTPS redirection, automatic ACME certificate management,
-and the WebSocket-capable reverse proxy. The prerequisite is a public DNS CNAME
-for `dev.tupensioninteligente.cl` to the Elastic Beanstalk environment CNAME.
-No AWS, DNS, IAM, secret, or deployment change is permitted before that is
-confirmed.
+Only Caddy publishes host ports. `public` receives no `AUTH_USERS_JSON` value;
+the private service alone receives it. Validate locally with:
 
-The Elastic Beanstalk instance role will receive exactly
-`secretsmanager:GetSecretValue` on the exact ARN of `tpi/dev/auth-users`.
-It must not receive access to the administrative database secret.
+```bash
+docker build --tag tpi-backoffice:local .
+docker compose config --quiet
+docker compose build
+```
 
-## Feature flags
+The domains and AWS deployment remain pending approval. Caddy, SimpleDevAuth,
+and the temporary DEV domain are not production architecture.
 
-- `DEV_DELETE_ENABLED`: enables DEV test-data cleanup only with `APP_ENV=aws-dev`.
-- `LEAD_NOTIFICATIONS_ENABLED`: enables SNS lead event publishing in DEV.
-- `AUTH_ENABLED`: turns on the DEV auth boundary. It defaults to `false`.
-- `AUTH_MODE`: must be `simple-dev` for this milestone. Unknown modes fail closed.
+## Configuration
 
-## Quality gates
+- `APP_ENV`: controls environment safeguards.
+- `DEV_DELETE_ENABLED`: permits cleanup only when `APP_ENV=aws-dev`.
+- `LEAD_NOTIFICATIONS_ENABLED`: permits SNS publishing after a successful DB commit.
+- `AUTH_ENABLED` and `AUTH_MODE=simple-dev`: enable the private DEV boundary.
+- `AUTH_USERS_JSON`: private runtime secret only.
+
+## Tests and quality gates
 
 ```bash
 pytest tests/ --cov=app --cov-fail-under=85
@@ -106,22 +105,30 @@ bandit -r app/ --severity-level medium --confidence-level medium
 pip-audit --requirement requirements/runtime.lock
 docker build --tag tpi-backoffice:local .
 docker compose config --quiet
-docker compose build streamlit
 ```
 
-Tests use the CI PostgreSQL service and fakes for identity and AWS boundaries;
-they never need AWS Secrets Manager or the DEV RDS instance.
+CI uses PostgreSQL testing and fake authentication/publishers. It never calls
+AWS RDS, Secrets Manager, or SNS.
 
-## Rollback
+## Rollback and production direction
 
-For an authentication incident, deploy the H2.4 application revision and
-restore the temporary HTTP `/32` allowlist only for controlled recovery. Remove
-the exact auth-secret IAM permission only after no running revision depends on
-it. Do not modify RDS, database grants, H2.3 cleanup, or SNS during this
-rollback.
+### A. Backoffice/authentication-only rollback
 
-## Production direction
+If only private authentication or the backoffice fails, remove the
+`backoffice` Caddy route or roll back only the `backoffice` service to its last
+known healthy private revision. Keep the `public` service, its Caddy route, and
+lead creation online. Do not turn off authentication to make the private
+surface public: failed private authentication remains fail-closed.
 
-SimpleDevAuth and instance-local Caddy certificates are DEV-only. Production
-must use managed HTTPS, OIDC with a professional identity provider, appropriate
-MFA, and authorization policy/RBAC.
+This rollback does not change RDS, database grants, H2.3 cleanup, SNS, or the
+public application service flow.
+
+### B. Complete H2.5 to H2.4 rollback
+
+For a complete rollback, deploy the approved H2.4 revision and remove the
+H2.5 Compose/Caddy routing only after controlled recovery. This restores the
+previous single Streamlit surface and its existing IP allowlist. Do not alter
+RDS, database grants, H2.3 cleanup, or SNS.
+
+Future production uses `tupensioninteligente.cl`, managed HTTPS, OIDC with a
+professional IdP, MFA where required, RBAC, and public anti-abuse controls.

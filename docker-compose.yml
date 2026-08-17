@@ -1,5 +1,29 @@
 services:
-  streamlit:
+  public:
+    build: .
+    expose:
+      - "8501"
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_NAME: ${APP_NAME:-Tu Pension Inteligente}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      DATABASE_HOST: ${DATABASE_HOST:-}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_NAME: ${DATABASE_NAME:-}
+      DATABASE_USER: ${DATABASE_USER:-}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-}
+      DATABASE_SCHEMA: ${DATABASE_SCHEMA:-tpi}
+      DATABASE_SSLMODE: ${DATABASE_SSLMODE:-disable}
+      DATABASE_CONNECT_TIMEOUT: ${DATABASE_CONNECT_TIMEOUT:-10}
+      DATABASE_POOL_MIN_SIZE: ${DATABASE_POOL_MIN_SIZE:-1}
+      DATABASE_POOL_MAX_SIZE: ${DATABASE_POOL_MAX_SIZE:-5}
+      DATABASE_POOL_TIMEOUT: ${DATABASE_POOL_TIMEOUT:-30}
+      LEAD_NOTIFICATIONS_ENABLED: ${LEAD_NOTIFICATIONS_ENABLED:-false}
+      LEAD_NOTIFICATION_TOPIC_ARN: ${LEAD_NOTIFICATION_TOPIC_ARN:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    command: ["streamlit", "run", "app/streamlit_app.py"]
+
+  backoffice:
     build: .
     expose:
       - "8501"
@@ -25,6 +49,7 @@ services:
       AUTH_MODE: ${AUTH_MODE:-simple-dev}
       AUTH_USERS_JSON: ${AUTH_USERS_JSON:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    command: ["streamlit", "run", "app/backoffice_app.py"]
 
   caddy:
     image: caddy@sha256:d8c17a862962def15cde69863a3a463f25a2664942eafd7bdbf050e9c3116b83
@@ -32,13 +57,14 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      TPI_DEV_DOMAIN: ${TPI_DEV_DOMAIN:-localhost}
+      TPI_PUBLIC_DOMAIN: ${TPI_PUBLIC_DOMAIN:-localhost}
     volumes:
       - ./deployment/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - streamlit
+      - public
+      - backoffice
 
 volumes:
   caddy_data:

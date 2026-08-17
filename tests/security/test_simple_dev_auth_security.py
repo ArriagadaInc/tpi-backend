@@ -38,9 +38,19 @@ def test_compose_exposes_only_caddy_web_ports() -> None:
     assert '"5432:5432"' not in compose
 
 
-def test_caddy_proxies_only_to_the_internal_streamlit_service() -> None:
+def test_caddy_routes_public_and_private_hosts_to_internal_services() -> None:
     caddyfile = (PROJECT_ROOT / "deployment/caddy/Caddyfile").read_text(encoding="utf-8")
 
-    assert "{$TPI_DEV_DOMAIN}" in caddyfile
-    assert "reverse_proxy streamlit:8501" in caddyfile
+    assert "{$TPI_PUBLIC_DOMAIN:localhost}" in caddyfile
+    assert "backoffice.{$TPI_PUBLIC_DOMAIN:localhost}" in caddyfile
+    assert "reverse_proxy public:8501" in caddyfile
+    assert "reverse_proxy backoffice:8501" in caddyfile
     assert "http://" not in caddyfile
+
+
+def test_public_compose_service_does_not_receive_auth_secret() -> None:
+    compose = (PROJECT_ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+    public_section = compose.split("  backoffice:", maxsplit=1)[0]
+
+    assert "AUTH_USERS_JSON" not in public_section
+    assert "AUTH_USERS_JSON" in compose.split("  backoffice:", maxsplit=1)[1]

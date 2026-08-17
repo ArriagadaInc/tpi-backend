@@ -1,8 +1,17 @@
-{$TPI_DEV_DOMAIN} {
+{$TPI_PUBLIC_DOMAIN:localhost} {
 	log {
 		output stdout
 		format json
 	}
 
-	reverse_proxy streamlit:8501
+	reverse_proxy public:8501
+}
+
+backoffice.{$TPI_PUBLIC_DOMAIN:localhost} {
+	log {
+		output stdout
+		format json
+	}
+
+	reverse_proxy backoffice:8501
 }

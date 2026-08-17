@@ -1,5 +1,9 @@
 # H2.5 - SimpleDevAuth and Caddy Preflight
 
+> Superseded for implementation by [H2.5 Architecture](H2_5_ARCHITECTURE.md).
+> The target now keeps lead capture public and restricts authentication to the
+> backoffice only.
+
 ## Scope and approval gate
 
 This document records the approved preflight and local implementation boundary.
