@@ -88,8 +88,14 @@ CREATE TABLE IF NOT EXISTS tpi.consentimientos (
 -- Mirrors the real operational dependency that must block test cleanup.
 CREATE TABLE IF NOT EXISTS tpi.auditoria (
     id_auditoria UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id_usuario UUID,
     id_persona UUID REFERENCES tpi.personas(id_persona),
-    id_lead UUID REFERENCES tpi.leads(id_lead)
+    id_lead UUID REFERENCES tpi.leads(id_lead),
+    accion VARCHAR(100) NOT NULL,
+    tabla_afectada VARCHAR(100) NOT NULL,
+    fecha_hora TIMESTAMPTZ NOT NULL DEFAULT now(),
+    ip_origen VARCHAR(80),
+    detalle JSONB
 );
 
 INSERT INTO tpi.catalogo_genero (codigo, nombre, activo, orden_visual)
