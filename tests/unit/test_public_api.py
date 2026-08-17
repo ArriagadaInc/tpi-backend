@@ -121,7 +121,11 @@ def test_fingerprint_is_stable_and_does_not_include_honeypot() -> None:
 
 
 def test_public_api_fails_closed_without_its_dedicated_hmac_secret() -> None:
-    settings = Settings(_env_file=None, APP_ENV="testing")
+    settings = Settings(
+        _env_file=None,
+        APP_ENV="testing",
+        API_IDEMPOTENCY_HMAC_SECRET="",
+    )
 
     with pytest.raises(ValueError, match="API_IDEMPOTENCY_HMAC_SECRET"):
         create_api_app(settings=settings)
