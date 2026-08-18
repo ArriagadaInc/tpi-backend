@@ -150,6 +150,7 @@ class Settings(BaseSettings):
     auth_enabled: bool = Field(default=False, alias="AUTH_ENABLED")
     auth_mode: str = Field(default="simple-dev", alias="AUTH_MODE")
     auth_users_json: SecretStr | None = Field(default=None, alias="AUTH_USERS_JSON")
+    public_site_url: str | None = Field(default=None, alias="TPI_PUBLIC_SITE_URL")
     api_idempotency_hmac_secret: SecretStr | None = Field(
         default=None, alias="API_IDEMPOTENCY_HMAC_SECRET"
     )
