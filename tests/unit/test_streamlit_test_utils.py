@@ -16,7 +16,7 @@ def test_project_root_points_to_repository_root() -> None:
     "relative_path",
     [
         "app/streamlit_app.py",
-        "app/pages/1_registrar_solicitud.py",
+        "app/internal_tools/registrar_solicitud.py",
         "app/pages/2_solicitudes_registradas.py",
         "app/pages/3_trazabilidad.py",
     ],
