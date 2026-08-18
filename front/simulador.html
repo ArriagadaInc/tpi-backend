@@ -42,6 +42,7 @@
       </nav>
 
       <div class="header__actions">
+        <a class="btn btn--backoffice" data-backoffice-access hidden>Acceso Backoffice</a>
         <a href="#contacto" class="btn btn--outline">Simula tu renta</a>
         <button class="header__toggle" id="nav-toggle" aria-label="Abrir menú" aria-expanded="false" aria-controls="nav">
           <span></span><span></span><span></span>
@@ -195,7 +196,7 @@
             </div>
 
             <!-- Honeypot anti-spam -->
-            <input type="text" name="empresa" class="lead-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <input type="text" name="tpi_contact_confirmation" class="lead-hp" data-honeypot tabindex="-1" autocomplete="off" aria-hidden="true">
 
             <label class="lead-consent">
               <input type="checkbox" id="lead-terminos" required>
@@ -259,6 +260,7 @@
   </a>
 
   <script src="js/main.js"></script>
+  <script src="js/backoffice-access.js"></script>
   <script src="js/simulador.js"></script>
   <script src="js/contacto.js"></script>
 </body>

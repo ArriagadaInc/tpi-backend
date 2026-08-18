@@ -113,6 +113,17 @@ section {
    color: #fff;
 }
 
+.btn--backoffice {
+   border: 1px solid #9aa8b5;
+   background: #f3f7fa;
+   color: var(--color-navy);
+}
+
+.btn--backoffice:hover {
+   border-color: var(--color-navy);
+   background: #e6eef4;
+}
+
 /* ============ 1. HEADER STICKY ============ */
 .header {
    position: sticky;
@@ -916,6 +927,7 @@ section {
    left: -9999px;
    opacity: 0;
    height: 0;
+   pointer-events: none;
 }
 
 .lead-consent {

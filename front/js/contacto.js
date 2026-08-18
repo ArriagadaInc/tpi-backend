@@ -122,7 +122,7 @@
       acepta_politica_privacidad: $('lead-privacidad').checked,
       finalidad_contacto: $('lead-contacto').checked,
     },
-    honeypot: form.empresa?.value || '',
+    honeypot: form.querySelector('[data-honeypot]')?.value || '',
   });
 
   form.addEventListener('input', () => {
