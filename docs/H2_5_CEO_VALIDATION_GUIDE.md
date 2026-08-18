@@ -23,3 +23,12 @@ client data.
 
 SimpleDevAuth is a temporary DEV-only mechanism. Production will use managed
 HTTPS and a professional identity provider.
+
+## Local rehearsal
+
+For a local rehearsal, technical staff provides `http://tpi.localhost` and
+`http://backoffice.tpi.localhost` plus a locally generated test credential.
+Use synthetic data only. The public landing must remain available without
+login; the private URL must require login and return to that state after logout.
+Local cleanup is performed by resetting the demo database, not by weakening the
+AWS DEV cleanup safeguard.

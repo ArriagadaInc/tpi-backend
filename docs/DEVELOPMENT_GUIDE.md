@@ -23,7 +23,83 @@ The public site never imports the authentication boundary. The backoffice calls
 Both presentations use the same Pydantic contracts and `SolicitudService`; no
 Streamlit page accesses PostgreSQL or SNS directly.
 
-## Local setup
+The public form is the canonical lead-creation channel. The private backoffice
+is limited to consultation, traceability and DEV cleanup; it does not expose a
+second operational registration page. The former Streamlit form remains only
+as `app/internal_tools/registrar_solicitud.py` for temporary developer
+diagnostics and is outside Streamlit's page navigation.
+
+## Local demo
+
+The local H2.5C demo is intentionally isolated from AWS: it uses a PostgreSQL
+container, a fictitious HMAC value, disabled notifications and HTTP on loopback
+only. It never reads AWS secrets, RDS or SNS.
+
+Create an untracked `.env.local` containing an Argon2id hash. Choose the local
+password interactively; do not place it in a command, source file or document:
+
+```powershell
+$hash = python -c "from argon2 import PasswordHasher; from getpass import getpass; print(PasswordHasher().hash(getpass('Local demo password: ')))"
+$users = @{ users = @(@{ subject = 'local-demo-alvaro'; username = 'alvaro.local'; display_name = 'Alvaro Local'; role = 'tester'; password_hash = $hash }) } | ConvertTo-Json -Compress
+Set-Content -Path .env.local -Value "AUTH_USERS_JSON='$users'" -NoNewline
+```
+
+Start the complete demo:
+
+```powershell
+docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml up --build
+```
+
+Open `http://tpi.localhost:8080` for the public landing and
+`http://backoffice.tpi.localhost:8080` for the private backoffice. The local
+test user is `alvaro.local`; its password is the one entered interactively
+above.
+
+The public header exposes `Acceso Backoffice` only on approved local/DEV
+hostnames. It derives the matching private hostname while preserving the local
+port; no credentials, tokens, or query parameters are transferred.
+
+After authentication, the backoffice sidebar displays `Volver al sitio` only
+when `TPI_PUBLIC_SITE_URL` matches the approved environment URL: local uses
+`http://tpi.localhost:8080/` and AWS DEV uses `https://tpi-dev-lab.com/`.
+The link does not log out or transfer session data.
+
+Running services are `postgres`, one-shot `db-init`, `api`, `backoffice` and
+`caddy`. Only Caddy publishes `127.0.0.1:8080` and `127.0.0.1:443`; API,
+Streamlit and PostgreSQL remain internal to Compose. Stop while retaining the
+local data:
+
+```powershell
+docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml down
+```
+
+Reset the demo database completely:
+
+```powershell
+docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml down -v
+```
+
+To inspect a submitted fictitious lead:
+
+```powershell
+docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml exec postgres psql -U tpi_app -d tpi_local -c "SELECT id_lead, estado_lead, created_at FROM tpi.leads ORDER BY created_at DESC;"
+```
+
+`DEV_DELETE_ENABLED` deliberately remains false in local mode: H2.3 cleanup is
+restricted to `aws-dev`. Reset the local PostgreSQL volume instead of weakening
+that environment guard.
+
+If Docker Desktop is unavailable, use an existing local PostgreSQL instance,
+set the equivalent `DATABASE_*`, `AUTH_USERS_JSON` and
+`API_IDEMPOTENCY_HMAC_SECRET` values in untracked environment variables, run
+`python scripts/init_test_database.py`, then start `uvicorn` on `127.0.0.1:8000`
+and Streamlit on `127.0.0.1:8501`. Install Caddy locally and run it with
+`TPI_API_UPSTREAM=127.0.0.1:8000`,
+`TPI_BACKOFFICE_UPSTREAM=127.0.0.1:8501`,
+`TPI_FRONT_ROOT=<absolute path to front>` and the two `http://*.localhost`
+site-address variables. This keeps browser traffic same-origin through Caddy.
+
+## Python setup
 
 ```bash
 python -m pip install --requirement requirements/dev.lock
@@ -79,7 +155,7 @@ Those failures must not affect the public landing or form.
 
 ## Docker and Caddy
 
-Docker Compose runs three services:
+The AWS-oriented Compose topology runs three application services:
 
 ```text
 Caddy :80/:443
@@ -98,6 +174,10 @@ docker build --tag tpi-backoffice:local .
 docker compose config --quiet
 docker compose build
 ```
+
+For the isolated local demo, use `docker-compose.local.yml` as described above.
+It adds only local PostgreSQL and an idempotent schema initializer; it is not an
+AWS deployment artifact.
 
 The domains and AWS deployment remain pending approval. Caddy, SimpleDevAuth,
 and the temporary DEV domain are not production architecture.

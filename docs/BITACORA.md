@@ -22,6 +22,30 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-08-17 - H2.5C local demo preparation
+
+Contexto:
+
+- AWS account-plan work is blocked externally. A complete local rehearsal is
+  required without AWS, RDS, SNS, Secrets Manager or HTTPS.
+
+Tareas realizadas:
+
+- Added `docker-compose.local.yml` with local PostgreSQL and the existing
+  idempotent schema initializer, while keeping the AWS-oriented Compose file
+  free of a database service.
+- Parameterized Caddy site addresses and upstreams. The local defaults are
+  loopback-only HTTP `tpi.localhost` and `backoffice.tpi.localhost`; future AWS
+  deployment must set public domain addresses explicitly.
+- Documented an untracked Argon2id local user, fake local HMAC, disabled SNS,
+  lifecycle commands and the manual Caddy fallback.
+
+Seguridad:
+
+- `AUTH_USERS_JSON` is supplied only to backoffice from `.env.local`.
+- H2.3 cleanup remains impossible in local mode; reset the local volume instead.
+- No AWS resource, secret or network configuration was changed.
+
 ### 2026-08-17 - H2.5C idempotency hardening pending local validation
 
 Contexto:

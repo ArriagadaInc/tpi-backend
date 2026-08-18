@@ -20,6 +20,12 @@ containers expose port 8000 or 8501 only to the Compose network. Hostname
 routing keeps the authentication responsibility in the private application,
 not in Caddy.
 
+For local H2.5C validation, `docker-compose.local.yml` supplies PostgreSQL and
+the idempotent schema initializer. Caddy uses `http://tpi.localhost` and
+`http://backoffice.tpi.localhost`, bound only to loopback. This local override
+uses a fictitious HMAC, disabled SNS and an untracked Argon2id auth hash; it is
+not an AWS artifact and cannot access AWS RDS, SNS or Secrets Manager.
+
 ## Boundaries
 
 - `front/`: static public landing and lead form.
