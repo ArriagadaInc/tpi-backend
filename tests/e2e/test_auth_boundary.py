@@ -17,7 +17,8 @@ def test_aws_dev_without_auth_secret_renders_only_safe_access_message(
     clear_settings_cache()
     st.cache_resource.clear()
     try:
-        app = streamlit_app_factory("app/backoffice_app.py")
+        # Match the public landing's explicit cold-start allowance.
+        app = streamlit_app_factory("app/backoffice_app.py", default_timeout=15)
         app.run()
 
         assert any("Acceso temporalmente no disponible" in str(item.value) for item in app.error)
@@ -37,7 +38,9 @@ def test_invalid_auth_configuration_does_not_block_public_landing(
     clear_settings_cache()
     st.cache_resource.clear()
     try:
-        app = streamlit_app_factory("app/streamlit_app.py")
+        # The public landing imports the complete shared application boundary;
+        # its cold Streamlit start can exceed AppTest's three-second default.
+        app = streamlit_app_factory("app/streamlit_app.py", default_timeout=15)
         app.run()
 
         assert any("Tu Pension Inteligente" in str(item.value) for item in app.title)

@@ -1,0 +1,69 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: tpi_app
+      POSTGRES_PASSWORD: local_demo_postgres_password
+      POSTGRES_DB: tpi_local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tpi_app -d tpi_local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - tpi_local_postgres_data:/var/lib/postgresql/data
+
+  db-init:
+    build: .
+    command: ["python", "scripts/init_test_database.py"]
+    environment:
+      APP_ENV: local
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_NAME: tpi_local
+      DATABASE_USER: tpi_app
+      DATABASE_PASSWORD: local_demo_postgres_password
+      DATABASE_SCHEMA: tpi
+      DATABASE_SSLMODE: disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    environment:
+      APP_ENV: local
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_NAME: tpi_local
+      DATABASE_USER: tpi_app
+      DATABASE_PASSWORD: local_demo_postgres_password
+      DATABASE_SCHEMA: tpi
+      DATABASE_SSLMODE: disable
+      API_IDEMPOTENCY_HMAC_SECRET: local-demo-hmac-not-for-aws
+      API_RATE_LIMIT_REQUESTS: "100"
+      LEAD_NOTIFICATIONS_ENABLED: "false"
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+
+  backoffice:
+    environment:
+      APP_ENV: local
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_NAME: tpi_local
+      DATABASE_USER: tpi_app
+      DATABASE_PASSWORD: local_demo_postgres_password
+      DATABASE_SCHEMA: tpi
+      DATABASE_SSLMODE: disable
+      AUTH_ENABLED: "true"
+      AUTH_MODE: simple-dev
+      TPI_PUBLIC_SITE_URL: http://tpi.localhost:8080/
+      DEV_DELETE_ENABLED: "false"
+      LEAD_NOTIFICATIONS_ENABLED: "false"
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+
+volumes:
+  tpi_local_postgres_data:

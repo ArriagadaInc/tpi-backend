@@ -37,8 +37,22 @@ def test_caddy_keeps_api_and_streamlit_ports_internal() -> None:
 
     assert '"8000:8000"' not in compose
     assert '"8501:8501"' not in compose
-    assert "reverse_proxy api:8000" in caddyfile
-    assert "reverse_proxy backoffice:8501" in caddyfile
+    assert "reverse_proxy {$TPI_API_UPSTREAM:api:8000}" in caddyfile
+    assert "reverse_proxy {$TPI_BACKOFFICE_UPSTREAM:backoffice:8501}" in caddyfile
+
+
+def test_local_demo_keeps_public_listener_on_loopback_and_auth_private() -> None:
+    compose = (PROJECT_ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+    local_compose = (PROJECT_ROOT / "docker-compose.local.yml").read_text(encoding="utf-8")
+
+    assert '"${CADDY_BIND_ADDRESS:-127.0.0.1}:8080:80"' in compose
+    assert '"${CADDY_BIND_ADDRESS:-127.0.0.1}:443:443"' in compose
+    assert "postgres:" in local_compose
+    assert "db-init:" in local_compose
+    assert (
+        "AUTH_USERS_JSON"
+        not in local_compose.split("api:", maxsplit=1)[1].split("backoffice:", maxsplit=1)[0]
+    )
 
 
 def test_idempotency_migration_is_minimal_and_cleanup_safe() -> None:

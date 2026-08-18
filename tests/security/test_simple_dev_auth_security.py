@@ -32,8 +32,8 @@ def test_auth_runtime_artifacts_do_not_reference_admin_database_secret() -> None
 def test_compose_exposes_only_caddy_web_ports() -> None:
     compose = (PROJECT_ROOT / "docker-compose.yml").read_text(encoding="utf-8")
 
-    assert '"80:80"' in compose
-    assert '"443:443"' in compose
+    assert '"${CADDY_BIND_ADDRESS:-127.0.0.1}:8080:80"' in compose
+    assert '"${CADDY_BIND_ADDRESS:-127.0.0.1}:443:443"' in compose
     assert '"8501:8501"' not in compose
     assert '"5432:5432"' not in compose
 
@@ -41,12 +41,11 @@ def test_compose_exposes_only_caddy_web_ports() -> None:
 def test_caddy_routes_public_and_private_hosts_to_internal_services() -> None:
     caddyfile = (PROJECT_ROOT / "deployment/caddy/Caddyfile").read_text(encoding="utf-8")
 
-    assert "{$TPI_PUBLIC_DOMAIN:localhost}" in caddyfile
-    assert "backoffice.{$TPI_PUBLIC_DOMAIN:localhost}" in caddyfile
+    assert "{$TPI_PUBLIC_SITE_ADDRESS:http://tpi.localhost}" in caddyfile
+    assert "{$TPI_BACKOFFICE_SITE_ADDRESS:http://backoffice.tpi.localhost}" in caddyfile
     assert "handle /api/*" in caddyfile
-    assert "reverse_proxy api:8000" in caddyfile
-    assert "reverse_proxy backoffice:8501" in caddyfile
-    assert "http://" not in caddyfile
+    assert "reverse_proxy {$TPI_API_UPSTREAM:api:8000}" in caddyfile
+    assert "reverse_proxy {$TPI_BACKOFFICE_UPSTREAM:backoffice:8501}" in caddyfile
 
 
 def test_public_api_compose_service_does_not_receive_auth_secret() -> None:

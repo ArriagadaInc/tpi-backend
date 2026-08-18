@@ -53,6 +53,7 @@ services:
       AUTH_ENABLED: ${AUTH_ENABLED:-false}
       AUTH_MODE: ${AUTH_MODE:-simple-dev}
       AUTH_USERS_JSON: ${AUTH_USERS_JSON:-}
+      TPI_PUBLIC_SITE_URL: ${TPI_PUBLIC_SITE_URL:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     command: ["streamlit", "run", "app/backoffice_app.py"]
 
@@ -61,10 +62,14 @@ services:
       context: .
       dockerfile: deployment/caddy/Dockerfile
     ports:
-      - "80:80"
-      - "443:443"
+      - "${CADDY_BIND_ADDRESS:-127.0.0.1}:8080:80"
+      - "${CADDY_BIND_ADDRESS:-127.0.0.1}:443:443"
     environment:
-      TPI_PUBLIC_DOMAIN: ${TPI_PUBLIC_DOMAIN:-localhost}
+      TPI_PUBLIC_SITE_ADDRESS: ${TPI_PUBLIC_SITE_ADDRESS:-http://tpi.localhost}
+      TPI_BACKOFFICE_SITE_ADDRESS: ${TPI_BACKOFFICE_SITE_ADDRESS:-http://backoffice.tpi.localhost}
+      TPI_API_UPSTREAM: ${TPI_API_UPSTREAM:-api:8000}
+      TPI_BACKOFFICE_UPSTREAM: ${TPI_BACKOFFICE_UPSTREAM:-backoffice:8501}
+      TPI_FRONT_ROOT: ${TPI_FRONT_ROOT:-/srv/front}
     volumes:
       - caddy_data:/data
       - caddy_config:/config
