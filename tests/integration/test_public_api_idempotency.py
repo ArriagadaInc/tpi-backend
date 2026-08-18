@@ -9,7 +9,10 @@ from threading import Barrier
 from uuid import UUID, uuid4
 
 import pytest
+from fastapi.testclient import TestClient
 
+from app.api import create_api_app
+from app.config import Settings
 from app.models import (
     ConsentimientosData,
     IdempotencyConflictError,
@@ -87,6 +90,65 @@ def test_idempotency_persists_one_lead_and_publishes_only_once() -> None:
     assert replay.created is False
     assert replay.lead_id == first.lead_id
     assert service.get_solicitud_detalle(first.lead_id) is not None
+    assert len(publisher.events) == 1
+
+
+def test_public_lead_is_available_through_the_backoffice_listing_service() -> None:
+    """A lead created through the public contract must be visible to backoffice reads."""
+    publisher = RecordingPublisher()
+    public_service = SolicitudService(publisher=publisher)  # type: ignore[arg-type]
+    request = _request(public_service, _valid_rut(22_000_000 + (uuid4().int % 1_000_000)))
+    api = create_api_app(
+        settings=Settings(
+            _env_file=None,
+            APP_ENV="testing",
+            API_IDEMPOTENCY_HMAC_SECRET="integration-test-hmac-secret",
+        ),
+        service_factory=lambda: public_service,
+    )
+    payload = {
+        "schema_version": "1.0",
+        "rut": request.persona.rut,
+        "nombre_completo": request.persona.nombre_completo,
+        "email": request.persona.email,
+        "telefono": request.persona.telefono,
+        "fecha_nacimiento": request.persona.fecha_nacimiento.isoformat(),
+        "genero_id": str(request.solicitud.genero_id),
+        "estado_civil_id": str(request.solicitud.estado_civil_id),
+        "afp_id": str(request.solicitud.afp_id),
+        "saldo_afp": str(request.solicitud.saldo_afp),
+        "comentarios": request.solicitud.comentarios,
+        "consentimientos": {
+            "acepta_terminos": True,
+            "acepta_politica_privacidad": True,
+            "finalidad_contacto": True,
+        },
+        "honeypot": "",
+    }
+
+    with TestClient(api) as client:
+        response = client.post(
+            "/api/v1/leads",
+            json=payload,
+            headers={
+                "Content-Type": "application/json",
+                "Idempotency-Key": str(uuid4()),
+            },
+        )
+    created_lead_id = UUID(response.json()["lead_id"])
+
+    # The listing below is the same application service operation used by the
+    # private Streamlit page, not a parallel API-specific query.
+    backoffice_listing = SolicitudService().get_solicitudes_lista(
+        page=1,
+        page_size=100,
+        masked=True,
+    )
+
+    assert response.status_code == 201
+    assert any(
+        str(row["id_lead"]) == str(created_lead_id) for row in backoffice_listing["solicitudes"]
+    )
     assert len(publisher.events) == 1
 
 
