@@ -52,7 +52,7 @@ def test_caddy_routes_public_and_private_hosts_to_internal_services() -> None:
     assert "handle /api/*" in caddyfile
     assert "reverse_proxy {$TPI_API_UPSTREAM:api:8000}" in caddyfile
     assert "reverse_proxy {$TPI_BACKOFFICE_UPSTREAM:backoffice:8501}" in caddyfile
-    assert 'X-Robots-Tag "noindex, nofollow"' in caddyfile
+    assert caddyfile.count('X-Robots-Tag "noindex, nofollow"') == 2
 
 
 def test_public_api_compose_service_does_not_receive_auth_secret() -> None:

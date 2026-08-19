@@ -27,5 +27,9 @@
 		format json
 	}
 
+	header {
+		X-Robots-Tag "noindex, nofollow"
+	}
+
 	reverse_proxy {$TPI_BACKOFFICE_UPSTREAM:backoffice:8501}
 }
