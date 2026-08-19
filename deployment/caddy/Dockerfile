@@ -1,4 +1,4 @@
-FROM caddy@sha256:d8c17a862962def15cde69863a3a463f25a2664942eafd7bdbf050e9c3116b83
+FROM caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
 
 COPY front /srv/front
 COPY deployment/caddy/Caddyfile /etc/caddy/Caddyfile

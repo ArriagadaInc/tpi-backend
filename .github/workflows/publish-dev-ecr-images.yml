@@ -169,3 +169,36 @@ jobs:
         run: |
           aws ecr describe-images --repository-name "$ECR_APP_REPOSITORY" --image-ids imageTag="$IMAGE_TAG" --query 'imageDetails[0].imageDigest' --output text
           aws ecr describe-images --repository-name "$ECR_CADDY_REPOSITORY" --image-ids imageTag="$IMAGE_TAG" --query 'imageDetails[0].imageDigest' --output text
+      - name: Fail closed on critical ECR findings
+        env:
+          IMAGE_TAG: ${{ inputs.source_sha || github.sha }}
+        run: |
+          for repository in "$ECR_APP_REPOSITORY" "$ECR_CADDY_REPOSITORY"; do
+            for attempt in $(seq 1 30); do
+              status=$(aws ecr describe-image-scan-findings \
+                --repository-name "$repository" \
+                --image-id imageTag="$IMAGE_TAG" \
+                --query 'imageScanStatus.status' \
+                --output text 2>/dev/null || true)
+              if [ "$status" = "COMPLETE" ]; then
+                break
+              fi
+              sleep 10
+            done
+            if [ "$status" != "COMPLETE" ]; then
+              echo "ECR scan did not complete for $repository within five minutes."
+              exit 1
+            fi
+            critical=$(aws ecr describe-image-scan-findings \
+              --repository-name "$repository" \
+              --image-id imageTag="$IMAGE_TAG" \
+              --query 'imageScanFindings.findingSeverityCounts.CRITICAL || `0`' \
+              --output text)
+            high=$(aws ecr describe-image-scan-findings \
+              --repository-name "$repository" \
+              --image-id imageTag="$IMAGE_TAG" \
+              --query 'imageScanFindings.findingSeverityCounts.HIGH || `0`' \
+              --output text)
+            echo "$repository: CRITICAL=$critical HIGH=$high"
+            test "$critical" = "0"
+          done

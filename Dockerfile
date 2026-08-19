@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12.13-alpine3.23@sha256:601d3d3797e90e2534782e69c85fafb7971b43f24c7b1b079b7e48dd435e458d
 
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -9,7 +9,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-RUN useradd --create-home --shell /bin/bash appuser
+RUN adduser -S -D -h /home/appuser -s /sbin/nologin appuser
 
 COPY --chown=appuser:appuser pyproject.toml README.md ./
 COPY --chown=appuser:appuser requirements/runtime.lock ./requirements/runtime.lock
