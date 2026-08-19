@@ -62,7 +62,7 @@ The future production replacement is managed HTTPS plus OIDC/IdP and RBAC.
 ## Container vulnerability gate
 
 As of 2026-08-19, published ECR candidates must have zero CRITICAL findings.
-The application image deliberately removes CPython's unused SQLite extension
+The application image deliberately removes CPython's unused SQLite runtime
 because TPI only uses PostgreSQL; the Caddy image removes curl/libcurl because
 Caddy uses its Go HTTP stack and neither its entrypoint nor healthcheck invokes
 curl. This removes the unused affected components instead of accepting the
