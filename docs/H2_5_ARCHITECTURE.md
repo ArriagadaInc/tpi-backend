@@ -59,6 +59,20 @@ SimpleDevAuth consumes `AUTH_USERS_JSON` only in the backoffice service. Missing
 or invalid auth data denies private access but cannot block public lead capture.
 The future production replacement is managed HTTPS plus OIDC/IdP and RBAC.
 
+## Container vulnerability gate
+
+As of 2026-08-19, published ECR candidates must have zero CRITICAL findings.
+The application image deliberately removes SQLite because TPI only uses
+PostgreSQL; the Caddy image removes curl/libcurl because Caddy uses its Go HTTP
+stack and neither its entrypoint nor healthcheck invokes curl. This removes the
+unused affected packages instead of accepting the upstream SQLite FTS5 and
+libcurl CVEs as a DEV exception.
+
+Every immutable image remains subject to ECR scan-on-push. A future dependency
+on SQLite or curl/libcurl requires an explicit security review and a currently
+fixed vendor package before it can be added back. This is not a production-risk
+acceptance and does not replace production enhanced scanning.
+
 ## Rollback
 
 ### A. Backoffice/authentication-only rollback
