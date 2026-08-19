@@ -67,12 +67,10 @@ neither its entrypoint nor healthcheck invokes curl. This removes the unused
 affected component rather than accepting CVE-2026-6276 or CVE-2026-5773 as a
 DEV exception.
 
-The pinned Python base still reports CVE-2026-11822 and CVE-2026-11824 for its
-SQLite 3.51.2 runtime. TPI uses PostgreSQL and does not process SQLite database
-files, but SQLite 3.53.2 is the upstream fix and is not yet available as a
-fixed vendor package for this base. This is a deployment blocker, not a DEV
-risk acceptance: rebuild and rescan with a supported official base containing
-the fixed SQLite version before H2.5D is deployed.
+The application image is pinned to the official Python 3.12.13 Alpine 3.24
+digest, which provides SQLite 3.53.2. H2.5D treats both HIGH and CRITICAL ECR
+findings as deployment blockers; a candidate must be rebuilt and scanned clean
+before it can be deployed.
 
 Every immutable image remains subject to ECR scan-on-push. A future dependency
 on SQLite or curl/libcurl requires an explicit security review and a currently

@@ -169,7 +169,7 @@ jobs:
         run: |
           aws ecr describe-images --repository-name "$ECR_APP_REPOSITORY" --image-ids imageTag="$IMAGE_TAG" --query 'imageDetails[0].imageDigest' --output text
           aws ecr describe-images --repository-name "$ECR_CADDY_REPOSITORY" --image-ids imageTag="$IMAGE_TAG" --query 'imageDetails[0].imageDigest' --output text
-      - name: Fail closed on critical ECR findings
+      - name: Fail closed on high or critical ECR findings
         env:
           IMAGE_TAG: ${{ inputs.source_sha || github.sha }}
         run: |
@@ -200,5 +200,8 @@ jobs:
               --query 'imageScanFindings.findingSeverityCounts.HIGH || `0`' \
               --output text)
             echo "$repository: CRITICAL=$critical HIGH=$high"
-            test "$critical" = "0"
+            if [ "$critical" != "0" ] || [ "$high" != "0" ]; then
+              echo "ECR deployment eligibility requires CRITICAL=0 and HIGH=0 for $repository."
+              exit 1
+            fi
           done
