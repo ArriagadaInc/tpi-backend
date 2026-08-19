@@ -117,8 +117,8 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.source_sha || github.sha }}
-      - run: docker build --tag tpi-dev-app:${{ inputs.source_sha }} .
-      - run: docker build --tag tpi-dev-caddy:${{ inputs.source_sha }} --file deployment/caddy/Dockerfile .
+      - run: docker build --tag tpi-dev-app:${{ inputs.source_sha || github.sha }} .
+      - run: docker build --tag tpi-dev-caddy:${{ inputs.source_sha || github.sha }} --file deployment/caddy/Dockerfile .
       - run: docker compose config --quiet
       - run: docker compose build
       - name: Validate Caddy configuration
