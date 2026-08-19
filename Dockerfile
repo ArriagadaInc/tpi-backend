@@ -23,8 +23,8 @@ COPY --chown=appuser:appuser .streamlit ./.streamlit
 
 RUN pip install --no-cache-dir --no-deps .
 
-# TPI persists exclusively in PostgreSQL; do not retain an unused SQLite runtime.
-RUN apk del --no-network sqlite
+# TPI persists exclusively in PostgreSQL; remove CPython's unused SQLite extension.
+RUN rm -f /usr/local/lib/python3.12/lib-dynload/_sqlite3*.so
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
     CMD ["python", "-m", "scripts.healthcheck_runtime"]
