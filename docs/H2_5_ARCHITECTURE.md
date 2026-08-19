@@ -62,16 +62,21 @@ The future production replacement is managed HTTPS plus OIDC/IdP and RBAC.
 ## Container vulnerability gate
 
 As of 2026-08-19, published ECR candidates must have zero CRITICAL findings.
-The application image deliberately removes CPython's unused SQLite runtime
-because TPI only uses PostgreSQL; the Caddy image removes curl/libcurl because
-Caddy uses its Go HTTP stack and neither its entrypoint nor healthcheck invokes
-curl. This removes the unused affected components instead of accepting the
-upstream SQLite FTS5 and libcurl CVEs as a DEV exception.
+The Caddy image removes curl/libcurl because Caddy uses its Go HTTP stack and
+neither its entrypoint nor healthcheck invokes curl. This removes the unused
+affected component rather than accepting CVE-2026-6276 or CVE-2026-5773 as a
+DEV exception.
+
+The pinned Python base still reports CVE-2026-11822 and CVE-2026-11824 for its
+SQLite 3.51.2 runtime. TPI uses PostgreSQL and does not process SQLite database
+files, but SQLite 3.53.2 is the upstream fix and is not yet available as a
+fixed vendor package for this base. This is a deployment blocker, not a DEV
+risk acceptance: rebuild and rescan with a supported official base containing
+the fixed SQLite version before H2.5D is deployed.
 
 Every immutable image remains subject to ECR scan-on-push. A future dependency
 on SQLite or curl/libcurl requires an explicit security review and a currently
-fixed vendor package before it can be added back. This is not a production-risk
-acceptance and does not replace production enhanced scanning.
+fixed vendor package. This does not replace production enhanced scanning.
 
 ## Rollback
 
