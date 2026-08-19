@@ -1,11 +1,15 @@
 name: Publish immutable DEV images to ECR
 
 on:
+  push:
+    branches:
+      - feat/h2-5-simple-dev-auth
   workflow_dispatch:
     inputs:
       source_sha:
         description: Full immutable Git SHA to validate, build, and publish.
-        required: true
+        required: false
+        default: ''
         type: string
 
 permissions:
@@ -24,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.source_sha }}
+          ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
@@ -57,7 +61,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.source_sha }}
+          ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
@@ -94,7 +98,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.source_sha }}
+          ref: ${{ inputs.source_sha || github.sha }}
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
@@ -112,7 +116,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.source_sha }}
+          ref: ${{ inputs.source_sha || github.sha }}
       - run: docker build --tag tpi-dev-app:${{ inputs.source_sha }} .
       - run: docker build --tag tpi-dev-caddy:${{ inputs.source_sha }} --file deployment/caddy/Dockerfile .
       - run: docker compose config --quiet
@@ -135,12 +139,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.source_sha }}
+          ref: ${{ inputs.source_sha || github.sha }}
           fetch-depth: 0
       - name: Verify the requested revision belongs to the authorized branch
         run: |
           git fetch origin "feat/h2-5-simple-dev-auth:refs/remotes/origin/feat/h2-5-simple-dev-auth"
-          git merge-base --is-ancestor "${{ inputs.source_sha }}" origin/feat/h2-5-simple-dev-auth
+          git merge-base --is-ancestor "${{ inputs.source_sha || github.sha }}" origin/feat/h2-5-simple-dev-auth
       - name: Configure AWS credentials through GitHub OIDC
         uses: aws-actions/configure-aws-credentials@v5
         with:
@@ -153,7 +157,7 @@ jobs:
       - name: Build and push immutable images
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ inputs.source_sha }}
+          IMAGE_TAG: ${{ inputs.source_sha || github.sha }}
         run: |
           docker build --tag "$REGISTRY/$ECR_APP_REPOSITORY:$IMAGE_TAG" .
           docker build --tag "$REGISTRY/$ECR_CADDY_REPOSITORY:$IMAGE_TAG" --file deployment/caddy/Dockerfile .
@@ -161,7 +165,7 @@ jobs:
           docker push "$REGISTRY/$ECR_CADDY_REPOSITORY:$IMAGE_TAG"
       - name: Record immutable image digests
         env:
-          IMAGE_TAG: ${{ inputs.source_sha }}
+          IMAGE_TAG: ${{ inputs.source_sha || github.sha }}
         run: |
           aws ecr describe-images --repository-name "$ECR_APP_REPOSITORY" --image-ids imageTag="$IMAGE_TAG" --query 'imageDetails[0].imageDigest' --output text
           aws ecr describe-images --repository-name "$ECR_CADDY_REPOSITORY" --image-ids imageTag="$IMAGE_TAG" --query 'imageDetails[0].imageDigest' --output text
