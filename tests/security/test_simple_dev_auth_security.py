@@ -38,6 +38,12 @@ def test_compose_exposes_only_caddy_web_ports() -> None:
     assert '"5432:5432"' not in compose
 
 
+def test_beanstalk_bundle_keeps_the_compose_topology() -> None:
+    attributes = (PROJECT_ROOT / ".gitattributes").read_text(encoding="utf-8")
+
+    assert "/docker-compose.yml export-ignore" not in attributes
+
+
 def test_caddy_routes_public_and_private_hosts_to_internal_services() -> None:
     caddyfile = (PROJECT_ROOT / "deployment/caddy/Caddyfile").read_text(encoding="utf-8")
 
