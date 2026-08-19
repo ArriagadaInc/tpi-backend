@@ -32,11 +32,17 @@ def test_backoffice_access_is_limited_to_approved_dev_hosts() -> None:
         assert 'src="js/backoffice-access.js"' in page
 
     assert "['tpi.localhost', 'backoffice.tpi.localhost']" in script
-    assert "['tpi-dev-lab.com', 'backoffice.tpi-dev-lab.com']" in script
+    assert "['dev.genialabs.cl', 'backoffice.dev.genialabs.cl']" in script
     assert "destination.port = window.location.port" in script
     assert "link?.remove()" in script
     assert "destination.search = ''" in script
     assert "destination.hash = ''" in script
+
+
+def test_public_dev_pages_are_not_indexable() -> None:
+    for filename in ("index.html", "simulador.html"):
+        page = (PROJECT_ROOT / "front" / filename).read_text(encoding="utf-8")
+        assert '<meta name="robots" content="noindex,nofollow">' in page
 
 
 def test_public_form_loads_catalogs_and_submits_same_origin_api_with_idempotency() -> None:

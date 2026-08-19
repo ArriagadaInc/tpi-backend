@@ -61,7 +61,8 @@ port; no credentials, tokens, or query parameters are transferred.
 
 After authentication, the backoffice sidebar displays `Volver al sitio` only
 when `TPI_PUBLIC_SITE_URL` matches the approved environment URL: local uses
-`http://tpi.localhost:8080/` and AWS DEV uses `https://tpi-dev-lab.com/`.
+`http://tpi.localhost:8080/` and temporary AWS DEV uses
+`https://dev.genialabs.cl/`.
 The link does not log out or transfer session data.
 
 Running services are `postgres`, one-shot `db-init`, `api`, `backoffice` and
@@ -159,8 +160,8 @@ The AWS-oriented Compose topology runs three application services:
 
 ```text
 Caddy :80/:443
-  tpi-dev-lab.com             -> static front/ and api:8000 (/api/*)
-  backoffice.tpi-dev-lab.com  -> backoffice:8501
+  dev.genialabs.cl             -> static front/ and api:8000 (/api/*)
+  backoffice.dev.genialabs.cl  -> backoffice:8501
 ```
 
 Only Caddy publishes host ports. The `api` service receives no `AUTH_USERS_JSON`;

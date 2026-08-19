@@ -10,7 +10,7 @@ from app.config import Settings, get_settings
 
 _PUBLIC_SITE_BY_ENVIRONMENT = {
     "local": ("http", "tpi.localhost", 8080),
-    "aws-dev": ("https", "tpi-dev-lab.com", None),
+    "aws-dev": ("https", "dev.genialabs.cl", None),
 }
 
 

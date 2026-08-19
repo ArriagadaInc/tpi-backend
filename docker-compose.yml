@@ -27,6 +27,8 @@ services:
       LEAD_NOTIFICATION_TOPIC_ARN: ${LEAD_NOTIFICATION_TOPIC_ARN:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     command: ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    networks:
+      - tpi_internal
 
   backoffice:
     build: .
@@ -56,14 +58,16 @@ services:
       TPI_PUBLIC_SITE_URL: ${TPI_PUBLIC_SITE_URL:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     command: ["streamlit", "run", "app/backoffice_app.py"]
+    networks:
+      - tpi_internal
 
   caddy:
     build:
       context: .
       dockerfile: deployment/caddy/Dockerfile
     ports:
-      - "${CADDY_BIND_ADDRESS:-127.0.0.1}:8080:80"
-      - "${CADDY_BIND_ADDRESS:-127.0.0.1}:443:443"
+      - "${CADDY_BIND_ADDRESS:-127.0.0.1}:${CADDY_HTTP_PORT:-8080}:80"
+      - "${CADDY_BIND_ADDRESS:-127.0.0.1}:${CADDY_HTTPS_PORT:-443}:443"
     environment:
       TPI_PUBLIC_SITE_ADDRESS: ${TPI_PUBLIC_SITE_ADDRESS:-http://tpi.localhost}
       TPI_BACKOFFICE_SITE_ADDRESS: ${TPI_BACKOFFICE_SITE_ADDRESS:-http://backoffice.tpi.localhost}
@@ -76,7 +80,17 @@ services:
     depends_on:
       - api
       - backoffice
+    networks:
+      tpi_internal:
+        ipv4_address: ${CADDY_INTERNAL_IP:-172.30.0.10}
 
 volumes:
   caddy_data:
   caddy_config:
+
+networks:
+  tpi_internal:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${TPI_INTERNAL_SUBNET:-172.30.0.0/24}

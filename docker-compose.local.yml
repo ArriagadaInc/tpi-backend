@@ -12,6 +12,8 @@ services:
       retries: 10
     volumes:
       - tpi_local_postgres_data:/var/lib/postgresql/data
+    networks:
+      - tpi_internal
 
   db-init:
     build: .
@@ -28,6 +30,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - tpi_internal
 
   api:
     environment:

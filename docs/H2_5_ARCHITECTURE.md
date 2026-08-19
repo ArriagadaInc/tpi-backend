@@ -10,8 +10,8 @@ deployment has been created by this change.
 ## Routing
 
 ```text
-tpi-dev-lab.com                  -> Caddy -> static front/ + FastAPI /api/*
-backoffice.tpi-dev-lab.com       -> Caddy -> private Streamlit
+dev.genialabs.cl                  -> Caddy -> static front/ + FastAPI /api/*
+backoffice.dev.genialabs.cl       -> Caddy -> private Streamlit
                                              -> SimpleDevAuth
 ```
 

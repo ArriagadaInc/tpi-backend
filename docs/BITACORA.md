@@ -136,6 +136,14 @@ Tareas realizadas:
 Seguridad:
 
 - The public Compose service does not receive `AUTH_USERS_JSON`.
+
+### H2.5D temporary DEV DNS
+
+- `dev.genialabs.cl` and `backoffice.dev.genialabs.cl` are the temporary AWS
+  DEV hostnames. DNS and Caddy configuration are deployment concerns; the
+  application core remains independent of the hostname.
+- The public front sends `noindex,nofollow` in HTML and Caddy's
+  `X-Robots-Tag`. Production TPI and its data remain outside this environment.
 - Invalid auth configuration remains fail-closed for backoffice and does not
   prevent public lead capture.
 - Port 8501 remains internal to Compose; no infrastructure rules changed.

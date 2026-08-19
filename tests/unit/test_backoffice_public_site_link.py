@@ -12,7 +12,7 @@ from app.config import Settings
     ("app_env", "configured_url", "expected"),
     [
         ("local", "http://tpi.localhost:8080/", "http://tpi.localhost:8080/"),
-        ("aws-dev", "https://tpi-dev-lab.com/", "https://tpi-dev-lab.com/"),
+        ("aws-dev", "https://dev.genialabs.cl/", "https://dev.genialabs.cl/"),
     ],
 )
 def test_public_site_link_uses_the_approved_environment_url(
@@ -30,7 +30,7 @@ def test_public_site_link_uses_the_approved_environment_url(
         ("local", "https://tpi.localhost:8080/"),
         ("local", "http://tpi.localhost:8080/?token=unsafe"),
         ("local", "http://tpi.localhost:not-a-port/"),
-        ("aws-dev", "https://user:password@tpi-dev-lab.com/"),
+        ("aws-dev", "https://user:password@dev.genialabs.cl/"),
         ("aws-dev", "https://unapproved.example/"),
     ],
 )
