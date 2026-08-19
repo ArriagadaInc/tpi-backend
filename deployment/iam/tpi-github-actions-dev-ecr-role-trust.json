@@ -1,0 +1,19 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowTpiRepositoryDevBranchOnly",
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::821656895812:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+          "token.actions.githubusercontent.com:sub": "repo:ArriagadaInc/tpi-backend:ref:refs/heads/feat/h2-5-simple-dev-auth"
+        }
+      }
+    }
+  ]
+}
