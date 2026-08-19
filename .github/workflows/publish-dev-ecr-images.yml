@@ -145,6 +145,20 @@ jobs:
         run: |
           git fetch origin "feat/h2-5-simple-dev-auth:refs/remotes/origin/feat/h2-5-simple-dev-auth"
           git merge-base --is-ancestor "${{ inputs.source_sha || github.sha }}" origin/feat/h2-5-simple-dev-auth
+      - name: Report non-sensitive OIDC claims
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const token = await core.getIDToken("sts.amazonaws.com");
+            const payload = JSON.parse(
+              Buffer.from(token.split(".")[1], "base64url").toString("utf8"),
+            );
+            core.info(JSON.stringify({
+              aud: payload.aud,
+              sub: payload.sub,
+              repository: payload.repository,
+              ref: payload.ref,
+            }));
       - name: Configure AWS credentials through GitHub OIDC
         uses: aws-actions/configure-aws-credentials@v5
         with:
