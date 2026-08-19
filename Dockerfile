@@ -13,12 +13,15 @@ RUN useradd --create-home --shell /bin/bash appuser
 
 COPY --chown=appuser:appuser pyproject.toml README.md ./
 COPY --chown=appuser:appuser requirements/runtime.lock ./requirements/runtime.lock
+
+# Keep the locked runtime dependencies cacheable across application-only changes.
+RUN pip install --no-cache-dir --requirement requirements/runtime.lock
+
 COPY --chown=appuser:appuser app ./app
 COPY --chown=appuser:appuser scripts ./scripts
 COPY --chown=appuser:appuser .streamlit ./.streamlit
 
-RUN pip install --no-cache-dir --requirement requirements/runtime.lock \
-    && pip install --no-cache-dir --no-deps .
+RUN pip install --no-cache-dir --no-deps .
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
     CMD ["python", "-m", "scripts.healthcheck_runtime"]

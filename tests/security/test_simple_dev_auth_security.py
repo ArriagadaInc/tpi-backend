@@ -73,3 +73,11 @@ def test_public_api_does_not_receive_the_admin_database_secret_or_open_cors() ->
     contents = "\n".join(path.read_text(encoding="utf-8") for path in api_files)
     assert "database-admin-password" not in contents
     assert "CORSMiddleware" not in contents
+
+
+def test_dockerfile_caches_locked_dependencies_before_application_source() -> None:
+    dockerfile = (PROJECT_ROOT / "Dockerfile").read_text(encoding="utf-8")
+
+    assert dockerfile.index(
+        "RUN pip install --no-cache-dir --requirement requirements/runtime.lock"
+    ) < (dockerfile.index("COPY --chown=appuser:appuser app ./app"))
