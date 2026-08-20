@@ -55,6 +55,23 @@ client UUID and `ON DELETE SET NULL` for its short-lived lead reference, so DEV
 test-lead cleanup cannot be blocked by metadata. Its only secondary index is
 `expires_at`, used for opportunistic expiry cleanup.
 
+### BLUE/GREEN IAM isolation
+
+BLUE and GREEN must never share IAM identity. Cloning an Elastic Beanstalk
+environment configuration is not the same as cloning its IAM role or EC2
+instance profile. `IamInstanceProfile` is an environment-specific setting and
+must be versioned, reviewed, and validated independently for each environment.
+
+The operational guardrail is a preflight script:
+`deployment/aws/check_eb_iam_isolation.py`.
+It fails closed when BLUE and GREEN use the same instance profile or the same
+IAM role, and it prints the resolved profile and role for both environments on
+success.
+
+As a longer-term drift control, IAM roles, instance profiles, and Elastic
+Beanstalk environment settings should move progressively into IaC so that
+identity isolation is enforced structurally instead of by manual review.
+
 SimpleDevAuth consumes `AUTH_USERS_JSON` only in the backoffice service. Missing
 or invalid auth data denies private access but cannot block public lead capture.
 The future production replacement is managed HTTPS plus OIDC/IdP and RBAC.
