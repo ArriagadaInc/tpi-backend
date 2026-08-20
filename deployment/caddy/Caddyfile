@@ -19,7 +19,6 @@
 		}
 		file_server
 	}
-	}
 }
 
 (backoffice_site) {
@@ -46,20 +45,12 @@
 	}
 }
 
-dev.genialabs.cl {
+{$TPI_PUBLIC_SITE_ADDRESS:http://tpi.localhost} {
 	import public_site
 	import route53_dns_challenge
 }
 
-backoffice.dev.genialabs.cl {
+{$TPI_BACKOFFICE_SITE_ADDRESS:http://backoffice.tpi.localhost} {
 	import backoffice_site
 	import route53_dns_challenge
-}
-
-http://tpi.localhost {
-	import public_site
-}
-
-http://backoffice.tpi.localhost {
-	import backoffice_site
 }
