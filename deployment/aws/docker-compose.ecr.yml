@@ -2,7 +2,7 @@
 # remains on docker-compose.yml and docker-compose.local.yml, which use builds.
 services:
   api:
-    image: ${TPI_ECR_REGISTRY}/tpi-dev-app:${TPI_IMAGE_TAG}
+    image: ${TPI_APP_IMAGE:?TPI_APP_IMAGE must be an immutable digest reference}
     expose:
       - "8000"
     environment:
@@ -33,7 +33,7 @@ services:
       - tpi_internal
 
   backoffice:
-    image: ${TPI_ECR_REGISTRY}/tpi-dev-app:${TPI_IMAGE_TAG}
+    image: ${TPI_APP_IMAGE:?TPI_APP_IMAGE must be an immutable digest reference}
     expose:
       - "8501"
     environment:
@@ -64,7 +64,7 @@ services:
       - tpi_internal
 
   caddy:
-    image: ${TPI_ECR_REGISTRY}/tpi-dev-caddy:${TPI_IMAGE_TAG}
+    image: ${TPI_CADDY_IMAGE:?TPI_CADDY_IMAGE must be an immutable digest reference}
     ports:
       - "80:80"
       - "443:443"

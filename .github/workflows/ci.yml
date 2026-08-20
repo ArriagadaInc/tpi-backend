@@ -26,10 +26,10 @@ jobs:
           python -m pip install --no-deps -e .
       
       - name: Ruff check
-        run: ruff check app/ tests/ scripts/
+        run: ruff check app/ tests/ scripts/ deployment/
       
       - name: Black format check
-        run: black --check app/ tests/ scripts/
+        run: black --check app/ tests/ scripts/ deployment/
       
       - name: Mypy type check
         run: mypy app/ --ignore-missing-imports
@@ -138,3 +138,38 @@ jobs:
           --volume "$GITHUB_WORKSPACE/deployment/caddy/Caddyfile:/etc/caddy/Caddyfile:ro"
           caddy@sha256:d8c17a862962def15cde69863a3a463f25a2664942eafd7bdbf050e9c3116b83
           caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+      - name: Build minimal ECR Elastic Beanstalk bundle
+        run: >-
+          python deployment/build_eb_ecr_bundle.py
+          --template deployment/aws/docker-compose.ecr.yml
+          --output dist/h2-5d-ecr-5c6a726.zip
+          --runtime-git-sha 5c6a726423a7539daefb9bcb1c35748e928e7999
+          --app-image 821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-app@sha256:1446f299deb66f40b1eb50cf91d82447fba51ceed4c8adb23a138688571a7c66
+          --caddy-image 821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-caddy@sha256:5a2ac992e935d4b012c08117c6b3e4c310e0db5c765fe5211f0a2128d989b7dc
+
+      - name: Validate Linux EB source bundle
+        env:
+          DATABASE_HOST: ci-postgres
+          DATABASE_NAME: tpi_test
+          DATABASE_USER: tpi_app
+          DATABASE_PASSWORD: ci-not-a-secret
+          API_IDEMPOTENCY_HMAC_SECRET: ci-not-a-secret
+          AUTH_USERS_JSON: '{"users":[]}'
+          TPI_PUBLIC_SITE_ADDRESS: https://dev.example.test
+          TPI_BACKOFFICE_SITE_ADDRESS: https://backoffice.dev.example.test
+        run: |
+          unzip -t dist/h2-5d-ecr-5c6a726.zip
+          unzip -l dist/h2-5d-ecr-5c6a726.zip
+          bundle_dir="$(mktemp -d)"
+          unzip -q dist/h2-5d-ecr-5c6a726.zip -d "$bundle_dir"
+          test "$(find "$bundle_dir" -mindepth 1 -maxdepth 1 | wc -l)" -eq 1
+          test -f "$bundle_dir/docker-compose.yml"
+          docker compose -f "$bundle_dir/docker-compose.yml" config --quiet
+
+      - name: Upload validated EB bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: h2-5d-ecr-5c6a726
+          path: dist/h2-5d-ecr-5c6a726.zip
+          if-no-files-found: error

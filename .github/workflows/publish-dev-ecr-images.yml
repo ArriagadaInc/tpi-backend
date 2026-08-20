@@ -4,6 +4,17 @@ on:
   push:
     branches:
       - feat/h2-5-simple-dev-auth
+    paths:
+      - '.dockerignore'
+      - '.streamlit/**'
+      - 'Dockerfile'
+      - 'README.md'
+      - 'app/**'
+      - 'front/**'
+      - 'pyproject.toml'
+      - 'requirements/runtime.lock'
+      - 'scripts/**'
+      - 'deployment/caddy/**'
   workflow_dispatch:
     inputs:
       source_sha:

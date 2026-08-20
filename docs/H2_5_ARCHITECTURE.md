@@ -76,6 +76,28 @@ Every immutable image remains subject to ECR scan-on-push. A future dependency
 on SQLite or curl/libcurl requires an explicit security review and a currently
 fixed vendor package. This does not replace production enhanced scanning.
 
+## Elastic Beanstalk ECR bundle
+
+Elastic Beanstalk receives a minimal source bundle generated with
+`deployment/build_eb_ecr_bundle.py`. The ZIP contains exactly one root entry:
+`docker-compose.yml`. Its entry name is written with POSIX `/` separators, so
+Linux `unzip` can extract it deterministically.
+
+The rendered compose references the approved application and Caddy images by
+full SHA-256 digest. It contains no `build:` directive, source code, Dockerfile,
+`.ebextensions`, environment files, or secrets. Runtime configuration and
+infrastructure remain persisted as Elastic Beanstalk environment settings;
+application versions do not reapply IAM, VPC, subnet, security-group, instance,
+or scaling configuration.
+
+GitHub Actions on Ubuntu generates and validates the canonical artifact using
+`unzip -t`, extraction into a temporary directory, and `docker compose config`.
+The workflow uploads the ZIP as a build artifact with a separate, non-secret
+manifest containing the runtime Git SHA, image digests, generation time, and
+bundle SHA-256. A bundle that contains backslashes, nested paths, extra files,
+mutable image tags, host ports for API/Streamlit, or build directives fails
+validation.
+
 ## Rollback
 
 ### A. Backoffice/authentication-only rollback
