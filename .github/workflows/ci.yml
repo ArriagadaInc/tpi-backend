@@ -131,12 +131,14 @@ jobs:
       - name: Build complete Compose topology
         run: docker compose build
 
+      - name: Build custom Caddy image
+        run: docker build --tag tpi-dev-caddy:${{ github.sha }} --file deployment/caddy/Dockerfile .
+
       - name: Validate Caddy configuration
         run: >-
           docker run --rm
-          --env TPI_PUBLIC_SITE_ADDRESS=http://tpi.localhost
           --volume "$GITHUB_WORKSPACE/deployment/caddy/Caddyfile:/etc/caddy/Caddyfile:ro"
-          caddy@sha256:d8c17a862962def15cde69863a3a463f25a2664942eafd7bdbf050e9c3116b83
+          tpi-dev-caddy:${{ github.sha }}
           caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 
       - name: Build minimal ECR Elastic Beanstalk bundle
