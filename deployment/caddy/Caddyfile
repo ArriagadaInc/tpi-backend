@@ -1,4 +1,4 @@
-{$TPI_PUBLIC_SITE_ADDRESS:http://tpi.localhost} {
+(public_site) {
 	log {
 		output stdout
 		format json
@@ -19,9 +19,10 @@
 		}
 		file_server
 	}
+	}
 }
 
-{$TPI_BACKOFFICE_SITE_ADDRESS:http://backoffice.tpi.localhost} {
+(backoffice_site) {
 	log {
 		output stdout
 		format json
@@ -32,4 +33,33 @@
 	}
 
 	reverse_proxy {$TPI_BACKOFFICE_UPSTREAM:backoffice:8501}
+}
+
+(route53_dns_challenge) {
+	tls {
+		dns route53 {
+			hosted_zone_id Z0562050FYDQE12LRGMA
+			wait_for_route53_sync true
+			route53_max_wait 2m
+			debug_logging true
+		}
+	}
+}
+
+dev.genialabs.cl {
+	import public_site
+	import route53_dns_challenge
+}
+
+backoffice.dev.genialabs.cl {
+	import backoffice_site
+	import route53_dns_challenge
+}
+
+http://tpi.localhost {
+	import public_site
+}
+
+http://backoffice.tpi.localhost {
+	import backoffice_site
 }
