@@ -660,3 +660,31 @@ class SolicitudRepository:
                 cur.execute(query)
                 rows = cur.fetchall()
                 return [dict(row) for row in rows]
+
+    @staticmethod
+    def get_crm_estado_lead_options() -> list[str]:
+        """Return the actual lead states present in the model for CRM filtering."""
+        query = """
+            SELECT estado_lead
+            FROM (
+                SELECT DISTINCT LOWER(TRIM(l.estado_lead)) AS estado_lead
+                FROM tpi.leads l
+                WHERE COALESCE(NULLIF(TRIM(l.estado_lead), ''), '') <> ''
+            ) estados
+            ORDER BY
+                CASE estado_lead
+                    WHEN 'pendiente' THEN 1
+                    WHEN 'aprobada' THEN 2
+                    WHEN 'simulada' THEN 3
+                    WHEN 'en gestion' THEN 4
+                    WHEN 'cerrado' THEN 5
+                    WHEN 'descartado' THEN 6
+                    ELSE 99
+                END,
+                estado_lead
+        """
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query)
+                rows = cur.fetchall()
+                return [str(row["estado_lead"]) for row in rows if row.get("estado_lead")]

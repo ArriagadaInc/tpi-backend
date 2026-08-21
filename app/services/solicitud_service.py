@@ -283,6 +283,10 @@ class SolicitudService:
     def get_catalogo_estado_civil(self) -> list[dict[str, Any]]:
         return self.repository.get_active_estado_civil()
 
+    def get_crm_estado_lead_options(self) -> list[str]:
+        """Return the actual lead states present in the current data model."""
+        return self.repository.get_crm_estado_lead_options()
+
     def is_test_lead_cleanup_enabled(self) -> bool:
         """Return the effective cleanup capability, never enabled outside AWS DEV."""
         return self.settings.is_test_lead_cleanup_enabled

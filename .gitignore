@@ -80,3 +80,7 @@ tmp/
 temp/
 .tmp-tests/
 *.tmp
+_pw_*.py
+current-eb-options*.json
+smoke-*.json
+tmp*

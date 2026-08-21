@@ -160,3 +160,11 @@ def test_crm_board_combines_afp_estado_and_date_filters(service):
                 )
                 cur.execute("DELETE FROM tpi.leads WHERE id_lead = %s", (str(response.id_lead),))
             conn.commit()
+
+
+def test_crm_estado_options_are_present_and_non_empty(service):
+    states = service.get_crm_estado_lead_options()
+
+    assert states
+    assert all(state == state.strip().lower() for state in states)
+    assert "pendiente" in states

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Any, cast
 from uuid import UUID
 
 import pytest
@@ -18,9 +19,12 @@ class _RepositoryStub:
         self.calls.append(kwargs)
         return ([], 0)
 
+    def get_crm_estado_lead_options(self) -> list[str]:
+        return ["pendiente", "aprobada", "descartado"]
+
 
 def test_crm_bandeja_rejects_invalid_pagination() -> None:
-    service = SolicitudService(repository=_RepositoryStub())
+    service = SolicitudService(repository=cast(Any, _RepositoryStub()))
 
     with pytest.raises(ValueError, match="page must be greater than zero"):
         service.get_crm_bandeja(page=0)
@@ -30,7 +34,7 @@ def test_crm_bandeja_rejects_invalid_pagination() -> None:
 
 
 def test_crm_bandeja_rejects_inverted_date_range() -> None:
-    service = SolicitudService(repository=_RepositoryStub())
+    service = SolicitudService(repository=cast(Any, _RepositoryStub()))
 
     with pytest.raises(ValueError, match="date_from cannot be greater than date_to"):
         service.get_crm_bandeja(date_from=date(2026, 8, 20), date_to=date(2026, 8, 19))
@@ -38,7 +42,7 @@ def test_crm_bandeja_rejects_inverted_date_range() -> None:
 
 def test_crm_bandeja_normalizes_dates_to_aware_datetimes() -> None:
     repo = _RepositoryStub()
-    service = SolicitudService(repository=repo)
+    service = SolicitudService(repository=cast(Any, repo))
     afp_id = UUID("11111111-1111-1111-1111-111111111111")
 
     service.get_crm_bandeja(
@@ -62,3 +66,13 @@ def test_crm_bandeja_normalizes_dates_to_aware_datetimes() -> None:
     assert isinstance(call["date_to"], datetime)
     assert call["date_from"].tzinfo is not None
     assert call["date_to"].tzinfo is not None
+
+
+def test_crm_estado_options_are_delegated() -> None:
+    service = SolicitudService(repository=cast(Any, _RepositoryStub()))
+
+    assert service.get_crm_estado_lead_options() == [
+        "pendiente",
+        "aprobada",
+        "descartado",
+    ]

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 import streamlit as st
@@ -48,6 +48,26 @@ def _resolve_afp_id(selected_name: str, afp_catalog: list[dict[str, object]]) ->
     return None
 
 
+def _parse_optional_date(raw_value: str) -> date | None:
+    value = raw_value.strip()
+    if not value:
+        return None
+    return date.fromisoformat(value)
+
+
+def _reset_filters() -> None:
+    st.session_state.crm_search = ""
+    st.session_state.crm_estado = "Todos"
+    st.session_state.crm_afp = "Todas"
+    st.session_state.crm_date_from = ""
+    st.session_state.crm_date_to = ""
+    st.session_state.crm_sort_label = "Más recientes primero"
+    st.session_state.crm_sort_direction = "desc"
+    st.session_state.crm_sort_by = "created_at"
+    st.session_state.crm_page = 1
+    _reset_selection()
+
+
 def main() -> None:
     configure_logging()
     require_authenticated_user()
@@ -72,6 +92,8 @@ def main() -> None:
         st.session_state.crm_sort_by = "created_at"
     if "crm_sort_direction" not in st.session_state:
         st.session_state.crm_sort_direction = "desc"
+    if "crm_sort_label" not in st.session_state:
+        st.session_state.crm_sort_label = "Más recientes primero"
     if "crm_search" not in st.session_state:
         st.session_state.crm_search = ""
     if "crm_estado" not in st.session_state:
@@ -79,83 +101,86 @@ def main() -> None:
     if "crm_afp" not in st.session_state:
         st.session_state.crm_afp = "Todas"
     if "crm_date_from" not in st.session_state:
-        st.session_state.crm_date_from = None
+        st.session_state.crm_date_from = ""
     if "crm_date_to" not in st.session_state:
-        st.session_state.crm_date_to = None
+        st.session_state.crm_date_to = ""
 
     afp_catalog = service.get_catalogo_afp()
     afp_options = ["Todas"] + [afp["nombre"] for afp in afp_catalog]
+    estado_options = ["Todos"] + service.get_crm_estado_lead_options()
 
-    filter_col1, filter_col2, filter_col3 = st.columns([1.7, 1.0, 1.0])
+    st.subheader("Leads")
+    st.text_input(
+        "Buscar nombre o RUT",
+        value=st.session_state.crm_search,
+        placeholder="Nombre o RUT",
+        help="Filtra por nombre completo o por RUT sin cargar todo en memoria.",
+        key="crm_search",
+    )
+
+    filter_col1, filter_col2, filter_col3, filter_col4, filter_col5 = st.columns(
+        [1.0, 1.0, 0.9, 0.9, 1.0]
+    )
     with filter_col1:
-        st.session_state.crm_search = st.text_input(
-            "Buscar por nombre o RUT",
-            value=st.session_state.crm_search,
-            placeholder="Nombre o RUT",
-            help="Búsqueda textual por campos existentes del lead.",
-        )
+        st.selectbox("AFP", options=afp_options, key="crm_afp")
     with filter_col2:
-        st.session_state.crm_afp = st.selectbox(
-            "AFP",
-            options=afp_options,
-            index=(
-                afp_options.index(st.session_state.crm_afp)
-                if st.session_state.crm_afp in afp_options
-                else 0
-            ),
-        )
+        st.selectbox("Estado", options=estado_options, key="crm_estado")
     with filter_col3:
-        st.session_state.crm_estado = st.selectbox(
-            "Estado",
-            options=["Todos", "pendiente", "aprobada", "descartado"],
-            index=["Todos", "pendiente", "aprobada", "descartado"].index(
-                st.session_state.crm_estado
-                if st.session_state.crm_estado in {"Todos", "pendiente", "aprobada", "descartado"}
-                else "Todos"
-            ),
-        )
-
-    date_col1, date_col2, sort_col1, sort_col2 = st.columns([1.0, 1.0, 1.0, 1.0])
-    with date_col1:
-        st.session_state.crm_date_from = st.date_input(
+        st.text_input(
             "Desde",
             value=st.session_state.crm_date_from,
+            placeholder="YYYY-MM-DD",
+            help="Fecha inicial en formato ISO, por ejemplo 2026-08-01.",
+            key="crm_date_from",
         )
-    with date_col2:
-        st.session_state.crm_date_to = st.date_input(
+    with filter_col4:
+        st.text_input(
             "Hasta",
             value=st.session_state.crm_date_to,
+            placeholder="YYYY-MM-DD",
+            help="Fecha final en formato ISO, por ejemplo 2026-08-21.",
+            key="crm_date_to",
         )
-    with sort_col1:
-        st.session_state.crm_sort_by = st.selectbox(
-            "Ordenar por",
-            options=["created_at", "nombre_completo", "rut", "saldo_afp", "estado_lead"],
-            index=["created_at", "nombre_completo", "rut", "saldo_afp", "estado_lead"].index(
-                st.session_state.crm_sort_by
-                if st.session_state.crm_sort_by
-                in {"created_at", "nombre_completo", "rut", "saldo_afp", "estado_lead"}
-                else "created_at"
-            ),
-        )
-    with sort_col2:
-        st.session_state.crm_sort_direction = st.selectbox(
-            "Dirección",
-            options=["desc", "asc"],
-            index=0 if st.session_state.crm_sort_direction != "asc" else 1,
+    with filter_col5:
+        st.selectbox(
+            "Ordenar",
+            options=["Más recientes primero", "Más antiguas primero"],
+            key="crm_sort_label",
         )
 
-    page_size_col, refresh_col = st.columns([1, 1])
-    with page_size_col:
-        st.session_state.crm_page_size = st.selectbox(
+    action_col1, action_col2, action_col3 = st.columns([1, 1, 1])
+    with action_col1:
+        st.selectbox(
             "Registros por página",
             options=[10, 20, 50, 100],
-            index=[10, 20, 50, 100].index(st.session_state.crm_page_size),
+            key="crm_page_size",
         )
-    with refresh_col:
+    with action_col2:
         if st.button("Actualizar filtros", use_container_width=True):
             st.session_state.crm_page = 1
             _reset_selection()
             st.rerun()
+    with action_col3:
+        if st.button("Limpiar filtros", use_container_width=True):
+            _reset_filters()
+            st.rerun()
+
+    st.session_state.crm_sort_direction = (
+        "asc" if st.session_state.get("crm_sort_label") == "Más antiguas primero" else "desc"
+    )
+    st.session_state.crm_sort_by = "created_at"
+    crm_date_from_raw = st.session_state.crm_date_from.strip()
+    crm_date_to_raw = st.session_state.crm_date_to.strip()
+
+    try:
+        normalized_date_from = _parse_optional_date(crm_date_from_raw)
+        normalized_date_to = _parse_optional_date(crm_date_to_raw)
+    except ValueError:
+        show_error_message(
+            "Error de filtros",
+            "Las fechas deben usar el formato YYYY-MM-DD.",
+        )
+        st.stop()
 
     try:
         result = service.get_crm_bandeja(
@@ -167,8 +192,8 @@ def main() -> None:
                 None if st.session_state.crm_estado == "Todos" else st.session_state.crm_estado
             ),
             afp_id=_resolve_afp_id(st.session_state.crm_afp, afp_catalog),
-            date_from=st.session_state.crm_date_from,
-            date_to=st.session_state.crm_date_to,
+            date_from=normalized_date_from,
+            date_to=normalized_date_to,
             sort_by=st.session_state.crm_sort_by,
             sort_direction=st.session_state.crm_sort_direction,
         )
@@ -280,27 +305,6 @@ def main() -> None:
                         st.link_button(
                             "Abrir simulador público", simulator_url, use_container_width=True
                         )
-
-        st.markdown("---")
-        st.subheader("Búsqueda por RUT")
-        search_rut = st.text_input(
-            "Ingresa RUT a buscar",
-            placeholder="12345678-5",
-            help="Formato: 12345678-5 o 12.345.678-5",
-            key="crm_search_rut",
-        )
-        search_button = st.button("Buscar lead", use_container_width=True)
-        if search_button and search_rut:
-            solicitudes_rut = service.get_solicitudes_por_rut(search_rut, masked=True)
-            if not solicitudes_rut:
-                st.warning(f"No se encontraron leads para el RUT: {search_rut}")
-            else:
-                st.success(f"Se encontraron {len(solicitudes_rut)} lead(s)")
-                render_crm_board(
-                    solicitudes_rut,
-                    on_select_callback=on_detail_click,
-                    key_prefix="crm_busqueda",
-                )
 
     except Exception as exc:
         show_error_message("Error al cargar la bandeja", get_safe_error_message(exc))
