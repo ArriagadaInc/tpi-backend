@@ -12,8 +12,8 @@ from app.services.solicitud_service import SolicitudService
 
 
 @pytest.fixture
-def synthetic_board(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, object]]:
-    records = [
+def synthetic_board_records() -> list[dict[str, object]]:
+    return [
         {
             "id_lead": "11111111-1111-1111-1111-111111111111",
             "id_persona": "22222222-2222-2222-2222-222222222222",
@@ -52,6 +52,13 @@ def synthetic_board(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, object]]:
         },
     ]
 
+
+@pytest.fixture
+def synthetic_board(
+    monkeypatch: pytest.MonkeyPatch, synthetic_board_records: list[dict[str, object]]
+) -> list[dict[str, object]]:
+    records = synthetic_board_records
+
     def get_crm_bandeja(self, page=1, page_size=10, masked=True, **kwargs):
         return {
             "solicitudes": records,
@@ -65,6 +72,7 @@ def synthetic_board(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, object]]:
         return next((row for row in records if row["id_lead"] == str(id_lead)), None)
 
     def delete_test_lead(self, id_lead):
+        records[:] = [row for row in records if row["id_lead"] != str(id_lead)]
         return TestLeadCleanupResult(
             status="deleted",
             message="Lead de prueba eliminado correctamente.",
@@ -142,3 +150,40 @@ def test_dev_cleanup_controls_remain_available_when_enabled(app):
         checkbox.label == "Confirmo que este es un dato de prueba" for checkbox in app.checkbox
     )
     assert any(text.label == "Escribe ELIMINAR para confirmar" for text in app.text_input)
+
+
+def test_dev_cleanup_flow_is_stable(app, synthetic_board_records):
+    app.run()
+    next(button for button in app.button if button.label == "Abrir").click()
+    app.run()
+
+    checkbox = next(
+        checkbox
+        for checkbox in app.checkbox
+        if checkbox.label == "Confirmo que este es un dato de prueba"
+    )
+    confirmation_text = next(
+        text for text in app.text_input if text.label == "Escribe ELIMINAR para confirmar"
+    )
+    delete_button = next(
+        button for button in app.button if button.label == "ELIMINAR LEAD DE PRUEBA"
+    )
+
+    checkbox.set_value(True)
+    confirmation_text.set_value("ELIMINAR")
+    app.run()
+
+    delete_button = next(
+        button for button in app.button if button.label == "ELIMINAR LEAD DE PRUEBA"
+    )
+    assert delete_button.disabled is False
+
+    delete_button.click()
+    app.run()
+
+    body = "\n".join(
+        [*(element.value for element in app.success), *(element.value for element in app.markdown)]
+    )
+    assert "Lead de prueba eliminado correctamente" in body
+    app.run()
+    assert all(lead["nombre_completo"] != "Lead Sintetico Alpha" for lead in synthetic_board_records)
