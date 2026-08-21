@@ -45,3 +45,10 @@ No se crean tablas, columnas, constraints, migraciones ni nuevos estados persist
 
 La UI no accede a PostgreSQL directamente.
 La lectura y paginación viven en `app/services/solicitud_service.py` y `app/repositories/solicitud_repository.py`.
+
+## Despliegue Elastic Beanstalk
+
+`ServiceRole` es administrado por el environment de Elastic Beanstalk.
+No debe definirse en `.ebextensions`.
+Los despliegues de nuevas versiones deben preservar la configuración existente
+del environment y actualizar solamente `VersionLabel`.
