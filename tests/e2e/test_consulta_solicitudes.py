@@ -186,4 +186,6 @@ def test_dev_cleanup_flow_is_stable(app, synthetic_board_records):
     )
     assert "Lead de prueba eliminado correctamente" in body
     app.run()
-    assert all(lead["nombre_completo"] != "Lead Sintetico Alpha" for lead in synthetic_board_records)
+    assert all(
+        lead["nombre_completo"] != "Lead Sintetico Alpha" for lead in synthetic_board_records
+    )
