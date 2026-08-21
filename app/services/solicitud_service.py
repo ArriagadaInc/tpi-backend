@@ -174,6 +174,56 @@ class SolicitudService:
             "total_pages": total_pages,
         }
 
+    def get_crm_bandeja(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        masked: bool = True,
+        *,
+        search: str | None = None,
+        estado_lead: str | None = None,
+        afp_id: UUID | None = None,
+        genero_id: UUID | None = None,
+        estado_civil_id: UUID | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        sort_by: str | None = None,
+        sort_direction: str = "desc",
+    ) -> dict[str, Any]:
+        """Return a CRM-oriented lead board without changing the schema."""
+        offset = (page - 1) * page_size
+        solicitudes, total = self.repository.get_crm_solicitudes(
+            limit=page_size,
+            offset=offset,
+            search=search,
+            estado_lead=estado_lead,
+            afp_id=afp_id,
+            genero_id=genero_id,
+            estado_civil_id=estado_civil_id,
+            date_from=date_from,
+            date_to=date_to,
+            sort_by=sort_by,
+            sort_direction=sort_direction,
+        )
+
+        if masked:
+            solicitudes = [
+                mask_row_for_display(
+                    solicitud,
+                    sensitive_fields=["rut", "email", "telefono"],
+                )
+                for solicitud in solicitudes
+            ]
+
+        total_pages = (total + page_size - 1) // page_size if page_size else 0
+        return {
+            "solicitudes": solicitudes,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+        }
+
     def get_solicitudes_por_rut(self, rut: str, masked: bool = True) -> list[dict[str, Any]]:
         solicitudes = self.repository.get_solicitudes_by_rut(rut)
 

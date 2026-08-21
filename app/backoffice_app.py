@@ -67,17 +67,17 @@ def main() -> None:
             "total_solicitudes": stats.get("total_solicitudes", 0),
         }
     )
-    st.title("Panel de control")
+    st.title("CRM Lite")
     if stats["error"]:
         show_error_message("Error", stats["error"])
 
     col1, col2, col3 = st.columns(3)
     col1.metric("Solicitudes registradas", stats["total_solicitudes"])
     col2.metric("Estado BD", "Conectada" if health.get("connected") else "Desconectada")
-    col3.metric("Version", "MVP")
+    col3.metric("Modo", "CRM Lite")
 
     st.markdown("## Operacion privada")
-    st.page_link("pages/2_solicitudes_registradas.py", label="Consultar solicitudes")
+    st.page_link("pages/2_solicitudes_registradas.py", label="Abrir bandeja de leads")
     st.page_link("pages/3_trazabilidad.py", label="Ver trazabilidad")
     st.caption(f"Ultima actualizacion: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 

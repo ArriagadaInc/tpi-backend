@@ -95,16 +95,15 @@ class TestConsultaSolicitudesBusqueda:
         """Test que input de búsqueda está presente."""
         app.run()
 
-        # Debe haber al menos un text_input para RUT
-        text_inputs = app.text_input
-        assert len(text_inputs) >= 1, "Falta input de búsqueda por RUT"
+        labels = [element.label for element in app.text_input]
+        assert "Ingresa RUT a buscar" in labels, "Falta input de búsqueda por RUT"
 
     def test_search_button_present(self, app):
         """Test que botón de búsqueda está presente."""
         app.run()
 
-        buttons = app.button
-        assert len(buttons) >= 1, "Falta botón de búsqueda"
+        buttons = [element.label for element in app.button]
+        assert "Buscar lead" in buttons, "Falta botón de búsqueda"
 
     def test_search_with_invalid_rut_format(self, app):
         """Test búsqueda con formato inválido de RUT."""
@@ -136,8 +135,8 @@ class TestConsultaSolicitudesBusqueda:
 
         monkeypatch.setattr(
             SolicitudService,
-            "get_solicitudes_lista",
-            lambda self, page=1, page_size=10, masked=True: {
+            "get_crm_bandeja",
+            lambda self, page=1, page_size=10, masked=True, **kwargs: {
                 "solicitudes": [record],
                 "total": 1,
                 "page": 1,
@@ -147,26 +146,28 @@ class TestConsultaSolicitudesBusqueda:
         )
         monkeypatch.setattr(
             SolicitudService,
-            "get_solicitudes_por_rut",
-            lambda self, rut, masked=True: [record],
+            "get_solicitud_detalle_masked",
+            lambda self, id_lead: record,
         )
         monkeypatch.setattr(
             SolicitudService,
-            "get_solicitud_detalle_masked",
-            lambda self, id_lead: record,
+            "get_solicitudes_por_rut",
+            lambda self, rut, masked=True: [record],
         )
 
         app = streamlit_app_factory("app/pages/2_solicitudes_registradas.py")
         app.run()
-        app.text_input[0].set_value("12345678-5")
+        next(
+            element for element in app.text_input if element.label == "Ingresa RUT a buscar"
+        ).set_value("12345678-5")
         app.run()
-        app.button[1].click()
+        next(button for button in app.button if button.label == "Buscar lead").click()
         app.run()
 
         success_messages = [element.value for element in app.success]
         error_messages = [element.value for element in app.error]
 
-        assert "Se encontraron 1 solicitud(es)" in success_messages
+        assert "Se encontraron 1 lead(s)" in success_messages
         assert not any("Error en la Busqueda" in message for message in error_messages)
         assert not any("Ocurrio un error inesperado" in message for message in error_messages)
 
@@ -222,8 +223,8 @@ class TestConsultaSolicitudesDetalle:
         monkeypatch.setattr(SolicitudService, "is_test_lead_cleanup_enabled", lambda self: True)
         monkeypatch.setattr(
             SolicitudService,
-            "get_solicitudes_lista",
-            lambda self, page=1, page_size=10, masked=True: {
+            "get_crm_bandeja",
+            lambda self, page=1, page_size=10, masked=True, **kwargs: {
                 "solicitudes": [] if state["deleted"] else [record],
                 "total": 0 if state["deleted"] else 1,
                 "page": 1,
@@ -246,7 +247,7 @@ class TestConsultaSolicitudesDetalle:
 
         app = streamlit_app_factory("app/pages/2_solicitudes_registradas.py")
         app.run()
-        detail_button = next(button for button in app.button if button.label == "📋")
+        detail_button = next(button for button in app.button if button.label == "Abrir")
         detail_button.click()
         app.run()
 
