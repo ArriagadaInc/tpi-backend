@@ -163,8 +163,52 @@ def test_crm_board_combines_afp_estado_and_date_filters(service):
 
 
 def test_crm_estado_options_are_present_and_non_empty(service):
-    states = service.get_crm_estado_lead_options()
+    afp_id = UUID(str(service.get_catalogo_afp()[0]["id"]))
+    genero_id = UUID(str(service.get_catalogo_genero()[0]["id"]))
+    estado_civil_id = UUID(str(service.get_catalogo_estado_civil()[0]["id"]))
+    rut = "20999999-9"
 
-    assert states
-    assert all(state == state.strip().lower() for state in states)
-    assert "pendiente" in states
+    request = RegistrarSolicitudRequest(
+        persona=PersonaData(
+            rut=rut,
+            nombre_completo="CRM Lite Estado Test",
+            email="crm.lite.estado@example.com",
+            telefono="+56999998888",
+            fecha_nacimiento=date(1992, 2, 2),
+        ),
+        solicitud=SolicitudData(
+            genero_id=genero_id,
+            estado_civil_id=estado_civil_id,
+            afp_id=afp_id,
+            saldo_afp=Decimal("1500000"),
+            comentarios="Lead de prueba para estados CRM Lite",
+        ),
+        consentimientos=ConsentimientosData(
+            acepta_terminos=True,
+            acepta_politica_privacidad=True,
+            finalidad_contacto=True,
+        ),
+    )
+
+    response = service.registrar_solicitud(request)
+    try:
+        lead = service.get_solicitud_detalle(response.id_lead)
+        assert lead is not None
+        assert lead["estado_lead"] == "pendiente"
+
+        states = service.get_crm_estado_lead_options()
+
+        assert states
+        assert all(state == state.strip().lower() for state in states)
+        assert "pendiente" in states
+    finally:
+        from app.database.connection import get_db_connection
+
+        with get_db_connection(operation="test_crm_estado_options_cleanup") as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM tpi.consentimientos WHERE id_lead = %s",
+                    (str(response.id_lead),),
+                )
+                cur.execute("DELETE FROM tpi.leads WHERE id_lead = %s", (str(response.id_lead),))
+            conn.commit()
