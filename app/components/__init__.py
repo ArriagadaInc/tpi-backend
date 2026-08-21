@@ -3,6 +3,7 @@
 from app.components.ui import (
     format_currency_clp,
     format_datetime_short,
+    get_public_simulator_url,
     lead_stage_label,
     lead_stage_tone,
     render_crm_board,
@@ -29,6 +30,7 @@ __all__ = [
     "show_database_status",
     "format_currency_clp",
     "format_datetime_short",
+    "get_public_simulator_url",
     "lead_stage_label",
     "lead_stage_tone",
     "render_solicitud_table",

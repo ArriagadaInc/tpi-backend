@@ -10,12 +10,14 @@ import streamlit as st
 from app.auth import require_authenticated_user
 from app.components import (
     format_datetime_short,
+    get_public_simulator_url,
     render_crm_board,
     show_error_message,
     show_header,
     show_pagination_info,
     show_solicitud_detalle,
 )
+from app.config import get_settings
 from app.database import get_safe_error_message
 from app.runtime import configure_logging, run_guarded
 from app.services.solicitud_service import SolicitudService
@@ -35,6 +37,15 @@ def get_service() -> SolicitudService:
 def _reset_selection() -> None:
     st.session_state.pop("selected_solicitud_id", None)
     st.session_state.pop("show_detail", None)
+
+
+def _resolve_afp_id(selected_name: str, afp_catalog: list[dict[str, object]]) -> UUID | None:
+    if selected_name == "Todas":
+        return None
+    for afp in afp_catalog:
+        if afp.get("nombre") == selected_name:
+            return UUID(str(afp["id"]))
+    return None
 
 
 def main() -> None:
@@ -65,16 +76,35 @@ def main() -> None:
         st.session_state.crm_search = ""
     if "crm_estado" not in st.session_state:
         st.session_state.crm_estado = "Todos"
+    if "crm_afp" not in st.session_state:
+        st.session_state.crm_afp = "Todas"
+    if "crm_date_from" not in st.session_state:
+        st.session_state.crm_date_from = None
+    if "crm_date_to" not in st.session_state:
+        st.session_state.crm_date_to = None
 
-    filter_col1, filter_col2, filter_col3, filter_col4 = st.columns([1.3, 1.1, 1.1, 1.1])
+    afp_catalog = service.get_catalogo_afp()
+    afp_options = ["Todas"] + [afp["nombre"] for afp in afp_catalog]
+
+    filter_col1, filter_col2, filter_col3 = st.columns([1.7, 1.0, 1.0])
     with filter_col1:
         st.session_state.crm_search = st.text_input(
-            "Buscar",
+            "Buscar por nombre o RUT",
             value=st.session_state.crm_search,
-            placeholder="RUT, nombre, email, teléfono o comentario",
-            help="La búsqueda usa datos existentes del lead.",
+            placeholder="Nombre o RUT",
+            help="Búsqueda textual por campos existentes del lead.",
         )
     with filter_col2:
+        st.session_state.crm_afp = st.selectbox(
+            "AFP",
+            options=afp_options,
+            index=(
+                afp_options.index(st.session_state.crm_afp)
+                if st.session_state.crm_afp in afp_options
+                else 0
+            ),
+        )
+    with filter_col3:
         st.session_state.crm_estado = st.selectbox(
             "Estado",
             options=["Todos", "pendiente", "aprobada", "descartado"],
@@ -84,7 +114,19 @@ def main() -> None:
                 else "Todos"
             ),
         )
-    with filter_col3:
+
+    date_col1, date_col2, sort_col1, sort_col2 = st.columns([1.0, 1.0, 1.0, 1.0])
+    with date_col1:
+        st.session_state.crm_date_from = st.date_input(
+            "Desde",
+            value=st.session_state.crm_date_from,
+        )
+    with date_col2:
+        st.session_state.crm_date_to = st.date_input(
+            "Hasta",
+            value=st.session_state.crm_date_to,
+        )
+    with sort_col1:
         st.session_state.crm_sort_by = st.selectbox(
             "Ordenar por",
             options=["created_at", "nombre_completo", "rut", "saldo_afp", "estado_lead"],
@@ -95,7 +137,7 @@ def main() -> None:
                 else "created_at"
             ),
         )
-    with filter_col4:
+    with sort_col2:
         st.session_state.crm_sort_direction = st.selectbox(
             "Dirección",
             options=["desc", "asc"],
@@ -124,6 +166,9 @@ def main() -> None:
             estado_lead=(
                 None if st.session_state.crm_estado == "Todos" else st.session_state.crm_estado
             ),
+            afp_id=_resolve_afp_id(st.session_state.crm_afp, afp_catalog),
+            date_from=st.session_state.crm_date_from,
+            date_to=st.session_state.crm_date_to,
             sort_by=st.session_state.crm_sort_by,
             sort_direction=st.session_state.crm_sort_direction,
         )
@@ -179,13 +224,10 @@ def main() -> None:
 
             with detail_col:
                 st.markdown("### Flujo operativo")
-                st.write("Nuevo")
-                st.write("Contactado")
-                st.write("Pendiente simulación")
-                st.write("Simulación generada")
-                st.write("En gestión")
-                st.write("Cerrado")
-                st.write("Descartado")
+                st.caption(
+                    "Nuevo → Contactado → Pendiente simulación → Simulación generada → En gestión → Cerrado"
+                )
+                st.caption("Salida alternativa: Descartado")
 
                 if st.session_state.get("show_detail") and st.session_state.get(
                     "selected_solicitud_id"
@@ -233,6 +275,11 @@ def main() -> None:
                         st.error("No se encontró el lead seleccionado.")
                 else:
                     st.info("Selecciona un lead para ver su detalle.")
+                    simulator_url = get_public_simulator_url(get_settings())
+                    if simulator_url:
+                        st.link_button(
+                            "Abrir simulador público", simulator_url, use_container_width=True
+                        )
 
         st.markdown("---")
         st.subheader("Búsqueda por RUT")

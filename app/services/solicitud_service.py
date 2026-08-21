@@ -5,9 +5,10 @@ Business service for lead registration and lookup.
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from app.config import Settings, get_settings
 from app.database import DatabaseAppError
@@ -27,6 +28,8 @@ logger = logging.getLogger(__name__)
 
 class SolicitudService:
     """Business service for pension simulation requests."""
+
+    _CRM_TZ = ZoneInfo("America/Santiago")
 
     def __init__(
         self,
@@ -185,12 +188,26 @@ class SolicitudService:
         afp_id: UUID | None = None,
         genero_id: UUID | None = None,
         estado_civil_id: UUID | None = None,
-        date_from: datetime | None = None,
-        date_to: datetime | None = None,
+        date_from: datetime | date | None = None,
+        date_to: datetime | date | None = None,
         sort_by: str | None = None,
         sort_direction: str = "desc",
     ) -> dict[str, Any]:
         """Return a CRM-oriented lead board without changing the schema."""
+        if page < 1:
+            raise ValueError("page must be greater than zero")
+        if page_size < 1:
+            raise ValueError("page_size must be greater than zero")
+
+        normalized_date_from = self._normalize_crm_date(date_from, end_of_day=False)
+        normalized_date_to = self._normalize_crm_date(date_to, end_of_day=True)
+        if (
+            normalized_date_from
+            and normalized_date_to
+            and normalized_date_from > normalized_date_to
+        ):
+            raise ValueError("date_from cannot be greater than date_to")
+
         offset = (page - 1) * page_size
         solicitudes, total = self.repository.get_crm_solicitudes(
             limit=page_size,
@@ -200,8 +217,8 @@ class SolicitudService:
             afp_id=afp_id,
             genero_id=genero_id,
             estado_civil_id=estado_civil_id,
-            date_from=date_from,
-            date_to=date_to,
+            date_from=normalized_date_from,
+            date_to=normalized_date_to,
             sort_by=sort_by,
             sort_direction=sort_direction,
         )
@@ -223,6 +240,25 @@ class SolicitudService:
             "page_size": page_size,
             "total_pages": total_pages,
         }
+
+    @classmethod
+    def _normalize_crm_date(
+        cls,
+        value: datetime | date | None,
+        *,
+        end_of_day: bool,
+    ) -> datetime | None:
+        """Normalize date filters to timezone-aware datetimes for TIMESTAMPTZ comparisons."""
+        if value is None:
+            return None
+
+        if isinstance(value, datetime):
+            if value.tzinfo is None:
+                return value.replace(tzinfo=cls._CRM_TZ)
+            return value.astimezone(cls._CRM_TZ)
+
+        local_time = time.max if end_of_day else time.min
+        return datetime.combine(value, local_time, tzinfo=cls._CRM_TZ)
 
     def get_solicitudes_por_rut(self, rut: str, masked: bool = True) -> list[dict[str, Any]]:
         solicitudes = self.repository.get_solicitudes_by_rut(rut)

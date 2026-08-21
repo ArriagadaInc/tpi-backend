@@ -7,7 +7,7 @@ Responsabilidades:
 - Mantener integridad referencial y transaccional
 """
 
-from datetime import datetime
+from datetime import UTC, date, datetime, time
 from typing import Any
 from uuid import UUID
 
@@ -45,8 +45,8 @@ class SolicitudRepository:
         afp_id: UUID | None = None,
         genero_id: UUID | None = None,
         estado_civil_id: UUID | None = None,
-        date_from: datetime | None = None,
-        date_to: datetime | None = None,
+        date_from: datetime | date | None = None,
+        date_to: datetime | date | None = None,
     ) -> tuple[str, list[Any]]:
         """Build the CRM WHERE clause and parameters using whitelisted filters."""
         clauses: list[str] = []
@@ -84,10 +84,14 @@ class SolicitudRepository:
             params.append(str(estado_civil_id))
 
         if date_from:
+            if isinstance(date_from, date) and not isinstance(date_from, datetime):
+                date_from = datetime.combine(date_from, time.min, tzinfo=UTC)
             clauses.append("l.created_at >= %s")
             params.append(date_from)
 
         if date_to:
+            if isinstance(date_to, date) and not isinstance(date_to, datetime):
+                date_to = datetime.combine(date_to, time.max, tzinfo=UTC)
             clauses.append("l.created_at <= %s")
             params.append(date_to)
 

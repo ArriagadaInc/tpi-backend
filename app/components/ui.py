@@ -51,6 +51,14 @@ def render_public_site_link(settings: Settings) -> None:
         st.sidebar.link_button("Volver al sitio", public_site_url, use_container_width=True)
 
 
+def get_public_simulator_url(settings: Settings) -> str | None:
+    """Return the approved simulator URL derived from the approved public host."""
+    public_site_url = get_public_site_url(settings)
+    if public_site_url is None:
+        return None
+    return public_site_url.rstrip("/") + "/simulador.html"
+
+
 def show_header():
     """Muestra el header de la aplicación."""
     settings = get_settings()
@@ -304,6 +312,7 @@ def render_crm_board(
 
 def render_lead_detail_panel(solicitud: dict[str, Any]) -> None:
     """Render a compact side-panel style detail for a selected lead."""
+    settings = get_settings()
     st.subheader("Detalle del lead")
 
     top_cols = st.columns([2, 1])
@@ -336,6 +345,9 @@ def render_lead_detail_panel(solicitud: dict[str, Any]) -> None:
         st.info("El lead todavía está pendiente de simulación.")
     else:
         st.success("El lead ya tiene avance operativo registrado.")
+    simulator_url = get_public_simulator_url(settings)
+    if simulator_url is not None:
+        st.link_button("Abrir simulador público", simulator_url, use_container_width=True)
     if solicitud.get("comentarios"):
         st.text_area(
             "Comentario operativo",
@@ -356,6 +368,10 @@ def render_lead_detail_panel(solicitud: dict[str, Any]) -> None:
         st.text_input(
             "Creado", value=format_datetime_short(solicitud.get("created_at")), disabled=True
         )
+    st.caption(
+        "La edición de estado, responsable y otros campos administrativos no está soportada "
+        "por el esquema actual."
+    )
 
 
 def show_solicitud_detalle(solicitud: dict[str, Any]):

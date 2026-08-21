@@ -69,3 +69,19 @@ def test_rendering_public_site_link_does_not_change_authentication_state(
     ui.render_public_site_link(settings)
 
     assert fake_streamlit.sidebar.calls == [("Volver al sitio", "http://tpi.localhost:8080/", True)]
+
+
+def test_public_simulator_url_is_derived_from_the_approved_base_url() -> None:
+    settings = Settings(
+        _env_file=None, APP_ENV="aws-dev", TPI_PUBLIC_SITE_URL="https://dev.genialabs.cl/"
+    )
+
+    assert ui.get_public_simulator_url(settings) == "https://dev.genialabs.cl/simulador.html"
+
+
+def test_public_simulator_url_is_hidden_when_public_site_is_not_approved() -> None:
+    settings = Settings(
+        _env_file=None, APP_ENV="aws-dev", TPI_PUBLIC_SITE_URL="https://example.com/"
+    )
+
+    assert ui.get_public_simulator_url(settings) is None
