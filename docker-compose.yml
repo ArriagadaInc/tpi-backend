@@ -1,86 +1,96 @@
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: tpi_postgres
+  api:
+    build: .
+    expose:
+      - "8000"
     environment:
-      POSTGRES_USER: ${TPI_POSTGRES_USER:-tpi_app}
-      POSTGRES_PASSWORD: ${TPI_POSTGRES_PASSWORD:?TPI_POSTGRES_PASSWORD must be set}
-      POSTGRES_DB: ${TPI_POSTGRES_DB:-tpi_local}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=es_ES.UTF-8"
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      APP_ENV: ${APP_ENV:-local}
+      APP_NAME: ${APP_NAME:-Tu Pension Inteligente Public API}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      DATABASE_HOST: ${DATABASE_HOST:-}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_NAME: ${DATABASE_NAME:-}
+      DATABASE_USER: ${DATABASE_USER:-}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-}
+      DATABASE_SCHEMA: ${DATABASE_SCHEMA:-tpi}
+      DATABASE_SSLMODE: ${DATABASE_SSLMODE:-disable}
+      DATABASE_CONNECT_TIMEOUT: ${DATABASE_CONNECT_TIMEOUT:-10}
+      DATABASE_POOL_MIN_SIZE: ${DATABASE_POOL_MIN_SIZE:-1}
+      DATABASE_POOL_MAX_SIZE: ${DATABASE_POOL_MAX_SIZE:-5}
+      DATABASE_POOL_TIMEOUT: ${DATABASE_POOL_TIMEOUT:-30}
+      API_IDEMPOTENCY_HMAC_SECRET: ${API_IDEMPOTENCY_HMAC_SECRET:-}
+      API_MAX_REQUEST_BYTES: ${API_MAX_REQUEST_BYTES:-16384}
+      API_RATE_LIMIT_REQUESTS: ${API_RATE_LIMIT_REQUESTS:-5}
+      API_RATE_LIMIT_WINDOW_SECONDS: ${API_RATE_LIMIT_WINDOW_SECONDS:-600}
+      API_TRUSTED_PROXY_CIDRS: ${API_TRUSTED_PROXY_CIDRS:-}
+      LEAD_NOTIFICATIONS_ENABLED: ${LEAD_NOTIFICATIONS_ENABLED:-false}
+      LEAD_NOTIFICATION_TOPIC_ARN: ${LEAD_NOTIFICATION_TOPIC_ARN:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    command: ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
     networks:
-      - tpi_network
+      - tpi_internal
 
-  db-init:
+  backoffice:
+    build: .
+    expose:
+      - "8501"
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      APP_NAME: ${APP_NAME:-Tu Pension Inteligente Back-office}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      DATABASE_HOST: ${DATABASE_HOST:-}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_NAME: ${DATABASE_NAME:-}
+      DATABASE_USER: ${DATABASE_USER:-}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-}
+      DATABASE_SCHEMA: ${DATABASE_SCHEMA:-tpi}
+      DATABASE_SSLMODE: ${DATABASE_SSLMODE:-disable}
+      DATABASE_CONNECT_TIMEOUT: ${DATABASE_CONNECT_TIMEOUT:-10}
+      DATABASE_POOL_MIN_SIZE: ${DATABASE_POOL_MIN_SIZE:-1}
+      DATABASE_POOL_MAX_SIZE: ${DATABASE_POOL_MAX_SIZE:-5}
+      DATABASE_POOL_TIMEOUT: ${DATABASE_POOL_TIMEOUT:-30}
+      DEV_DELETE_ENABLED: ${DEV_DELETE_ENABLED:-false}
+      LEAD_NOTIFICATIONS_ENABLED: ${LEAD_NOTIFICATIONS_ENABLED:-false}
+      LEAD_NOTIFICATION_TOPIC_ARN: ${LEAD_NOTIFICATION_TOPIC_ARN:-}
+      AUTH_ENABLED: ${AUTH_ENABLED:-false}
+      AUTH_MODE: ${AUTH_MODE:-simple-dev}
+      AUTH_USERS_JSON: ${AUTH_USERS_JSON:-}
+      TPI_PUBLIC_SITE_URL: ${TPI_PUBLIC_SITE_URL:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    command: ["streamlit", "run", "app/backoffice_app.py"]
+    networks:
+      - tpi_internal
+
+  caddy:
     build:
       context: .
-      dockerfile: Dockerfile
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      APP_ENV: local
-      DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_NAME: ${TPI_POSTGRES_DB:-tpi_local}
-      DATABASE_USER: ${TPI_POSTGRES_USER:-tpi_app}
-      DATABASE_PASSWORD: ${TPI_POSTGRES_PASSWORD:?TPI_POSTGRES_PASSWORD must be set}
-      DATABASE_SCHEMA: tpi
-      DATABASE_SSLMODE: disable
-    networks:
-      - tpi_network
-    command: python scripts/init_test_database.py
-
-  streamlit:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: tpi_streamlit
-    depends_on:
-      db-init:
-        condition: service_completed_successfully
-    environment:
-      APP_ENV: local
-      DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_NAME: ${TPI_POSTGRES_DB:-tpi_local}
-      DATABASE_USER: ${TPI_POSTGRES_USER:-tpi_app}
-      DATABASE_PASSWORD: ${TPI_POSTGRES_PASSWORD:?TPI_POSTGRES_PASSWORD must be set}
-      DATABASE_SCHEMA: tpi
-      DATABASE_SSLMODE: disable
-      DATABASE_CONNECT_TIMEOUT: 10
-      DATABASE_POOL_MIN_SIZE: 1
-      DATABASE_POOL_MAX_SIZE: 5
-      DATABASE_POOL_TIMEOUT: 30
-      STREAMLIT_SERVER_ADDRESS: 0.0.0.0
-      STREAMLIT_SERVER_PORT: 8501
-      STREAMLIT_SERVER_HEADLESS: "true"
+      dockerfile: deployment/caddy/Dockerfile
     ports:
-      - "8501:8501"
+      - "${CADDY_BIND_ADDRESS:-127.0.0.1}:${CADDY_HTTP_PORT:-8080}:80"
+      - "${CADDY_BIND_ADDRESS:-127.0.0.1}:${CADDY_HTTPS_PORT:-443}:443"
+    environment:
+      TPI_PUBLIC_SITE_ADDRESS: ${TPI_PUBLIC_SITE_ADDRESS:-http://tpi.localhost}
+      TPI_BACKOFFICE_SITE_ADDRESS: ${TPI_BACKOFFICE_SITE_ADDRESS:-http://backoffice.tpi.localhost}
+      TPI_API_UPSTREAM: ${TPI_API_UPSTREAM:-api:8000}
+      TPI_BACKOFFICE_UPSTREAM: ${TPI_BACKOFFICE_UPSTREAM:-backoffice:8501}
+      TPI_FRONT_ROOT: ${TPI_FRONT_ROOT:-/srv/front}
     volumes:
-      - .:/app
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - backoffice
     networks:
-      - tpi_network
-    command: streamlit run app/streamlit_app.py
-    healthcheck:
-      test: ["CMD", "python", "-m", "scripts.healthcheck_runtime"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+      tpi_internal:
+        ipv4_address: ${CADDY_INTERNAL_IP:-172.30.0.10}
 
 volumes:
-  postgres_data:
-    driver: local
+  caddy_data:
+  caddy_config:
 
 networks:
-  tpi_network:
+  tpi_internal:
     driver: bridge
+    ipam:
+      config:
+        - subnet: ${TPI_INTERNAL_SUBNET:-172.30.0.0/24}

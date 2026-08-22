@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12.13-alpine3.24@sha256:6d43704baacd1bfbe7c295d7f13079d5d8104ed33568873133f8fc69980419df
 
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -9,18 +9,19 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-RUN useradd --create-home --shell /bin/bash appuser
+RUN adduser -S -D -h /home/appuser -s /sbin/nologin appuser
 
 COPY --chown=appuser:appuser pyproject.toml README.md ./
 COPY --chown=appuser:appuser requirements/runtime.lock ./requirements/runtime.lock
+
+# Keep the locked runtime dependencies cacheable across application-only changes.
+RUN pip install --no-cache-dir --requirement requirements/runtime.lock
+
 COPY --chown=appuser:appuser app ./app
 COPY --chown=appuser:appuser scripts ./scripts
 COPY --chown=appuser:appuser .streamlit ./.streamlit
 
-RUN pip install --no-cache-dir --requirement requirements/runtime.lock \
-    && pip install --no-cache-dir --no-deps .
-
-EXPOSE 8501
+RUN pip install --no-cache-dir --no-deps .
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
     CMD ["python", "-m", "scripts.healthcheck_runtime"]

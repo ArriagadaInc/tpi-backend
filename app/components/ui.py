@@ -1,15 +1,60 @@
 """Componentes reutilizables de UI para Streamlit."""
 
 from typing import Any
+from urllib.parse import urlsplit
 
 import streamlit as st
 
-from app.config import get_settings
+from app.auth.guards import render_logout_control
+from app.config import Settings, get_settings
+
+_PUBLIC_SITE_BY_ENVIRONMENT = {
+    "local": ("http", "tpi.localhost", 8080),
+    "aws-dev": ("https", "dev.genialabs.cl", None),
+}
+
+
+def get_public_site_url(settings: Settings) -> str | None:
+    """Return the approved public DEV URL without credentials or query data."""
+    expected = _PUBLIC_SITE_BY_ENVIRONMENT.get(settings.normalized_app_env)
+    configured_url = settings.public_site_url
+    if expected is None or not configured_url:
+        return None
+
+    try:
+        parsed = urlsplit(configured_url)
+        configured_port = parsed.port
+    except ValueError:
+        return None
+
+    scheme, hostname, port = expected
+    if (
+        parsed.scheme != scheme
+        or parsed.hostname != hostname
+        or configured_port != port
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.path not in {"", "/"}
+        or parsed.query
+        or parsed.fragment
+    ):
+        return None
+
+    return configured_url.rstrip("/") + "/"
+
+
+def render_public_site_link(settings: Settings) -> None:
+    """Render public navigation without changing the authenticated session."""
+    public_site_url = get_public_site_url(settings)
+    if public_site_url is not None:
+        st.sidebar.link_button("Volver al sitio", public_site_url, use_container_width=True)
 
 
 def show_header():
     """Muestra el header de la aplicación."""
     settings = get_settings()
+    render_logout_control()
+    render_public_site_link(settings)
     st.markdown("---")
     col1, col2, col3 = st.columns([2, 3, 1])
 

@@ -1,0 +1,56 @@
+(public_site) {
+	log {
+		output stdout
+		format json
+	}
+
+	handle /api/* {
+		reverse_proxy {$TPI_API_UPSTREAM:api:8000}
+	}
+
+	handle {
+		root * {$TPI_FRONT_ROOT:/srv/front}
+		header {
+			Content-Security-Policy "default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://mindicador.cl; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+			Referrer-Policy "strict-origin-when-cross-origin"
+			X-Content-Type-Options "nosniff"
+			X-Frame-Options "DENY"
+			X-Robots-Tag "noindex, nofollow"
+		}
+		file_server
+	}
+}
+
+(backoffice_site) {
+	log {
+		output stdout
+		format json
+	}
+
+	header {
+		X-Robots-Tag "noindex, nofollow"
+	}
+
+	reverse_proxy {$TPI_BACKOFFICE_UPSTREAM:backoffice:8501}
+}
+
+(route53_dns_challenge) {
+	tls {
+		dns route53 {
+			hosted_zone_id Z0562050FYDQE12LRGMA
+			wait_for_route53_sync true
+			route53_max_wait 2m
+			debug_logging true
+		}
+	}
+}
+
+{$TPI_PUBLIC_SITE_ADDRESS:http://tpi.localhost} {
+	import public_site
+	import route53_dns_challenge
+}
+
+{$TPI_BACKOFFICE_SITE_ADDRESS:http://backoffice.tpi.localhost} {
+	import backoffice_site
+	import route53_dns_challenge
+}

@@ -8,6 +8,7 @@ from uuid import UUID
 
 import streamlit as st
 
+from app.auth import require_authenticated_user
 from app.components import (
     render_solicitud_table,
     show_error_message,
@@ -33,6 +34,7 @@ def get_service() -> SolicitudService:
 
 def main() -> None:
     configure_logging()
+    require_authenticated_user()
     show_header()
 
     cleanup_success_message = st.session_state.pop("test_lead_cleanup_success", None)

@@ -13,6 +13,7 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
+from app.auth import require_authenticated_user
 from app.components import show_error_message, show_header
 from app.database import get_safe_error_message
 from app.runtime import configure_logging, run_guarded
@@ -34,6 +35,7 @@ def get_service() -> SolicitudService:
 def main():
     """Función principal."""
     configure_logging()
+    require_authenticated_user()
     show_header()
 
     st.title("📈 Trazabilidad y Métricas")

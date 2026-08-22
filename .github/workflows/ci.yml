@@ -26,10 +26,10 @@ jobs:
           python -m pip install --no-deps -e .
       
       - name: Ruff check
-        run: ruff check app/ tests/ scripts/
+        run: ruff check app/ tests/ scripts/ deployment/
       
       - name: Black format check
-        run: black --check app/ tests/ scripts/
+        run: black --check app/ tests/ scripts/ deployment/
       
       - name: Mypy type check
         run: mypy app/ --ignore-missing-imports
@@ -80,6 +80,8 @@ jobs:
       
       - name: Run tests
         env:
+          # Deliberately non-production value. CI never reads deployment secrets.
+          API_IDEMPOTENCY_HMAC_SECRET: ci-testing-hmac-secret-not-for-runtime
           DATABASE_HOST: localhost
           DATABASE_PORT: 5432
           DATABASE_NAME: tpi_test
@@ -122,3 +124,54 @@ jobs:
 
       - name: Build application image
         run: docker build --tag tpi-backoffice-h21:${{ github.sha }} .
+
+      - name: Validate Docker Compose topology
+        run: docker compose config --quiet
+
+      - name: Build complete Compose topology
+        run: docker compose build
+
+      - name: Build custom Caddy image
+        run: docker build --tag tpi-dev-caddy:${{ github.sha }} --file deployment/caddy/Dockerfile .
+
+      - name: Validate Caddy configuration
+        run: >-
+          docker run --rm
+          --volume "$GITHUB_WORKSPACE/deployment/caddy/Caddyfile:/etc/caddy/Caddyfile:ro"
+          tpi-dev-caddy:${{ github.sha }}
+          caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+      - name: Build minimal ECR Elastic Beanstalk bundle
+        run: >-
+          python deployment/build_eb_ecr_bundle.py
+          --template deployment/aws/docker-compose.ecr.yml
+          --output dist/h2-5d-ecr-5c6a726.zip
+          --runtime-git-sha 5c6a726423a7539daefb9bcb1c35748e928e7999
+          --app-image 821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-app@sha256:1446f299deb66f40b1eb50cf91d82447fba51ceed4c8adb23a138688571a7c66
+          --caddy-image 821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-caddy@sha256:0c72b8cb2f8b7281437d128ebc4b7669105e1df5693d1e026967b2c747a77449
+
+      - name: Validate Linux EB source bundle
+        env:
+          DATABASE_HOST: ci-postgres
+          DATABASE_NAME: tpi_test
+          DATABASE_USER: tpi_app
+          DATABASE_PASSWORD: ci-not-a-secret
+          API_IDEMPOTENCY_HMAC_SECRET: ci-not-a-secret
+          AUTH_USERS_JSON: '{"users":[]}'
+          TPI_PUBLIC_SITE_ADDRESS: https://dev.example.test
+          TPI_BACKOFFICE_SITE_ADDRESS: https://backoffice.dev.example.test
+        run: |
+          unzip -t dist/h2-5d-ecr-5c6a726.zip
+          unzip -l dist/h2-5d-ecr-5c6a726.zip
+          bundle_dir="$(mktemp -d)"
+          unzip -q dist/h2-5d-ecr-5c6a726.zip -d "$bundle_dir"
+          test "$(find "$bundle_dir" -mindepth 1 -maxdepth 1 | wc -l)" -eq 1
+          test -f "$bundle_dir/docker-compose.yml"
+          docker compose -f "$bundle_dir/docker-compose.yml" config --quiet
+
+      - name: Upload validated EB bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: h2-5d-ecr-5c6a726
+          path: dist/h2-5d-ecr-5c6a726.zip
+          if-no-files-found: error

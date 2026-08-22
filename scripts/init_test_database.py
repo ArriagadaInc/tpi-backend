@@ -88,9 +88,28 @@ CREATE TABLE IF NOT EXISTS tpi.consentimientos (
 -- Mirrors the real operational dependency that must block test cleanup.
 CREATE TABLE IF NOT EXISTS tpi.auditoria (
     id_auditoria UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id_usuario UUID,
     id_persona UUID REFERENCES tpi.personas(id_persona),
-    id_lead UUID REFERENCES tpi.leads(id_lead)
+    id_lead UUID REFERENCES tpi.leads(id_lead),
+    accion VARCHAR(100) NOT NULL,
+    tabla_afectada VARCHAR(100) NOT NULL,
+    fecha_hora TIMESTAMPTZ NOT NULL DEFAULT now(),
+    ip_origen VARCHAR(80),
+    detalle JSONB
 );
+
+-- Stores no payload or PII: only a keyed fingerprint and the resulting lead id.
+CREATE TABLE IF NOT EXISTS tpi.api_idempotency (
+    idempotency_key UUID PRIMARY KEY,
+    payload_fingerprint CHAR(64) NOT NULL,
+    lead_id UUID REFERENCES tpi.leads(id_lead) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at TIMESTAMPTZ NOT NULL,
+    CHECK (expires_at > created_at)
+);
+
+CREATE INDEX IF NOT EXISTS api_idempotency_expires_at_idx
+    ON tpi.api_idempotency (expires_at);
 
 INSERT INTO tpi.catalogo_genero (codigo, nombre, activo, orden_visual)
 VALUES

@@ -1,0 +1,96 @@
+# Immutable-image topology for Elastic Beanstalk deployments. Local development
+# remains on docker-compose.yml and docker-compose.local.yml, which use builds.
+services:
+  api:
+    image: ${TPI_APP_IMAGE:?TPI_APP_IMAGE must be an immutable digest reference}
+    expose:
+      - "8000"
+    environment:
+      APP_ENV: ${APP_ENV:-aws-dev}
+      APP_NAME: ${APP_NAME:-Tu Pension Inteligente Public API}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      DATABASE_HOST: ${DATABASE_HOST:?DATABASE_HOST is required}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_NAME: ${DATABASE_NAME:?DATABASE_NAME is required}
+      DATABASE_USER: ${DATABASE_USER:?DATABASE_USER is required}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD is required}
+      DATABASE_SCHEMA: ${DATABASE_SCHEMA:-tpi}
+      DATABASE_SSLMODE: ${DATABASE_SSLMODE:-require}
+      DATABASE_CONNECT_TIMEOUT: ${DATABASE_CONNECT_TIMEOUT:-10}
+      DATABASE_POOL_MIN_SIZE: ${DATABASE_POOL_MIN_SIZE:-1}
+      DATABASE_POOL_MAX_SIZE: ${DATABASE_POOL_MAX_SIZE:-5}
+      DATABASE_POOL_TIMEOUT: ${DATABASE_POOL_TIMEOUT:-30}
+      API_IDEMPOTENCY_HMAC_SECRET: ${API_IDEMPOTENCY_HMAC_SECRET:?API_IDEMPOTENCY_HMAC_SECRET is required}
+      API_MAX_REQUEST_BYTES: ${API_MAX_REQUEST_BYTES:-16384}
+      API_RATE_LIMIT_REQUESTS: ${API_RATE_LIMIT_REQUESTS:-5}
+      API_RATE_LIMIT_WINDOW_SECONDS: ${API_RATE_LIMIT_WINDOW_SECONDS:-600}
+      API_TRUSTED_PROXY_CIDRS: ${API_TRUSTED_PROXY_CIDRS:-172.30.0.10/32}
+      LEAD_NOTIFICATIONS_ENABLED: ${LEAD_NOTIFICATIONS_ENABLED:-false}
+      LEAD_NOTIFICATION_TOPIC_ARN: ${LEAD_NOTIFICATION_TOPIC_ARN:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    command: ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    networks:
+      - tpi_internal
+
+  backoffice:
+    image: ${TPI_APP_IMAGE:?TPI_APP_IMAGE must be an immutable digest reference}
+    expose:
+      - "8501"
+    environment:
+      APP_ENV: ${APP_ENV:-aws-dev}
+      APP_NAME: ${APP_NAME:-Tu Pension Inteligente Back-office}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      DATABASE_HOST: ${DATABASE_HOST:?DATABASE_HOST is required}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_NAME: ${DATABASE_NAME:?DATABASE_NAME is required}
+      DATABASE_USER: ${DATABASE_USER:?DATABASE_USER is required}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD is required}
+      DATABASE_SCHEMA: ${DATABASE_SCHEMA:-tpi}
+      DATABASE_SSLMODE: ${DATABASE_SSLMODE:-require}
+      DATABASE_CONNECT_TIMEOUT: ${DATABASE_CONNECT_TIMEOUT:-10}
+      DATABASE_POOL_MIN_SIZE: ${DATABASE_POOL_MIN_SIZE:-1}
+      DATABASE_POOL_MAX_SIZE: ${DATABASE_POOL_MAX_SIZE:-5}
+      DATABASE_POOL_TIMEOUT: ${DATABASE_POOL_TIMEOUT:-30}
+      DEV_DELETE_ENABLED: ${DEV_DELETE_ENABLED:-false}
+      LEAD_NOTIFICATIONS_ENABLED: ${LEAD_NOTIFICATIONS_ENABLED:-false}
+      LEAD_NOTIFICATION_TOPIC_ARN: ${LEAD_NOTIFICATION_TOPIC_ARN:-}
+      AUTH_ENABLED: ${AUTH_ENABLED:-false}
+      AUTH_MODE: ${AUTH_MODE:-simple-dev}
+      AUTH_USERS_JSON: ${AUTH_USERS_JSON:?AUTH_USERS_JSON is required when authentication is enabled}
+      TPI_PUBLIC_SITE_URL: ${TPI_PUBLIC_SITE_URL:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    command: ["streamlit", "run", "app/backoffice_app.py"]
+    networks:
+      - tpi_internal
+
+  caddy:
+    image: ${TPI_CADDY_IMAGE:?TPI_CADDY_IMAGE must be an immutable digest reference}
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      TPI_PUBLIC_SITE_ADDRESS: ${TPI_PUBLIC_SITE_ADDRESS:?TPI_PUBLIC_SITE_ADDRESS is required}
+      TPI_BACKOFFICE_SITE_ADDRESS: ${TPI_BACKOFFICE_SITE_ADDRESS:?TPI_BACKOFFICE_SITE_ADDRESS is required}
+      TPI_API_UPSTREAM: api:8000
+      TPI_BACKOFFICE_UPSTREAM: backoffice:8501
+      TPI_FRONT_ROOT: /srv/front
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - backoffice
+    networks:
+      tpi_internal:
+        ipv4_address: 172.30.0.10
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  tpi_internal:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24

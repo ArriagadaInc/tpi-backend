@@ -5,12 +5,14 @@ Business service for lead registration and lookup.
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
 from app.config import Settings, get_settings
 from app.database import DatabaseAppError
 from app.database.errors import DevLeadCleanupBlockedError
+from app.models.idempotency import IdempotencyConflictError, IdempotentSolicitudResult
 from app.models.solicitud import (
     RegistrarSolicitudRequest,
     SolicitudResponse,
@@ -51,7 +53,7 @@ class SolicitudService:
                 solicitud_data=request.solicitud,
                 consentimientos_data=request.consentimientos,
             )
-            self._publish_lead_created_event(response)
+            self._publish_lead_created_event(response.id_lead)
             return response
         except DatabaseAppError:
             raise
@@ -60,10 +62,43 @@ class SolicitudService:
         except Exception as exc:
             raise RuntimeError("No fue posible registrar la solicitud.") from exc
 
-    def _publish_lead_created_event(self, response: SolicitudResponse) -> None:
+    def registrar_solicitud_idempotente(
+        self,
+        request: RegistrarSolicitudRequest,
+        *,
+        idempotency_key: UUID,
+        payload_fingerprint: str,
+        expires_in: timedelta = timedelta(hours=24),
+    ) -> IdempotentSolicitudResult:
+        """Register a public lead once and publish only after its first commit."""
+        try:
+            self._validate_catalogo_ids(
+                genero_id=request.solicitud.genero_id,
+                estado_civil_id=request.solicitud.estado_civil_id,
+                afp_id=request.solicitud.afp_id,
+            )
+            result = self.repository.create_solicitud_idempotent(
+                persona_data=request.persona,
+                solicitud_data=request.solicitud,
+                consentimientos_data=request.consentimientos,
+                idempotency_key=idempotency_key,
+                payload_fingerprint=payload_fingerprint,
+                expires_at=datetime.now(UTC) + expires_in,
+            )
+            if result.created:
+                self._publish_lead_created_event(result.lead_id)
+            return result
+        except (DatabaseAppError, IdempotencyConflictError):
+            raise
+        except ValueError as exc:
+            raise ValueError(f"Validacion de negocio fallida: {exc}") from exc
+        except Exception as exc:
+            raise RuntimeError("No fue posible registrar la solicitud.") from exc
+
+    def _publish_lead_created_event(self, lead_id: UUID) -> None:
         """Best-effort event publication after the repository has committed the lead."""
         event = LeadCreatedEvent.create(
-            lead_id=response.id_lead,
+            lead_id=lead_id,
             environment=self.settings.normalized_app_env,
         )
         try:

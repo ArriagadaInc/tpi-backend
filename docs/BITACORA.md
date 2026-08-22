@@ -22,6 +22,182 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-08-17 - H2.5C local demo preparation
+
+Contexto:
+
+- AWS account-plan work is blocked externally. A complete local rehearsal is
+  required without AWS, RDS, SNS, Secrets Manager or HTTPS.
+
+Tareas realizadas:
+
+- Added `docker-compose.local.yml` with local PostgreSQL and the existing
+  idempotent schema initializer, while keeping the AWS-oriented Compose file
+  free of a database service.
+- Parameterized Caddy site addresses and upstreams. The local defaults are
+  loopback-only HTTP `tpi.localhost` and `backoffice.tpi.localhost`; future AWS
+  deployment must set public domain addresses explicitly.
+- Documented an untracked Argon2id local user, fake local HMAC, disabled SNS,
+  lifecycle commands and the manual Caddy fallback.
+
+Seguridad:
+
+- `AUTH_USERS_JSON` is supplied only to backoffice from `.env.local`.
+- H2.3 cleanup remains impossible in local mode; reset the local volume instead.
+- No AWS resource, secret or network configuration was changed.
+
+### 2026-08-17 - H2.5C idempotency hardening pending local validation
+
+Contexto:
+
+- The public API remains local only. No AWS, DNS, IAM, Secrets Manager, RDS or
+  deployment change is authorized or executed.
+
+Tareas realizadas:
+
+- Renamed the idempotency HMAC configuration to the dedicated
+  `API_IDEMPOTENCY_HMAC_SECRET` contract. Public API startup fails closed when
+  it is absent and it is explicitly separate from database and auth secrets.
+- Confirmed the PostgreSQL algorithm reserves `idempotency_key` with its primary
+  key plus `INSERT ... ON CONFLICT` in the same transaction as lead creation.
+  A PostgreSQL concurrency test covers two simultaneous equal requests.
+- Updated the short-lived lead FK to `ON DELETE SET NULL` so the approved DEV
+  cleanup path is not blocked. The migration grants only the required table
+  privileges to `tpi_app`; `scripts/sql/003_drop_api_idempotency.sql` is the
+  documented reversal after disabling the public API.
+
+Pendiente:
+
+- Complete quality gates in an environment with normal temporary, Docker and
+  Git permissions before any commit or push.
+
+### 2026-08-16 - H2.5C public static frontend and HTTP API (local only)
+
+Contexto:
+
+- H2.5C replaces the cloned frontend lead transport through WhatsApp with a
+  same-origin, versioned HTTP API. No AWS, DNS, billing, IAM, secret, security
+  group, Route 53 or deployment change is authorized or executed.
+
+Tareas realizadas:
+
+- Versioned `front/`, corrected JPEG extensions/MIME references, removed binary
+  duplicates and added the mandatory synthetic-data DEV banner.
+- Added `app/api` FastAPI adapter with `GET /api/v1/catalogs` and
+  `POST /api/v1/leads`, explicit public-to-application DTO mapping, safe errors,
+  request size limit, security headers, same-origin operation and no CORS.
+- Added PostgreSQL-backed idempotency in `tpi.api_idempotency` through the
+  versioned `scripts/sql/003_create_api_idempotency.sql` migration. It stores no
+  payload or PII and uses a runtime HMAC key.
+- Preserved `SolicitudService` as the only public lead business entrypoint and
+  SNS publication as best effort strictly after commit.
+- Changed local Compose/Caddy topology to static front + API on the public host
+  and Streamlit backoffice on the private hostname.
+
+Validacion local parcial:
+
+- Applied the idempotency schema only to the local test database and passed the
+  new integration cases for replay, conflict and notification failure.
+- No AWS RDS change was made.
+
+Pendiente:
+
+- Complete full quality-gate validation and review before any push or AWS work.
+- The runtime HMAC key must be supplied from a future exact secret; no secret
+  has been created in this iteration.
+
+Siguiente paso:
+
+- Finish local tests, Docker/Compose/Caddy validation and commit the isolated
+  H2.5C changes after review.
+
+### 2026-08-16 - H2.5 public/private presentation separation
+
+Contexto:
+
+- H2.5 was corrected before AWS work: public lead capture must remain available
+  without login, while the backoffice remains private.
+- No AWS, billing-plan, DNS, Route 53, IAM, Secrets Manager, network, or
+  deployment change is authorized in this iteration.
+
+Tareas realizadas:
+
+- Split Streamlit into the public `app/streamlit_app.py` entrypoint and private
+  `app/backoffice_app.py` entrypoint.
+- Reused `SolicitudService`, Pydantic requests, PostgreSQL repositories, and
+  post-commit SNS behavior through a public presentation component.
+- Kept `app/auth` unchanged in responsibility and applied it only to private
+  entrypoints/pages.
+- Changed Compose/Caddy declaration to route proposed public and backoffice
+  hostnames to separate internal Streamlit services.
+- Added public/private boundary tests and updated developer, architecture, CEO,
+  and decision documentation.
+
+Seguridad:
+
+- The public Compose service does not receive `AUTH_USERS_JSON`.
+
+### H2.5D temporary DEV DNS
+
+- `dev.genialabs.cl` and `backoffice.dev.genialabs.cl` are the temporary AWS
+  DEV hostnames. DNS and Caddy configuration are deployment concerns; the
+  application core remains independent of the hostname.
+- The public front sends `noindex,nofollow` in HTML and Caddy's
+  `X-Robots-Tag`. Production TPI and its data remain outside this environment.
+- Invalid auth configuration remains fail-closed for backoffice and does not
+  prevent public lead capture.
+- Port 8501 remains internal to Compose; no infrastructure rules changed.
+
+Pendiente:
+
+- Run complete local quality gates and review the refactor before any AWS work.
+- After approval, separately decide account upgrade, domain registration,
+  Route 53, auth secret, IAM, Caddy deployment, and access rules.
+
+Siguiente paso:
+
+- Complete local validation only; do not perform AWS operations.
+
+### 2026-08-15 - H2.5 SimpleDevAuth local preparation
+
+Contexto:
+
+- H2.5 approved the DEV-only SimpleDevAuth, Caddy, and Docker Compose design.
+- No AWS, DNS, IAM, Secrets Manager, user, Security Group, or deployment change
+  is authorized until the external DNS CNAME is confirmed.
+
+Tareas realizadas:
+
+- Added the `app/auth` boundary with an immutable user contract, provider
+  protocol, Argon2id SimpleDevAuth adapter, common guards, logout, and
+  per-session throttling.
+- Added safe auth settings with `AUTH_ENABLED=false` as the versioned default
+  and a fail-closed mode for AWS DEV, production, malformed users config, and
+  unknown auth modes.
+- Prepared Docker Compose with Caddy as the only host listener and Streamlit on
+  the internal Docker network.
+- Added an exact-resource IAM policy template, tests, CI Compose validation,
+  CEO validation guide, and development guide.
+
+Seguridad:
+
+- No password, password hash, user, AWS secret, IAM change, or network rule was
+  created or committed.
+- The future runtime secret is `tpi/dev/auth-users`; it will contain Argon2id
+  hashes only and be injected only after explicit infrastructure approval.
+
+Pendiente:
+
+- Confirm control of the DNS zone and create the approved CNAME for
+  `dev.tupensioninteligente.cl` outside this repository.
+- Only then create the auth secret, attach the exact IAM permission, open
+  80/443, deploy Compose, create the approved DEV user, and run the HTTPS smoke
+  test.
+
+Siguiente paso:
+
+- Wait for DNS confirmation; do not perform AWS changes before it arrives.
+
 ## Snapshot Actual
 
 Fecha de referencia: `2026-08-07`
@@ -85,6 +261,34 @@ Archivos clave:
 - `scripts/verify_database_connection.py`
 
 ## Historial Incremental
+
+### 2026-08-15 - H2.5 preflight SimpleDevAuth y Caddy
+
+Contexto:
+
+- Se reemplazo el preflight previo ALB/Cognito por una propuesta temporal y
+  explicitamente DEV ONLY: Caddy HTTPS delante de Streamlit y SimpleDevAuth
+  desacoplado mediante `app/auth/`.
+
+Hallazgos y decision propuesta:
+
+- Elastic Beanstalk Docker puede usar Docker Compose con un proxy propio; Caddy
+  seria el unico contenedor que expone 80/443 y Streamlit quedaria interno en
+  8501.
+- La cuenta AWS no tiene Hosted Zone Route 53. El DNS publico actual delega en
+  DataTecno y no existe el CNAME `dev.tupensioninteligente.cl`; se requiere
+  confirmar control administrativo y aprobar el registro antes de ACME.
+- El secreto propuesto `tpi/dev/auth-users` contiene solo hashes Argon2id y
+  metadata minima. El role EB recibira lectura unicamente sobre su ARN exacto.
+- El modo SimpleDevAuth tendra guard fail-closed, sesion Streamlit sin password
+  ni hash, logout y throttle por sesion. Produccion debera migrar a HTTPS
+  administrado y OIDC con un IdP profesional.
+
+Estado:
+
+- No se crearon ni modificaron recursos, usuarios, secretos, DNS, IAM ni
+  Security Groups. Se requiere aprobacion del preflight y confirmacion DNS.
+- Detalle completo: `docs/H2_5_SIMPLE_DEV_AUTH_PREFLIGHT.md`.
 
 ### 2026-08-15 - H2.4 notificaciones extensibles de leads
 

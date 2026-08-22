@@ -25,6 +25,9 @@ Guia de todos los documentos del proyecto. Comienza por el que corresponda a tu 
 - [ARCHITECTURE.md](ARCHITECTURE.md): capas y componentes.
 - [ENGINEERING_STANDARDS.md](ENGINEERING_STANDARDS.md): Definition of Done, gates y reproducibilidad.
 - [SEGURIDAD.md](SEGURIDAD.md): practicas de seguridad y datos sensibles.
+- [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md): setup, quality gates, AWS DEV and authentication boundary.
+- [H2_5_SIMPLE_DEV_AUTH_PREFLIGHT.md](H2_5_SIMPLE_DEV_AUTH_PREFLIGHT.md): approved H2.5 topology and DNS prerequisite.
+- [H2_5_CEO_VALIDATION_GUIDE.md](H2_5_CEO_VALIDATION_GUIDE.md): DEV validation flow without credentials.
 
 ## Pruebas
 
