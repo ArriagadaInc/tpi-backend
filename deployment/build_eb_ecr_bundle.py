@@ -7,9 +7,15 @@ import hashlib
 import json
 import re
 import zipfile
-from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import Final
+
+from deployment.release_contract import (
+    build_release_id,
+    build_release_manifest,
+    get_git_tree_sha,
+    validate_release_bundle_against_manifest,
+)
 
 APP_PLACEHOLDER: Final = "${TPI_APP_IMAGE:?TPI_APP_IMAGE must be an immutable digest reference}"
 CADDY_PLACEHOLDER: Final = (
@@ -100,6 +106,13 @@ def build_bundle(
     app_image: str,
     caddy_image: str,
     runtime_git_sha: str,
+    git_tree_sha: str | None = None,
+    release_id: str | None = None,
+    environment: str = "aws-dev",
+    eb_version: str | None = None,
+    repository: str = "ArriagadaInc/tpi-backend",
+    run_id: str = "local",
+    run_attempt: int = 1,
 ) -> tuple[Path, Path]:
     """Create and validate a minimal POSIX-path ZIP plus an external manifest."""
     if not GIT_SHA_PATTERN.fullmatch(runtime_git_sha):
@@ -117,16 +130,26 @@ def build_bundle(
         archive.writestr(info, compose.encode("utf-8"))
 
     validate_bundle(output)
-    manifest = {
-        "bundle_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
-        "caddy_image": caddy_image,
-        "generated_at": datetime.now(UTC).isoformat(),
-        "runtime_git_sha": runtime_git_sha,
-        "app_image": app_image,
-    }
+    bundle_sha256 = hashlib.sha256(output.read_bytes()).hexdigest()
+    release_manifest = build_release_manifest(
+        git_sha=runtime_git_sha,
+        git_tree_sha=git_tree_sha or get_git_tree_sha(),
+        app_image=app_image,
+        app_source_git_sha=runtime_git_sha,
+        caddy_image=caddy_image,
+        caddy_source_git_sha=runtime_git_sha,
+        bundle_filename=output.name,
+        bundle_sha256=bundle_sha256,
+        environment=environment,
+        eb_version=eb_version or (release_id or build_release_id(runtime_git_sha)),
+        repository=repository,
+        run_id=run_id,
+        run_attempt=run_attempt,
+    )
     manifest_path = output.with_suffix(".manifest.json")
-    manifest_path.write_text(
-        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    manifest_path.write_text(release_manifest.to_json(), encoding="utf-8")
+    validate_release_bundle_against_manifest(
+        output, manifest_path, expected_git_sha=runtime_git_sha
     )
     return output, manifest_path
 
@@ -138,6 +161,13 @@ def main() -> None:
     parser.add_argument("--app-image", required=True)
     parser.add_argument("--caddy-image", required=True)
     parser.add_argument("--runtime-git-sha", required=True)
+    parser.add_argument("--git-tree-sha")
+    parser.add_argument("--release-id")
+    parser.add_argument("--environment", default="aws-dev")
+    parser.add_argument("--eb-version")
+    parser.add_argument("--repository", default="ArriagadaInc/tpi-backend")
+    parser.add_argument("--run-id", default="local")
+    parser.add_argument("--run-attempt", type=int, default=1)
     args = parser.parse_args()
 
     bundle, manifest = build_bundle(
@@ -146,6 +176,13 @@ def main() -> None:
         app_image=args.app_image,
         caddy_image=args.caddy_image,
         runtime_git_sha=args.runtime_git_sha,
+        git_tree_sha=args.git_tree_sha,
+        release_id=args.release_id,
+        environment=args.environment,
+        eb_version=args.eb_version,
+        repository=args.repository,
+        run_id=args.run_id,
+        run_attempt=args.run_attempt,
     )
     print(json.dumps({"bundle": str(bundle), "manifest": str(manifest)}, sort_keys=True))
 

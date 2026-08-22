@@ -22,9 +22,11 @@ def _load_bundle_module() -> Any:
 
 
 bundle_builder: Any = _load_bundle_module()
+release_contract: Any = importlib.import_module("deployment.release_contract")
 APP_IMAGE = "821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-app@sha256:" + "a" * 64
 CADDY_IMAGE = "821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-caddy@sha256:" + "b" * 64
 RUNTIME_SHA = "c" * 40
+TREE_SHA = "d" * 40
 
 
 def test_build_bundle_is_minimal_posix_and_digest_pinned(tmp_path: Path) -> None:
@@ -36,15 +38,43 @@ def test_build_bundle_is_minimal_posix_and_digest_pinned(tmp_path: Path) -> None
         app_image=APP_IMAGE,
         caddy_image=CADDY_IMAGE,
         runtime_git_sha=RUNTIME_SHA,
+        git_tree_sha=TREE_SHA,
+        environment="aws-dev",
+        eb_version="tpi-ccccccc",
+        repository="ArriagadaInc/tpi-backend",
+        run_id="321",
+        run_attempt=1,
     )
 
     assert bundle == output
     assert manifest.exists()
     manifest_data = json.loads(manifest.read_text(encoding="utf-8"))
-    assert manifest_data["app_image"] == APP_IMAGE
-    assert manifest_data["caddy_image"] == CADDY_IMAGE
-    assert manifest_data["runtime_git_sha"] == RUNTIME_SHA
-    assert len(manifest_data["bundle_sha256"]) == 64
+    assert manifest_data["schema_version"] == "1.0"
+    assert manifest_data["release_id"] == "tpi-ccccccc"
+    assert manifest_data["git_sha"] == RUNTIME_SHA
+    assert manifest_data["git_tree_sha"] == TREE_SHA
+    assert manifest_data["app_image"] == {
+        "reference": APP_IMAGE,
+        "source_git_sha": RUNTIME_SHA,
+    }
+    assert manifest_data["caddy_image"] == {
+        "reference": CADDY_IMAGE,
+        "source_git_sha": RUNTIME_SHA,
+    }
+    assert manifest_data["bundle"] == {
+        "filename": "h2-5d-ecr-ccccccc.zip",
+        "sha256": manifest_data["bundle"]["sha256"],
+    }
+    assert manifest_data["target"] == {
+        "environment": "aws-dev",
+        "eb_version": "tpi-ccccccc",
+    }
+    assert manifest_data["ci"] == {
+        "repository": "ArriagadaInc/tpi-backend",
+        "run_id": "321",
+        "run_attempt": 1,
+    }
+    assert len(manifest_data["bundle"]["sha256"]) == 64
     with zipfile.ZipFile(bundle) as archive:
         entries = archive.namelist()
         assert entries == ["docker-compose.yml"]
@@ -257,3 +287,76 @@ def test_main_prints_bundle_and_manifest_paths(
         "bundle": str(output),
         "manifest": str(output.with_suffix(".manifest.json")),
     }
+
+
+def test_release_manifest_contract_roundtrip() -> None:
+    manifest = release_contract.build_release_manifest(
+        git_sha=RUNTIME_SHA,
+        git_tree_sha=TREE_SHA,
+        app_image=APP_IMAGE,
+        app_source_git_sha=RUNTIME_SHA,
+        caddy_image=CADDY_IMAGE,
+        caddy_source_git_sha=RUNTIME_SHA,
+        bundle_filename="h2-5d-ecr-ccccccc.zip",
+        bundle_sha256="e" * 64,
+        environment="aws-dev",
+        eb_version="tpi-ccccccc",
+        repository="ArriagadaInc/tpi-backend",
+        run_id="123",
+        run_attempt=1,
+        generated_at="2026-08-22T00:00:00+00:00",
+    )
+
+    payload = manifest.to_dict()
+    assert payload["release_id"] == "tpi-ccccccc"
+    assert payload["git_sha"] == RUNTIME_SHA
+    assert payload["git_tree_sha"] == TREE_SHA
+    assert payload["app_image"]["reference"] == APP_IMAGE
+    assert payload["caddy_image"]["reference"] == CADDY_IMAGE
+    assert payload["bundle"]["filename"] == "h2-5d-ecr-ccccccc.zip"
+    assert payload["target"]["environment"] == "aws-dev"
+
+
+def test_release_manifest_validation_rejects_mismatched_git_sha() -> None:
+    manifest = {
+        "schema_version": "1.0",
+        "release_id": "tpi-ccccccc",
+        "git_sha": "f" * 40,
+        "git_tree_sha": TREE_SHA,
+        "app_image": {"reference": APP_IMAGE, "source_git_sha": RUNTIME_SHA},
+        "caddy_image": {"reference": CADDY_IMAGE, "source_git_sha": RUNTIME_SHA},
+        "bundle": {"filename": "h2-5d-ecr-ccccccc.zip", "sha256": "e" * 64},
+        "target": {"environment": "aws-dev", "eb_version": "tpi-ccccccc"},
+        "ci": {"repository": "ArriagadaInc/tpi-backend", "run_id": "123", "run_attempt": 1},
+        "generated_at": "2026-08-22T00:00:00+00:00",
+    }
+
+    with pytest.raises(ValueError, match="validated commit"):
+        release_contract.validate_release_manifest(manifest, expected_git_sha=RUNTIME_SHA)
+
+
+def test_release_bundle_validation_detects_manifest_mismatch(tmp_path: Path) -> None:
+    bundle, manifest = bundle_builder.build_bundle(
+        template=Path("deployment/aws/docker-compose.ecr.yml"),
+        output=tmp_path / "h2-5d-ecr-ccccccc.zip",
+        app_image=APP_IMAGE,
+        caddy_image=CADDY_IMAGE,
+        runtime_git_sha=RUNTIME_SHA,
+        git_tree_sha=TREE_SHA,
+        environment="aws-dev",
+        eb_version="tpi-ccccccc",
+        repository="ArriagadaInc/tpi-backend",
+        run_id="321",
+        run_attempt=1,
+    )
+
+    manifest_data = json.loads(manifest.read_text(encoding="utf-8"))
+    manifest_data["bundle"]["sha256"] = "f" * 64
+    manifest.write_text(
+        json.dumps(manifest_data, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
+    with pytest.raises(ValueError, match="Bundle SHA does not match"):
+        release_contract.validate_release_bundle_against_manifest(
+            bundle, manifest, expected_git_sha=RUNTIME_SHA
+        )
