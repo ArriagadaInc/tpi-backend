@@ -7,11 +7,12 @@ import json
 import sys
 import zipfile
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 
-def _load_bundle_module() -> object:
+def _load_bundle_module() -> Any:
     path = Path("deployment/build_eb_ecr_bundle.py")
     spec = importlib.util.spec_from_file_location("build_eb_ecr_bundle", path)
     assert spec is not None and spec.loader is not None
@@ -20,7 +21,7 @@ def _load_bundle_module() -> object:
     return module
 
 
-bundle_builder = _load_bundle_module()
+bundle_builder: Any = _load_bundle_module()
 APP_IMAGE = "821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-app@sha256:" + "a" * 64
 CADDY_IMAGE = "821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-caddy@sha256:" + "b" * 64
 RUNTIME_SHA = "c" * 40

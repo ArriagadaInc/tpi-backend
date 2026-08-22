@@ -7,7 +7,7 @@ Responsabilidades:
 - Mantener integridad referencial y transaccional
 """
 
-from datetime import datetime
+from datetime import UTC, date, datetime, time
 from typing import Any
 from uuid import UUID
 
@@ -26,6 +26,89 @@ from app.models.solicitud import (
 
 class SolicitudRepository:
     """Repositorio para operaciones de solicitudes en la BD."""
+
+    _CRM_SORT_COLUMNS = {
+        "created_at": "l.created_at",
+        "nombre_completo": "p.nombre_completo",
+        "rut": "p.rut",
+        "telefono": "p.telefono",
+        "afp": "ca.nombre",
+        "saldo_afp": "l.saldo_afp",
+        "estado_lead": "l.estado_lead",
+    }
+
+    @staticmethod
+    def _build_crm_query_filters(
+        *,
+        search: str | None = None,
+        estado_lead: str | None = None,
+        afp_id: UUID | None = None,
+        genero_id: UUID | None = None,
+        estado_civil_id: UUID | None = None,
+        date_from: datetime | date | None = None,
+        date_to: datetime | date | None = None,
+    ) -> tuple[str, list[Any]]:
+        """Build the CRM WHERE clause and parameters using whitelisted filters."""
+        clauses: list[str] = []
+        params: list[Any] = []
+
+        if search:
+            search_term = f"%{search.strip()}%"
+            clauses.append("""
+                (
+                    p.rut ILIKE %s
+                    OR p.nombre_completo ILIKE %s
+                    OR p.email ILIKE %s
+                    OR p.telefono ILIKE %s
+                    OR l.estado_lead ILIKE %s
+                    OR COALESCE(ca.nombre, '') ILIKE %s
+                    OR COALESCE(l.comentarios, '') ILIKE %s
+                )
+                """)
+            params.extend([search_term] * 7)
+
+        if estado_lead:
+            clauses.append("LOWER(l.estado_lead) = LOWER(%s)")
+            params.append(estado_lead.strip())
+
+        if afp_id:
+            clauses.append("l.afp_id = %s")
+            params.append(str(afp_id))
+
+        if genero_id:
+            clauses.append("l.genero_id = %s")
+            params.append(str(genero_id))
+
+        if estado_civil_id:
+            clauses.append("l.estado_civil_id = %s")
+            params.append(str(estado_civil_id))
+
+        if date_from:
+            if isinstance(date_from, date) and not isinstance(date_from, datetime):
+                date_from = datetime.combine(date_from, time.min, tzinfo=UTC)
+            clauses.append("l.created_at >= %s")
+            params.append(date_from)
+
+        if date_to:
+            if isinstance(date_to, date) and not isinstance(date_to, datetime):
+                date_to = datetime.combine(date_to, time.max, tzinfo=UTC)
+            clauses.append("l.created_at <= %s")
+            params.append(date_to)
+
+        if not clauses:
+            return "", params
+
+        return "WHERE " + " AND ".join(clauses), params
+
+    @classmethod
+    def _normalize_crm_sort(
+        cls,
+        sort_by: str | None = None,
+        sort_direction: str = "desc",
+    ) -> tuple[str, str]:
+        column = cls._CRM_SORT_COLUMNS.get((sort_by or "created_at").strip(), "l.created_at")
+        direction = "ASC" if sort_direction.strip().lower() == "asc" else "DESC"
+        return column, direction
 
     @staticmethod
     def get_persona_by_rut(rut: str) -> dict[str, Any] | None:
@@ -446,6 +529,77 @@ class SolicitudRepository:
                 rows = cur.fetchall()
                 return [dict(row) for row in rows], total
 
+    @classmethod
+    def get_crm_solicitudes(
+        cls,
+        limit: int = 100,
+        offset: int = 0,
+        *,
+        search: str | None = None,
+        estado_lead: str | None = None,
+        afp_id: UUID | None = None,
+        genero_id: UUID | None = None,
+        estado_civil_id: UUID | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        sort_by: str | None = None,
+        sort_direction: str = "desc",
+    ) -> tuple[list[dict[str, Any]], int]:
+        """Return a CRM-ready lead board using only the current schema."""
+        where_clause, where_params = cls._build_crm_query_filters(
+            search=search,
+            estado_lead=estado_lead,
+            afp_id=afp_id,
+            genero_id=genero_id,
+            estado_civil_id=estado_civil_id,
+            date_from=date_from,
+            date_to=date_to,
+        )
+        order_column, direction = cls._normalize_crm_sort(sort_by, sort_direction)
+        query_count = f"""
+            SELECT COUNT(*) AS total
+            FROM tpi.leads l
+            INNER JOIN tpi.personas p ON l.id_persona = p.id_persona
+            LEFT JOIN tpi.catalogo_afp ca ON l.afp_id = ca.id
+            {where_clause}
+        """
+        query_data = f"""
+            SELECT
+                l.id_lead,
+                l.id_persona,
+                p.rut,
+                p.nombre_completo,
+                p.email,
+                p.telefono,
+                l.genero_id,
+                cg.nombre AS genero,
+                l.estado_civil_id,
+                cec.nombre AS estado_civil,
+                l.afp_id,
+                ca.nombre AS afp,
+                l.saldo_afp,
+                l.comentarios,
+                l.estado_lead,
+                l.created_at
+            FROM tpi.leads l
+            INNER JOIN tpi.personas p ON l.id_persona = p.id_persona
+            LEFT JOIN tpi.catalogo_genero cg ON l.genero_id = cg.id
+            LEFT JOIN tpi.catalogo_estado_civil cec ON l.estado_civil_id = cec.id
+            LEFT JOIN tpi.catalogo_afp ca ON l.afp_id = ca.id
+            {where_clause}
+            ORDER BY {order_column} {direction}, l.created_at DESC, l.id_lead DESC
+            LIMIT %s OFFSET %s
+        """
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query_count, where_params)
+                total_row = cur.fetchone()
+                total = total_row["total"] if total_row else 0
+
+                cur.execute(query_data, [*where_params, limit, offset])
+                rows = cur.fetchall()
+                return [dict(row) for row in rows], total
+
     @staticmethod
     def get_solicitudes_by_rut(rut: str) -> list[dict[str, Any]]:
         """
@@ -506,3 +660,31 @@ class SolicitudRepository:
                 cur.execute(query)
                 rows = cur.fetchall()
                 return [dict(row) for row in rows]
+
+    @staticmethod
+    def get_crm_estado_lead_options() -> list[str]:
+        """Return the actual lead states present in the model for CRM filtering."""
+        query = """
+            SELECT estado_lead
+            FROM (
+                SELECT DISTINCT LOWER(TRIM(l.estado_lead)) AS estado_lead
+                FROM tpi.leads l
+                WHERE COALESCE(NULLIF(TRIM(l.estado_lead), ''), '') <> ''
+            ) estados
+            ORDER BY
+                CASE estado_lead
+                    WHEN 'pendiente' THEN 1
+                    WHEN 'aprobada' THEN 2
+                    WHEN 'simulada' THEN 3
+                    WHEN 'en gestion' THEN 4
+                    WHEN 'cerrado' THEN 5
+                    WHEN 'descartado' THEN 6
+                    ELSE 99
+                END,
+                estado_lead
+        """
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query)
+                rows = cur.fetchall()
+                return [str(row["estado_lead"]) for row in rows if row.get("estado_lead")]
