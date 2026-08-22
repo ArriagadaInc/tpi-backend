@@ -1,8 +1,9 @@
 """Integration tests for CRM Lite lead board queries."""
 
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -16,6 +17,8 @@ from app.models.solicitud import (
 from app.services.solicitud_service import SolicitudService
 
 pytestmark = pytest.mark.integration
+
+CRM_TZ = ZoneInfo("America/Santiago")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -123,7 +126,7 @@ def test_crm_board_combines_afp_estado_and_date_filters(service):
         assert by_name["total"] == 1
 
         lead = by_name["solicitudes"][0]
-        lead_date = lead["created_at"].date()
+        lead_date = lead["created_at"].astimezone(CRM_TZ).date()
 
         combined = service.get_crm_bandeja(
             page=1,
@@ -153,6 +156,96 @@ def test_crm_board_combines_afp_estado_and_date_filters(service):
         from app.database.connection import get_db_connection
 
         with get_db_connection(operation="test_crm_lite_board_cleanup") as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM tpi.consentimientos WHERE id_lead = %s",
+                    (str(response.id_lead),),
+                )
+                cur.execute("DELETE FROM tpi.leads WHERE id_lead = %s", (str(response.id_lead),))
+            conn.commit()
+
+
+def test_crm_board_date_filters_use_santiago_day_boundary(service):
+    afp_id = UUID(str(service.get_catalogo_afp()[0]["id"]))
+    genero_id = UUID(str(service.get_catalogo_genero()[0]["id"]))
+    estado_civil_id = UUID(str(service.get_catalogo_estado_civil()[0]["id"]))
+    rut = "20987654-4"
+
+    request = RegistrarSolicitudRequest(
+        persona=PersonaData(
+            rut=rut,
+            nombre_completo="CRM Lite TZ Boundary",
+            email="crm.lite.tz.boundary@example.com",
+            telefono="+56944445555",
+            fecha_nacimiento=date(1991, 1, 1),
+        ),
+        solicitud=SolicitudData(
+            genero_id=genero_id,
+            estado_civil_id=estado_civil_id,
+            afp_id=afp_id,
+            saldo_afp=Decimal("3200000"),
+            comentarios="Filtro de fecha en borde UTC/Santiago",
+        ),
+        consentimientos=ConsentimientosData(
+            acepta_terminos=True,
+            acepta_politica_privacidad=True,
+            finalidad_contacto=True,
+        ),
+    )
+
+    response = service.registrar_solicitud(request)
+    try:
+        lead = service.get_solicitud_detalle(response.id_lead)
+        assert lead is not None
+
+        created_at_utc = datetime(2026, 8, 22, 0, 30, tzinfo=UTC)
+        created_at_santiago = created_at_utc.astimezone(CRM_TZ)
+        assert created_at_santiago.date().isoformat() == "2026-08-21"
+
+        from app.database.connection import get_db_connection
+
+        with get_db_connection(operation="test_crm_lite_board_timezone_boundary") as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE tpi.leads
+                       SET created_at = %s
+                     WHERE id_lead = %s
+                    """,
+                    (created_at_utc, str(response.id_lead)),
+                )
+            conn.commit()
+
+        boundary_day = created_at_santiago.date()
+        included = service.get_crm_bandeja(
+            page=1,
+            page_size=10,
+            masked=False,
+            search=rut,
+            estado_lead="pendiente",
+            afp_id=afp_id,
+            date_from=boundary_day,
+            date_to=boundary_day,
+        )
+
+        assert included["total"] == 1
+        assert included["solicitudes"][0]["id_lead"] == response.id_lead
+
+        excluded = service.get_crm_bandeja(
+            page=1,
+            page_size=10,
+            masked=False,
+            search=rut,
+            estado_lead="pendiente",
+            afp_id=afp_id,
+            date_from=boundary_day + timedelta(days=1),
+            date_to=boundary_day + timedelta(days=1),
+        )
+        assert excluded["total"] == 0
+    finally:
+        from app.database.connection import get_db_connection
+
+        with get_db_connection(operation="test_crm_lite_board_timezone_cleanup") as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     "DELETE FROM tpi.consentimientos WHERE id_lead = %s",

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any, cast
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -21,6 +22,9 @@ class _RepositoryStub:
 
     def get_crm_estado_lead_options(self) -> list[str]:
         return ["pendiente", "aprobada", "descartado"]
+
+
+CRM_TZ = ZoneInfo("America/Santiago")
 
 
 def test_crm_bandeja_rejects_invalid_pagination() -> None:
@@ -66,6 +70,22 @@ def test_crm_bandeja_normalizes_dates_to_aware_datetimes() -> None:
     assert isinstance(call["date_to"], datetime)
     assert call["date_from"].tzinfo is not None
     assert call["date_to"].tzinfo is not None
+
+
+def test_crm_bandeja_normalizes_utc_dates_to_santiago_business_day() -> None:
+    repo = _RepositoryStub()
+    service = SolicitudService(repository=cast(Any, repo))
+
+    service.get_crm_bandeja(
+        date_from=datetime(2026, 8, 22, 0, 30, tzinfo=UTC),
+        date_to=datetime(2026, 8, 22, 0, 30, tzinfo=UTC),
+    )
+
+    call = repo.calls[0]
+    assert isinstance(call["date_from"], datetime)
+    assert isinstance(call["date_to"], datetime)
+    assert call["date_from"].astimezone(CRM_TZ).date().isoformat() == "2026-08-21"
+    assert call["date_to"].astimezone(CRM_TZ).date().isoformat() == "2026-08-21"
 
 
 def test_crm_estado_options_are_delegated() -> None:
