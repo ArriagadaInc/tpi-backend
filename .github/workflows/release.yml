@@ -1,0 +1,51 @@
+name: Release - Reproducible Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Full immutable Git SHA to build and release.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: us-east-2
+  AWS_ACCOUNT_ID: "821656895812"
+  ECR_APP_REPOSITORY: tpi-dev-app
+  ECR_CADDY_REPOSITORY: tpi-dev-caddy
+
+jobs:
+  build-release:
+    name: Build Release Artifact
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 0
+
+      - name: Validate requested SHA
+        run: |
+          git rev-parse --verify "${{ inputs.source_sha }}^{commit}"
+          git checkout --quiet "${{ inputs.source_sha }}"
+          test "$(git rev-parse HEAD)" = "${{ inputs.source_sha }}"
+          test -z "$(git status --short)"
+
+      - name: Resolve tree SHA
+        id: tree
+        run: |
+          echo "tree_sha=$(git rev-parse HEAD^{tree})" >> "$GITHUB_OUTPUT"
+
+      - name: Run preflight
+        run: |
+          python -m deployment.preflight \
+            --repo-root . \
+            --expected-branch feat/h3-2-reproducible-deployment \
+            --expected-git-sha "${{ inputs.source_sha }}" \
+            --expected-tree-sha "${{ steps.tree.outputs.tree_sha }}" \
+            --manifest dist/release-manifest.json \
+            --bundle dist/release-bundle.zip
+
