@@ -6,6 +6,17 @@
 
 ---
 
+## Hito H3.1: CRM Lite
+
+| Componente | Estado | Notas |
+|-----------|--------|-------|
+| CRM Lite | ✅ CLOSED | PR #8 integrado, validado y cerrado formalmente |
+| Runtime productivo | ✅ VALIDATED | Construido desde `d9bc2670bca87a71130d8e7088b56dd7976b82f5` |
+| AWS DEV | ✅ VALIDATED | Sin cambios estructurales de BD |
+| Pendientes restantes | 🔄 MOVED TO H3.2 | deployment chain, observability y runtime verification |
+
+---
+
 ## Hito Actual: MVP1 Validado ✅
 
 | Componente | Estado | Progreso | Notas |

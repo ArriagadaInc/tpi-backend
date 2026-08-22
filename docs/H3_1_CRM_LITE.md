@@ -1,5 +1,31 @@
 # H3.1 CRM Lite para Backoffice
 
+## Estado
+
+**CLOSED**
+
+## Cierre formal
+
+- PR: `#8`
+- Final PR HEAD: `58a11fdcd0b1a9b1bca6679ebe463e0964659c7f`
+- Merged main: `ad22d37048176aa80ab139f56c3ef6903f6e430e`
+- CI final: `#58`
+- Lint: PASS
+- Tests: PASS
+- Security: PASS
+- Docker: PASS
+- Productive runtime validated from: `d9bc2670bca87a71130d8e7088b56dd7976b82f5`
+- App digest: `sha256:e70d799ed6b5da252a7f90bc412b8a75ba37082377f3e3bc46ca7025571ca01b`
+- AWS DEV: validated
+- Database structural changes: none
+
+## Pendientes trasladados a H3.2
+
+- reproducible deployment chain
+- CI post-merge observability
+- runtime verification automation
+- cleanup log observability
+
 ## Objetivo
 
 La bandeja privada de backoffice evoluciona a una vista tipo CRM Lite, pensada para lectura rápida, filtros y apertura de detalle sin cambiar la estructura de PostgreSQL.
