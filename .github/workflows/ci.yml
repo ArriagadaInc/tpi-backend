@@ -159,6 +159,7 @@ jobs:
           API_IDEMPOTENCY_HMAC_SECRET: ci-not-a-secret
           AUTH_USERS_JSON: '{"users":[]}'
           WEB_SESSION_SECRET: ci-web-session-secret-not-for-runtime
+          TPI_PUBLIC_SITE_URL: https://dev.example.test
           TPI_PUBLIC_SITE_ADDRESS: https://dev.example.test
           TPI_BACKOFFICE_SITE_ADDRESS: https://backoffice.dev.example.test
         run: |
