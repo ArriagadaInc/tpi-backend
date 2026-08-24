@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="hero">
+    <div>
+      <p class="kicker">CRM Lite</p>
+      <h1>Leads</h1>
+      <p class="lead">Gestiona las solicitudes recibidas de potenciales clientes con una vista compacta y clara.</p>
+    </div>
+    <div class="hero-badges">
+      <span class="pill pill-muted">Mostrando {{ board.total }} leads</span>
+      {% if web_env_label %}
+        <span class="pill pill-accent">{{ web_env_label }}</span>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="filters card">
+    <form
+      method="get"
+      action="/leads"
+      class="filters-grid"
+      hx-get="/leads/board"
+      hx-target="#board-fragment"
+      hx-push-url="true"
+      hx-indicator="#loading-state"
+      hx-include="this"
+    >
+      <label class="search-field span-2">
+        Búsqueda
+        <input
+          name="search"
+          type="search"
+          value="{{ current_filters.search }}"
+          placeholder="Buscar por nombre o RUT..."
+        >
+      </label>
+      <label>
+        AFP
+        <select name="afp_id">
+          <option value="">Todas las AFPs</option>
+          {% for afp in afp_options %}
+            <option value="{{ afp.id }}" {% if current_filters.afp_id == afp.id %}selected{% endif %}>{{ afp.nombre }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        Estado
+        <select name="estado_lead">
+          <option value="">Todos los estados</option>
+          {% for estado in estado_options %}
+            <option value="{{ estado }}" {% if current_filters.estado_lead == estado %}selected{% endif %}>
+              {{ estado|crm_state_label }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        Fecha Desde
+        <input name="date_from" type="date" value="{{ current_filters.date_from }}">
+      </label>
+      <label>
+        Fecha Hasta
+        <input name="date_to" type="date" value="{{ current_filters.date_to }}">
+      </label>
+      <label>
+        Ordenar
+        <select name="sort_by">
+          <option value="created_at" {% if current_filters.sort_by == 'created_at' %}selected{% endif %}>Más recientes</option>
+          <option value="nombre_completo" {% if current_filters.sort_by == 'nombre_completo' %}selected{% endif %}>Nombre</option>
+          <option value="rut" {% if current_filters.sort_by == 'rut' %}selected{% endif %}>RUT</option>
+        </select>
+      </label>
+      <label>
+        Dirección
+        <select name="sort_direction">
+          <option value="desc" {% if current_filters.sort_direction != 'asc' %}selected{% endif %}>Descendente</option>
+          <option value="asc" {% if current_filters.sort_direction == 'asc' %}selected{% endif %}>Ascendente</option>
+        </select>
+      </label>
+      <div class="filters-actions">
+        <button class="primary" type="submit">Actualizar filtros</button>
+        <a class="secondary" href="/leads">Limpiar filtros</a>
+      </div>
+    </form>
+  </section>
+
+  <section class="card board" id="board-fragment">
+    {% include "leads_board.html" %}
+  </section>
+
+  {% if lead_not_found %}
+    <section class="card empty-detail">
+      <h3>No encontramos el lead solicitado</h3>
+      <p>Revisa la bandeja o vuelve a aplicar los filtros desde la lista principal.</p>
+      <a class="secondary" href="/leads">Volver a Leads</a>
+    </section>
+  {% endif %}
+{% endblock %}

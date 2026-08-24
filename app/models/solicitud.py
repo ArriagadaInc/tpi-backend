@@ -210,7 +210,7 @@ class SolicitudResponse(BaseModel):
     rut: str = Field(description="RUT de la persona (formato canónico)")
     nombre_completo: str = Field(description="Nombre de la persona")
     fecha_creacion: datetime = Field(description="Fecha y hora de creación (UTC)")
-    estado_lead: str = Field(description="Estado inicial de la solicitud: 'recibida'")
+    estado_lead: str = Field(description="Estado inicial de la solicitud: 'nuevo'")
     mensaje: str = Field(description="Mensaje de confirmación para el usuario")
 
     model_config = ConfigDict(
@@ -221,7 +221,7 @@ class SolicitudResponse(BaseModel):
                 "rut": "12345678-5",
                 "nombre_completo": "Juan Pérez García",
                 "fecha_creacion": "2026-07-31T10:30:00Z",
-                "estado_lead": "recibida",
+                "estado_lead": "nuevo",
                 "mensaje": "Solicitud registrada correctamente",
             }
         }

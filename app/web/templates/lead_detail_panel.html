@@ -1,0 +1,223 @@
+{% if selected_lead %}
+  <div class="detail-page">
+    <div class="nav-back-row">
+      <a class="secondary btn-back" href="{{ return_to_url or '/leads' }}">← Volver a Leads</a>
+    </div>
+
+    <section class="lead-hero-card card">
+      <div class="lead-identity">
+        <div class="title-row">
+          <h2 class="lead-name">{{ selected_lead.nombre_completo }}</h2>
+          <span class="badge-status badge-{{ selected_lead.estado_lead|replace('_', '-') }}">
+            <span class="badge-status-dot"></span>
+            {{ selected_lead.estado_lead|crm_state_label }}
+          </span>
+        </div>
+        <div class="lead-meta">
+          <span class="meta-item">
+            <span>RUT:</span>
+            <strong>{{ selected_lead.rut }}</strong>
+          </span>
+          <span class="meta-divider">·</span>
+          <span class="meta-item">
+            <span>Solicitud recibida:</span>
+            <strong>
+              {{ selected_lead.created_at.strftime('%d/%m/%Y %H:%M') if selected_lead.created_at else 'N/A' }}
+            </strong>
+          </span>
+        </div>
+      </div>
+
+      <div class="lead-hero-actions">
+        {% if simulator_url %}
+          <a
+            class="btn-primary-simulator"
+            href="{{ simulator_url }}"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-simulator-link
+            data-simulator-url="{{ simulator_url }}"
+          >
+            Abrir simulador ↗
+          </a>
+        {% else %}
+          <span class="btn-primary-simulator disabled">Abrir simulador ↗</span>
+        {% endif %}
+      </div>
+    </section>
+
+    {% if can_write %}
+      <section class="state-control-bar card" aria-label="Cambio de estado">
+        <div class="state-info">
+          <span class="state-label">Estado actual</span>
+          <strong>{{ selected_lead.estado_lead|crm_state_label }}</strong>
+        </div>
+        <form class="state-action-group" method="post" action="/leads/{{ selected_lead_id }}/status">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="return_to" value="{{ return_to_url or '/leads' }}">
+          <label class="sr-only" for="estado_lead">Cambiar estado</label>
+          <select id="estado_lead" name="estado_lead" class="select-compact">
+            {% for estado in lead_status_options %}
+              <option value="{{ estado }}" {% if selected_lead_state_canonical == estado %}selected{% endif %}>
+                {{ estado|crm_state_label }}
+              </option>
+            {% endfor %}
+          </select>
+          <button class="btn-save-state" type="submit">Guardar estado</button>
+        </form>
+      </section>
+    {% endif %}
+
+    <section class="detail-grid-v2">
+      <article class="info-card-v2">
+        <h3>Contacto</h3>
+        <dl>
+          <div>
+            <dt>Correo electrónico</dt>
+            <dd>{{ selected_lead.email }}</dd>
+          </div>
+          <div>
+            <dt>Teléfono</dt>
+            <dd>{{ selected_lead.telefono }}</dd>
+          </div>
+        </dl>
+      </article>
+
+      <article class="info-card-v2">
+        <h3>Información Personal</h3>
+        <dl>
+          <div>
+            <dt>Nombre completo</dt>
+            <dd>{{ selected_lead.nombre_completo }}</dd>
+          </div>
+          <div>
+            <dt>RUT</dt>
+            <dd>{{ selected_lead.rut }}</dd>
+          </div>
+          {% if selected_lead.fecha_nacimiento %}
+            <div>
+              <dt>Fecha de nacimiento</dt>
+              <dd>{{ selected_lead.fecha_nacimiento.strftime('%d/%m/%Y') }}</dd>
+            </div>
+          {% endif %}
+          {% if selected_lead.genero %}
+            <div>
+              <dt>Género</dt>
+              <dd>{{ selected_lead.genero }}</dd>
+            </div>
+          {% endif %}
+          {% if selected_lead.estado_civil %}
+            <div>
+              <dt>Estado civil</dt>
+              <dd>{{ selected_lead.estado_civil }}</dd>
+            </div>
+          {% endif %}
+        </dl>
+      </article>
+
+      <article class="info-card-v2">
+        <h3>Información Previsional</h3>
+        <dl>
+          <div>
+            <dt>AFP Actual</dt>
+            <dd>{{ selected_lead.afp }}</dd>
+          </div>
+          <div>
+            <dt>Saldo Previsional</dt>
+            <dd>{{ selected_lead.saldo_afp }}</dd>
+          </div>
+        </dl>
+      </article>
+    </section>
+
+    <section class="story-card">
+      <div class="story-card-head">
+        <div>
+          <p class="section-kicker">Mensaje del cliente</p>
+          <h3>Solicitud Original</h3>
+        </div>
+      </div>
+
+      <div class="original-request-box">
+        {% if comment_view.original_request %}
+          {{ comment_view.original_request }}
+        {% else %}
+          <span class="empty-inline">Sin solicitud disponible.</span>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="story-card">
+      <div class="story-card-head">
+        <div>
+          <p class="section-kicker">Seguimiento</p>
+          <h3>Seguimiento y Notas Internas</h3>
+        </div>
+      </div>
+
+      {% if comment_view.notes %}
+        <div class="timeline-list">
+          {% for note in comment_view.notes %}
+            <article class="timeline-item">
+              <div class="timeline-meta">
+                <span>{{ note.timestamp }}</span>
+                <span>·</span>
+                <span class="timeline-author">{{ note.author }}</span>
+              </div>
+              <div class="timeline-text">{{ note.text }}</div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-followup">Aun no existen notas de seguimiento.</div>
+      {% endif %}
+
+      {% if can_write %}
+        <form class="note-form" method="post" action="/leads/{{ selected_lead_id }}/comments">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="return_to" value="{{ return_to_url or '/leads' }}">
+          <label for="new_comment" class="note-label">Agregar nueva nota de seguimiento</label>
+          <textarea
+            id="new_comment"
+            name="new_comment"
+            rows="4"
+            maxlength="1000"
+            placeholder="Escribe una nueva nota de seguimiento..."
+          ></textarea>
+          <div class="note-actions">
+            <button class="primary note-submit" type="submit">+ Agregar nota</button>
+          </div>
+        </form>
+      {% endif %}
+    </section>
+
+    {% if web_cleanup_enabled and can_write %}
+      <section class="dev-tools-card card">
+        <div>
+          <p class="section-kicker">Herramientas de desarrollo</p>
+          <h3>Este lead es un registro ficticio utilizado para pruebas.</h3>
+        </div>
+        <button class="danger" type="button" data-open-delete-modal>Eliminar lead de prueba</button>
+      </section>
+    {% endif %}
+  </div>
+
+  {% if web_cleanup_enabled and can_write %}
+    <div class="modal" id="delete-modal" hidden>
+      <div class="modal-card modal-card-dev">
+        <p class="section-kicker">Confirmación DEV</p>
+        <h3>¿Eliminar lead de prueba?</h3>
+        <p>
+          Esta acción eliminará permanentemente a <strong>{{ selected_lead.nombre_completo }}</strong>
+          de la base local de demostración.
+        </p>
+        <div class="modal-actions">
+          <button class="secondary" type="button" data-close-delete-modal>Cancelar</button>
+          <form method="post" action="/leads/{{ selected_lead.id_lead }}/cleanup">
+            <button class="danger" type="submit">Eliminar Lead</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+{% endif %}

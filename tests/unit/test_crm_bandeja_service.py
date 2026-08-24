@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+from app.models.crm_states import CRM_STATE_CONTRACT
 from app.services.solicitud_service import SolicitudService
 
 
@@ -21,7 +22,7 @@ class _RepositoryStub:
         return ([], 0)
 
     def get_crm_estado_lead_options(self) -> list[str]:
-        return ["pendiente", "aprobada", "descartado"]
+        return list(CRM_STATE_CONTRACT)
 
 
 CRM_TZ = ZoneInfo("America/Santiago")
@@ -51,7 +52,7 @@ def test_crm_bandeja_normalizes_dates_to_aware_datetimes() -> None:
 
     service.get_crm_bandeja(
         search="alvaro",
-        estado_lead="pendiente",
+        estado_lead="nuevo",
         afp_id=afp_id,
         date_from=date(2026, 8, 20),
         date_to=datetime(2026, 8, 21, 12, 0),
@@ -62,7 +63,7 @@ def test_crm_bandeja_normalizes_dates_to_aware_datetimes() -> None:
     assert len(repo.calls) == 1
     call = repo.calls[0]
     assert call["search"] == "alvaro"
-    assert call["estado_lead"] == "pendiente"
+    assert call["estado_lead"] == "nuevo"
     assert call["afp_id"] == afp_id
     assert call["sort_by"] == "nombre_completo"
     assert call["sort_direction"] == "asc"
@@ -92,7 +93,5 @@ def test_crm_estado_options_are_delegated() -> None:
     service = SolicitudService(repository=cast(Any, _RepositoryStub()))
 
     assert service.get_crm_estado_lead_options() == [
-        "pendiente",
-        "aprobada",
-        "descartado",
+        *CRM_STATE_CONTRACT,
     ]

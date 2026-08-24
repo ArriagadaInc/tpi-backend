@@ -15,6 +15,11 @@ from psycopg.errors import ForeignKeyViolation
 
 from app.database.connection import get_db_connection
 from app.database.errors import DevLeadCleanupBlockedError
+from app.models.crm_states import (
+    CRM_STATE_CONTRACT,
+    crm_state_filter_terms,
+    normalize_crm_state_for_write,
+)
 from app.models.idempotency import IdempotencyConflictError, IdempotentSolicitudResult
 from app.models.solicitud import (
     ConsentimientosData,
@@ -68,8 +73,11 @@ class SolicitudRepository:
             params.extend([search_term] * 7)
 
         if estado_lead:
-            clauses.append("LOWER(l.estado_lead) = LOWER(%s)")
-            params.append(estado_lead.strip())
+            normalized_states = crm_state_filter_terms(estado_lead)
+            if normalized_states:
+                placeholders = ", ".join(["%s"] * len(normalized_states))
+                clauses.append(f"LOWER(TRIM(l.estado_lead)) IN ({placeholders})")
+                params.extend(normalized_states)
 
         if afp_id:
             clauses.append("l.afp_id = %s")
@@ -338,7 +346,7 @@ class SolicitudRepository:
                 str(solicitud_data.afp_id),
                 solicitud_data.saldo_afp,
                 solicitud_data.comentarios or "",
-                "pendiente",
+                "nuevo",
                 datetime.now(),
                 "formulario_streamlit",
                 "backoffice",
@@ -376,7 +384,7 @@ class SolicitudRepository:
             rut=persona_data.rut,
             nombre_completo=persona_data.nombre_completo,
             fecha_creacion=datetime.now(),
-            estado_lead="pendiente",
+            estado_lead="nuevo",
             mensaje="Solicitud registrada exitosamente",
         )
 
@@ -663,28 +671,42 @@ class SolicitudRepository:
 
     @staticmethod
     def get_crm_estado_lead_options() -> list[str]:
-        """Return the actual lead states present in the model for CRM filtering."""
+        """Return the canonical lead states accepted by the CRM."""
+        return list(CRM_STATE_CONTRACT)
+
+    @staticmethod
+    def update_lead_status(id_lead: UUID, estado_lead: str) -> bool:
+        """Update the lead status using a single parametrized transaction."""
+        normalized_estado = normalize_crm_state_for_write(estado_lead)
         query = """
-            SELECT estado_lead
-            FROM (
-                SELECT DISTINCT LOWER(TRIM(l.estado_lead)) AS estado_lead
-                FROM tpi.leads l
-                WHERE COALESCE(NULLIF(TRIM(l.estado_lead), ''), '') <> ''
-            ) estados
-            ORDER BY
-                CASE estado_lead
-                    WHEN 'pendiente' THEN 1
-                    WHEN 'aprobada' THEN 2
-                    WHEN 'simulada' THEN 3
-                    WHEN 'en gestion' THEN 4
-                    WHEN 'cerrado' THEN 5
-                    WHEN 'descartado' THEN 6
-                    ELSE 99
-                END,
-                estado_lead
+            UPDATE tpi.leads
+            SET estado_lead = %s
+            WHERE id_lead = %s
+            RETURNING id_lead
         """
-        with get_db_connection() as conn:
+        with get_db_connection(operation="update_lead_status") as conn:
             with conn.cursor() as cur:
-                cur.execute(query)
-                rows = cur.fetchall()
-                return [str(row["estado_lead"]) for row in rows if row.get("estado_lead")]
+                cur.execute(query, (normalized_estado, str(id_lead)))
+                row = cur.fetchone()
+                conn.commit()
+                return row is not None
+
+    @staticmethod
+    def append_lead_comment(id_lead: UUID, new_fragment: str) -> bool:
+        """Append a new follow-up note atomically to the existing comments."""
+        query = """
+            UPDATE tpi.leads
+            SET comentarios =
+                CASE
+                    WHEN COALESCE(NULLIF(TRIM(comentarios), ''), '') = '' THEN %s
+                    ELSE comentarios || E'\n\n' || %s
+                END
+            WHERE id_lead = %s
+            RETURNING id_lead
+        """
+        with get_db_connection(operation="append_lead_comment") as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (new_fragment, new_fragment, str(id_lead)))
+                row = cur.fetchone()
+                conn.commit()
+                return row is not None

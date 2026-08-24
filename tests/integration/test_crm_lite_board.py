@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from app.database.healthcheck import full_health_check
+from app.models.crm_states import CRM_STATE_CONTRACT
 from app.models.solicitud import (
     ConsentimientosData,
     PersonaData,
@@ -133,7 +134,7 @@ def test_crm_board_combines_afp_estado_and_date_filters(service):
             page_size=10,
             masked=False,
             search=rut,
-            estado_lead="pendiente",
+            estado_lead="nuevo",
             afp_id=afp_id,
             date_from=lead_date,
             date_to=lead_date,
@@ -222,7 +223,7 @@ def test_crm_board_date_filters_use_santiago_day_boundary(service):
             page_size=10,
             masked=False,
             search=rut,
-            estado_lead="pendiente",
+            estado_lead="nuevo",
             afp_id=afp_id,
             date_from=boundary_day,
             date_to=boundary_day,
@@ -236,7 +237,7 @@ def test_crm_board_date_filters_use_santiago_day_boundary(service):
             page_size=10,
             masked=False,
             search=rut,
-            estado_lead="pendiente",
+            estado_lead="nuevo",
             afp_id=afp_id,
             date_from=boundary_day + timedelta(days=1),
             date_to=boundary_day + timedelta(days=1),
@@ -287,13 +288,13 @@ def test_crm_estado_options_are_present_and_non_empty(service):
     try:
         lead = service.get_solicitud_detalle(response.id_lead)
         assert lead is not None
-        assert lead["estado_lead"] == "pendiente"
+        assert lead["estado_lead"] == "nuevo"
 
         states = service.get_crm_estado_lead_options()
 
         assert states
         assert all(state == state.strip().lower() for state in states)
-        assert "pendiente" in states
+        assert states == list(CRM_STATE_CONTRACT)
     finally:
         from app.database.connection import get_db_connection
 

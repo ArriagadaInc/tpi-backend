@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+  {% if flash_message %}
+    <div class="notice {% if flash_message.kind == 'error' %}alert-error{% else %}notice-soft{% endif %}">
+      {{ flash_message.message }}
+    </div>
+  {% endif %}
+  {% if error_message %}
+    <div class="notice alert-error">{{ error_message }}</div>
+  {% endif %}
+  {% include "lead_detail_panel.html" %}
+  {% if lead_not_found %}
+    <section class="card empty-detail">
+      <h3>No encontramos el lead solicitado</h3>
+      <p>Revisa la bandeja o vuelve a aplicar los filtros desde la lista principal.</p>
+      <a class="secondary" href="{{ return_to_url or '/leads' }}">Volver a Leads</a>
+    </section>
+  {% endif %}
+{% endblock %}

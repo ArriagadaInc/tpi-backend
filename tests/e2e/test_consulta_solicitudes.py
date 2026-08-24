@@ -7,6 +7,7 @@ from uuid import UUID
 
 import pytest
 
+from app.models.crm_states import CRM_STATE_CONTRACT
 from app.models.test_lead_cleanup import TestLeadCleanupResult
 from app.services.solicitud_service import SolicitudService
 
@@ -25,7 +26,7 @@ def synthetic_board_records() -> list[dict[str, object]]:
             "genero": "Masculino",
             "estado_civil": "Soltero/a",
             "saldo_afp": 100000,
-            "estado_lead": "pendiente",
+            "estado_lead": "nuevo",
             "created_at": datetime(2026, 8, 21, 9, 0, 0),
             "acepta_terminos": True,
             "acepta_politica_privacidad": True,
@@ -43,7 +44,7 @@ def synthetic_board_records() -> list[dict[str, object]]:
             "genero": "Femenino",
             "estado_civil": "Casado/a",
             "saldo_afp": 3000000,
-            "estado_lead": "aprobada",
+            "estado_lead": "cerrado",
             "created_at": datetime(2026, 8, 20, 10, 0, 0),
             "acepta_terminos": True,
             "acepta_politica_privacidad": True,
@@ -88,7 +89,7 @@ def synthetic_board(
     monkeypatch.setattr(
         SolicitudService,
         "get_crm_estado_lead_options",
-        lambda self: ["pendiente", "aprobada", "descartado"],
+        lambda self: list(CRM_STATE_CONTRACT),
     )
     return records
 

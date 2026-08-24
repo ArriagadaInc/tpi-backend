@@ -19,11 +19,13 @@ def test_format_datetime_short_prefers_dense_iso_style() -> None:
 
 
 def test_lead_stage_label_normalizes_readable_text() -> None:
-    assert lead_stage_label("pendiente") == "Pendiente"
-    assert lead_stage_label("simulacion_generada") == "Simulacion Generada"
+    assert lead_stage_label("pendiente") == "Nuevo"
+    assert lead_stage_label("nuevo") == "Nuevo"
+    assert lead_stage_label("simulacion_generada") == "simulacion_generada"
 
 
 def test_lead_stage_tone_maps_known_states() -> None:
     assert lead_stage_tone("pendiente") == "info"
-    assert lead_stage_tone("aprobada") == "success"
-    assert lead_stage_tone("descartado") == "error"
+    assert lead_stage_tone("nuevo") == "info"
+    assert lead_stage_tone("cerrado") == "success"
+    assert lead_stage_tone("perdido") == "error"

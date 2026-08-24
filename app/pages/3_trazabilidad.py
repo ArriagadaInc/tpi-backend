@@ -16,6 +16,7 @@ import streamlit as st
 from app.auth import require_authenticated_user
 from app.components import show_error_message, show_header
 from app.database import get_safe_error_message
+from app.models.crm_states import crm_state_aggregate_key, crm_state_filter_terms
 from app.runtime import configure_logging, run_guarded
 from app.services.solicitud_service import SolicitudService
 
@@ -70,7 +71,8 @@ def main():
 
         with col2:
             if "estado_lead" in df.columns:
-                pendientes = len(df[df["estado_lead"] == "pendiente"])
+                estado_normalizado = df["estado_lead"].map(crm_state_aggregate_key)
+                pendientes = int(estado_normalizado.isin(crm_state_filter_terms("nuevo")).sum())
                 st.metric("Solicitudes Pendientes", pendientes)
 
         with col3:
@@ -131,7 +133,7 @@ def main():
         st.markdown("## 📋 Estado de Solicitudes")
 
         if "estado_lead" in df.columns:
-            estado_dist = df["estado_lead"].value_counts()
+            estado_dist = df["estado_lead"].map(crm_state_aggregate_key).value_counts()
 
             col1, col2 = st.columns([2, 1])
 
@@ -141,8 +143,8 @@ def main():
             with col2:
                 st.markdown("### Resumen por Estado")
                 for estado, count in estado_dist.items():
-                    if estado == "pendiente":
-                        st.warning(f"⏳ Pendiente: {count}")
+                    if estado == "nuevo":
+                        st.warning(f"⏳ Nuevo: {count}")
                     elif estado == "aprobada":
                         st.success(f"✅ Aprobada: {count}")
                     else:

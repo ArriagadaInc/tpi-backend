@@ -163,7 +163,7 @@ def test_insert_read_update_and_cleanup(
                 (str(response.id_lead),),
             )
             lead_row = cur.fetchone()
-            assert lead_row["estado_lead"] == "pendiente"
+            assert lead_row["estado_lead"] == "nuevo"
             assert lead_row["origen_lead"] == "formulario_streamlit"
             assert lead_row["fuente_actual"] == "backoffice"
             assert lead_row["fecha_ingreso"] is not None
@@ -234,7 +234,7 @@ def test_transaction_rollback_on_failure_leaves_no_residual_data(
                         str(invalid_afp_id),
                         Decimal("1000"),
                         "force-rollback",
-                        "pendiente",
+                        "nuevo",
                         datetime.now(),
                         "integration-test",
                         "integration-test",
