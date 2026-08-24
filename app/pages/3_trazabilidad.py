@@ -72,9 +72,7 @@ def main():
         with col2:
             if "estado_lead" in df.columns:
                 estado_normalizado = df["estado_lead"].map(crm_state_aggregate_key)
-                pendientes = int(
-                    estado_normalizado.isin(crm_state_filter_terms("nuevo")).sum()
-                )
+                pendientes = int(estado_normalizado.isin(crm_state_filter_terms("nuevo")).sum())
                 st.metric("Solicitudes Pendientes", pendientes)
 
         with col3:
