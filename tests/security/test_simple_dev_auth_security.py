@@ -79,19 +79,31 @@ def test_aws_dev_compose_runs_fastapi_web_and_cables_web_runtime_secrets() -> No
     compose = (PROJECT_ROOT / "deployment/aws/docker-compose.ecr.yml").read_text(encoding="utf-8")
     backoffice_section = compose.split("  backoffice:", maxsplit=1)[1]
 
-    assert 'command: ["uvicorn", "app.web.main:app", "--host", "0.0.0.0", "--port", "8501"]' in compose
-    assert 'AUTH_ENABLED: ${AUTH_ENABLED:-true}' in backoffice_section
-    assert 'AUTH_MODE: ${AUTH_MODE:-simple-dev}' in backoffice_section
     assert (
-        'AUTH_USERS_JSON: ${AUTH_USERS_JSON:?AUTH_USERS_JSON is required when authentication is enabled}'
+        'command: ["uvicorn", "app.web.main:app", "--host", "0.0.0.0", "--port", "8501"]' in compose
+    )
+    assert "AUTH_ENABLED: ${AUTH_ENABLED:-true}" in backoffice_section
+    assert "AUTH_MODE: ${AUTH_MODE:-simple-dev}" in backoffice_section
+    assert (
+        "AUTH_USERS_JSON: ${AUTH_USERS_JSON:?AUTH_USERS_JSON is required when authentication is enabled}"
         in backoffice_section
     )
-    assert 'WEB_SESSION_SECRET: ${WEB_SESSION_SECRET:?WEB_SESSION_SECRET is required}' in backoffice_section
-    assert 'WEB_SESSION_MAX_AGE_SECONDS: ${WEB_SESSION_MAX_AGE_SECONDS:-28800}' in backoffice_section
-    assert 'WEB_MASK_PII: ${WEB_MASK_PII:-true}' in backoffice_section
-    assert 'TPI_PUBLIC_SITE_URL: ${TPI_PUBLIC_SITE_URL:?TPI_PUBLIC_SITE_URL is required}' in backoffice_section
-    assert 'DEV_DELETE_ENABLED: ${DEV_DELETE_ENABLED:-false}' in backoffice_section
-    assert "reverse_proxy {$TPI_BACKOFFICE_UPSTREAM:backoffice:8501}" in (PROJECT_ROOT / "deployment/caddy/Caddyfile").read_text(encoding="utf-8")
+    assert (
+        "WEB_SESSION_SECRET: ${WEB_SESSION_SECRET:?WEB_SESSION_SECRET is required}"
+        in backoffice_section
+    )
+    assert (
+        "WEB_SESSION_MAX_AGE_SECONDS: ${WEB_SESSION_MAX_AGE_SECONDS:-28800}" in backoffice_section
+    )
+    assert "WEB_MASK_PII: ${WEB_MASK_PII:-true}" in backoffice_section
+    assert (
+        "TPI_PUBLIC_SITE_URL: ${TPI_PUBLIC_SITE_URL:?TPI_PUBLIC_SITE_URL is required}"
+        in backoffice_section
+    )
+    assert "DEV_DELETE_ENABLED: ${DEV_DELETE_ENABLED:-false}" in backoffice_section
+    assert "reverse_proxy {$TPI_BACKOFFICE_UPSTREAM:backoffice:8501}" in (
+        PROJECT_ROOT / "deployment/caddy/Caddyfile"
+    ).read_text(encoding="utf-8")
 
 
 def test_dockerfile_caches_locked_dependencies_before_application_source() -> None:
