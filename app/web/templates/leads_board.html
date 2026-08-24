@@ -1,0 +1,66 @@
+{% if board.solicitudes %}
+  <div class="board-meta">
+    <span>Mostrando {{ board.solicitudes|length }} de {{ board.total }} solicitudes</span>
+    <span>Página {{ board.page }} de {{ board.total_pages or 1 }}</span>
+  </div>
+  <div class="table-wrap">
+    <table class="board-table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Nombre</th>
+          <th>RUT</th>
+          <th>AFP</th>
+          <th>Estado</th>
+          <th>Saldo</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lead in board.solicitudes %}
+          <tr>
+            <td>{{ lead.created_at.strftime('%d/%m/%Y') if lead.created_at else 'N/A' }}</td>
+            <td>
+              <a class="lead-link" href="/leads/{{ lead.id_lead }}">{{ lead.nombre_completo }}</a>
+            </td>
+            <td class="mono">{{ lead.rut }}</td>
+            <td>{{ lead.afp }}</td>
+            <td>
+              <span class="status-badge {{ lead.estado_lead|replace('_', '-') }}">
+                {{ lead.estado_lead|replace('_', ' ')|title }}
+              </span>
+            </td>
+            <td>{{ lead.saldo_afp }}</td>
+            <td><a class="row-link" href="{{ lead.detail_url or '/leads/' ~ lead.id_lead }}">Ver</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="empty-state">
+    {% if current_filters.search or current_filters.afp_id or current_filters.estado_lead or current_filters.date_from or current_filters.date_to %}
+      <h3>No encontramos leads con estos filtros</h3>
+      <p>Ajusta la búsqueda, AFP, estado o rango de fechas.</p>
+    {% else %}
+      <h3>Aún no existen solicitudes en el sistema</h3>
+      <p>Las solicitudes aparecerán aquí cuando lleguen desde el sitio público.</p>
+    {% endif %}
+  </div>
+{% endif %}
+
+<div class="pagination">
+  <span>Mostrando {{ board.page }} / {{ board.total_pages or 1 }}</span>
+  <div class="pagination-actions">
+    {% if pagination_prev_url %}
+      <a class="secondary" href="{{ pagination_prev_url }}">Anterior</a>
+    {% else %}
+      <span class="disabled">Anterior</span>
+    {% endif %}
+    {% if pagination_next_url %}
+      <a class="primary inline" href="{{ pagination_next_url }}">Siguiente</a>
+    {% else %}
+      <span class="disabled">Siguiente</span>
+    {% endif %}
+  </div>
+</div>

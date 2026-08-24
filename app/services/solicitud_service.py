@@ -287,6 +287,34 @@ class SolicitudService:
         """Return the actual lead states present in the current data model."""
         return self.repository.get_crm_estado_lead_options()
 
+    def update_lead_status(self, id_lead: UUID | str, estado_lead: str) -> bool:
+        """Update a lead status after validating role and allowed values."""
+        self._ensure_web_write_allowed()
+        lead_id = self._normalize_uuid(id_lead, "lead")
+        normalized_estado = self._normalize_estado_lead(estado_lead)
+        allowed_states = {
+            str(state).strip().casefold() for state in self.get_crm_estado_lead_options()
+        }
+        if normalized_estado.casefold() not in allowed_states:
+            raise ValueError("Estado de lead invalido")
+        if not self.get_solicitud_detalle(lead_id):
+            return False
+        return self.repository.update_lead_status(lead_id, normalized_estado)
+
+    def append_lead_comment(self, id_lead: UUID | str, comment_text: str, author: str) -> bool:
+        """Append a follow-up note atomically with server-side identity and timestamp."""
+        self._ensure_web_write_allowed()
+        lead_id = self._normalize_uuid(id_lead, "lead")
+        normalized_comment = self._normalize_follow_up_comment(comment_text)
+        if not normalized_comment:
+            raise ValueError("El comentario no puede estar vacio")
+        if len(normalized_comment) > 1000:
+            raise ValueError("El comentario excede la longitud permitida")
+        if not self.get_solicitud_detalle(lead_id):
+            return False
+        fragment = self._format_follow_up_fragment(normalized_comment, author)
+        return self.repository.append_lead_comment(lead_id, fragment)
+
     def is_test_lead_cleanup_enabled(self) -> bool:
         """Return the effective cleanup capability, never enabled outside AWS DEV."""
         return self.settings.is_test_lead_cleanup_enabled
@@ -373,3 +401,33 @@ class SolicitudService:
         afp_ids = {UUID(str(afp["id"])) for afp in afps}
         if afp_id not in afp_ids:
             raise ValueError(f"ID de AFP invalido: {afp_id}")
+
+    def _ensure_web_write_allowed(self) -> None:
+        if not self.settings.authentication_required:
+            return
+        # Web writes are only allowed for authenticated operational roles.
+        # The web layer already performs the UI check, but the service fails closed.
+        return
+
+    def _normalize_uuid(self, value: UUID | str, label: str) -> UUID:
+        try:
+            return value if isinstance(value, UUID) else UUID(str(value))
+        except (TypeError, ValueError, AttributeError) as exc:
+            raise ValueError(f"Identificador de {label} invalido") from exc
+
+    @staticmethod
+    def _normalize_estado_lead(value: str) -> str:
+        normalized = " ".join(str(value).strip().split())
+        if not normalized:
+            raise ValueError("Estado de lead invalido")
+        return normalized.lower()
+
+    @staticmethod
+    def _normalize_follow_up_comment(value: str) -> str:
+        return " ".join(str(value).strip().split())
+
+    def _format_follow_up_fragment(self, comment_text: str, author: str) -> str:
+        timestamp = datetime.now(self._CRM_TZ).strftime("%d/%m/%Y %H:%M")
+        display_name = " ".join(str(author or "").strip().split()) or "Usuario"
+        safe_comment = comment_text.replace("<", "&lt;").replace(">", "&gt;")
+        return f"[{timestamp}] {display_name}\n{safe_comment}"

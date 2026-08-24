@@ -688,3 +688,39 @@ class SolicitudRepository:
                 cur.execute(query)
                 rows = cur.fetchall()
                 return [str(row["estado_lead"]) for row in rows if row.get("estado_lead")]
+
+    @staticmethod
+    def update_lead_status(id_lead: UUID, estado_lead: str) -> bool:
+        """Update the lead status using a single parametrized transaction."""
+        query = """
+            UPDATE tpi.leads
+            SET estado_lead = %s
+            WHERE id_lead = %s
+            RETURNING id_lead
+        """
+        with get_db_connection(operation="update_lead_status") as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (estado_lead, str(id_lead)))
+                row = cur.fetchone()
+                conn.commit()
+                return row is not None
+
+    @staticmethod
+    def append_lead_comment(id_lead: UUID, new_fragment: str) -> bool:
+        """Append a new follow-up note atomically to the existing comments."""
+        query = """
+            UPDATE tpi.leads
+            SET comentarios =
+                CASE
+                    WHEN COALESCE(NULLIF(TRIM(comentarios), ''), '') = '' THEN %s
+                    ELSE comentarios || E'\n\n' || %s
+                END
+            WHERE id_lead = %s
+            RETURNING id_lead
+        """
+        with get_db_connection(operation="append_lead_comment") as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (new_fragment, new_fragment, str(id_lead)))
+                row = cur.fetchone()
+                conn.commit()
+                return row is not None

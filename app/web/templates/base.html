@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page_title or "Tu Pensión Inteligente" }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/app.css') }}">
+    <script defer src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script defer src="{{ url_for('static', path='/js/app.js') }}"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-wrap" role="banner" aria-label="Tu Pensión Inteligente CRM Lite">
+        <div class="brand-mark">TPI</div>
+        <div class="brand-copy">
+          <div class="brand-title">Tu Pensión Inteligente</div>
+          <div class="brand-badge">CRM Lite</div>
+        </div>
+      </div>
+      <div class="topbar-user">
+        {% if selected_user %}
+          <div class="user-meta">
+            <span class="user-name">{{ selected_user.display_name }}</span>
+            {% if web_env_label %}
+              <span class="env-pill">{{ web_env_label }}</span>
+            {% endif %}
+          </div>
+          <a class="link-button" href="/logout">Salir</a>
+        {% else %}
+          <span class="topbar-muted">Acceso local</span>
+        {% endif %}
+      </div>
+    </header>
+    <main class="page-shell">
+      {% block content %}{% endblock %}
+    </main>
+    <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+  </body>
+</html>

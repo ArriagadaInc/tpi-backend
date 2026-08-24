@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="auth-shell">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="brand-mark large">TPI</div>
+        <div>
+          <p class="kicker">Tu Pensión Inteligente</p>
+          <h1>CRM Lite</h1>
+          <p class="lead">
+            Acceso al sistema de gestión previsional para revisar leads, filtros y detalle.
+          </p>
+        </div>
+      </div>
+
+      <div class="notice notice-soft">
+        Autenticación real del ambiente. Usa tus credenciales autorizadas.
+      </div>
+
+      {% if error %}
+        <div class="alert alert-error">{{ error }}</div>
+      {% endif %}
+
+      <form class="auth-form" method="post" action="/login">
+        <label>
+          Correo electrónico
+          <input name="username" type="text" autocomplete="username" placeholder="demo">
+        </label>
+        <label>
+          Contraseña
+          <input name="password" type="password" autocomplete="current-password" placeholder="demo">
+        </label>
+        <button class="primary primary-full" type="submit">Ingresar al CRM</button>
+      </form>
+    </div>
+  </section>
+{% endblock %}

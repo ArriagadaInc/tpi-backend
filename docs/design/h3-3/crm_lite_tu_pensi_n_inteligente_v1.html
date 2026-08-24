@@ -1,0 +1,757 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM Lite — Tu Pensión Inteligente (TPI)</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              900: '#0F172A',
+              800: '#1E293B',
+              700: '#334155',
+              teal: '#0D9488',
+              tealHover: '#0F766E',
+              tealLight: '#F0FDFA',
+              bg: '#F8FAFC',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      --color-primary: #0F172A;
+      --color-accent: #0D9488;
+      --color-bg: #F8FAFC;
+      --font-main: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background-color: var(--color-bg);
+      color: #1E293B;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .view-panel {
+      display: none;
+      opacity: 0;
+      transition: opacity 0.2s ease-in-out;
+    }
+
+    .view-panel.active {
+      display: block;
+      opacity: 1;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #F1F5F9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 3px;
+    }
+  </style>
+
+  <!-- Chosen Palette: Warm Neutral Slate & Petrol Teal (Primary: Slate Navy #0F172A, Accent: Petrol Teal #0D9488, Surface: White #FFFFFF, Background: Soft Slate #F8FAFC, Statuses: Amber/Emerald/Blue/Slate) -->
+
+  <!-- Application Structure Plan: Esta versión depurada del CRM Lite elimina elementos no operativos como dashboards o guías integradas para entregar una interfaz directa y limpia enfocada exclusivamente en la gestión de solicitudes. La navegación se distribuye en tres pantallas bien delimitadas: Autenticación (Login), Bandeja de Leads (con filtros de búsqueda y rango de fechas Desde/Hasta) y Ficha Detallada del Lead. Se incluye un conmutador discreto de ambiente DEV en el encabezado para probar la acción secundaria de eliminación de leads con modal de confirmación. -->
+
+  <!-- Visualization & Content Choices:
+   - Pantalla Login: Formulario sobrio con feedback de error simulado y estado loading en botón.
+   - Bandeja de Leads: Filtro unificado que abarca Búsqueda (Nombre/RUT), AFP, Estado y Rango de Fechas (Desde/Hasta).
+   - Tabla de Leads: Filas limpias con badges de estado basados en HTML/CSS y ordenamiento dinámico por columnas.
+   - Ficha del Lead: Estructura dividida por bloques informativos (Contacto, Datos Personales, Previsionales y Solicitud) junto con el botón primario 'Abrir simulador'.
+   - Modo DEV: Control de prueba integrado para simular eliminación de leads sin sobrecargar la vista.
+   Confirmación: NO SVG graphics used. NO Mermaid JS used. -->
+
+  <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="min-h-screen flex flex-col justify-between text-slate-800">
+
+  <!-- ENCABEZADO PRINCIPAL DE LA APLICACIÓN -->
+  <header id="app-header" class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm hidden">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="navTo('leads')">
+        <div class="w-9 h-9 bg-gradient-to-br from-slate-900 to-teal-700 text-white font-black text-sm flex items-center justify-center rounded-lg shadow-sm">
+          TPI
+        </div>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-2">
+          <span class="font-bold text-slate-900 text-base tracking-tight">Tu Pensión Inteligente</span>
+          <span class="bg-slate-100 text-slate-600 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-slate-200 uppercase tracking-wider w-max">CRM Lite</span>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-4">
+        <!-- Indicador y Selector de Modo DEV -->
+        <button id="header-dev-toggle" onclick="toggleDevModeUI()" class="text-[11px] font-semibold px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 transition">
+          Modo DEV: OFF
+        </button>
+
+        <div class="flex items-center space-x-2 pl-2 border-l border-slate-200">
+          <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center border border-slate-300">
+            CS
+          </div>
+          <span class="text-xs font-medium text-slate-700 hidden sm:inline">Carolina Silva</span>
+          <button onclick="navTo('login')" class="text-xs font-medium text-slate-500 hover:text-red-600 px-2 py-1 rounded hover:bg-slate-100 transition">
+            Salir
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL -->
+  <main class="max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 flex-grow">
+
+    <!-- PANTALLA 1: LOGIN -->
+    <section id="view-login" class="view-panel active my-8 sm:my-16">
+      <div class="max-w-md mx-auto bg-white border border-slate-200 rounded-xl shadow-lg p-8">
+        <div class="text-center mb-6">
+          <div class="w-14 h-14 bg-gradient-to-br from-slate-900 to-teal-700 text-white font-black text-xl flex items-center justify-center rounded-xl mx-auto mb-3 shadow-md">
+            TPI
+          </div>
+          <h1 class="text-xl font-bold text-slate-900 tracking-tight">Tu Pensión Inteligente</h1>
+          <p class="text-xs text-slate-500 mt-1">Acceso al sistema de gestión previsional CRM Lite</p>
+        </div>
+
+        <!-- Alerta de Error de Autenticación -->
+        <div id="login-error-alert" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-start space-x-2">
+          <span class="text-base leading-none">⚠️</span>
+          <span>Credenciales inválidas. Por favor verifica tu correo y contraseña.</span>
+        </div>
+
+        <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+          <div>
+            <label for="login-email" class="block text-xs font-semibold text-slate-700 mb-1">Correo Electrónico</label>
+            <input type="email" id="login-email" required value="carolina.silva@tupensioninteligente.cl" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-600 bg-white">
+          </div>
+
+          <div>
+            <label for="login-password" class="block text-xs font-semibold text-slate-700 mb-1">Contraseña</label>
+            <input type="password" id="login-password" required value="••••••••••••" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-600 bg-white">
+          </div>
+
+          <div class="pt-2">
+            <button type="submit" id="btn-login-submit" class="w-full py-2.5 px-4 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-lg shadow transition flex items-center justify-center space-x-2">
+              <span id="login-btn-text">Ingresar al CRM</span>
+            </button>
+          </div>
+        </form>
+
+        <div class="mt-6 pt-4 border-t border-slate-100 text-center">
+          <button onclick="toggleLoginErrorDemo()" class="text-[11px] text-slate-400 hover:text-slate-600 underline">
+            [Prototipo: Simular error de credenciales]
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANTALLA 2: BANDEJA DE LEADS -->
+    <section id="view-leads" class="view-panel space-y-6">
+      <!-- Título de Página -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-200">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Leads</h1>
+          <p class="text-sm text-slate-500 mt-0.5">Gestiona las solicitudes recibidas de potenciales clientes.</p>
+        </div>
+
+        <div id="dev-mode-badge" class="hidden">
+          <span class="bg-amber-100 text-amber-800 text-[11px] font-bold px-2.5 py-1 rounded-md border border-amber-300 uppercase tracking-wider">
+            Ambiente DEV Activo
+          </span>
+        </div>
+      </div>
+
+      <!-- Barra Unificada de Búsqueda y Filtros -->
+      <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-end">
+
+          <!-- Buscador Nombre / RUT -->
+          <div class="lg:col-span-3">
+            <label for="search-input" class="block text-xs font-semibold text-slate-700 mb-1">Búsqueda</label>
+            <div class="relative">
+              <input type="text" id="search-input" oninput="applyFilters()" placeholder="Buscar por nombre o RUT..." class="w-full pl-8 pr-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-600 bg-white">
+              <span class="absolute left-2.5 top-2.5 text-xs text-slate-400 pointer-events-none">🔍</span>
+            </div>
+          </div>
+
+          <!-- Filtro AFP -->
+          <div class="lg:col-span-2">
+            <label for="filter-afp" class="block text-xs font-semibold text-slate-700 mb-1">AFP</label>
+            <select id="filter-afp" onchange="applyFilters()" class="w-full px-2.5 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-600 bg-white">
+              <option value="">Todas las AFPs</option>
+              <option value="Habitat">Habitat</option>
+              <option value="Cuprum">Cuprum</option>
+              <option value="Capital">Capital</option>
+              <option value="PlanVital">PlanVital</option>
+              <option value="Provida">Provida</option>
+              <option value="Modelo">Modelo</option>
+              <option value="Uno">Uno</option>
+            </select>
+          </div>
+
+          <!-- Filtro Estado -->
+          <div class="lg:col-span-2">
+            <label for="filter-estado" class="block text-xs font-semibold text-slate-700 mb-1">Estado</label>
+            <select id="filter-estado" onchange="applyFilters()" class="w-full px-2.5 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-600 bg-white">
+              <option value="">Todos los Estados</option>
+              <option value="Pendiente">Pendiente</option>
+              <option value="Contactado">Contactado</option>
+              <option value="En Evaluación">En Evaluación</option>
+              <option value="Cerrado">Cerrado</option>
+            </select>
+          </div>
+
+          <!-- Filtro Fecha Desde -->
+          <div class="lg:col-span-2">
+            <label for="filter-date-from" class="block text-xs font-semibold text-slate-700 mb-1">Fecha Desde</label>
+            <input type="date" id="filter-date-from" onchange="applyFilters()" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-600 bg-white">
+          </div>
+
+          <!-- Filtro Fecha Hasta -->
+          <div class="lg:col-span-2">
+            <label for="filter-date-to" class="block text-xs font-semibold text-slate-700 mb-1">Fecha Hasta</label>
+            <input type="date" id="filter-date-to" onchange="applyFilters()" class="w-full px-2 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-teal-600 bg-white">
+          </div>
+
+          <!-- Acciones Limpiar -->
+          <div class="lg:col-span-1 flex items-center justify-end">
+            <button id="btn-clear-filters" onclick="resetFilters()" class="invisible w-full py-2 text-xs text-slate-500 hover:text-slate-800 underline font-medium text-center transition">
+              Limpiar
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Tabla Principal de Leads -->
+      <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider select-none">
+                <th class="py-3 px-4 cursor-pointer hover:text-slate-900 transition" onclick="toggleSort('nombre')">
+                  Nombre Completo <span id="sort-icon-nombre" class="ml-1 text-slate-400">↕</span>
+                </th>
+                <th class="py-3 px-4">RUT</th>
+                <th class="py-3 px-4">AFP</th>
+                <th class="py-3 px-4">Estado</th>
+                <th class="py-3 px-4 cursor-pointer hover:text-slate-900 transition" onclick="toggleSort('fechaISO')">
+                  Fecha Solicitud <span id="sort-icon-fecha" class="ml-1 text-slate-700">↓</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="leads-table-body" class="divide-y divide-slate-100 text-xs">
+              <!-- Filas dinámicas -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Estado de Carga (Spinner) -->
+        <div id="loading-state" class="hidden p-12 text-center">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-2 border-teal-600 border-t-transparent mb-3"></div>
+          <div class="text-sm font-semibold text-slate-800">Cargando solicitudes...</div>
+          <p class="text-xs text-slate-500 mt-1">Consultando base de datos previsional.</p>
+        </div>
+
+        <!-- Estado Sin Resultados de Filtro -->
+        <div id="no-results-state" class="hidden p-12 text-center">
+          <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-400 text-xl">
+            🔍
+          </div>
+          <h3 class="text-sm font-bold text-slate-900">No encontramos leads con estos filtros</h3>
+          <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Ajusta tus términos de búsqueda, modifica las fechas o limpia los criterios seleccionados.</p>
+          <button onclick="resetFilters()" class="mt-4 px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 transition">
+            Limpiar filtros
+          </button>
+        </div>
+
+        <!-- Estado Sin Leads (Base Vacía) -->
+        <div id="empty-db-state" class="hidden p-12 text-center">
+          <div class="w-12 h-12 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-3 text-teal-700 text-xl">
+            📋
+          </div>
+          <h3 class="text-sm font-bold text-slate-900">Aún no existen solicitudes en el sistema</h3>
+          <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Las solicitudes ingresadas por personas en el sitio web de Tu Pensión Inteligente aparecerán automáticamente en esta bandeja.</p>
+        </div>
+
+        <!-- Paginación y Pie de Tabla -->
+        <div id="table-footer" class="py-3 px-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+          <span id="pagination-info">Mostrando 1–8 de 8 solicitudes</span>
+          <div class="flex items-center space-x-2">
+            <button disabled class="px-3 py-1 bg-white border border-slate-300 text-slate-400 rounded-md cursor-not-allowed font-medium">Anterior</button>
+            <button disabled class="px-3 py-1 bg-white border border-slate-300 text-slate-400 rounded-md cursor-not-allowed font-medium">Siguiente</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANTALLA 3: DETALLE DEL LEAD (/leads/{id}) -->
+    <section id="view-lead-detail" class="view-panel space-y-6">
+      <!-- Navegación de Regreso -->
+      <div>
+        <button onclick="navTo('leads')" class="inline-flex items-center space-x-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 transition shadow-sm">
+          <span>←</span>
+          <span>Volver a Leads</span>
+        </button>
+      </div>
+
+      <!-- Tarjeta de Encabezado Principal del Lead -->
+      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="flex flex-wrap items-center gap-3">
+            <h1 id="detail-name" class="text-2xl font-bold text-slate-900 tracking-tight">Juan Pablo Pérez Morales</h1>
+            <span id="detail-status-badge" class="inline-flex items-center space-x-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+              <span id="detail-status-text">Pendiente</span>
+            </span>
+          </div>
+          <div class="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-4">
+            <span>RUT: <strong id="detail-rut" class="text-slate-700 font-mono">12.345.678-9</strong></span>
+            <span>•</span>
+            <span>Fecha Solicitud: <strong id="detail-date" class="text-slate-700">21 Aug 2026, 10:30 hrs</strong></span>
+          </div>
+        </div>
+
+        <!-- Acciones Principales en Cabecera -->
+        <div class="flex items-center space-x-3">
+          <!-- Acción DEV discreta (Solo visible en ambiente DEV) -->
+          <button id="btn-dev-delete" onclick="openDeleteModal()" class="hidden px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5">
+            <span>🗑</span>
+            <span>Eliminar lead de prueba</span>
+          </button>
+
+          <!-- Acción Principal de Negocio -->
+          <button onclick="triggerSimulator()" class="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold shadow transition flex items-center space-x-2">
+            <span>Abrir simulador</span>
+            <span>↗</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Grid de Bloques de Información -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+        <!-- Bloque 1: Contacto -->
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
+          <div class="border-b border-slate-100 pb-2 flex items-center space-x-2">
+            <span class="text-teal-600 text-sm">✉</span>
+            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Contacto</h3>
+          </div>
+          <div class="space-y-2.5 text-xs">
+            <div>
+              <div class="text-slate-400 text-[11px]">Correo Electrónico</div>
+              <div id="detail-email" class="font-semibold text-slate-800">juan.perez@email.cl</div>
+            </div>
+            <div>
+              <div class="text-slate-400 text-[11px]">Teléfono de Contacto</div>
+              <div id="detail-phone" class="font-semibold text-slate-800">+56 9 1234 5678</div>
+            </div>
+            <div>
+              <div class="text-slate-400 text-[11px]">Preferencia de Horario</div>
+              <div class="font-semibold text-slate-800">Llamada telefónica (Mañana / Tardes)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bloque 2: Información Personal -->
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
+          <div class="border-b border-slate-100 pb-2 flex items-center space-x-2">
+            <span class="text-teal-600 text-sm">👤</span>
+            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Información Personal</h3>
+          </div>
+          <div class="space-y-2.5 text-xs">
+            <div>
+              <div class="text-slate-400 text-[11px]">Nombre Completo</div>
+              <div id="detail-fullname" class="font-semibold text-slate-800">Juan Pablo Pérez Morales</div>
+            </div>
+            <div>
+              <div class="text-slate-400 text-[11px]">RUT Identificador</div>
+              <div id="detail-rut-body" class="font-semibold font-mono text-slate-800">12.345.678-9</div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <div class="text-slate-400 text-[11px]">Edad / Género</div>
+                <div class="font-semibold text-slate-800"><span id="detail-age">52 años</span> • <span id="detail-gender">Masculino</span></div>
+              </div>
+              <div>
+                <div class="text-slate-400 text-[11px]">Estado Civil</div>
+                <div id="detail-civil" class="font-semibold text-slate-800">Casado</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bloque 3: Información Previsional -->
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3">
+          <div class="border-b border-slate-100 pb-2 flex items-center space-x-2">
+            <span class="text-teal-600 text-sm">💰</span>
+            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Información Previsional</h3>
+          </div>
+          <div class="space-y-2.5 text-xs">
+            <div>
+              <div class="text-slate-400 text-[11px]">AFP Actual</div>
+              <div id="detail-afp" class="font-bold text-slate-900 text-sm">Habitat</div>
+            </div>
+            <div>
+              <div class="text-slate-400 text-[11px]">Saldo Previsional Estimado</div>
+              <div id="detail-saldo" class="text-base font-extrabold text-teal-700">$48.300.000 CLP</div>
+            </div>
+            <div>
+              <div class="text-slate-400 text-[11px]">Situación Laboral</div>
+              <div class="font-semibold text-slate-800">Trabajador Dependiente</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bloque 4: Solicitud / Comentario del Cliente -->
+      <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-3">
+        <div class="border-b border-slate-100 pb-2 flex items-center space-x-2">
+          <span class="text-teal-600 text-sm">📝</span>
+          <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Solicitud / Comentario de la Persona</h3>
+        </div>
+        <div id="detail-comment" class="p-4 bg-slate-50 border-l-4 border-teal-600 text-slate-700 text-xs leading-relaxed italic rounded-r-lg">
+          “Me interesa revisar mis alternativas de pensión, entender el cálculo de mi saldo proyectado y evaluar si me conviene la modalidad de Renta Vitalicia o Retiro Programado.”
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL DE CONFIRMACIÓN (ACCIÓN DEV) -->
+  <div id="delete-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-200">
+    <div class="bg-white rounded-xl border border-slate-200 max-w-sm w-full p-6 shadow-xl transform translate-y-2 transition-transform duration-200">
+      <h3 class="text-base font-bold text-slate-900">¿Eliminar lead de prueba?</h3>
+      <p class="text-xs text-slate-600 mt-2 leading-relaxed">
+        Esta acción eliminará permanentemente a <strong id="modal-lead-name" class="text-slate-900">Juan Pablo Pérez</strong> de la base de datos.<br><br>
+        <span class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-block">Nota: Funcionalidad exclusiva de ambiente DEV.</span>
+      </p>
+
+      <div class="mt-6 flex items-center justify-end space-x-3">
+        <button onclick="closeDeleteModal()" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 transition">
+          Cancelar
+        </button>
+        <button onclick="confirmDeleteLead()" class="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition shadow">
+          Eliminar Lead
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor para Notificaciones Toast -->
+  <div id="toast-container" class="fixed bottom-6 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <!-- LÓGICA DEL PROTOTIPO (VANILLA JS) -->
+  <script>
+    // BASE DE DATOS FICTICIA REPRESENTATIVA
+    let mockLeads = [
+      { id: '1', nombre: 'Juan Pablo Pérez Morales', rut: '12.345.678-9', afp: 'Habitat', estado: 'Pendiente', fechaISO: '2026-08-21', fecha: '21 Aug 2026', email: 'juan.perez@email.cl', telefono: '+56 9 1234 5678', saldo: '$48.300.000', edad: '52 años', genero: 'Masculino', civil: 'Casado', comentario: 'Me interesa revisar mis alternativas de pensión, entender el cálculo de mi saldo proyectado y evaluar si me conviene la modalidad de Renta Vitalicia o Retiro Programado.' },
+      { id: '2', nombre: 'María José Loyola Soto', rut: '15.678.432-K', afp: 'Cuprum', estado: 'Contactado', fechaISO: '2026-08-20', fecha: '20 Aug 2026', email: 'm.loyola@gmail.com', telefono: '+56 9 8765 4321', saldo: '$62.100.000', edad: '48 años', genero: 'Femenino', civil: 'Soltera', comentario: 'Solicito asesoría para APV y optimización tributaria previsional ante mi próximo cambio de empleador.' },
+      { id: '3', nombre: 'Roberto Carlos Tapia Ruiz', rut: '10.987.654-3', afp: 'Capital', estado: 'Pendiente', fechaISO: '2026-08-20', fecha: '20 Aug 2026', email: 'roberto.tapia@outlook.cl', telefono: '+56 9 5555 1234', saldo: '$35.400.000', edad: '59 años', genero: 'Masculino', civil: 'Casado', comentario: 'Quiero ver si cumplo los requisitos para jubilarme anticipadamente por invalidez parcial o vejez.' },
+      { id: '4', nombre: 'Andrea Pilar Contreras Vera', rut: '16.543.210-7', afp: 'PlanVital', estado: 'En Evaluación', fechaISO: '2026-08-19', fecha: '19 Aug 2026', email: 'andrea.contreras@empresa.cl', telefono: '+56 9 4444 8888', saldo: '$89.000.000', edad: '55 años', genero: 'Femenino', civil: 'Divorciada', comentario: 'Necesito evaluar el traspaso de fondos e impacto de tasas de interés actuales en la oferta de Renta Vitalicia.' },
+      { id: '5', nombre: 'Gonzalo Esteban Silva Fuentealba', rut: '13.876.543-2', afp: 'Provida', estado: 'Contactado', fechaISO: '2026-08-18', fecha: '18 Aug 2026', email: 'gonzalo.silva@yahoo.es', telefono: '+56 9 2222 3333', saldo: '$54.200.000', edad: '51 años', genero: 'Masculino', civil: 'Casado', comentario: 'Consulta sobre modalidades de pensión para trabajadores independientes con cotizaciones voluntarias.' },
+      { id: '6', nombre: 'Camila Ignacia Valenzuela Olea', rut: '17.123.456-8', afp: 'Modelo', estado: 'Pendiente', fechaISO: '2026-08-18', fecha: '18 Aug 2026', email: 'cami.valenzuela@live.cl', telefono: '+56 9 9999 0000', saldo: '$28.900.000', edad: '42 años', genero: 'Femenino', civil: 'Soltera', comentario: 'Deseo conocer la proyección de mi pensión al cumplir 60 años manteniendo mi tasa de ahorro actual.' },
+      { id: '7', nombre: 'Francisco Javier Araya Gómez', rut: '11.456.789-1', afp: 'Uno', estado: 'Cerrado', fechaISO: '2026-08-17', fecha: '17 Aug 2026', email: 'fco.araya@servicios.cl', telefono: '+56 9 7777 6666', saldo: '$71.500.000', edad: '63 años', genero: 'Masculino', civil: 'Viudo', comentario: 'Atendido correctamente. Proceso de simulación y trámite de pensión agendado.' },
+      { id: '8', nombre: 'Valentina Sofía Muñoz Castro', rut: '14.321.876-5', afp: 'Habitat', estado: 'Contactado', fechaISO: '2026-08-16', fecha: '16 Aug 2026', email: 'v.munoz@empresa.com', telefono: '+56 9 3333 1111', saldo: '$42.000.000', edad: '49 años', genero: 'Femenino', civil: 'Casada', comentario: 'Interesada en comparar comisiones de AFPs y rentabilidad histórica de los fondos C y D.' }
+    ];
+
+    let currentLeadSelected = null;
+    let isDevMode = false;
+    let currentSortField = 'fechaISO';
+    let currentSortOrder = 'desc';
+
+    // NAVEGACIÓN ENTRE VISTAS
+    function navTo(viewId) {
+      document.querySelectorAll('.view-panel').forEach(el => el.classList.remove('active'));
+
+      const target = document.getElementById(`view-${viewId}`);
+      if (target) target.classList.add('active');
+
+      const header = document.getElementById('app-header');
+      if (viewId === 'login') {
+        header.classList.add('hidden');
+      } else {
+        header.classList.remove('hidden');
+      }
+
+      window.scrollTo(0, 0);
+    }
+
+    // AUTENTICACIÓN SIMULADA
+    function handleLogin(e) {
+      e.preventDefault();
+      const btnText = document.getElementById('login-btn-text');
+      btnText.innerHTML = '<span class="inline-block animate-spin mr-2">🌀</span> Ingresando...';
+
+      setTimeout(() => {
+        btnText.innerHTML = 'Ingresar al CRM';
+        navTo('leads');
+        renderLeadsTable(mockLeads);
+        showToast('Sesión iniciada correctamente');
+      }, 400);
+    }
+
+    function toggleLoginErrorDemo() {
+      const alert = document.getElementById('login-error-alert');
+      alert.classList.toggle('hidden');
+    }
+
+    // RENDERIZADO DE TABLA DE LEADS
+    function renderLeadsTable(leads) {
+      const tbody = document.getElementById('leads-table-body');
+      const noResults = document.getElementById('no-results-state');
+      const emptyDb = document.getElementById('empty-db-state');
+      const footer = document.getElementById('table-footer');
+
+      tbody.innerHTML = '';
+
+      if (leads.length === 0) {
+        footer.classList.add('hidden');
+        const searchVal = document.getElementById('search-input').value;
+        const afpVal = document.getElementById('filter-afp').value;
+        const estadoVal = document.getElementById('filter-estado').value;
+        const dateFrom = document.getElementById('filter-date-from').value;
+        const dateTo = document.getElementById('filter-date-to').value;
+
+        if (searchVal || afpVal || estadoVal || dateFrom || dateTo) {
+          noResults.classList.remove('hidden');
+          emptyDb.classList.add('hidden');
+        } else {
+          noResults.classList.add('hidden');
+          emptyDb.classList.remove('hidden');
+        }
+        return;
+      }
+
+      noResults.classList.add('hidden');
+      emptyDb.classList.add('hidden');
+      footer.classList.remove('hidden');
+
+      document.getElementById('pagination-info').innerText = `Mostrando 1–${leads.length} de ${leads.length} solicitudes`;
+
+      leads.forEach(lead => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 cursor-pointer transition border-b border-slate-100';
+        tr.onclick = () => openLeadDetail(lead.id);
+
+        let badgeStyle = 'bg-amber-100 text-amber-800 border-amber-300';
+        let dotStyle = 'bg-amber-600';
+
+        if (lead.estado === 'Contactado') {
+          badgeStyle = 'bg-emerald-100 text-emerald-800 border-emerald-300';
+          dotStyle = 'bg-emerald-600';
+        } else if (lead.estado === 'En Evaluación') {
+          badgeStyle = 'bg-blue-100 text-blue-800 border-blue-300';
+          dotStyle = 'bg-blue-600';
+        } else if (lead.estado === 'Cerrado') {
+          badgeStyle = 'bg-slate-100 text-slate-700 border-slate-300';
+          dotStyle = 'bg-slate-500';
+        }
+
+        tr.innerHTML = `
+          <td class="py-3 px-4 font-bold text-slate-900">${lead.nombre}</td>
+          <td class="py-3 px-4 font-mono text-slate-600">${lead.rut}</td>
+          <td class="py-3 px-4 text-slate-700">${lead.afp}</td>
+          <td class="py-3 px-4">
+            <span class="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${badgeStyle}">
+              <span class="w-1.5 h-1.5 rounded-full ${dotStyle}"></span>
+              <span>${lead.estado}</span>
+            </span>
+          </td>
+          <td class="py-3 px-4 text-slate-600">${lead.fecha}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // FILTRADO Y BÚSQUEDA DINÁMICA (INCLUYE RANGO DE FECHAS DESDE / HASTA)
+    function applyFilters() {
+      const search = document.getElementById('search-input').value.toLowerCase().trim();
+      const afp = document.getElementById('filter-afp').value;
+      const estado = document.getElementById('filter-estado').value;
+      const dateFrom = document.getElementById('filter-date-from').value;
+      const dateTo = document.getElementById('filter-date-to').value;
+      const btnClear = document.getElementById('btn-clear-filters');
+
+      const isFiltered = search || afp || estado || dateFrom || dateTo;
+      btnClear.style.visibility = isFiltered ? 'visible' : 'hidden';
+
+      let filtered = mockLeads.filter(l => {
+        const matchesSearch = l.nombre.toLowerCase().includes(search) || l.rut.toLowerCase().includes(search);
+        const matchesAfp = afp === '' || l.afp === afp;
+        const matchesEstado = estado === '' || l.estado === estado;
+
+        let matchesDateFrom = true;
+        if (dateFrom) {
+          matchesDateFrom = l.fechaISO >= dateFrom;
+        }
+
+        let matchesDateTo = true;
+        if (dateTo) {
+          matchesDateTo = l.fechaISO <= dateTo;
+        }
+
+        return matchesSearch && matchesAfp && matchesEstado && matchesDateFrom && matchesDateTo;
+      });
+
+      renderLeadsTable(filtered);
+    }
+
+    function resetFilters() {
+      document.getElementById('search-input').value = '';
+      document.getElementById('filter-afp').value = '';
+      document.getElementById('filter-estado').value = '';
+      document.getElementById('filter-date-from').value = '';
+      document.getElementById('filter-date-to').value = '';
+      document.getElementById('btn-clear-filters').style.visibility = 'hidden';
+      renderLeadsTable(mockLeads);
+      showToast('Filtros reiniciados');
+    }
+
+    // ORDENAMIENTO DE COLUMNAS
+    function toggleSort(field) {
+      if (currentSortField === field) {
+        currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSortField = field;
+        currentSortOrder = 'asc';
+      }
+
+      document.getElementById('sort-icon-nombre').innerText = field === 'nombre' ? (currentSortOrder === 'asc' ? '↑' : '↓') : '↕';
+      document.getElementById('sort-icon-fecha').innerText = field === 'fechaISO' ? (currentSortOrder === 'asc' ? '↑' : '↓') : '↕';
+
+      mockLeads.sort((a, b) => {
+        let valA = a[field];
+        let valB = b[field];
+        if (currentSortOrder === 'asc') return valA.localeCompare(valB);
+        return valB.localeCompare(valA);
+      });
+
+      applyFilters();
+    }
+
+    // VER DETALLE DE LEAD
+    function openLeadDetail(leadId) {
+      const lead = mockLeads.find(l => l.id === leadId);
+      if (!lead) return;
+
+      currentLeadSelected = lead;
+
+      document.getElementById('detail-name').innerText = lead.nombre;
+      document.getElementById('detail-rut').innerText = lead.rut;
+      document.getElementById('detail-rut-body').innerText = lead.rut;
+      document.getElementById('detail-fullname').innerText = lead.nombre;
+      document.getElementById('detail-date').innerText = `${lead.fecha}, 10:30 hrs`;
+      document.getElementById('detail-email').innerText = lead.email;
+      document.getElementById('detail-phone').innerText = lead.telefono;
+      document.getElementById('detail-afp').innerText = lead.afp;
+      document.getElementById('detail-saldo').innerText = `${lead.saldo} CLP`;
+      document.getElementById('detail-comment').innerText = `“${lead.comentario}”`;
+      document.getElementById('detail-age').innerText = lead.edad;
+      document.getElementById('detail-gender').innerText = lead.genero;
+      document.getElementById('detail-civil').innerText = lead.civil;
+
+      const badge = document.getElementById('detail-status-badge');
+      const text = document.getElementById('detail-status-text');
+      text.innerText = lead.estado;
+
+      if (lead.estado === 'Contactado') {
+        badge.className = 'inline-flex items-center space-x-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300';
+      } else if (lead.estado === 'En Evaluación') {
+        badge.className = 'inline-flex items-center space-x-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-300';
+      } else if (lead.estado === 'Cerrado') {
+        badge.className = 'inline-flex items-center space-x-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-300';
+      } else {
+        badge.className = 'inline-flex items-center space-x-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300';
+      }
+
+      navTo('lead-detail');
+    }
+
+    // ACCIÓN PRINCIPAL AL SIMULADOR
+    function triggerSimulator() {
+      showToast('Redirigiendo al Simulador Previsional...');
+    }
+
+    // CONMUTADOR MODO DEV
+    function toggleDevModeUI() {
+      isDevMode = !isDevMode;
+      const btn = document.getElementById('header-dev-toggle');
+      const badge = document.getElementById('dev-mode-badge');
+      const devDeleteBtn = document.getElementById('btn-dev-delete');
+
+      if (isDevMode) {
+        btn.innerText = 'Modo DEV: ON';
+        btn.className = 'text-[11px] font-semibold px-2.5 py-1 rounded-md bg-amber-600 text-white transition';
+        badge.classList.remove('hidden');
+        devDeleteBtn.classList.remove('hidden');
+        showToast('Modo Desarrollo (DEV) Activado');
+      } else {
+        btn.innerText = 'Modo DEV: OFF';
+        btn.className = 'text-[11px] font-semibold px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 transition';
+        badge.classList.add('hidden');
+        devDeleteBtn.classList.add('hidden');
+        showToast('Modo Desarrollo (DEV) Desactivado');
+      }
+    }
+
+    // MODAL DE CONFIRMACIÓN DEV
+    function openDeleteModal() {
+      if (!currentLeadSelected) return;
+      document.getElementById('modal-lead-name').innerText = currentLeadSelected.nombre;
+      const modal = document.getElementById('delete-modal');
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+    }
+
+    function closeDeleteModal() {
+      const modal = document.getElementById('delete-modal');
+      modal.classList.add('opacity-0', 'pointer-events-none');
+    }
+
+    function confirmDeleteLead() {
+      if (!currentLeadSelected) return;
+      mockLeads = mockLeads.filter(l => l.id !== currentLeadSelected.id);
+      closeDeleteModal();
+      showToast(`Lead de prueba "${currentLeadSelected.nombre}" eliminado`);
+      navTo('leads');
+      renderLeadsTable(mockLeads);
+    }
+
+    // TOAST NOTIFICATIONS
+    function showToast(message) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'bg-slate-900 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-xl border border-slate-700 flex items-center space-x-2 pointer-events-auto transition duration-300';
+      toast.innerHTML = `<span class="text-teal-400">✓</span><span>${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // INICIALIZACIÓN
+    document.addEventListener('DOMContentLoaded', () => {
+      renderLeadsTable(mockLeads);
+    });
+  </script>
+</body>
+</html>
