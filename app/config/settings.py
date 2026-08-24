@@ -7,6 +7,7 @@ across local development, testing, AWS development, and future production.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -150,6 +151,9 @@ class Settings(BaseSettings):
     auth_enabled: bool = Field(default=False, alias="AUTH_ENABLED")
     auth_mode: str = Field(default="simple-dev", alias="AUTH_MODE")
     auth_users_json: SecretStr | None = Field(default=None, alias="AUTH_USERS_JSON")
+    web_session_secret: SecretStr | None = Field(default=None, alias="WEB_SESSION_SECRET")
+    web_session_max_age_seconds: int = Field(default=28800, alias="WEB_SESSION_MAX_AGE_SECONDS")
+    web_mask_pii: bool = Field(default=True, alias="WEB_MASK_PII")
     public_site_url: str | None = Field(default=None, alias="TPI_PUBLIC_SITE_URL")
     api_idempotency_hmac_secret: SecretStr | None = Field(
         default=None, alias="API_IDEMPOTENCY_HMAC_SECRET"
@@ -250,6 +254,7 @@ class Settings(BaseSettings):
         "api_max_request_bytes",
         "api_rate_limit_requests",
         "api_rate_limit_window_seconds",
+        "web_session_max_age_seconds",
     )
     @classmethod
     def validate_positive_api_limit(cls, value: int) -> int:
@@ -289,6 +294,10 @@ class Settings(BaseSettings):
     @property
     def is_aws(self) -> bool:
         return self.normalized_app_env in {"aws-dev", "production"}
+
+    @property
+    def should_mask_web_pii(self) -> bool:
+        return self.is_production or self.web_mask_pii
 
     @property
     def is_test_lead_cleanup_enabled(self) -> bool:
@@ -554,7 +563,14 @@ def _normalize_optional_sslmode(value: str | None) -> str | None:
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     """Return cached settings for the current process."""
-    return Settings()
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        return Settings(_env_file=".env", _env_file_encoding="utf-8")  # type: ignore[call-arg]
+
+    env_files: tuple[str, ...] = (".env",)
+    local_env = Path(".env.local")
+    if local_env.exists():
+        env_files = (".env", ".env.local")
+    return Settings(_env_file=env_files, _env_file_encoding="utf-8")  # type: ignore[call-arg]
 
 
 def clear_settings_cache() -> None:

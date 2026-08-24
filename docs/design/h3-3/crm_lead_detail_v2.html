@@ -1,0 +1,1199 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tu Pensión Inteligente — Detalle del Lead (v2)</title>
+
+  <style>
+    /* VARIABLES & TOKENS DE DISEÑO */
+    :root {
+      --color-primary: #0F172A;       /* Slate Navy */
+      --color-primary-light: #1E293B;
+      --color-accent: #0D9488;        /* Petrol Teal */
+      --color-accent-hover: #0F766E;
+      --color-accent-bg: #F0FDFA;
+      --color-bg: #F8FAFC;            /* Warm Soft Slate */
+      --color-surface: #FFFFFF;
+      --color-border: #E2E8F0;
+      --color-border-subtle: #F1F5F9;
+      --color-text-main: #0F172A;
+      --color-text-muted: #64748B;
+      --color-text-subtle: #94A3B8;
+
+      /* ESTADOS PERMITIDOS */
+      --state-pendiente-bg: #FEF3C7;
+      --state-pendiente-text: #92400E;
+      --state-pendiente-border: #FDE68A;
+
+      --state-nuevo-bg: #EFF6FF;
+      --state-nuevo-text: #1E40AF;
+      --state-nuevo-border: #BFDBFE;
+
+      --font-main: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+      --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+      --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.1), 0 4px 6px -4px rgba(15, 23, 42, 0.05);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background-color: var(--color-bg);
+      color: var(--color-text-main);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ENCABEZADO SUPERIOR */
+    .app-header {
+      background-color: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .header-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+      color: white;
+      font-weight: 900;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .brand-name {
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: -0.02em;
+      color: var(--color-primary);
+    }
+
+    .brand-tag {
+      background-color: var(--color-border-subtle);
+      color: var(--color-text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--color-border);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .user-menu {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .user-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text-main);
+    }
+
+    .avatar-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background-color: #E2E8F0;
+      color: var(--color-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .env-dev-pill {
+      background-color: #FEF3C7;
+      color: #92400E;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      border: 1px solid #FDE68A;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .btn-logout {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--color-text-muted);
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      transition: all 0.15s ease;
+    }
+
+    .btn-logout:hover {
+      color: #DC2626;
+      background-color: #FEF2F2;
+    }
+
+    /* CONTENEDOR PRINCIPAL */
+    .main-wrapper {
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 28px 24px 48px 24px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* BOTÓN VOLVER */
+    .nav-back-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      text-decoration: none;
+      background-color: var(--color-surface);
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-sm);
+      transition: all 0.15s ease;
+    }
+
+    .btn-back:hover {
+      color: var(--color-text-main);
+      border-color: #CBD5E1;
+      background-color: #F8FAFC;
+    }
+
+    /* TARJETA HERO DE CABECERA */
+    .lead-hero-card {
+      background-color: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 24px 28px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .lead-identity {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .lead-name {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--color-primary);
+      letter-spacing: -0.02em;
+    }
+
+    /* BADGES DE ESTADO */
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+
+    .badge-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+    }
+
+    .badge-pendiente {
+      background-color: var(--state-pendiente-bg);
+      color: var(--state-pendiente-text);
+      border-color: var(--state-pendiente-border);
+    }
+    .badge-pendiente .badge-status-dot { background-color: #B45309; }
+
+    .badge-nuevo {
+      background-color: var(--state-nuevo-bg);
+      color: var(--state-nuevo-text);
+      border-color: var(--state-nuevo-border);
+    }
+    .badge-nuevo .badge-status-dot { background-color: #2563EB; }
+
+    .lead-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--color-text-muted);
+      flex-wrap: wrap;
+    }
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .meta-item strong {
+      color: var(--color-text-main);
+      font-weight: 600;
+    }
+
+    .meta-divider {
+      color: var(--color-border);
+    }
+
+    /* BOTONES ACCIÓN PRINCIPAL */
+    .btn-primary-simulator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background-color: var(--color-accent);
+      color: white;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 12px 22px;
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      border: none;
+      box-shadow: 0 2px 4px rgba(13, 148, 136, 0.2);
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+
+    .btn-primary-simulator:hover {
+      background-color: var(--color-accent-hover);
+      box-shadow: 0 4px 8px rgba(13, 148, 136, 0.3);
+      transform: translateY(-1px);
+    }
+
+    /* BARRA COMPACTA DE CONTROL DE ESTADO */
+    .state-control-bar {
+      background-color: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: var(--shadow-sm);
+      flex-wrap: wrap;
+    }
+
+    .state-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+    }
+
+    .state-label {
+      font-weight: 700;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }
+
+    .state-action-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .select-compact {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text-main);
+      background-color: var(--color-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: 7px 12px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.15s ease;
+    }
+
+    .select-compact:focus {
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.15);
+    }
+
+    .btn-save-state {
+      background-color: var(--color-primary);
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-save-state:hover {
+      background-color: var(--color-primary-light);
+    }
+
+    /* GRID DE TARJETAS DE DATOS (3 COLUMNAS) */
+    .data-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .info-card {
+      background-color: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--color-border-subtle);
+    }
+
+    .card-icon {
+      font-size: 14px;
+      color: var(--color-accent);
+    }
+
+    .card-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .data-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .data-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .data-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--color-text-subtle);
+    }
+
+    .data-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text-main);
+      word-break: break-word;
+    }
+
+    .data-value-highlight {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--color-accent);
+    }
+
+    .data-value-mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    /* SECCIÓN DE SOLICITUD ORIGINAL & SEGUIMIENTO */
+    .content-block {
+      background-color: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .block-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--color-border-subtle);
+    }
+
+    .block-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .block-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+
+    .tag-immutable {
+      font-size: 11px;
+      font-weight: 600;
+      background-color: #F1F5F9;
+      color: #64748B;
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid #E2E8F0;
+    }
+
+    /* CAJA SOLICITUD ORIGINAL */
+    .original-request-box {
+      background-color: #F8FAFC;
+      border-left: 4px solid var(--color-accent);
+      border-top: 1px solid var(--color-border-subtle);
+      border-right: 1px solid var(--color-border-subtle);
+      border-bottom: 1px solid var(--color-border-subtle);
+      padding: 16px 20px;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      font-size: 13px;
+      color: #334155;
+      line-height: 1.6;
+      font-style: normal;
+    }
+
+    /* SEGUIMIENTO Y NOTAS HISTÓRICAS */
+    .timeline-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .timeline-item {
+      background-color: var(--color-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .timeline-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--color-text-muted);
+    }
+
+    .timeline-author {
+      color: var(--color-primary);
+    }
+
+    .timeline-text {
+      font-size: 13px;
+      color: var(--color-text-main);
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    /* FORMULARIO AGREGAR SEGUIMIENTO */
+    .add-note-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 8px;
+      padding-top: 16px;
+      border-top: 1px solid var(--color-border-subtle);
+    }
+
+    .form-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--color-text-main);
+    }
+
+    .textarea-custom {
+      width: 100%;
+      min-height: 90px;
+      padding: 12px 14px;
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--color-text-main);
+      background-color: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      outline: none;
+      resize: vertical;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .textarea-custom:focus {
+      border-color: var(--color-accent);
+      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+    }
+
+    .textarea-custom::placeholder {
+      color: var(--color-text-subtle);
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .btn-add-note {
+      background-color: var(--color-accent);
+      color: white;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-add-note:hover {
+      background-color: var(--color-accent-hover);
+    }
+
+    /* ZONA SECUNDARIA / DEV ACCIONES */
+    .dev-zone-card {
+      margin-top: 12px;
+      background-color: var(--color-surface);
+      border: 1px dashed #CBD5E1;
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .dev-zone-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--color-text-muted);
+    }
+
+    .btn-dev-delete {
+      background-color: #FEF2F2;
+      color: #DC2626;
+      border: 1px solid #FECACA;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-dev-delete:hover {
+      background-color: #FEE2E2;
+      border-color: #FCA5A5;
+    }
+
+    /* MODAL DE CONFIRMACIÓN DEV */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(15, 23, 42, 0.4);
+      backdrop-filter: blur(2px);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background-color: var(--color-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-lg);
+      max-width: 420px;
+      width: 100%;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transform: translateY(8px);
+      transition: transform 0.2s ease;
+    }
+
+    .modal-overlay.active .modal-card {
+      transform: translateY(0);
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--color-primary);
+    }
+
+    .modal-body {
+      font-size: 13px;
+      color: var(--color-text-muted);
+      line-height: 1.5;
+    }
+
+    .modal-note-box {
+      background-color: #FFFBEB;
+      border: 1px solid #FDE68A;
+      color: #92400E;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      margin-top: 8px;
+    }
+
+    .modal-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      padding-top: 8px;
+    }
+
+    .btn-modal-cancel {
+      background-color: var(--color-bg);
+      color: var(--color-text-main);
+      border: 1px solid var(--color-border);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+
+    .btn-modal-confirm {
+      background-color: #DC2626;
+      color: white;
+      border: none;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+
+    /* TOAST FEEDBACK */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 60;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background-color: var(--color-primary);
+      color: white;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 10px 16px;
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: opacity 0.3s ease;
+      pointer-events: auto;
+    }
+
+    .toast-icon {
+      color: var(--color-accent);
+    }
+
+    /* RESPONSIVE DESIGN */
+    @media (max-width: 900px) {
+      .data-cards-grid {
+        grid-template-columns: 1fr;
+      }
+      .lead-hero-card {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .btn-primary-simulator {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .header-container {
+        padding: 0 16px;
+      }
+      .main-wrapper {
+        padding: 16px;
+      }
+      .state-control-bar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .state-action-group {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .select-compact {
+        flex-grow: 1;
+      }
+    }
+  </style>
+
+  <!-- Chosen Palette: Slate Navy & Petrol Teal (Primary: #0F172A, Accent: #0D9488, BG: #F8FAFC) -->
+
+  <!-- Application Structure Plan: Rediseño enfocado en jerarquía operacional, eliminación de la sobrecarga vertical de cambio de estado mediante una barra compacta, separación clara entre la solicitud pública inmutable y la línea de tiempo de notas de seguimiento, y relegación de acciones destructivas DEV al pie de la página con modal de confirmación. -->
+
+  <!-- Visualization & Content Choices: Interfaz limpia en CSS nativo con variables CSS, tres tarjetas de datos con jerarquía label/valor contrastada, timeline con metadata clara por nota, y JS mínimo funcional para demostración interactiva (guardar estado, agregar notas y modal DEV). Confirmando NO SVG ni Mermaid JS. -->
+
+  <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body>
+
+  <!-- ENCABEZADO APLICACIÓN -->
+  <header class="app-header">
+    <div class="header-container">
+      <a href="#" class="brand-group">
+        <div class="brand-logo">TPI</div>
+        <span class="brand-name">Tu Pensión Inteligente</span>
+        <span class="brand-tag">CRM Lite</span>
+      </a>
+
+      <div class="user-menu">
+        <div class="user-badge">
+          <div class="avatar-circle">AL</div>
+          <span>Álvaro Local</span>
+          <span class="env-dev-pill">DEV</span>
+        </div>
+        <a href="#" class="btn-logout" onclick="alert('Simulación: Salir de la aplicación')">Salir</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="main-wrapper">
+
+    <!-- NAVEGACIÓN SECUNDARIA (VOLVER) -->
+    <div class="nav-back-row">
+      <a href="#" class="btn-back" onclick="showToast('Regresando a la Bandeja de Leads...')">
+        <span>←</span>
+        <span>Volver a Leads</span>
+      </a>
+    </div>
+
+    <!-- CABECERA PRINCIPAL / HERO DEL LEAD -->
+    <section class="lead-hero-card">
+      <div class="lead-identity">
+        <div class="title-row">
+          <h1 class="lead-name" id="lead-name-heading">Persona API Ficticia</h1>
+          <span class="badge-status badge-pendiente" id="hero-status-badge">
+            <span class="badge-status-dot"></span>
+            <span id="hero-status-text">Pendiente</span>
+          </span>
+        </div>
+
+        <div class="lead-meta">
+          <div class="meta-item">
+            <span>RUT:</span>
+            <strong class="data-value-mono">20.082.301-K</strong>
+          </div>
+          <span class="meta-divider">•</span>
+          <div class="meta-item">
+            <span>Solicitud recibida:</span>
+            <strong>23/08/2026 21:32</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACCIÓN PRINCIPAL DE NEGOCIO -->
+      <a href="https://dev.genialabs.cl/simulador.html" target="_blank" class="btn-primary-simulator" onclick="showToast('Abriendo simulador previsional...')">
+        <span>Abrir simulador</span>
+        <span>↗</span>
+      </a>
+    </section>
+
+    <!-- BARRA COMPACTA DE ESTADO -->
+    <section class="state-control-bar">
+      <div class="state-info">
+        <span class="state-label">Estado actual:</span>
+        <strong id="bar-status-text" style="color: var(--color-primary); font-size: 13px;">Pendiente</strong>
+      </div>
+
+      <div class="state-action-group">
+        <label for="state-selector" class="state-label">Cambiar a:</label>
+        <select id="state-selector" class="select-compact">
+          <option value="Pendiente" selected>Pendiente</option>
+          <option value="Nuevo">Nuevo</option>
+        </select>
+        <button type="button" class="btn-save-state" onclick="handleSaveState()">
+          <span>✓</span>
+          <span>Guardar estado</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- GRID DE TARJETAS DE DATOS (3 COLUMNAS) -->
+    <section class="data-cards-grid">
+
+      <!-- TARJETA 1: CONTACTO -->
+      <article class="info-card">
+        <div class="card-header">
+          <span class="card-icon">✉</span>
+          <h2 class="card-title">Contacto</h2>
+        </div>
+        <div class="data-list">
+          <div class="data-item">
+            <span class="data-label">Correo Electrónico</span>
+            <span class="data-value">api.ficticia@example.test</span>
+          </div>
+          <div class="data-item">
+            <span class="data-label">Teléfono</span>
+            <span class="data-value">+56 9 1111 2222</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- TARJETA 2: INFORMACIÓN PERSONAL -->
+      <article class="info-card">
+        <div class="card-header">
+          <span class="card-icon">👤</span>
+          <h2 class="card-title">Información Personal</h2>
+        </div>
+        <div class="data-list">
+          <div class="data-item">
+            <span class="data-label">Nombre Completo</span>
+            <span class="data-value">Persona API Ficticia</span>
+          </div>
+          <div class="data-item">
+            <span class="data-label">RUT</span>
+            <span class="data-value data-value-mono">20.082.301-K</span>
+          </div>
+          <div class="data-item">
+            <span class="data-label">Fecha de Nacimiento</span>
+            <span class="data-value">01/01/1990</span>
+          </div>
+          <div class="data-item">
+            <span class="data-label">Género / Estado Civil</span>
+            <span class="data-value">Femenino • Soltera</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- TARJETA 3: INFORMACIÓN PREVISIONAL -->
+      <article class="info-card">
+        <div class="card-header">
+          <span class="card-icon">💰</span>
+          <h2 class="card-title">Información Previsional</h2>
+        </div>
+        <div class="data-list">
+          <div class="data-item">
+            <span class="data-label">AFP Actual</span>
+            <span class="data-value" style="font-weight: 700;">Habitat</span>
+          </div>
+          <div class="data-item">
+            <span class="data-label">Saldo Previsional Estimado</span>
+            <span class="data-value-highlight">$10.000.000 CLP</span>
+          </div>
+          <div class="data-item">
+            <span class="data-label">Estado Registro</span>
+            <span class="data-value" id="card-status-text">Pendiente</span>
+          </div>
+        </div>
+      </article>
+
+    </section>
+
+    <!-- BLOQUE 1: SOLICITUD ORIGINAL -->
+    <section class="content-block">
+      <div class="block-header">
+        <div class="block-title-group">
+          <span style="color: var(--color-accent); font-size: 14px;">📝</span>
+          <h2 class="block-title">Solicitud Original</h2>
+        </div>
+        <span class="tag-immutable">Mensaje cliente • Inmutable</span>
+      </div>
+
+      <div class="original-request-box">
+        Solicitud pública ficticia.
+      </div>
+    </section>
+
+    <!-- BLOQUE 2: SEGUIMIENTO Y HISTORIAL DE NOTAS -->
+    <section class="content-block">
+      <div class="block-header">
+        <div class="block-title-group">
+          <span style="color: var(--color-accent); font-size: 14px;">💬</span>
+          <h2 class="block-title">Seguimiento y Notas Internas</h2>
+        </div>
+      </div>
+
+      <!-- LÍNEA DE TIEMPO DE NOTAS -->
+      <div class="timeline-list" id="timeline-container">
+
+        <div class="timeline-item">
+          <div class="timeline-meta">
+            <span>23/08/2026 22:32</span>
+            <span>•</span>
+            <span class="timeline-author">Álvaro Local</span>
+          </div>
+          <div class="timeline-text">Prueba de nota de seguimiento.</div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-meta">
+            <span>24/08/2026 09:15</span>
+            <span>•</span>
+            <span class="timeline-author">Carolina Silva</span>
+          </div>
+          <div class="timeline-text">Cliente solicita revisar una segunda alternativa de simulación.</div>
+        </div>
+
+      </div>
+
+      <!-- FORMULARIO PARA AGREGAR NUEVA NOTA -->
+      <form onsubmit="handleAddNote(event)" class="add-note-form">
+        <label for="new-note-input" class="form-label">Agregar nueva nota de seguimiento</label>
+        <textarea
+          id="new-note-input"
+          class="textarea-custom"
+          placeholder="Escribe una nueva nota de seguimiento..."
+          rows="3"
+          required
+        ></textarea>
+        <div class="form-actions">
+          <button type="submit" class="btn-add-note">
+            <span>+</span>
+            <span>Agregar nota</span>
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ZONA SECUNDARIA / DEV (SOLO EN AMBIENTE DEV) -->
+    <div class="dev-zone-card">
+      <div class="dev-zone-info">
+        <span>⚙</span>
+        <span><strong>Herramientas de desarrollo:</strong> Este lead es un registro ficticio utilizado para pruebas.</span>
+      </div>
+      <button type="button" class="btn-dev-delete" onclick="openDevModal()">
+        <span>🗑</span>
+        <span>Eliminar lead de prueba</span>
+      </button>
+    </div>
+
+  </main>
+
+  <!-- MODAL DE CONFIRMACIÓN DEV -->
+  <div id="dev-modal" class="modal-overlay">
+    <div class="modal-card">
+      <h3 class="modal-title">¿Eliminar lead de prueba?</h3>
+      <p class="modal-body">
+        Esta acción eliminará permanentemente a <strong style="color: var(--color-primary);">Persona API Ficticia</strong> de la base de datos de desarrollo.
+      </p>
+      <div class="modal-note-box">
+        Nota: Funcionalidad exclusiva de ambiente DEV. No afecta datos productivos.
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-cancel" onclick="closeDevModal()">Cancelar</button>
+        <button type="button" class="btn-modal-confirm" onclick="confirmDeleteLead()">Eliminar Lead</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- LÓGICA VANILLA JS DE DEMOSTRACIÓN UX -->
+  <script>
+    // CAMBIO DE ESTADO
+    function handleSaveState() {
+      const selectedState = document.getElementById('state-selector').value;
+      const heroBadge = document.getElementById('hero-status-badge');
+      const heroText = document.getElementById('hero-status-text');
+      const barText = document.getElementById('bar-status-text');
+      const cardText = document.getElementById('card-status-text');
+
+      // Actualizar textos
+      heroText.innerText = selectedState;
+      barText.innerText = selectedState;
+      cardText.innerText = selectedState;
+
+      // Actualizar badge styling
+      if (selectedState === 'Pendiente') {
+        heroBadge.className = 'badge-status badge-pendiente';
+      } else {
+        heroBadge.className = 'badge-status badge-nuevo';
+      }
+
+      showToast(`Estado actualizado a "${selectedState}" correctamente`);
+    }
+
+    // AGREGAR NOTA DE SEGUIMIENTO
+    function handleAddNote(e) {
+      e.preventDefault();
+      const input = document.getElementById('new-note-input');
+      const text = input.value.trim();
+
+      if (!text) return;
+
+      const container = document.getElementById('timeline-container');
+      const now = new Date();
+
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const year = now.getFullYear();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+
+      const dateStr = `${day}/${month}/${year} ${hours}:${minutes}`;
+
+      const noteItem = document.createElement('div');
+      noteItem.className = 'timeline-item';
+      noteItem.style.animation = 'fadeIn 0.3s ease';
+      noteItem.innerHTML = `
+        <div class="timeline-meta">
+          <span>${dateStr}</span>
+          <span>•</span>
+          <span class="timeline-author">Álvaro Local</span>
+        </div>
+        <div class="timeline-text">${escapeHtml(text)}</div>
+      `;
+
+      container.appendChild(noteItem);
+      input.value = '';
+
+      showToast('Nueva nota de seguimiento agregada');
+    }
+
+    // MODAL DEV
+    function openDevModal() {
+      document.getElementById('dev-modal').classList.add('active');
+    }
+
+    function closeDevModal() {
+      document.getElementById('dev-modal').classList.remove('active');
+    }
+
+    function confirmDeleteLead() {
+      closeDevModal();
+      showToast('Lead de prueba eliminado');
+      setTimeout(() => {
+        alert('Simulación: Lead eliminado. Redirigiendo a la bandeja de leads...');
+      }, 500);
+    }
+
+    // TOAST NOTIFICATIONS
+    function showToast(msg) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.innerHTML = `<span class="toast-icon">✓</span><span>${msg}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // HELPER UTILS
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#030;");
+    }
+  </script>
+</body>
+</html>
