@@ -191,7 +191,7 @@
       {% endif %}
     </section>
 
-    {% if web_cleanup_enabled and can_write %}
+    {% if web_cleanup_enabled and can_cleanup %}
       <section class="dev-tools-card card">
         <div>
           <p class="section-kicker">Herramientas de desarrollo</p>
@@ -202,7 +202,7 @@
     {% endif %}
   </div>
 
-  {% if web_cleanup_enabled and can_write %}
+  {% if web_cleanup_enabled and can_cleanup %}
     <div class="modal" id="delete-modal" hidden>
       <div class="modal-card modal-card-dev">
         <p class="section-kicker">Confirmación DEV</p>
@@ -214,6 +214,7 @@
         <div class="modal-actions">
           <button class="secondary" type="button" data-close-delete-modal>Cancelar</button>
           <form method="post" action="/leads/{{ selected_lead.id_lead }}/cleanup">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button class="danger" type="submit">Eliminar Lead</button>
           </form>
         </div>

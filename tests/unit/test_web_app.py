@@ -6,6 +6,7 @@ import re
 from datetime import UTC, date, datetime
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.auth.models import AuthenticatedUser, AuthenticationResult
@@ -37,7 +38,12 @@ class _FakeAuthProvider:
 
 
 class _FakeWebService:
-    def __init__(self, rows: list[dict[str, object]] | None = None) -> None:
+    def __init__(
+        self,
+        rows: list[dict[str, object]] | None = None,
+        *,
+        cleanup_enabled: bool = True,
+    ) -> None:
         self._full_detail = {
             "id_lead": "11111111-1111-1111-1111-111111111111",
             "nombre_completo": "Juan Perez",
@@ -77,6 +83,8 @@ class _FakeWebService:
         self.last_board_kwargs: dict[str, object] = {}
         self.status_updates: list[tuple[str, str]] = []
         self.comment_appends: list[tuple[str, str, str]] = []
+        self.cleanup_calls: list[str] = []
+        self._cleanup_enabled = cleanup_enabled
 
     def get_crm_bandeja(self, *args, **kwargs):
         self.last_board_kwargs = dict(kwargs)
@@ -162,10 +170,11 @@ class _FakeWebService:
         return True
 
     def delete_test_lead(self, id_lead):
+        self.cleanup_calls.append(str(id_lead))
         return type("Cleanup", (), {"status": "deleted", "message": "OK"})()
 
     def is_test_lead_cleanup_enabled(self):
-        return True
+        return self._cleanup_enabled
 
     def get_solicitudes_por_rut(self, rut, masked=True):
         return []
@@ -195,6 +204,7 @@ def _build_client(
         AUTH_USERS_JSON='{"users":[{"subject":"local-demo-alvaro","username":"alvaro.local","display_name":"Alvaro Local","role":"tester","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"}]}',
         WEB_MASK_PII=False,
     )
+    app.state.web_cleanup_enabled = app.state.settings.is_test_lead_cleanup_enabled
     app.state.web_simulator_url = get_public_simulator_url(app.state.settings)
     return TestClient(app)
 
@@ -318,6 +328,150 @@ def test_readonly_users_do_not_see_write_actions() -> None:
     assert "Eliminar lead de prueba" not in detail.text
     assert "Guardar estado" not in detail.text
     assert "Agregar nueva nota de seguimiento" not in detail.text
+    assert "Eliminar lead de prueba" not in detail.text
+
+
+def test_cleanup_visibility_depends_on_cleanup_flag_and_role() -> None:
+    allowed_service = _FakeWebService(cleanup_enabled=True)
+    allowed_client = _build_client(
+        allowed_service,
+        auth_provider=_FakeAuthProvider(authenticated_role="tester"),
+    )
+    allowed_client.app.state.web_cleanup_enabled = True
+    _login(allowed_client)
+    detail = allowed_client.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert "Eliminar lead de prueba" in detail.text
+
+    operations_client = _build_client(
+        _FakeWebService(cleanup_enabled=True),
+        auth_provider=_FakeAuthProvider(authenticated_role="operations"),
+    )
+    operations_client.app.state.web_cleanup_enabled = True
+    _login(operations_client)
+    operations_detail = operations_client.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert "Eliminar lead de prueba" not in operations_detail.text
+
+    disabled_client = _build_client(
+        _FakeWebService(cleanup_enabled=False),
+        auth_provider=_FakeAuthProvider(authenticated_role="tester"),
+    )
+    _login(disabled_client)
+    disabled_detail = disabled_client.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert "Eliminar lead de prueba" not in disabled_detail.text
+
+
+def test_cleanup_requires_role_flag_and_csrf() -> None:
+    service = _FakeWebService(cleanup_enabled=True)
+    tester_client = _build_client(
+        service, auth_provider=_FakeAuthProvider(authenticated_role="tester")
+    )
+    tester_client.app.state.web_cleanup_enabled = True
+    _login(tester_client)
+    detail = tester_client.get("/leads/11111111-1111-1111-1111-111111111111")
+    csrf = _extract_csrf(detail.text)
+
+    missing_csrf = tester_client.post(
+        "/leads/11111111-1111-1111-1111-111111111111/cleanup",
+        data={},
+        follow_redirects=False,
+    )
+    assert missing_csrf.status_code == 403
+
+    invalid_csrf = tester_client.post(
+        "/leads/11111111-1111-1111-1111-111111111111/cleanup",
+        data={"csrf_token": "bad"},
+        follow_redirects=False,
+    )
+    assert invalid_csrf.status_code == 403
+
+    denied_operations = _build_client(
+        _FakeWebService(cleanup_enabled=True),
+        auth_provider=_FakeAuthProvider(authenticated_role="operations"),
+    )
+    denied_operations.app.state.web_cleanup_enabled = True
+    _login(denied_operations)
+    operations_detail = denied_operations.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert "Eliminar lead de prueba" not in operations_detail.text
+    denied_post = denied_operations.post(
+        "/leads/11111111-1111-1111-1111-111111111111/cleanup",
+        data={"csrf_token": csrf},
+        follow_redirects=False,
+    )
+    assert denied_post.status_code == 403
+
+    disabled_service = _FakeWebService(cleanup_enabled=False)
+    disabled_client = _build_client(
+        disabled_service, auth_provider=_FakeAuthProvider(authenticated_role="tester")
+    )
+    _login(disabled_client)
+    disabled_detail = disabled_client.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert "Eliminar lead de prueba" not in disabled_detail.text
+    disabled_post = disabled_client.post(
+        "/leads/11111111-1111-1111-1111-111111111111/cleanup",
+        data={"csrf_token": csrf},
+        follow_redirects=False,
+    )
+    assert disabled_post.status_code == 403
+
+    allowed_post = tester_client.post(
+        "/leads/11111111-1111-1111-1111-111111111111/cleanup",
+        data={"csrf_token": csrf},
+        follow_redirects=False,
+    )
+    assert allowed_post.status_code == 200
+    assert service.cleanup_calls[-1] == "11111111-1111-1111-1111-111111111111"
+
+
+def test_web_cleanup_follows_settings_and_fails_closed_in_production(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "app.web.main.get_settings",
+        lambda: Settings(
+            _env_file=None,
+            APP_ENV="aws-dev",
+            DEV_DELETE_ENABLED="true",
+            AUTH_ENABLED=True,
+            AUTH_MODE="simple-dev",
+            AUTH_USERS_JSON='{"users":[{"subject":"local-demo-alvaro","username":"alvaro.local","display_name":"Alvaro Local","role":"tester","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"}]}',
+            WEB_SESSION_SECRET="local-secret",
+            TPI_PUBLIC_SITE_URL="https://dev.genialabs.cl/",
+        ),
+    )
+    aws_dev_app = create_web_app()
+    assert aws_dev_app.state.web_cleanup_enabled is True
+
+    monkeypatch.setattr(
+        "app.web.main.get_settings",
+        lambda: Settings(
+            _env_file=None,
+            APP_ENV="aws-dev",
+            DEV_DELETE_ENABLED="false",
+            AUTH_ENABLED=True,
+            AUTH_MODE="simple-dev",
+            AUTH_USERS_JSON='{"users":[{"subject":"local-demo-alvaro","username":"alvaro.local","display_name":"Alvaro Local","role":"tester","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"}]}',
+            WEB_SESSION_SECRET="local-secret",
+            TPI_PUBLIC_SITE_URL="https://dev.genialabs.cl/",
+        ),
+    )
+    aws_dev_disabled_app = create_web_app()
+    assert aws_dev_disabled_app.state.web_cleanup_enabled is False
+
+    monkeypatch.setattr(
+        "app.web.main.get_settings",
+        lambda: Settings(
+            _env_file=None,
+            APP_ENV="production",
+            DEV_DELETE_ENABLED="true",
+            AUTH_ENABLED=True,
+            AUTH_MODE="simple-dev",
+            AUTH_USERS_JSON='{"users":[{"subject":"local-demo-alvaro","username":"alvaro.local","display_name":"Alvaro Local","role":"tester","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"}]}',
+            WEB_SESSION_SECRET="local-secret",
+            TPI_PUBLIC_SITE_URL="https://dev.genialabs.cl/",
+        ),
+    )
+    production_app = create_web_app()
+    assert production_app.state.web_cleanup_enabled is False
 
 
 def test_detail_return_to_is_internal_and_preserves_context() -> None:

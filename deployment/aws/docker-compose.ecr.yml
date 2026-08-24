@@ -54,12 +54,15 @@ services:
       DEV_DELETE_ENABLED: ${DEV_DELETE_ENABLED:-false}
       LEAD_NOTIFICATIONS_ENABLED: ${LEAD_NOTIFICATIONS_ENABLED:-false}
       LEAD_NOTIFICATION_TOPIC_ARN: ${LEAD_NOTIFICATION_TOPIC_ARN:-}
-      AUTH_ENABLED: ${AUTH_ENABLED:-false}
+      AUTH_ENABLED: ${AUTH_ENABLED:-true}
       AUTH_MODE: ${AUTH_MODE:-simple-dev}
       AUTH_USERS_JSON: ${AUTH_USERS_JSON:?AUTH_USERS_JSON is required when authentication is enabled}
-      TPI_PUBLIC_SITE_URL: ${TPI_PUBLIC_SITE_URL:-}
+      WEB_SESSION_SECRET: ${WEB_SESSION_SECRET:?WEB_SESSION_SECRET is required}
+      WEB_SESSION_MAX_AGE_SECONDS: ${WEB_SESSION_MAX_AGE_SECONDS:-28800}
+      WEB_MASK_PII: ${WEB_MASK_PII:-true}
+      TPI_PUBLIC_SITE_URL: ${TPI_PUBLIC_SITE_URL:?TPI_PUBLIC_SITE_URL is required}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-    command: ["streamlit", "run", "app/backoffice_app.py"]
+    command: ["uvicorn", "app.web.main:app", "--host", "0.0.0.0", "--port", "8501"]
     networks:
       - tpi_internal
 

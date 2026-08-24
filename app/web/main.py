@@ -48,7 +48,7 @@ def create_web_app() -> FastAPI:
     app.state.templates.env.filters["crm_state_label"] = crm_state_label
     app.state.templates.env.filters["crm_state_canonical"] = normalize_crm_state_for_display
     app.state.web_env_label = "Ambiente DEV"
-    app.state.web_cleanup_enabled = True
+    app.state.web_cleanup_enabled = settings.is_test_lead_cleanup_enabled
     app.state.web_simulator_url = resolve_web_simulator_url()
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
     app.include_router(auth_router)

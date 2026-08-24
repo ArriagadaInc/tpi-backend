@@ -16,6 +16,7 @@ from app.web.presentation import parse_lead_comments
 
 router = APIRouter()
 _WRITE_ROLES = {"tester", "advisor", "operations", "admin"}
+_CLEANUP_ROLES = {"tester", "admin"}
 _FLASH_KEY = "_tpi_web_flash"
 _CSRF_KEY = "_tpi_web_csrf_token"
 
@@ -36,6 +37,12 @@ def _can_write(user: dict[str, str] | None) -> bool:
     if not user:
         return False
     return user.get("role") in _WRITE_ROLES
+
+
+def _can_cleanup(user: dict[str, str] | None) -> bool:
+    if not user:
+        return False
+    return user.get("role") in _CLEANUP_ROLES
 
 
 def _build_query_url(base_path: str, params: dict[str, Any]) -> str:
@@ -264,6 +271,7 @@ def _resolve_detail_context(
         "request": request,
         "selected_user": user,
         "can_write": _can_write(user),
+        "can_cleanup": _can_cleanup(user),
         "web_env_label": getattr(request.app.state, "web_env_label", ""),
         "web_cleanup_enabled": bool(getattr(request.app.state, "web_cleanup_enabled", False)),
         "simulator_url": getattr(request.app.state, "web_simulator_url", None),
@@ -531,10 +539,11 @@ async def lead_comment_append(request: Request, lead_id: str):
 
 
 @router.post("/leads/{lead_id}/cleanup")
-def cleanup_lead(request: Request, lead_id: str):
+async def cleanup_lead(request: Request, lead_id: str):
     if not _require_web_user(request):
         return RedirectResponse(url="/login", status_code=307)
-    if not _can_write(_require_web_user(request)):
+    user = _require_web_user(request)
+    if not _can_cleanup(user):
         return request.app.state.templates.TemplateResponse(
             request,
             "leads.html",
@@ -554,6 +563,19 @@ def cleanup_lead(request: Request, lead_id: str):
                 "request": request,
                 **_resolve_board_data(request),
                 "cleanup_message": "Cleanup no disponible.",
+            },
+            status_code=403,
+        )
+
+    form = await request.form()
+    if not _validate_csrf_token(request, str(form.get("csrf_token") or "")):
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "leads.html",
+            {
+                "request": request,
+                **_resolve_board_data(request),
+                "cleanup_message": "La sesion de seguridad ha expirado. Recarga la pagina e intenta nuevamente.",
             },
             status_code=403,
         )
