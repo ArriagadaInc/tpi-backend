@@ -13,6 +13,11 @@ from zoneinfo import ZoneInfo
 from app.config import Settings, get_settings
 from app.database import DatabaseAppError
 from app.database.errors import DevLeadCleanupBlockedError
+from app.models.crm_states import (
+    CRM_STATE_CONTRACT,
+    crm_state_filter_terms,
+    normalize_crm_state_for_write,
+)
 from app.models.idempotency import IdempotencyConflictError, IdempotentSolicitudResult
 from app.models.solicitud import (
     RegistrarSolicitudRequest,
@@ -208,12 +213,16 @@ class SolicitudService:
         ):
             raise ValueError("date_from cannot be greater than date_to")
 
+        normalized_estado = None
+        if estado_lead is not None:
+            normalized_estado = self._normalize_crm_state_for_filter(estado_lead)
+
         offset = (page - 1) * page_size
         solicitudes, total = self.repository.get_crm_solicitudes(
             limit=page_size,
             offset=offset,
             search=search,
-            estado_lead=estado_lead,
+            estado_lead=normalized_estado,
             afp_id=afp_id,
             genero_id=genero_id,
             estado_civil_id=estado_civil_id,
@@ -291,11 +300,8 @@ class SolicitudService:
         """Update a lead status after validating role and allowed values."""
         self._ensure_web_write_allowed()
         lead_id = self._normalize_uuid(id_lead, "lead")
-        normalized_estado = self._normalize_estado_lead(estado_lead)
-        allowed_states = {
-            str(state).strip().casefold() for state in self.get_crm_estado_lead_options()
-        }
-        if normalized_estado.casefold() not in allowed_states:
+        normalized_estado = normalize_crm_state_for_write(estado_lead)
+        if normalized_estado not in CRM_STATE_CONTRACT:
             raise ValueError("Estado de lead invalido")
         if not self.get_solicitud_detalle(lead_id):
             return False
@@ -417,10 +423,17 @@ class SolicitudService:
 
     @staticmethod
     def _normalize_estado_lead(value: str) -> str:
-        normalized = " ".join(str(value).strip().split())
+        normalized = normalize_crm_state_for_write(value)
+        return normalized
+
+    @staticmethod
+    def _normalize_crm_state_for_filter(value: str) -> str | None:
+        normalized = crm_state_filter_terms(value)
         if not normalized:
-            raise ValueError("Estado de lead invalido")
-        return normalized.lower()
+            return None
+        # Use the canonical state for repository-level filtering and let the repository
+        # expand any approved historical aliases in SQL.
+        return normalized[0]
 
     @staticmethod
     def _normalize_follow_up_comment(value: str) -> str:

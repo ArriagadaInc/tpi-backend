@@ -385,10 +385,23 @@ select:focus {
   border-color: rgba(245, 158, 11, 0.22);
 }
 
+.status-badge.nuevo {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.22);
+}
+
 .status-badge.contactado {
   background: rgba(16, 185, 129, 0.12);
   color: #047857;
   border-color: rgba(16, 185, 129, 0.22);
+}
+
+.status-badge.prospecto,
+.status-badge.asignado {
+  background: rgba(13, 148, 136, 0.12);
+  color: #0f766e;
+  border-color: rgba(13, 148, 136, 0.22);
 }
 
 .status-badge.en-evaluacion,
@@ -396,6 +409,68 @@ select:focus {
   background: rgba(37, 99, 235, 0.12);
   color: #1d4ed8;
   border-color: rgba(37, 99, 235, 0.22);
+}
+
+.status-badge.citado,
+.status-badge.en-tramite,
+.status-badge.expediente,
+.status-badge.duplicado,
+.status-badge.dormido {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  border-color: rgba(59, 130, 246, 0.22);
+}
+
+.status-badge.ficha-generada,
+.status-badge.cerrado {
+  background: rgba(71, 85, 105, 0.12);
+  color: #334155;
+  border-color: rgba(71, 85, 105, 0.22);
+}
+
+.status-badge.perdido,
+.status-badge.no-califica {
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+  border-color: rgba(220, 38, 38, 0.22);
+}
+
+.badge-status.nuevo {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.22);
+}
+
+.badge-status.prospecto,
+.badge-status.asignado,
+.badge-status.contactado {
+  background: rgba(13, 148, 136, 0.12);
+  color: #0f766e;
+  border-color: rgba(13, 148, 136, 0.22);
+}
+
+.badge-status.citado,
+.badge-status.en-tramite,
+.badge-status.expediente,
+.badge-status.duplicado,
+.badge-status.dormido {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  border-color: rgba(59, 130, 246, 0.22);
+}
+
+.badge-status.ficha-generada,
+.badge-status.cerrado {
+  background: rgba(71, 85, 105, 0.12);
+  color: #334155;
+  border-color: rgba(71, 85, 105, 0.22);
+}
+
+.badge-status.perdido,
+.badge-status.no-califica {
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+  border-color: rgba(220, 38, 38, 0.22);
 }
 
 .status-badge.cerrado {

@@ -49,7 +49,7 @@
           <option value="">Todos los estados</option>
           {% for estado in estado_options %}
             <option value="{{ estado }}" {% if current_filters.estado_lead == estado %}selected{% endif %}>
-              {{ estado|replace('_', ' ')|title }}
+              {{ estado|crm_state_label }}
             </option>
           {% endfor %}
         </select>

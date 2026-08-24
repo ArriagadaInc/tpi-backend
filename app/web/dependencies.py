@@ -8,6 +8,7 @@ from typing import Any, Protocol
 
 from app.components.ui import get_public_simulator_url
 from app.config import get_settings
+from app.models.crm_states import CRM_STATE_CONTRACT
 from app.services import SolicitudService
 
 
@@ -49,7 +50,7 @@ MOCK_BOARD_ROWS: list[dict[str, Any]] = [
         "telefono": "+56 9 1234 5678",
         "afp": "Habitat",
         "saldo_afp": 5120000,
-        "estado_lead": "pendiente",
+        "estado_lead": "nuevo",
         "comentarios": "Lead de ejemplo para la interfaz web.",
         "created_at": datetime(2026, 8, 21, 9, 45),
     },
@@ -60,7 +61,7 @@ MOCK_BOARD_ROWS: list[dict[str, Any]] = [
         "telefono": "+56 9 8765 4321",
         "afp": "Cuprum",
         "saldo_afp": 2243000,
-        "estado_lead": "simulada",
+        "estado_lead": "contactado",
         "comentarios": "Seguimiento comercial en curso.",
         "created_at": datetime(2026, 8, 21, 11, 20),
     },
@@ -71,7 +72,7 @@ MOCK_BOARD_ROWS: list[dict[str, Any]] = [
         "telefono": "+56 9 5555 1212",
         "afp": "Provida",
         "saldo_afp": 6789000,
-        "estado_lead": "en gestion",
+        "estado_lead": "cerrado",
         "comentarios": "Esperando validacion de antecedentes.",
         "created_at": datetime(2026, 8, 20, 16, 5),
     },
@@ -83,7 +84,7 @@ MOCK_AFP_OPTIONS: list[dict[str, Any]] = [
     {"id": "00000000-0000-0000-0000-000000000003", "nombre": "Provida"},
 ]
 
-MOCK_ESTADOS: list[str] = ["pendiente", "simulada", "en gestion"]
+MOCK_ESTADOS: list[str] = list(CRM_STATE_CONTRACT)
 
 
 def get_web_service(factory: type[SolicitudService] | None = None) -> LeadBoardService:
@@ -184,6 +185,8 @@ class _MockLeadBoardService:
     def update_lead_status(self, id_lead: Any, estado_lead: str) -> bool:
         for row in MOCK_BOARD_ROWS:
             if str(row["id_lead"]) == str(id_lead):
+                if estado_lead not in CRM_STATE_CONTRACT:
+                    raise ValueError("Estado de lead invalido")
                 row["estado_lead"] = estado_lead
                 return True
         return False

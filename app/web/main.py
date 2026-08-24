@@ -13,6 +13,7 @@ from starlette.templating import Jinja2Templates
 
 from app.auth import build_auth_provider
 from app.config import get_settings
+from app.models.crm_states import crm_state_label, normalize_crm_state_for_display
 from app.web.dependencies import resolve_web_simulator_url
 from app.web.routes.auth import router as auth_router
 from app.web.routes.leads import router as leads_router
@@ -44,6 +45,8 @@ def create_web_app() -> FastAPI:
     except Exception:
         app.state.auth_provider = None
     app.state.templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+    app.state.templates.env.filters["crm_state_label"] = crm_state_label
+    app.state.templates.env.filters["crm_state_canonical"] = normalize_crm_state_for_display
     app.state.web_env_label = "Ambiente DEV"
     app.state.web_cleanup_enabled = True
     app.state.web_simulator_url = resolve_web_simulator_url()

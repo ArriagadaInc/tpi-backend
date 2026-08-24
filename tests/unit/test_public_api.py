@@ -72,7 +72,7 @@ class FakeSolicitudService:
                 rut="12345678-5",
                 nombre_completo="Persona Ficticia",
                 fecha_creacion=datetime.now(UTC),
-                estado_lead="pendiente",
+                estado_lead="nuevo",
                 mensaje="Solicitud registrada exitosamente",
             ),
         )

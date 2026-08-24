@@ -10,7 +10,7 @@
           <h2 class="lead-name">{{ selected_lead.nombre_completo }}</h2>
           <span class="badge-status badge-{{ selected_lead.estado_lead|replace('_', '-') }}">
             <span class="badge-status-dot"></span>
-            {{ selected_lead.estado_lead|replace('_', ' ')|title }}
+            {{ selected_lead.estado_lead|crm_state_label }}
           </span>
         </div>
         <div class="lead-meta">
@@ -50,7 +50,7 @@
       <section class="state-control-bar card" aria-label="Cambio de estado">
         <div class="state-info">
           <span class="state-label">Estado actual</span>
-          <strong>{{ selected_lead.estado_lead|replace('_', ' ')|title }}</strong>
+          <strong>{{ selected_lead.estado_lead|crm_state_label }}</strong>
         </div>
         <form class="state-action-group" method="post" action="/leads/{{ selected_lead_id }}/status">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -58,8 +58,8 @@
           <label class="sr-only" for="estado_lead">Cambiar estado</label>
           <select id="estado_lead" name="estado_lead" class="select-compact">
             {% for estado in lead_status_options %}
-              <option value="{{ estado }}" {% if selected_lead.estado_lead|lower == estado|lower %}selected{% endif %}>
-                {{ estado|replace('_', ' ')|title }}
+              <option value="{{ estado }}" {% if selected_lead_state_canonical == estado %}selected{% endif %}>
+                {{ estado|crm_state_label }}
               </option>
             {% endfor %}
           </select>

@@ -83,7 +83,7 @@ class TestSolicitudFlow:
         assert response.id_persona is not None
         assert response.rut == "19999999-9"
         assert response.nombre_completo == "Test User"
-        assert response.estado_lead == "pendiente"
+        assert response.estado_lead == "nuevo"
         assert "exitosamente" in response.mensaje.lower()
 
     def test_get_catalogo_afp(self, service):

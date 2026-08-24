@@ -178,7 +178,7 @@ def test_web_status_update_and_comment_append_persist(
         csrf = _extract_csrf(detail.text)
 
         allowed_states = service.get_crm_estado_lead_options()
-        target_state = next(state for state in allowed_states if state.lower() != "pendiente")
+        target_state = next(state for state in allowed_states if state != "nuevo")
 
         status_response = web_client.post(
             f"/leads/{response.id_lead}/status",
@@ -251,7 +251,7 @@ def test_web_readonly_users_cannot_mutate_leads(
 
         denied_status = readonly_client.post(
             f"/leads/{response.id_lead}/status",
-            data={"estado_lead": "simulada"},
+            data={"estado_lead": "contactado"},
             follow_redirects=False,
         )
         assert denied_status.status_code == 403

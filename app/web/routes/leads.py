@@ -10,6 +10,7 @@ from urllib.parse import parse_qs, urlencode, urlsplit
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from app.models.crm_states import normalize_crm_state_for_display
 from app.web.dependencies import build_service_for_web
 from app.web.presentation import parse_lead_comments
 
@@ -121,7 +122,8 @@ def _resolve_board_data(request: Request) -> dict[str, Any]:
     page_size = 10
     search = params.get("search") or None
     afp_id = params.get("afp_id") or None
-    estado = params.get("estado_lead") or None
+    estado_raw = params.get("estado_lead") or None
+    estado = normalize_crm_state_for_display(estado_raw) or estado_raw
     sort_by = params.get("sort_by") or "created_at"
     sort_direction = params.get("sort_direction") or "desc"
     date_from = _parse_date(params.get("date_from"))
@@ -268,6 +270,9 @@ def _resolve_detail_context(
         "mask_pii": mask_pii,
         "selected_lead": selected_lead,
         "selected_lead_id": lead_id,
+        "selected_lead_state_canonical": normalize_crm_state_for_display(
+            (selected_lead or {}).get("estado_lead") if selected_lead else None
+        ),
         "lead_status_options": state_options,
         "comment_view": parsed_comments,
         "csrf_token": _get_csrf_token(request),

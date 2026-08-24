@@ -27,7 +27,7 @@
             <td>{{ lead.afp }}</td>
             <td>
               <span class="status-badge {{ lead.estado_lead|replace('_', '-') }}">
-                {{ lead.estado_lead|replace('_', ' ')|title }}
+                {{ lead.estado_lead|crm_state_label }}
               </span>
             </td>
             <td>{{ lead.saldo_afp }}</td>

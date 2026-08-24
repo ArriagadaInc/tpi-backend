@@ -8,6 +8,7 @@ import streamlit as st
 
 from app.auth.guards import render_logout_control
 from app.config import Settings, get_settings
+from app.models.crm_states import crm_state_label, crm_state_tone, normalize_crm_state_for_display
 
 _PUBLIC_SITE_BY_ENVIRONMENT = {
     "local": ("http", "tpi.localhost", 8080),
@@ -149,21 +150,15 @@ def format_datetime_short(value: Any) -> str:
 
 def lead_stage_label(estado_lead: Any) -> str:
     """Render a readable label for the current lead state without inventing persistence."""
-    if not estado_lead:
-        return "Pendiente"
-    return str(estado_lead).replace("_", " ").strip().title()
+    return crm_state_label(None if estado_lead is None else str(estado_lead))
 
 
 def lead_stage_tone(estado_lead: Any) -> str:
     """Return a simple visual tone for the CRM board."""
-    normalized = str(estado_lead or "").lower().strip()
-    if normalized in {"pendiente", "nuevo"}:
-        return "info"
-    if normalized in {"aprobada", "simulada", "cerrado"}:
-        return "success"
-    if normalized in {"descartado", "rechazado"}:
-        return "error"
-    return "warning"
+    normalized = normalize_crm_state_for_display(None if estado_lead is None else str(estado_lead))
+    if normalized is None:
+        return "warning"
+    return crm_state_tone(normalized)
 
 
 def render_solicitud_table(
@@ -223,13 +218,9 @@ def render_solicitud_table(
             st.caption(str(fecha)[:10] if fecha else "N/A")
 
         with cols[4]:
-            estado = solicitud.get("estado_lead", "pendiente")
-            if estado == "pendiente":
-                st.info(estado)
-            elif estado == "aprobada":
-                st.success(estado)
-            else:
-                st.warning(estado)
+            estado = lead_stage_label(solicitud.get("estado_lead"))
+            render = getattr(st, lead_stage_tone(solicitud.get("estado_lead")), st.warning)
+            render(estado)
 
         with cols[5]:
             if st.button("\U0001f4cb", key=button_key, help="Ver detalle"):
@@ -293,9 +284,9 @@ def render_crm_board(
             render = getattr(st, tone, st.info)
             render(estado)
         with row_cols[7]:
-            estado = str(solicitud.get("estado_lead", "")).lower().strip()
-            if estado in {"pendiente", "nuevo"}:
-                st.warning("Pendiente")
+            estado_canonical = normalize_crm_state_for_display(solicitud.get("estado_lead"))
+            if estado_canonical == "nuevo":
+                st.warning("Nuevo")
                 st.caption("Acceso a simulación")
             else:
                 st.success("Disponible")
@@ -340,8 +331,8 @@ def render_lead_detail_panel(solicitud: dict[str, Any]) -> None:
         )
 
     st.markdown("#### Simulación")
-    estado = str(solicitud.get("estado_lead", "")).lower().strip()
-    if estado in {"pendiente", "nuevo"}:
+    estado = normalize_crm_state_for_display(solicitud.get("estado_lead"))
+    if estado == "nuevo":
         st.info("El lead todavía está pendiente de simulación.")
     else:
         st.success("El lead ya tiene avance operativo registrado.")
