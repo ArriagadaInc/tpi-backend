@@ -14,7 +14,7 @@
       "Sid": "ListRecordsInDevZoneOnly",
       "Effect": "Allow",
       "Action": "route53:ListResourceRecordSets",
-      "Resource": "arn:aws:route53:::hostedzone/Z0562050FYDQE12LRGMA"
+      "Resource": "arn:aws:route53:::hostedzone/Z07053592LX0W8GJXNI1C"
     },
     {
       "Sid": "ReadChangeStatus",
@@ -26,7 +26,7 @@
       "Sid": "ChangeOnlyAcmeChallengeTxtRecords",
       "Effect": "Allow",
       "Action": "route53:ChangeResourceRecordSets",
-      "Resource": "arn:aws:route53:::hostedzone/Z0562050FYDQE12LRGMA",
+      "Resource": "arn:aws:route53:::hostedzone/Z07053592LX0W8GJXNI1C",
       "Condition": {
         "ForAllValues:StringEquals": {
           "route53:ChangeResourceRecordSetsRecordTypes": [
@@ -35,8 +35,6 @@
         },
         "ForAllValues:StringLike": {
           "route53:ChangeResourceRecordSetsNormalizedRecordNames": [
-            "_acme-challenge.dev.genialabs.cl",
-            "_acme-challenge.backoffice.dev.genialabs.cl",
             "_acme-challenge.dev.tupensioninteligente.cl"
           ]
         }

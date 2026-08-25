@@ -14,6 +14,12 @@ The image is built from Caddy 2.11.4 with the `caddy-dns/route53` module enabled
 - AWS credentials are provided through the EC2 / Elastic Beanstalk instance role.
 - Route53 permissions are intentionally minimal and limited to the ACME TXT records required for these hostnames.
 
+## Route53 hosted zones
+
+- `dev.genialabs.cl` uses hosted zone `Z0562050FYDQE12LRGMA`.
+- `dev.tupensioninteligente.cl` uses hosted zone `Z07053592LX0W8GJXNI1C`.
+- `backoffice.dev.genialabs.cl` continues using the `dev.genialabs.cl` DNS-01 configuration.
+
 ## Hostnames
 
 - `dev.genialabs.cl`

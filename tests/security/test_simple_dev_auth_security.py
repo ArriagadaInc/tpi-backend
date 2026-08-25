@@ -47,7 +47,18 @@ def test_beanstalk_bundle_keeps_the_compose_topology() -> None:
 def test_caddy_routes_public_and_private_hosts_to_internal_services() -> None:
     caddyfile = (PROJECT_ROOT / "deployment/caddy/Caddyfile").read_text(encoding="utf-8")
 
-    assert "dev.genialabs.cl, dev.tupensioninteligente.cl" in caddyfile
+    assert "(route53_dns_challenge_genialabs)" in caddyfile
+    assert "(route53_dns_challenge_tupension)" in caddyfile
+    assert "hosted_zone_id Z0562050FYDQE12LRGMA" in caddyfile
+    assert "hosted_zone_id Z07053592LX0W8GJXNI1C" in caddyfile
+    assert (
+        "dev.genialabs.cl {\n\timport public_site\n\timport route53_dns_challenge_genialabs"
+        in caddyfile
+    )
+    assert (
+        "dev.tupensioninteligente.cl {\n\timport public_site\n\timport route53_dns_challenge_tupension"
+        in caddyfile
+    )
     assert "{$TPI_BACKOFFICE_SITE_ADDRESS:http://backoffice.tpi.localhost}" in caddyfile
     assert "handle /api/*" in caddyfile
     assert "reverse_proxy {$TPI_API_UPSTREAM:api:8000}" in caddyfile
