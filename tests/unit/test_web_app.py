@@ -771,4 +771,21 @@ def test_static_assets_can_be_served() -> None:
     client = _build_client()
     response = client.get("/static/css/app.css")
     assert response.status_code == 200
+    assert "text/css" in response.headers["content-type"].lower()
     assert "CRM Lite" not in response.text
+
+    script = client.get("/static/js/app.js")
+    assert script.status_code == 200
+    assert "javascript" in script.headers["content-type"].lower()
+    assert "CRM Lite" not in script.text
+
+
+def test_board_html_uses_relative_static_asset_urls() -> None:
+    client = _build_client()
+    _login(client)
+
+    response = client.get("/leads")
+    assert response.status_code == 200
+    assert "/static/css/app.css" in response.text
+    assert "/static/js/app.js" in response.text
+    assert "http://backoffice.dev.genialabs.cl/static/" not in response.text
