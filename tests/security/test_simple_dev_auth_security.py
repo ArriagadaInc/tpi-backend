@@ -47,7 +47,7 @@ def test_beanstalk_bundle_keeps_the_compose_topology() -> None:
 def test_caddy_routes_public_and_private_hosts_to_internal_services() -> None:
     caddyfile = (PROJECT_ROOT / "deployment/caddy/Caddyfile").read_text(encoding="utf-8")
 
-    assert "{$TPI_PUBLIC_SITE_ADDRESS:http://tpi.localhost}" in caddyfile
+    assert "dev.genialabs.cl, dev.tupensioninteligente.cl" in caddyfile
     assert "{$TPI_BACKOFFICE_SITE_ADDRESS:http://backoffice.tpi.localhost}" in caddyfile
     assert "handle /api/*" in caddyfile
     assert "reverse_proxy {$TPI_API_UPSTREAM:api:8000}" in caddyfile

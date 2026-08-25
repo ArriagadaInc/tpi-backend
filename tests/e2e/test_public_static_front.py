@@ -33,6 +33,7 @@ def test_backoffice_access_is_limited_to_approved_dev_hosts() -> None:
 
     assert "['tpi.localhost', 'backoffice.tpi.localhost']" in script
     assert "['dev.genialabs.cl', 'backoffice.dev.genialabs.cl']" in script
+    assert "['dev.tupensioninteligente.cl', 'backoffice.dev.genialabs.cl']" in script
     assert "destination.port = window.location.port" in script
     assert "link?.remove()" in script
     assert "destination.search = ''" in script

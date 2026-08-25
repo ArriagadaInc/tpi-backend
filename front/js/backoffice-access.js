@@ -5,6 +5,7 @@
   const approvedHosts = new Map([
     ['tpi.localhost', 'backoffice.tpi.localhost'],
     ['dev.genialabs.cl', 'backoffice.dev.genialabs.cl'],
+    ['dev.tupensioninteligente.cl', 'backoffice.dev.genialabs.cl'],
   ]);
 
   const link = document.querySelector('[data-backoffice-access]');

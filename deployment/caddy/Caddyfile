@@ -45,7 +45,7 @@
 	}
 }
 
-{$TPI_PUBLIC_SITE_ADDRESS:http://tpi.localhost} {
+dev.genialabs.cl, dev.tupensioninteligente.cl {
 	import public_site
 	import route53_dns_challenge
 }

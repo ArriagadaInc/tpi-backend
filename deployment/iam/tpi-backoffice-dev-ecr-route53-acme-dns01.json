@@ -36,7 +36,8 @@
         "ForAllValues:StringLike": {
           "route53:ChangeResourceRecordSetsNormalizedRecordNames": [
             "_acme-challenge.dev.genialabs.cl",
-            "_acme-challenge.backoffice.dev.genialabs.cl"
+            "_acme-challenge.backoffice.dev.genialabs.cl",
+            "_acme-challenge.dev.tupensioninteligente.cl"
           ]
         }
       }
