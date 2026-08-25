@@ -85,3 +85,44 @@ El rollback inmediato se define como:
 - no revertir Caddy, IAM ni la version green para volver al estado anterior;
 - conservar `tpi-backoffice-dev` como respaldo temporal.
 
+## Decision: servir assets del CRM Lite con rutas same-origin
+
+### Contexto
+
+Durante la validacion del CRM Lite web en AWS DEV, el front se renderizaba sin estilos porque el HTML referenciaba CSS/JS con URL absolutas dependientes del esquema detectado por el proxy.
+
+### Decision
+
+Para recursos estaticos same-origin se usan rutas directas en la aplicacion web:
+
+- `/static/css/app.css`
+- `/static/js/app.js`
+
+### Resultado
+
+- se evita mixed content;
+- se elimina la dependencia innecesaria del esquema absoluto;
+- el CRM carga estilos y scripts de forma consistente detras de Caddy/Uvicorn.
+
+### Leccion
+
+Cuando el recurso es same-origin, conviene usar rutas estaticas directas si el esquema/proxy puede variar y no aporta valor funcional.
+
+## Decision: mantener `AUTH_USERS_JSON` como secreto vivo del environment
+
+### Contexto
+
+Durante la operacion DEV se detecto una version corrupta del secreto `AUTH_USERS_JSON` en Secrets Manager.
+
+### Decision
+
+- `AUTH_USERS_JSON` se mantiene como configuracion secreta del environment;
+- no se versiona en Git;
+- la correccion de credenciales se aplica sobre la version viva del secreto;
+- los usuarios existentes se preservan al reconstruir el payload.
+
+### Resultado
+
+- el login DEV depende de configuracion viva y validada;
+- `diego.operaciones` queda soportado como usuario operacional;
+- la autenticacion simple-dev permanece server-side y fail-closed.

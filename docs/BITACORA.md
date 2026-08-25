@@ -78,6 +78,12 @@ Siguiente paso:
 - No realizar mas cambios funcionales ni de infraestructura sobre este hito.
 - Si se requiere ajustar documentacion historica adicional, hacerlo en una PR exclusivamente documental.
 
+Referencia canonica:
+
+- [docs/H3_3_CRM_LITE_WEB_UX.md](H3_3_CRM_LITE_WEB_UX.md)
+- [docs/PROJECT_STATUS.md](PROJECT_STATUS.md)
+- [docs/DECISIONES_TECNICAS.md](DECISIONES_TECNICAS.md)
+
 ### 2026-08-22 - H3.1 CRM Lite cerrado formalmente
 
 Contexto:
