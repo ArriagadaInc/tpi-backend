@@ -22,6 +22,68 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-08-25 - Cutover DEV oficial a `dev.tupensioninteligente.cl`
+
+Contexto:
+
+- Se habilito el nuevo dominio DEV oficial `https://dev.tupensioninteligente.cl`.
+- El objetivo fue dejar HTTPS valido, mantener rollback y preservar `dev.genialabs.cl` como respaldo temporal.
+
+Resumen tecnico cronologico:
+
+- Se verifico primero la resolucion DNS y el flujo HTTP hacia el environment AWS DEV.
+- El handshake HTTPS inicial fallo, por lo que se descarto un problema basico de DNS o conectividad.
+- Se confirmo por logs de Caddy que el hostname nuevo llegaba a la config activa y que Caddy intentaba ACME DNS-01.
+- La primera causa raiz identificada fue IAM insuficiente para Route 53.
+- La segunda causa raiz fue un `hosted_zone_id` hardcodeado en `deployment/caddy/Caddyfile` que estaba compartido entre dominios y apuntaba a la zona de `dev.genialabs.cl`.
+- Se separo la configuracion DNS-01 por hosted zone:
+  - `dev.genialabs.cl` -> `Z0562050FYDQE12LRGMA`
+  - `dev.tupensioninteligente.cl` -> `Z07053592LX0W8GJXNI1C`
+- Se valido el runtime real de Caddy dentro de `tpi-backoffice-dev-green` y luego se desplego una nueva version reproducible.
+- Se realizo cutover DNS controlado del alias publico para `dev.tupensioninteligente.cl` hacia `tpi-backoffice-dev-green`.
+- Se confirmo TLS valido, smoke read-only y preservacion del dominio legado como respaldo temporal.
+
+Evidencia de release:
+
+- Commit: `47fa0c92e2fb9fc916309ac219410fffb08f7cbc`
+- VersionLabel: `h2-5d-ecr-47fa0c9`
+- Bundle: `s3://elasticbeanstalk-us-east-2-821656895812/deployments/h2-5d-ecr-47fa0c9.zip`
+- SHA256: `e62d039cdfe4e11e1c6fc1aacf13cb6182ba2480217ca5e395eaa520e2621cb7`
+
+Siguiente paso:
+
+- Mantener observacion de estabilidad del nuevo dominio.
+- No retirar todavia `dev.genialabs.cl` hasta que el corte de operacion quede formalmente cerrado.
+- Consolidar los aprendizajes en la documentacion de despliegue reproducible.
+
+### 2026-08-25 - H3.3 CRM Lite Web UX cerrado formalmente
+
+Contexto:
+
+- H3.3 quedo validado funcionalmente en AWS DEV como CRM Lite Web UX.
+- La validacion manual del producto sobre `https://backoffice.dev.genialabs.cl` fue satisfactoria.
+
+Datos de cierre:
+
+- Hito: `H3.3 — CRM Lite Web UX`
+- Status: `CLOSED`
+- Human UX Acceptance: `PASS`
+- Git SHA: `1574d79920342d3da2bac8296de9020b8162c68f`
+- App digest: `sha256:1f5bca0350e3f3229516643b1f1f5dcf05f6f13e826c6a444aa8640302b73922`
+- EB Version: `h3-3-crm-web-1574d79-r1`
+- URL: `https://backoffice.dev.genialabs.cl`
+
+Siguiente paso:
+
+- No realizar mas cambios funcionales ni de infraestructura sobre este hito.
+- Si se requiere ajustar documentacion historica adicional, hacerlo en una PR exclusivamente documental.
+
+Referencia canonica:
+
+- [docs/H3_3_CRM_LITE_WEB_UX.md](H3_3_CRM_LITE_WEB_UX.md)
+- [docs/PROJECT_STATUS.md](PROJECT_STATUS.md)
+- [docs/DECISIONES_TECNICAS.md](DECISIONES_TECNICAS.md)
+
 ### 2026-08-22 - H3.1 CRM Lite cerrado formalmente
 
 Contexto:
