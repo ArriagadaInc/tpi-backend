@@ -13,7 +13,16 @@ from app.auth.models import AuthenticatedUser, AuthenticationResult, UserRole
 from app.auth.provider import AuthProvider
 from app.config import Settings
 
-_ALLOWED_ROLES = {"tester", "admin", "advisor", "operations", "readonly"}
+_ALLOWED_ROLES = {
+    "tester",
+    "admin",
+    "advisor",
+    "executive",
+    "operations",
+    "readonly",
+    "ceo",
+    "cto",
+}
 
 
 class AuthConfigurationError(ValueError):

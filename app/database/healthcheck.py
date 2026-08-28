@@ -59,22 +59,28 @@ def check_database_connection() -> dict[str, Any]:
                 schema_row = cur.fetchone() or {}
                 schema_accessible = bool(schema_row.get("schema_exists"))
 
-                cur.execute(
-                    "SELECT to_regclass(%s) IS NOT NULL AS table_exists",
-                    (f"{schema_name}.leads",),
-                )
-                leads_row = cur.fetchone() or {}
-                leads_table_present = bool(leads_row.get("table_exists"))
-                leads_accessible = False
+                table_names = ("leads", "asesores", "asignaciones")
+                table_presence: dict[str, bool] = {}
+                table_accessibility: dict[str, bool] = {}
 
-                if leads_table_present:
+                for table_name in table_names:
                     cur.execute(
-                        sql.SQL("SELECT 1 FROM {}.{} WHERE 1 = 0").format(
-                            sql.Identifier(schema_name),
-                            sql.Identifier("leads"),
-                        )
+                        "SELECT to_regclass(%s) IS NOT NULL AS table_exists",
+                        (f"{schema_name}.{table_name}",),
                     )
-                    leads_accessible = True
+                    table_row = cur.fetchone() or {}
+                    table_present = bool(table_row.get("table_exists"))
+                    table_presence[table_name] = table_present
+                    table_accessibility[table_name] = False
+
+                    if table_present:
+                        cur.execute(
+                            sql.SQL("SELECT 1 FROM {}.{} WHERE 1 = 0").format(
+                                sql.Identifier(schema_name),
+                                sql.Identifier(table_name),
+                            )
+                        )
+                        table_accessibility[table_name] = True
 
         return {
             "connected": connection_row.get("ready") == 1,
@@ -85,8 +91,12 @@ def check_database_connection() -> dict[str, Any]:
             "schema": schema_name,
             "effective_user": connection_row.get("effective_user"),
             "schema_accessible": schema_accessible,
-            "leads_table_present": leads_table_present,
-            "leads_accessible": leads_accessible,
+            "leads_table_present": table_presence["leads"],
+            "leads_accessible": table_accessibility["leads"],
+            "asesores_table_present": table_presence["asesores"],
+            "asesores_accessible": table_accessibility["asesores"],
+            "asignaciones_table_present": table_presence["asignaciones"],
+            "asignaciones_accessible": table_accessibility["asignaciones"],
             "sslmode": config.sslmode,
         }
 
@@ -108,6 +118,10 @@ def check_database_connection() -> dict[str, Any]:
             "schema_accessible": False,
             "leads_table_present": False,
             "leads_accessible": False,
+            "asesores_table_present": False,
+            "asesores_accessible": False,
+            "asignaciones_table_present": False,
+            "asignaciones_accessible": False,
             "sslmode": None,
         }
 
@@ -156,6 +170,8 @@ def check_required_tables() -> dict[str, Any]:
     required_tables = [
         "personas",
         "leads",
+        "asesores",
+        "asignaciones",
         "consentimientos",
         "catalogo_afp",
         "catalogo_genero",

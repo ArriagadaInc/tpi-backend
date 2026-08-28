@@ -30,6 +30,21 @@ El hito fue validado manualmente en AWS DEV y quedó cerrado con `Human UX Accep
 - control por roles;
 - cleanup DEV restringido.
 
+### Modelo de datos de referencia
+
+La imagen `Estructura BD.jpg` corresponde al modelo de datos propuesto para el dominio.
+No debe leerse como un DDL literal del ambiente actual.
+
+Puntos a tener en cuenta al comparar con la BD real:
+
+- `ASIGNACIONES` existe como entidad operacional formal y no debe tratarse como un JSON embebido en `leads`.
+- `ASESORES` es la entidad formal de destino para la asignación; la UI puede llamarla "Ejecutivo", pero el código debe usar `asesor` e `id_asesor`.
+- El esquema físico observado usa `id_asesor`, `fecha_asignacion`, `asignado_por`, `regla_asignacion`, `estado_asignacion` y `observacion` en `tpi.asignaciones`.
+- `estado_asignacion = 'activa'` es el valor canónico del contrato actual; la app debe impedir variantes y la migración candidata debe reforzar la unicidad activa por `id_lead`.
+- `asignado` no debe exponerse como transición genérica de estado: solo puede llegar desde la operación de asignación válida.
+- `AUDITORIA` también existe como tabla separada y se usa como trazabilidad funcional.
+- `LEADS.raw_payload` permanece solo como campo auxiliar de ingestión; no se usa para relaciones operacionales.
+
 ### Excluido
 
 - cambios de esquema;
@@ -62,7 +77,7 @@ Componentes transversales:
 - autenticación simple-dev;
 - sesiones web;
 - CSRF en operaciones mutables;
-- roles `tester`, `admin`, `advisor`, `operations`, `readonly`;
+- roles `tester`, `admin`, `advisor`, `executive`, `operations`, `readonly`, `ceo`, `cto`;
 - masking de PII mediante `WEB_MASK_PII`;
 - integración con simulador por configuración central;
 - runtime Uvicorn `app.web.main:app` en puerto `8501`.
@@ -131,7 +146,7 @@ Valores ambiguos no normalizados automáticamente:
 ## 8. Deployment AWS DEV
 
 - Environment: `tpi-backoffice-dev-green`
-- URL: `https://backoffice.dev.genialabs.cl`
+- URL: `https://backoffice.dev.tupensioninteligente.cl`
 - VersionLabel: `h3-3-crm-web-1574d79-r1`
 - Git SHA: `1574d79920342d3da2bac8296de9020b8162c68f`
 - App digest: `sha256:1f5bca0350e3f3229516643b1f1f5dcf05f6f13e826c6a444aa8640302b73922`
@@ -196,7 +211,7 @@ Lección:
 - App digest: `sha256:1f5bca0350e3f3229516643b1f1f5dcf05f6f13e826c6a444aa8640302b73922`
 - EB Version: `h3-3-crm-web-1574d79-r1`
 - Environment: `tpi-backoffice-dev-green`
-- URL: `https://backoffice.dev.genialabs.cl`
+- URL: `https://backoffice.dev.tupensioninteligente.cl`
 
 CI final:
 

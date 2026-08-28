@@ -22,14 +22,21 @@ class _FakeAuthProvider:
         self.authenticated_role = authenticated_role
 
     def authenticate(self, username: str, password: str) -> AuthenticationResult:
-        if username == "alvaro.local" and password == "AlvaroLocal!2026":
+        valid_users = {
+            "alvaro.local": ("Alvaro Local", "tester"),
+            "ceo.local": ("CEO Demo", "ceo"),
+            "cto.local": ("CTO Demo", "cto"),
+            "exec.local": ("Ejecutivo Demo", "executive"),
+        }
+        if username in valid_users and password == "AlvaroLocal!2026":
+            display_name, role = valid_users[username]
             return AuthenticationResult(
                 status="authenticated",
                 user=AuthenticatedUser(
                     subject="local-demo-alvaro",
-                    username="alvaro.local",
-                    display_name="Alvaro Local",
-                    role=self.authenticated_role,
+                    username=username,
+                    display_name=display_name,
+                    role=self.authenticated_role if self.authenticated_role else role,
                 ),
             )
         if username == "unavailable":
@@ -117,12 +124,46 @@ class _FakeWebService:
             "dormido",
         ]
 
+    def get_crm_estado_lead_options_for_update(self):
+        return [
+            "nuevo",
+            "prospecto",
+            "contactado",
+            "citado",
+            "en_tramite",
+            "expediente",
+            "ficha_generada",
+            "cerrado",
+            "perdido",
+            "no_califica",
+            "duplicado",
+            "dormido",
+        ]
+
     def get_catalogo_afp(self):
         return [{"id": "afp-1", "nombre": "Habitat"}]
 
-    def get_solicitud_detalle_masked(self, id_lead):
+    def get_asesores_disponibles_para_asignacion(self):
+        return [
+            {
+                "id_asesor": "22222222-2222-2222-2222-222222222222",
+                "nombre": "Ejecutivo Demo",
+                "rol": "asesor",
+                "estado_disponibilidad": "activo",
+                "especialidad": "General",
+                "carga_activa": 3,
+            }
+        ]
+
+    @staticmethod
+    def can_assign_lead(user: AuthenticatedUser) -> bool:
+        return user.role in {"admin", "executive"}
+
+    def get_solicitud_detalle_masked(self, id_lead, *, user=None):
         if str(id_lead) != str(self._full_detail["id_lead"]):
             return None
+        if user and getattr(user, "role", None) in {"ceo", "cto"}:
+            return dict(self._full_detail)
         return self._masked_row(self._full_detail)
 
     def get_solicitud_detalle(self, id_lead):
@@ -136,7 +177,6 @@ class _FakeWebService:
         allowed = {
             "nuevo",
             "prospecto",
-            "asignado",
             "contactado",
             "citado",
             "en_tramite",
@@ -167,6 +207,19 @@ class _FakeWebService:
             if str(row["id_lead"]) == str(id_lead):
                 row["comentarios"] = self._full_detail["comentarios"]
         self.comment_appends.append((str(id_lead), comment_text, author))
+        return True
+
+    def assign_lead(self, id_lead, id_asesor, *, actor):
+        if str(id_lead) != str(self._full_detail["id_lead"]):
+            return False
+        self._full_detail["estado_lead"] = "asignado"
+        self._full_detail["id_asesor"] = str(id_asesor)
+        self._full_detail["asesor_nombre"] = "Ejecutivo Demo"
+        self._full_detail["asignado_por"] = actor.subject
+        for row in self.rows:
+            if str(row["id_lead"]) == str(id_lead):
+                row["estado_lead"] = "asignado"
+                row["id_asesor"] = str(id_asesor)
         return True
 
     def delete_test_lead(self, id_lead):
@@ -201,7 +254,7 @@ def _build_client(
         APP_ENV="local",
         AUTH_ENABLED=True,
         AUTH_MODE="simple-dev",
-        AUTH_USERS_JSON='{"users":[{"subject":"local-demo-alvaro","username":"alvaro.local","display_name":"Alvaro Local","role":"tester","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"}]}',
+        AUTH_USERS_JSON='{"users":[{"subject":"local-demo-alvaro","username":"alvaro.local","display_name":"Alvaro Local","role":"tester","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"},{"subject":"ceo-demo","username":"ceo.local","display_name":"CEO Demo","role":"ceo","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"},{"subject":"cto-demo","username":"cto.local","display_name":"CTO Demo","role":"cto","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"},{"subject":"executive-demo","username":"exec.local","display_name":"Ejecutivo Demo","role":"executive","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"}]}',
         WEB_MASK_PII=False,
     )
     app.state.web_cleanup_enabled = app.state.settings.is_test_lead_cleanup_enabled
@@ -261,7 +314,7 @@ def test_login_and_leads_routes_render() -> None:
     assert "Juan Perez" in detail.text
     assert "Buscar por nombre o RUT" not in detail.text
     assert "Mostrando" not in detail.text
-    assert "Abrir simulador" in detail.text
+    assert "Abrir simulación" in detail.text
     assert "Juan Perez" in detail.text
     assert "12.345.678-5" in detail.text
     assert "juan@example.com" in detail.text
@@ -329,6 +382,93 @@ def test_readonly_users_do_not_see_write_actions() -> None:
     assert "Guardar estado" not in detail.text
     assert "Agregar nueva nota de seguimiento" not in detail.text
     assert "Eliminar lead de prueba" not in detail.text
+
+
+def test_ceo_and_cto_can_view_full_pii() -> None:
+    ceo_client = _build_client(auth_provider=_FakeAuthProvider(authenticated_role="ceo"))
+    _login(ceo_client, username="ceo.local")
+    ceo_detail = ceo_client.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert "12.345.678-5" in ceo_detail.text
+    assert "juan@example.com" in ceo_detail.text
+    assert "+56 9 1234 5678" in ceo_detail.text
+
+    cto_client = _build_client(auth_provider=_FakeAuthProvider(authenticated_role="cto"))
+    _login(cto_client, username="cto.local")
+    cto_detail = cto_client.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert "12.345.678-5" in cto_detail.text
+    assert "juan@example.com" in cto_detail.text
+    assert "+56 9 1234 5678" in cto_detail.text
+
+
+def test_non_privileged_users_continue_to_see_masked_pii() -> None:
+    client = _build_client(
+        auth_provider=_FakeAuthProvider(authenticated_role="readonly"),
+        settings=Settings(
+            APP_ENV="local",
+            AUTH_ENABLED=True,
+            AUTH_MODE="simple-dev",
+            AUTH_USERS_JSON='{"users":[{"subject":"local-demo-alvaro","username":"alvaro.local","display_name":"Alvaro Local","role":"readonly","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"}]}',
+            WEB_MASK_PII=True,
+        ),
+    )
+    _login(client)
+
+    detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert mask_rut("12.345.678-5") in detail.text
+    assert mask_email("juan@example.com") in detail.text
+    assert mask_phone("+56 9 1234 5678") in detail.text
+
+
+def test_assign_lead_updates_status_and_executes_with_authorization() -> None:
+    service = _FakeWebService()
+    client = _build_client(service, auth_provider=_FakeAuthProvider(authenticated_role="executive"))
+    _login(client, username="exec.local")
+
+    detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
+    csrf = _extract_csrf(detail.text)
+
+    response = client.post(
+        "/leads/11111111-1111-1111-1111-111111111111/assign",
+        data={"csrf_token": csrf, "id_asesor": "22222222-2222-2222-2222-222222222222"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert service._full_detail["estado_lead"] == "asignado"
+    assert service._full_detail["id_asesor"] == "22222222-2222-2222-2222-222222222222"
+    assert service._full_detail["asesor_nombre"] == "Ejecutivo Demo"
+    assert service._full_detail["asignado_por"] == "local-demo-alvaro"
+    follow_up = client.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert "asignado" in follow_up.text.lower()
+    assert "Ejecutivo Demo" in follow_up.text
+    assert 'name="id_asesor"' in follow_up.text
+
+
+def test_assign_lead_rejects_unauthorized_user_and_direct_bypass() -> None:
+    privileged = _build_client(auth_provider=_FakeAuthProvider(authenticated_role="executive"))
+    _login(privileged, username="exec.local")
+    detail = privileged.get("/leads/11111111-1111-1111-1111-111111111111")
+    csrf = _extract_csrf(detail.text)
+
+    client = _build_client(auth_provider=_FakeAuthProvider(authenticated_role="readonly"))
+    _login(client)
+
+    denied = client.post(
+        "/leads/11111111-1111-1111-1111-111111111111/assign",
+        data={"csrf_token": csrf, "id_asesor": "22222222-2222-2222-2222-222222222222"},
+        follow_redirects=False,
+    )
+    assert denied.status_code == 403
+    assert "Esta accion no esta disponible para este usuario" in denied.text
+
+    unauthenticated = _build_client()
+    unauthenticated.cookies.clear()
+    bypass = unauthenticated.post(
+        "/leads/11111111-1111-1111-1111-111111111111/assign",
+        data={"csrf_token": "bad", "id_asesor": "22222222-2222-2222-2222-222222222222"},
+        follow_redirects=False,
+    )
+    assert bypass.status_code == 307
+    assert bypass.headers["location"] == "/login"
 
 
 def test_cleanup_visibility_depends_on_cleanup_flag_and_role() -> None:
@@ -435,7 +575,7 @@ def test_web_cleanup_follows_settings_and_fails_closed_in_production(
             AUTH_MODE="simple-dev",
             AUTH_USERS_JSON='{"users":[{"subject":"local-demo-alvaro","username":"alvaro.local","display_name":"Alvaro Local","role":"tester","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"}]}',
             WEB_SESSION_SECRET="local-secret",
-            TPI_PUBLIC_SITE_URL="https://dev.genialabs.cl/",
+            TPI_PUBLIC_SITE_URL="https://backoffice.dev.tupensioninteligente.cl/",
         ),
     )
     aws_dev_app = create_web_app()
@@ -451,7 +591,7 @@ def test_web_cleanup_follows_settings_and_fails_closed_in_production(
             AUTH_MODE="simple-dev",
             AUTH_USERS_JSON='{"users":[{"subject":"local-demo-alvaro","username":"alvaro.local","display_name":"Alvaro Local","role":"tester","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"}]}',
             WEB_SESSION_SECRET="local-secret",
-            TPI_PUBLIC_SITE_URL="https://dev.genialabs.cl/",
+            TPI_PUBLIC_SITE_URL="https://backoffice.dev.tupensioninteligente.cl/",
         ),
     )
     aws_dev_disabled_app = create_web_app()
@@ -467,7 +607,7 @@ def test_web_cleanup_follows_settings_and_fails_closed_in_production(
             AUTH_MODE="simple-dev",
             AUTH_USERS_JSON='{"users":[{"subject":"local-demo-alvaro","username":"alvaro.local","display_name":"Alvaro Local","role":"tester","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"}]}',
             WEB_SESSION_SECRET="local-secret",
-            TPI_PUBLIC_SITE_URL="https://dev.genialabs.cl/",
+            TPI_PUBLIC_SITE_URL="https://backoffice.dev.tupensioninteligente.cl/",
         ),
     )
     production_app = create_web_app()
@@ -508,10 +648,10 @@ def test_detail_renders_simulator_link_from_central_configuration() -> None:
 
     detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
     assert detail.status_code == 200
-    assert 'href="http://tpi.localhost:8080/simulador.html"' in detail.text
+    assert 'href="http://tpi.localhost:8080/simulador.html#simulador-interactivo"' in detail.text
     assert "data-simulator-link" in detail.text
     assert "btn-primary-simulator disabled" not in detail.text
-    assert "Abrir simulador" in detail.text
+    assert "Abrir simulación" in detail.text
 
 
 def test_detail_disables_simulator_link_when_configuration_is_missing() -> None:
@@ -538,6 +678,7 @@ def test_web_status_update_and_comment_append_are_protected_and_incremental() ->
     _login(client)
 
     detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert 'value="asignado"' not in detail.text
     csrf = _extract_csrf(detail.text)
 
     status_response = client.post(
@@ -572,6 +713,24 @@ def test_web_status_update_and_comment_append_are_protected_and_incremental() ->
     assert "Lead de prueba" in final_detail.text
     assert "Solicitud Original" in final_detail.text
     assert "Seguimiento y Notas Internas" in final_detail.text
+
+
+def test_web_status_update_rejects_direct_transition_to_asignado() -> None:
+    service = _FakeWebService()
+    client = _build_client(service, auth_provider=_FakeAuthProvider(authenticated_role="tester"))
+    _login(client)
+
+    detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
+    csrf = _extract_csrf(detail.text)
+
+    denied = client.post(
+        "/leads/11111111-1111-1111-1111-111111111111/status",
+        data={"csrf_token": csrf, "estado_lead": "asignado"},
+        follow_redirects=False,
+    )
+    assert denied.status_code == 400
+    assert "No fue posible actualizar el estado" in denied.text
+    assert service._full_detail["estado_lead"] == "nuevo"
 
 
 def test_comment_parser_separates_original_and_followups_safely() -> None:

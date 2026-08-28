@@ -5,7 +5,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-UserRole = Literal["tester", "admin", "advisor", "operations", "readonly"]
+UserRole = Literal[
+    "tester",
+    "admin",
+    "advisor",
+    "executive",
+    "operations",
+    "readonly",
+    "ceo",
+    "cto",
+]
 
 
 @dataclass(frozen=True, slots=True)
