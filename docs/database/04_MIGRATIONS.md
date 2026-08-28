@@ -1,71 +1,79 @@
 Estado: vigente
-Ambiente validado: AWS DEV
-Ultima validacion fisica: 2026-08-28
-Fuente: PostgreSQL RDS + scripts versionados + init_test_database.py
+Ambiente de referencia: AWS DEV
+Ultima inspeccion: 2026-08-28
+Fuente: scripts versionados + `init_test_database.py` + evidencia AWS DEV
 
-# 04 Migrations
+# 04 Migraciones
 
-## Scope
+## Alcance
 
-This document inventories the versioned SQL scripts and bootstrap utilities
-that define the repository contract for the database layer.
+Este documento inventaria los scripts SQL versionados y los artefactos de
+bootstrap que definen el contrato reproducible del esquema.
 
-It does not describe ad-hoc manual changes. If a change is not reproducible
-through versioned scripts, it should be treated as drift.
+No describe cambios manuales ad hoc. Si un cambio no puede reproducirse mediante
+scripts versionados, debe tratarse como drift.
 
-## Chronological Inventory
+## Inventario cronologico
 
-| Script | Purpose | Dependency | Status | Environment | Rollback |
-| ------ | ------- | ---------- | ------ | ----------- | -------- |
-| `scripts/sql/001_create_tpi_app_role.sql` | Create the least-privilege application role | Existing database and schema `tpi` | Versioned and used for deployment planning | Local admin / AWS admin | Manual revoke / role disable if needed |
-| `scripts/sql/003_create_api_idempotency.sql` | Create the public-API idempotency table | `tpi.leads` | Versioned; runtime feature gate dependent | Admin deployment | `scripts/sql/003_drop_api_idempotency.sql` |
-| `scripts/sql/003_drop_api_idempotency.sql` | Rollback for idempotency table | `tpi.api_idempotency` exists | Versioned rollback script | Admin deployment | Drop table and revoke grants |
-| `scripts/sql/004_create_lead_assignments.sql` | Create assignment table and indexes | `tpi.leads`, `tpi.asesores` | Versioned; aligned with AWS DEV physical contract | Admin deployment | Drop table / indexes if needed in a controlled rollback |
-| `scripts/sql/005_enforce_single_active_assignment.sql` | Enforce one active assignment per lead | `tpi.asignaciones` existing data | Prepared, not executed in AWS DEV yet | Admin deployment | `DROP INDEX IF EXISTS tpi.asignaciones_one_active_per_lead_uq` |
-| `scripts/sql/dev/002_enable_test_cleanup.sql` | DEV-only delete grant for controlled cleanup | `tpi.leads`, `tpi.consentimientos` | DEV-only helper | AWS DEV only | `scripts/sql/dev/002_disable_test_cleanup.sql` |
-| `scripts/sql/dev/002_disable_test_cleanup.sql` | Revoke the DEV-only delete grant | Previous enable script applied | DEV-only rollback helper | AWS DEV only | Revoke delete grant |
+| Script | Proposito | Dependencia | Estado | Ambiente | Rollback |
+| ------ | --------- | ----------- | ------ | -------- | -------- |
+| `scripts/sql/001_create_tpi_app_role.sql` | Crear el rol de aplicacion con base minima | Base de datos y esquema `tpi` existentes | Versionado, pero no reproduce por completo el estado observado en AWS DEV | Bootstrap nuevo / administracion | Revocacion manual o deshabilitacion del rol |
+| `scripts/sql/003_create_api_idempotency.sql` | Crear la tabla de idempotencia de la API publica | `tpi.leads` | Versionado | Despliegue administrado | `scripts/sql/003_drop_api_idempotency.sql` |
+| `scripts/sql/003_drop_api_idempotency.sql` | Revertir la tabla de idempotencia | `tpi.api_idempotency` existente | Versionado | Despliegue administrado | Eliminar tabla y revocar grants |
+| `scripts/sql/004_create_lead_assignments.sql` | Crear `tpi.asignaciones` e indices basicos | `tpi.leads`, `tpi.asesores` | Versionado y alineado con el contrato fisico observado | Despliegue administrado | Drop controlado de tabla/indices si hiciera falta |
+| `scripts/sql/005_enforce_single_active_assignment.sql` | Garantizar una asignacion activa por lead | `tpi.asignaciones` con datos existentes | Preparado, no ejecutado todavia en AWS DEV | Despliegue administrado | `DROP INDEX IF EXISTS tpi.asignaciones_one_active_per_lead_uq` |
+| `scripts/sql/006_grant_h3_3_assignment_privileges.sql` | Agregar los privilegios minimos que requiere H3.3 inicial | `tpi_app`, `tpi.asesores`, `tpi.asignaciones`, `tpi.auditoria`, `tpi.leads` | Propuesto, no ejecutado todavia | AWS DEV existente / ambientes ya provisionados | Revoke solo de los privilegios agregados por este script |
+| `scripts/sql/dev/002_enable_test_cleanup.sql` | Conceder DELETE solo para limpieza controlada en DEV | `tpi.leads`, `tpi.consentimientos` | Ayuda DEV-only | AWS DEV solamente | `scripts/sql/dev/002_disable_test_cleanup.sql` |
+| `scripts/sql/dev/002_disable_test_cleanup.sql` | Revocar el DELETE DEV-only | Script de habilitacion previo | Ayuda DEV-only | AWS DEV solamente | Revocar DELETE |
 
-## Current State vs Target State
+## Estado actual vs estado objetivo
 
-### AWS DEV current physical state
+### AWS DEV actual
 
-- `tpi.asignaciones` exists
-- the partial UNIQUE index for active assignment does not exist yet
-- duplicate active assignments are still structurally possible
+- `tpi.asignaciones` existe
+- la llave parcial unica para una sola asignacion activa todavia no existe
+- `tpi_app` no tiene permisos efectivos sobre `tpi.asesores`, `tpi.asignaciones`
+  ni `tpi.auditoria`
+- `tpi_app` conserva privilegios efectivos adicionales sobre `tpi.leads` y
+  `tpi.personas` que forman parte del estado historico del ambiente
 
-### Target state after migration `005`
+### Estado objetivo H3.3
 
-- at most one active assignment per `id_lead`
-- the database enforces the invariant
-- application code still performs validation and conflict translation
+- al menos para el flujo de asignacion inicial:
+  - `tpi.asesores`: `SELECT`
+  - `tpi.asignaciones`: `SELECT`, `INSERT`
+  - `tpi.auditoria`: `INSERT`
+  - `tpi.leads`: `SELECT`, `UPDATE`
+- una sola asignacion activa por `id_lead`
+- trazabilidad sin ampliar privilegios mas de lo necesario
 
-## Migration `005` Notes
+## Notas sobre `005`
 
-The prepared migration follows this model:
+La migracion `005` no cambia datos de negocio. Solo agrega integridad.
 
-1. preflight query checks for duplicate active assignments
-2. abort if duplicates already exist
-3. create a partial UNIQUE index on `id_lead`
-4. scope the index to `estado_asignacion = 'activa'`
+Modelo:
 
-Important:
+1. preflight para detectar duplicados activos
+2. aborto si ya existen filas duplicadas
+3. creacion del indice parcial unico
+4. validacion posterior de que ya no existen conflictos estructurales
 
-- this migration does not change business data
-- it only adds integrity protection
-- it is not executed on AWS DEV yet
+## Bootstrap vs migracion incremental
 
-## Bootstrap vs Migration
+`scripts/init_test_database.py` no es una migracion de runtime.
 
-`scripts/init_test_database.py` is not a runtime migration.
+Es el bootstrap de testing que recrea el contrato necesario para CI e
+integracion, incluyendo la tabla de asignaciones y la proteccion por indice
+parcial que los tests necesitan validar.
 
-It is the test bootstrap that recreates the schema contract for CI and
-integration tests, including the assignment table and the partial UNIQUE
-index that tests need to validate integrity behavior.
+`001_create_tpi_app_role.sql` sigue siendo el bootstrap base para ambientes
+nuevos, mientras que `006_grant_h3_3_assignment_privileges.sql` representa la
+evolucion incremental necesaria para ambientes ya existentes como AWS DEV.
 
-## Drift Rule
+## Regla de drift
 
-If AWS DEV diverges from the versioned scripts, the fix should be a migration.
+Si AWS DEV diverge del contrato versionado, la correccion debe modelarse como
+migracion o grant versionado.
 
-Do not manually patch schema drift in AWS when the change is meant to be
-versioned and repeatable.
-
+No se debe parchar manualmente el schema drift cuando el cambio debe quedar
+reproducible.

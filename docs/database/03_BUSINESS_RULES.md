@@ -1,15 +1,15 @@
 Estado: vigente
-Ambiente validado: AWS DEV
-Ultima validacion fisica: 2026-08-28
-Fuente: PostgreSQL RDS + scripts versionados + init_test_database.py
+Ambiente de referencia: AWS DEV
+Ultima inspeccion: 2026-08-28
+Fuente: AWS DEV + scripts versionados + `init_test_database.py`
 
-# 03 Business Rules
+# 03 Reglas de Negocio
 
-## State Governance
+## Gobernanza de estados
 
 ### `estado_lead`
 
-Observed in AWS DEV:
+Observado en AWS DEV:
 
 - `nuevo`
 - `pendiente`
@@ -19,7 +19,7 @@ Observed in AWS DEV:
 - `no_califica`
 - `perdido`
 
-Repository canonical contract additionally includes:
+El contrato canonico del repositorio ademas incluye:
 
 - `prospecto`
 - `citado`
@@ -29,12 +29,12 @@ Repository canonical contract additionally includes:
 - `duplicado`
 - `dormido`
 
-Interpretation:
+Interpretacion:
 
-- PostgreSQL stores the field as `VARCHAR`.
-- The application governs the vocabulary.
-- There is no state catalog and no ENUM in the validated physical schema.
-- `pendiente` is treated by the application as a legacy alias for `nuevo`.
+- PostgreSQL almacena el campo como `VARCHAR`.
+- La aplicacion gobierna el vocabulario.
+- No existe catalogo de estados ni ENUM en el esquema fisico validado.
+- `pendiente` se trata como alias legacy de `nuevo`.
 
 ### `estado_asignacion`
 
@@ -42,23 +42,23 @@ Current canonical active value:
 
 - `activa`
 
-Rules:
+Reglas:
 
-- use `activa` as the only canonical active value
-- do not write case variants or semantic synonyms
-- keep the canonical value centralized in code
+- usar `activa` como unico valor canonico activo
+- no escribir variantes en mayusculas/minusculas ni sinonimos semanticos
+- mantener el valor canonico centralizado en codigo
 
-## Assignment Contract for H3.3
+## Contrato de asignacion para H3.3
 
 H3.3 implements initial assignment only.
 
-Allowed:
+Permitido:
 
 - create a new active assignment when none exists
 - update the lead state to `asignado` as part of the same transaction
 - record audit metadata for the event
 
-Not allowed:
+No permitido:
 
 - reassignment
 - auto-assignment
@@ -70,41 +70,41 @@ If an active assignment already exists:
 - return a business conflict
 - do not modify any row
 
-## Transition Rule
+## Regla de transicion
 
 `estado_lead='asignado'` must only be produced by the assignment operation.
 
-This means:
+Esto implica:
 
-- the UI must not offer `asignado` in the generic state selector
-- the backend must reject `update_lead_status(..., "asignado")`
-- the service layer must only allow `asignado` through `assign_lead`
+- la UI no debe ofrecer `asignado` en el selector generico de estados
+- el backend debe rechazar `update_lead_status(..., "asignado")`
+- la capa de servicio solo debe permitir `asignado` a traves de `assign_lead`
 
-## Actor and Advisor
+## Actor y asesor
 
 - actor = authenticated user who executes the operation
 - advisor = selected `id_asesor` that receives the lead
 
-These are separate concepts.
+Son conceptos separados.
 
-The current H3.3 contract does not require mapping the authenticated user to
-an advisor record.
+El contrato actual de H3.3 no requiere mapear el usuario autenticado a un
+registro de asesor.
 
 ## `asignado_por`
 
 The operational assignment row stores `asignado_por` as a technical actor
 identifier.
 
-Current rule:
+Regla actual:
 
-- use `AuthenticatedUser.subject`
-- keep it stable and non-display oriented
-- do not use `display_name`
-- do not use an advisor mapping for H3.3
+- usar `AuthenticatedUser.subject`
+- mantenerlo estable y no orientado a presentacion
+- no usar `display_name`
+- no usar un mapping de asesor para H3.3
 
 This value must fit the declared `VARCHAR(150)` contract.
 
-## Transaction Model
+## Modelo transaccional
 
 ```text
 BEGIN
@@ -125,7 +125,7 @@ If any step fails:
 ROLLBACK
 ```
 
-## Concurrency Rules
+## Reglas de concurrencia
 
 The design must prevent two active assignments for the same lead.
 
@@ -133,11 +133,17 @@ Layered protection:
 
 1. transaction boundary
 2. `SELECT ... FOR UPDATE` on the lead
-3. application validation
-4. partial UNIQUE index on active assignments
-5. explicit conflict handling for uniqueness violations
+3. validacion de aplicacion
+4. indice UNIQUE parcial sobre asignaciones activas
+5. manejo explicito de conflictos por unicidad
 
-## Future Work Not Yet Implemented
+Nota operativa:
+
+- el lead se bloquea con `SELECT ... FOR UPDATE`
+- el asesor se valida en modo solo lectura
+- H3.3 no necesita lock de escritura sobre `tpi.asesores`
+
+## Trabajo futuro aun no implementado
 
 - `reassign_lead(...)`
 - advisor workload automation
@@ -145,5 +151,4 @@ Layered protection:
 - scoring
 - auto-derivation logic
 
-These are intentionally out of scope for H3.3.
-
+Esto permanece fuera del alcance de H3.3.

@@ -1,18 +1,18 @@
 Estado: vigente
-Ambiente validado: AWS DEV
-Ultima validacion fisica: 2026-08-28
-Fuente: PostgreSQL RDS + scripts versionados + init_test_database.py
+Ambiente de referencia: AWS DEV
+Ultima inspeccion: 2026-08-28
+Fuente: privilegios efectivos en AWS DEV + scripts versionados + `init_test_database.py`
 
-# 06 Operations Runbook
+# 06 Runbook Operacional
 
-## Purpose
+## Proposito
 
-This runbook covers the operational steps needed to validate, inspect, migrate,
-verify, and roll back the database layer.
+Este runbook cubre los pasos operativos para validar, inspeccionar, migrar,
+verificar y revertir la capa de datos.
 
-## 1. Validate Connectivity
+## 1. Validar conectividad
 
-Read-only checks:
+Comprobaciones de solo lectura:
 
 ```sql
 SELECT version();
@@ -20,7 +20,7 @@ SELECT current_database();
 SELECT current_user;
 ```
 
-Validate schema visibility:
+Validar visibilidad del esquema:
 
 ```sql
 SELECT schema_name
@@ -28,7 +28,7 @@ FROM information_schema.schemata
 WHERE schema_name = 'tpi';
 ```
 
-Validate table presence:
+Validar presencia de tablas:
 
 ```sql
 SELECT table_name
@@ -37,9 +37,9 @@ WHERE table_schema = 'tpi'
 ORDER BY table_name;
 ```
 
-## 2. Inspect Tables, Indexes, and FK
+## 2. Inspeccionar tablas, indices y FK
 
-Useful catalog queries:
+Consultas utiles de catalogo:
 
 ```sql
 SELECT schemaname, tablename, indexname, indexdef
@@ -58,23 +58,31 @@ WHERE connamespace = 'tpi'::regnamespace
 ORDER BY conrelid::regclass::text, conname;
 ```
 
-## 3. Read-Only Inspection
+## 3. Inspeccion de privilegios
 
-When validating AWS DEV, use the dedicated inspection script and keep the
-session read-only.
+Usar el script versionado:
 
-Rule:
+- `scripts/sql/inspect_dev_tpi_app_privileges_readonly.sql`
 
-- no `INSERT`
-- no `UPDATE`
-- no `DELETE`
-- no `ALTER`
-- no `CREATE`
-- no `DROP`
+Este script:
 
-## 4. Preflight Before Migration `005`
+- ejecuta `BEGIN TRANSACTION READ ONLY`
+- no modifica datos
+- no ejecuta funciones con efectos laterales
+- permite comparar privilegios efectivos versus grants declarados
 
-Check for duplicate active assignments:
+Comprobaciones relevantes:
+
+- `tpi_app` tiene `USAGE` sobre `tpi`
+- `tpi_app` puede o no puede operar sobre `tpi.personas`, `tpi.leads`,
+  `tpi.asesores`, `tpi.asignaciones` y `tpi.auditoria`
+- el permiso sobre `tpi.auditoria` debe verificarse de forma independiente
+- la ausencia de membresias de roles debe quedar documentada junto con la
+  ausencia de herencia
+
+## 4. Preflight antes de la migracion `005`
+
+Comprobar duplicados activos:
 
 ```sql
 SELECT id_lead, COUNT(*) AS active_rows
@@ -85,28 +93,28 @@ HAVING COUNT(*) > 1
 ORDER BY active_rows DESC, id_lead;
 ```
 
-If this returns rows:
+Si la consulta devuelve filas:
 
-- do not create the partial UNIQUE index yet
-- resolve the duplicates by an approved business decision
-- then rerun the migration preflight
+- no crear todavia el indice parcial unico
+- resolver los duplicados mediante una decision de negocio aprobada
+- repetir el preflight antes de aplicar `005`
 
-## 5. Apply a Migration
+## 5. Aplicar una migracion
 
-Recommended process:
+Proceso recomendado:
 
-1. confirm the repository commit SHA that declares the migration
-2. confirm the target environment
-3. run the preflight query
-4. apply the migration in the approved admin session
-5. verify the resulting constraints and indexes
-6. record the result in release notes or change log
+1. confirmar el SHA del commit que declara la migracion
+2. confirmar el ambiente objetivo
+3. ejecutar el preflight
+4. aplicar la migracion en la sesion administrativa aprobada
+5. verificar los indices y privilegios resultantes
+6. registrar el resultado en notas de release o bitacora
 
-Do not patch schema drift manually if the fix is meant to be versioned.
+No parchar drift manual cuando el cambio debe quedar versionado.
 
-## 6. Verify a Migration
+## 6. Verificar una migracion
 
-After migration `005`, verify:
+Despues de `005`, verificar:
 
 ```sql
 SELECT indexname, indexdef
@@ -124,50 +132,74 @@ GROUP BY id_lead
 HAVING COUNT(*) > 1;
 ```
 
-Expected:
+Esperado:
 
-- the partial unique index exists
-- the duplicate query returns no rows
+- el indice parcial unico existe
+- la consulta de duplicados no retorna filas
 
-## 7. Rollback
+## 7. Verificar permisos despues de `006`
 
-For migration `005` the rollback is:
+Despues de aplicar `scripts/sql/006_grant_h3_3_assignment_privileges.sql`,
+validar nuevamente:
+
+- `USAGE` en `tpi`
+- `SELECT` en `tpi.asesores`
+- `SELECT`, `INSERT` en `tpi.asignaciones`
+- `INSERT` en `tpi.auditoria`
+- `SELECT`, `UPDATE` en `tpi.leads`
+
+La verificacion debe distinguir:
+
+- privilegio efectivo
+- grant directo
+- privilegio heredado por membresia
+
+## 8. Rollback
+
+Rollback de `005`:
 
 ```sql
 DROP INDEX IF EXISTS tpi.asignaciones_one_active_per_lead_uq;
 ```
 
-Rollback rules:
+Reglas de rollback:
 
-- only remove the integrity object that was added
-- do not delete business data
-- do not remove the schema or the RDS instance
+- solo eliminar el objeto de integridad agregado
+- no borrar datos de negocio
+- no eliminar el esquema ni la instancia RDS
 
-## 8. Backup and Restore
+Rollback de `006`:
 
-Use approved AWS or PostgreSQL backup mechanisms only.
+- revocar unicamente los privilegios agregados por esa migracion
+- no revocar privilegios preexistentes no relacionados
+- no tocar datos
 
-Examples:
+## 9. Backup and Restore
+
+Usar solo mecanismos aprobados de AWS o PostgreSQL.
+
+Ejemplos:
 
 - automated RDS snapshot
 - approved `pg_dump` / `pg_restore` workflow
 
-Never use manual schema edits as a substitute for a reproducible backup or
-migration path.
+Nunca usar ediciones manuales del esquema como sustituto de una ruta
+reproducible de backup o migracion.
 
-## 9. Post-Deploy Checks
+## 10. Controles post-despliegue
 
-After a release deployment:
+Despues de un despliegue:
 
-- run the application health check
-- confirm database connectivity
-- confirm `tpi.leads` is accessible
-- confirm the assignment flow if H3.3 is in scope
-- confirm the audit trail is generated when the app contract says it should be
+- ejecutar el healthcheck de la aplicacion
+- confirmar conectividad a la base
+- confirmar acceso a `tpi.leads`
+- confirmar el flujo de asignacion si H3.3 esta activo
+- confirmar que la trazabilidad se genera cuando el contrato de la app lo
+  requiere
 
-## 10. Healthcheck
+## 11. Healthcheck
 
-The runtime healthcheck should remain lightweight and safe:
+El healthcheck de runtime debe seguir siendo liviano y seguro:
 
 - `SELECT 1`
 - current database
@@ -175,6 +207,5 @@ The runtime healthcheck should remain lightweight and safe:
 - schema visibility
 - table accessibility
 
-Use `python scripts/verify_database_connection.py` for a quick operational
-check outside the UI.
-
+Usar `python scripts/verify_database_connection.py` para una validacion rapida
+fuera de la UI.
