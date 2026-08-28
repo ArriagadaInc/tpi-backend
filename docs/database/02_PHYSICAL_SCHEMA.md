@@ -1,32 +1,33 @@
 Estado: vigente
-Ambiente validado: AWS DEV
-Ultima validacion fisica: 2026-08-28
-Fuente: PostgreSQL RDS + scripts versionados + init_test_database.py
+Ambiente de referencia: AWS DEV
+Validacion fisica AWS DEV: parcial
+Ultima inspeccion: 2026-08-28
+Fuentes complementarias: scripts versionados + init_test_database.py
 
-# 02 Physical Schema
+# 02 Esquema Fisico
 
-## Reading Rules
+## Reglas de lectura
 
-- This document distinguishes between:
-  - AWS DEV physical state
-  - repository/test contract
-  - future target state after pending migrations
-- When a table or field was not directly revalidated in AWS DEV, it is marked
-  as `No validado todavia en AWS DEV`.
-- No real PII is shown here.
+- Este documento distingue entre:
+  - estado fisico actual en AWS DEV
+  - contrato versionado del repositorio y testing
+  - estado objetivo posterior a migraciones pendientes
+- Cuando una tabla o columna no fue inspeccionada directamente en AWS DEV,
+  queda marcada como `No validado todavia en AWS DEV`.
+- No se muestran PII reales.
 
-## Physical Snapshot
+## Instantanea fisica
 
 ### `tpi.leads`
 
-Estado AWS DEV:
+Observado en AWS DEV:
 
-- `estado_lead` is `VARCHAR`
-- `raw_payload` exists and is not operational
-- `estado_lead` has a normal index
-- no ENUM or catalog governs the values
+- `estado_lead` es `VARCHAR`
+- `raw_payload` existe y no es operacional
+- `estado_lead` tiene un indice normal
+- no existe ENUM ni catalogo que gobierne los valores
 
-Contract source for full column layout:
+Contrato fuente para el layout completo de columnas:
 
 - `scripts/init_test_database.py`
 
@@ -38,7 +39,7 @@ Contract source for full column layout:
 | `afp_actual` | VARCHAR(80) | Yes | none | - | Current AFP text |
 | `saldo_afp` | NUMERIC(14,2) | Yes | none | - | Balance shown as presentation later |
 | `comentarios` | TEXT | Yes | none | - | Lead notes |
-| `estado_lead` | VARCHAR(50) | No | `'nuevo'` | Index observed in AWS DEV | Functional lead state |
+| `estado_lead` | VARCHAR(50) | No | `'nuevo'` | Indice observado en AWS DEV | Functional lead state |
 | `prioridad` | VARCHAR(30) | Yes | none | - | Priority label |
 | `origen_lead` | VARCHAR(100) | No | `'formulario_web'` | - | Source channel |
 | `fuente_actual` | VARCHAR(100) | No | `'google_sheets'` | - | Current origin/source |
@@ -49,7 +50,7 @@ Contract source for full column layout:
 | `created_at` | TIMESTAMPTZ | No | `now()` | - | Creation timestamp |
 | `updated_at` | TIMESTAMPTZ | No | `now()` | - | Update timestamp |
 
-Notes:
+Notas:
 
 - `raw_payload` is auxiliary only.
 - `estado_lead` is governed primarily by application code.
@@ -59,7 +60,7 @@ Notes:
 
 ### `tpi.personas`
 
-Contract source:
+Contrato versionado:
 
 - `scripts/init_test_database.py`
 
@@ -76,13 +77,13 @@ Contract source:
 | `created_at` | TIMESTAMPTZ | No | `now()` | - | Creation timestamp |
 | `updated_at` | TIMESTAMPTZ | No | `now()` | - | Update timestamp |
 
-Status:
+Estado:
 
 - `No validado todavia en AWS DEV` at column level in this document
 
 ### `tpi.asesores`
 
-Estado AWS DEV:
+Observado en AWS DEV:
 
 - table exists
 - `id_asesor` is the PK
@@ -90,7 +91,7 @@ Estado AWS DEV:
 - advisors validated in AWS DEV were operationally active and had role
   `asesor`
 
-Contract source:
+Contrato versionado:
 
 - `scripts/init_test_database.py`
 
@@ -99,13 +100,13 @@ Contract source:
 | `id_asesor` | UUID | No | `gen_random_uuid()` | PK | Advisor identifier |
 | `nombre` | VARCHAR(150) | No | none | UNIQUE index on `lower(nombre)` | Advisor display/identity text |
 | `email` | VARCHAR(150) | Yes | none | - | Contact or login-related value if present |
-| `rol` | VARCHAR(50) | No | none | - | Operational role |
-| `estado_disponibilidad` | VARCHAR(50) | No | none | - | Availability flag |
+| `rol` | VARCHAR(50) | No | `'asesor'` | - | Operational role |
+| `estado_disponibilidad` | VARCHAR(50) | No | `'activo'` | - | Availability flag |
 | `especialidad` | VARCHAR(100) | Yes | none | - | Advisor specialty |
 | `carga_activa` | INTEGER | No | `0` | - | Load counter |
 | `created_at` | TIMESTAMPTZ | No | `now()` | - | Creation timestamp |
 
-Notes:
+Notas:
 
 - `email` is not declared UNIQUE in the current validated contract.
 - The domain term is `asesor`; the UX may display `Ejecutivo`.
@@ -114,7 +115,7 @@ Notes:
 
 ### `tpi.asignaciones`
 
-Estado AWS DEV:
+Observado en AWS DEV:
 
 - table exists
 - source of truth for lead-advisor relation
@@ -122,7 +123,7 @@ Estado AWS DEV:
 - multiple active rows for one lead are possible today unless prevented by the
   application
 
-Contract source:
+Contrato versionado:
 
 - `scripts/sql/004_create_lead_assignments.sql`
 - AWS DEV physical inspection
@@ -130,33 +131,39 @@ Contract source:
 | Columna | Tipo | Nullable | Default | PK / FK / UNIQUE / Index | Proposito |
 | ------- | ---- | -------- | ------- | ------------------------ | --------- |
 | `id_asignacion` | UUID | No | `gen_random_uuid()` | PK | Assignment identifier |
-| `id_lead` | UUID | No | none | FK -> `tpi.leads(id_lead)`; normal index | Lead reference |
-| `id_asesor` | UUID | No | none | FK -> `tpi.asesores(id_asesor)`; normal index | Advisor reference |
+| `id_lead` | UUID | No | none | FK -> `tpi.leads(id_lead)`; physical index `idx_asignaciones_lead` | Lead reference |
+| `id_asesor` | UUID | No | none | FK -> `tpi.asesores(id_asesor)`; physical index `idx_asignaciones_asesor` | Advisor reference |
 | `fecha_asignacion` | TIMESTAMPTZ | No | `now()` | - | Assignment timestamp |
 | `asignado_por` | VARCHAR(150) | Yes | none | - | Technical actor trace |
 | `regla_asignacion` | VARCHAR(100) | Yes | none | - | Assignment rule name |
 | `estado_asignacion` | VARCHAR(50) | No | `'activa'` | - | Assignment lifecycle state |
 | `observacion` | TEXT | Yes | none | - | Optional note |
 
-Indexes:
+Indices fisicos observados en AWS DEV:
 
-- `asignaciones_id_lead_idx`
-- `asignaciones_id_asesor_idx`
+- `idx_asignaciones_lead`
+- `idx_asignaciones_asesor`
+- `asignaciones_pkey`
 
-Notes:
+Notas:
 
 - `estado_asignacion='activa'` is the canonical active value.
 - The partial unique index is pending migration `005_enforce_single_active_assignment.sql`.
+- The repository bootstrap may use different index names for testing.
+- Documented divergence:
+  - AWS physical: `idx_asignaciones_lead`, `idx_asignaciones_asesor`,
+    `asignaciones_pkey`
+  - repo/versioned: `asignaciones_id_lead_idx`, `asignaciones_id_asesor_idx`
 
 ### `tpi.auditoria`
 
-Estado AWS DEV:
+Observado en AWS DEV:
 
 - table exists
 - used for traceability events
 - `detalle` is JSONB and can hold assignment metadata
 
-Contract source:
+Contrato versionado:
 
 - AWS DEV physical inspection
 - `scripts/init_test_database.py`
@@ -174,7 +181,7 @@ Contract source:
 | `ip_origen` | VARCHAR(80) | Yes | none | - | Source IP if available |
 | `detalle` | JSONB | Yes | none | - | Structured metadata |
 
-Notes:
+Notas:
 
 - `detalle` is the correct place for event metadata such as:
   - actor subject
@@ -185,7 +192,7 @@ Notes:
 
 ### `tpi.consentimientos`
 
-Contract source:
+Contrato versionado:
 
 - `scripts/init_test_database.py`
 
@@ -204,13 +211,13 @@ Contract source:
 | `finalidad_contacto` | BOOLEAN | No | `FALSE` | - | Contact permission |
 | `created_at` | TIMESTAMPTZ | No | `now()` | - | Creation timestamp |
 
-Status:
+Estado:
 
 - `No validado todavia en AWS DEV` at column level in this document
 
 ### Catalog tables
 
-Contract source:
+Contrato versionado:
 
 - `scripts/init_test_database.py`
 
@@ -230,13 +237,13 @@ Tables:
 - `tpi.catalogo_genero`
 - `tpi.catalogo_estado_civil`
 
-Status:
+Estado:
 
 - `No validado todavia en AWS DEV` at column level in this document
 
 ### `tpi.api_idempotency`
 
-Contract source:
+Contrato versionado:
 
 - `scripts/sql/003_create_api_idempotency.sql`
 - `scripts/init_test_database.py`
@@ -249,15 +256,14 @@ Contract source:
 | `created_at` | TIMESTAMPTZ | No | `now()` | Index on `expires_at` | Creation timestamp |
 | `expires_at` | TIMESTAMPTZ | No | none | CHECK `expires_at > created_at` | Expiration timestamp |
 
-Status:
+Estado:
 
 - `No validado todavia en AWS DEV` in this release note
 
-## Key Divergences
+## Divergencias relevantes
 
 - AWS DEV already has `tpi.asignaciones` but still lacks the partial unique
   index for one active assignment per lead.
 - `tpi.asesores.email` is not UNIQUE in the current validated contract.
 - `tpi.leads.estado_lead` and `tpi.asignaciones.estado_asignacion` are plain
   `VARCHAR` columns, not enums.
-
