@@ -12,7 +12,7 @@ from app.models.crm_states import crm_state_label, crm_state_tone, normalize_crm
 
 _PUBLIC_SITE_BY_ENVIRONMENT = {
     "local": ("http", "tpi.localhost", 8080),
-    "aws-dev": ("https", "backoffice.dev.tupensioninteligente.cl", None),
+    "aws-dev": ("https", "dev.tupensioninteligente.cl", None),
 }
 
 

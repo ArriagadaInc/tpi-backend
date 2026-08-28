@@ -53,11 +53,11 @@ def test_dependency_helpers_reuse_real_service_and_resolve_simulator_url(
         lambda: Settings(
             _env_file=None,
             APP_ENV="aws-dev",
-            TPI_PUBLIC_SITE_URL="https://backoffice.dev.tupensioninteligente.cl/",
+            TPI_PUBLIC_SITE_URL="https://dev.tupensioninteligente.cl/",
         ),
     )
     assert resolve_web_simulator_url() == (
-        "https://backoffice.dev.tupensioninteligente.cl/simulador.html#simulador-interactivo"
+        "https://dev.tupensioninteligente.cl/simulador.html#simulador-interactivo"
     )
 
 

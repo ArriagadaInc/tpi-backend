@@ -575,7 +575,7 @@ def test_web_cleanup_follows_settings_and_fails_closed_in_production(
             AUTH_MODE="simple-dev",
             AUTH_USERS_JSON='{"users":[{"subject":"local-demo-alvaro","username":"alvaro.local","display_name":"Alvaro Local","role":"tester","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"}]}',
             WEB_SESSION_SECRET="local-secret",
-            TPI_PUBLIC_SITE_URL="https://backoffice.dev.tupensioninteligente.cl/",
+            TPI_PUBLIC_SITE_URL="https://dev.tupensioninteligente.cl/",
         ),
     )
     aws_dev_app = create_web_app()
@@ -591,7 +591,7 @@ def test_web_cleanup_follows_settings_and_fails_closed_in_production(
             AUTH_MODE="simple-dev",
             AUTH_USERS_JSON='{"users":[{"subject":"local-demo-alvaro","username":"alvaro.local","display_name":"Alvaro Local","role":"tester","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"}]}',
             WEB_SESSION_SECRET="local-secret",
-            TPI_PUBLIC_SITE_URL="https://backoffice.dev.tupensioninteligente.cl/",
+            TPI_PUBLIC_SITE_URL="https://dev.tupensioninteligente.cl/",
         ),
     )
     aws_dev_disabled_app = create_web_app()
@@ -607,7 +607,7 @@ def test_web_cleanup_follows_settings_and_fails_closed_in_production(
             AUTH_MODE="simple-dev",
             AUTH_USERS_JSON='{"users":[{"subject":"local-demo-alvaro","username":"alvaro.local","display_name":"Alvaro Local","role":"tester","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"}]}',
             WEB_SESSION_SECRET="local-secret",
-            TPI_PUBLIC_SITE_URL="https://backoffice.dev.tupensioninteligente.cl/",
+            TPI_PUBLIC_SITE_URL="https://dev.tupensioninteligente.cl/",
         ),
     )
     production_app = create_web_app()

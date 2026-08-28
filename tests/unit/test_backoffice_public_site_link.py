@@ -14,8 +14,8 @@ from app.config import Settings
         ("local", "http://tpi.localhost:8080/", "http://tpi.localhost:8080/"),
         (
             "aws-dev",
-            "https://backoffice.dev.tupensioninteligente.cl/",
-            "https://backoffice.dev.tupensioninteligente.cl/",
+            "https://dev.tupensioninteligente.cl/",
+            "https://dev.tupensioninteligente.cl/",
         ),
     ],
 )
@@ -34,7 +34,7 @@ def test_public_site_link_uses_the_approved_environment_url(
         ("local", "https://tpi.localhost:8080/"),
         ("local", "http://tpi.localhost:8080/?token=unsafe"),
         ("local", "http://tpi.localhost:not-a-port/"),
-        ("aws-dev", "https://user:password@backoffice.dev.tupensioninteligente.cl/"),
+        ("aws-dev", "https://user:password@dev.tupensioninteligente.cl/"),
         ("aws-dev", "https://unapproved.example/"),
     ],
 )
@@ -79,11 +79,11 @@ def test_public_simulator_url_is_derived_from_the_approved_base_url() -> None:
     settings = Settings(
         _env_file=None,
         APP_ENV="aws-dev",
-        TPI_PUBLIC_SITE_URL="https://backoffice.dev.tupensioninteligente.cl/",
+        TPI_PUBLIC_SITE_URL="https://dev.tupensioninteligente.cl/",
     )
 
     assert ui.get_public_simulator_url(settings) == (
-        "https://backoffice.dev.tupensioninteligente.cl/simulador.html#simulador-interactivo"
+        "https://dev.tupensioninteligente.cl/simulador.html#simulador-interactivo"
     )
 
 
