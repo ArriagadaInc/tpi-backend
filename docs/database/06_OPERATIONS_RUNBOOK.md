@@ -70,6 +70,7 @@ Este script:
 - no modifica datos
 - no ejecuta funciones con efectos laterales
 - permite comparar privilegios efectivos versus grants declarados
+- sirve como evidencia antes de aplicar cualquier grant versionado
 
 Comprobaciones relevantes:
 
@@ -79,6 +80,11 @@ Comprobaciones relevantes:
 - el permiso sobre `tpi.auditoria` debe verificarse de forma independiente
 - la ausencia de membresias de roles debe quedar documentada junto con la
   ausencia de herencia
+
+Para H3.3, la validacion minima tambien debe confirmarse contra el rol de
+testing restringido `tpi_assignment_runtime`, creado por
+`scripts/init_test_database.py`, para asegurar que la asignacion funciona sin
+privilegios de escritura adicionales.
 
 ## 4. Preflight antes de la migracion `005`
 
@@ -109,6 +115,10 @@ Proceso recomendado:
 4. aplicar la migracion en la sesion administrativa aprobada
 5. verificar los indices y privilegios resultantes
 6. registrar el resultado en notas de release o bitacora
+
+Para `006_grant_h3_3_assignment_privileges.sql`, el preflight debe coincidir con
+el drift documentado. Si el estado observado no coincide, la migracion debe
+abortar en lugar de conceder permisos sobre un ambiente inesperado.
 
 No parchar drift manual cuando el cambio debe quedar versionado.
 

@@ -48,11 +48,22 @@ GRANT SELECT ON TABLE
     tpi.asesores
 TO :"app_role";
 
+-- H3.3 minimum bootstrap contract:
+-- - read-only advisors
+-- - create/read assignments for initial assignment flow
+-- - append-only audit trail
 GRANT SELECT, INSERT, UPDATE ON TABLE
     tpi.personas,
     tpi.leads,
-    tpi.consentimientos,
+    tpi.consentimientos
+TO :"app_role";
+
+GRANT SELECT, INSERT ON TABLE
     tpi.asignaciones
+TO :"app_role";
+
+GRANT INSERT ON TABLE
+    tpi.auditoria
 TO :"app_role";
 
 ALTER ROLE :"app_role" IN DATABASE tpi SET search_path = tpi, public;

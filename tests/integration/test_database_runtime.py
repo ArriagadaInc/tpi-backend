@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from datetime import date, datetime
 from decimal import Decimal
 from threading import Barrier
 from uuid import UUID, uuid4
 
 import pytest
+from psycopg import connect
+from psycopg.rows import dict_row
 
 from app.auth.models import AuthenticatedUser
+from app.config import get_settings
 from app.database import DatabaseAppError
 from app.database.connection import get_db_connection
 from app.database.healthcheck import check_database_connection, full_health_check
@@ -24,6 +28,7 @@ from app.models.solicitud import (
     RegistrarSolicitudRequest,
     SolicitudData,
 )
+from app.repositories import solicitud_repository as solicitud_repository_module
 from app.services.solicitud_service import SolicitudService
 from app.validators.rut import _calculate_dv
 
@@ -47,6 +52,43 @@ def ensure_assignment_schema_contract() -> None:
         conn.commit()
 
 
+@pytest.fixture(scope="session", autouse=True)
+def ensure_assignment_runtime_role() -> None:
+    with get_db_connection(operation="integration.assignment_runtime_role_bootstrap") as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'tpi_assignment_runtime') THEN
+                        CREATE ROLE tpi_assignment_runtime
+                            LOGIN
+                            PASSWORD 'tpi_assignment_runtime_password'
+                            NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
+                    ELSE
+                        ALTER ROLE tpi_assignment_runtime
+                            LOGIN
+                            PASSWORD 'tpi_assignment_runtime_password'
+                            NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
+                    END IF;
+
+                    EXECUTE format('GRANT CONNECT ON DATABASE %I TO %I', current_database(), 'tpi_assignment_runtime');
+                    EXECUTE format('GRANT USAGE ON SCHEMA %I TO %I', 'tpi', 'tpi_assignment_runtime');
+                    EXECUTE format('GRANT SELECT ON TABLE %I.%I TO %I', 'tpi', 'asesores', 'tpi_assignment_runtime');
+                    EXECUTE format('GRANT SELECT, INSERT ON TABLE %I.%I TO %I', 'tpi', 'asignaciones', 'tpi_assignment_runtime');
+                    EXECUTE format('GRANT INSERT ON TABLE %I.%I TO %I', 'tpi', 'auditoria', 'tpi_assignment_runtime');
+                    EXECUTE format('GRANT SELECT, UPDATE ON TABLE %I.%I TO %I', 'tpi', 'leads', 'tpi_assignment_runtime');
+                    EXECUTE format(
+                        'ALTER ROLE %I IN DATABASE %I SET search_path = %I, public',
+                        'tpi_assignment_runtime',
+                        current_database(),
+                        'tpi'
+                    );
+                END
+                $$;
+                """)
+        conn.commit()
+
+
 pytestmark = pytest.mark.integration
 
 
@@ -61,6 +103,35 @@ def build_assignment_actor() -> AuthenticatedUser:
         display_name="Integration Actor",
         role="executive",
     )
+
+
+@pytest.fixture
+def assignment_runtime_db_connection():
+    """Route repository database calls through the restricted runtime role."""
+
+    config = get_settings().database_config.connection_parameters()
+    runtime_params = {
+        **config,
+        "user": "tpi_assignment_runtime",
+        "password": "tpi_assignment_runtime_password",
+    }
+    original_get_db_connection = solicitud_repository_module.get_db_connection
+
+    @contextmanager
+    def _runtime_db_connection(operation: str = "database_operation"):
+        del operation
+        with connect(**runtime_params, row_factory=dict_row) as conn:
+            yield conn
+
+    @contextmanager
+    def _patched_runtime_connection():
+        solicitud_repository_module.get_db_connection = _runtime_db_connection
+        try:
+            yield
+        finally:
+            solicitud_repository_module.get_db_connection = original_get_db_connection
+
+    return _patched_runtime_connection
 
 
 @pytest.fixture
@@ -233,6 +304,7 @@ def test_assignment_creates_row_updates_state_and_audits(
     service: SolicitudService,
     catalog_ids: dict[str, UUID],
     tracked_entities: dict[str, set[str]],
+    assignment_runtime_db_connection,
 ) -> None:
     asesores = service.get_asesores_disponibles_para_asignacion()
     assert len(asesores) >= 2
@@ -268,7 +340,13 @@ def test_assignment_creates_row_updates_state_and_audits(
     tracked_entities["lead_ids"].add(str(response.id_lead))
     tracked_entities["persona_ids"].add(str(response.id_persona))
 
-    assigned = service.assign_lead(response.id_lead, asesor_id, actor=build_assignment_actor())
+    with assignment_runtime_db_connection():
+        runtime_service = SolicitudService()
+        assigned = runtime_service.assign_lead(
+            response.id_lead,
+            asesor_id,
+            actor=build_assignment_actor(),
+        )
     assert assigned is True
 
     detalle = service.get_solicitud_detalle(response.id_lead)
@@ -320,6 +398,7 @@ def test_assignment_rejects_second_active_assignment(
     service: SolicitudService,
     catalog_ids: dict[str, UUID],
     tracked_entities: dict[str, set[str]],
+    assignment_runtime_db_connection,
 ) -> None:
     asesores = service.get_asesores_disponibles_para_asignacion()
     assert len(asesores) >= 2
@@ -356,10 +435,22 @@ def test_assignment_rejects_second_active_assignment(
     tracked_entities["lead_ids"].add(str(response.id_lead))
     tracked_entities["persona_ids"].add(str(response.id_persona))
 
-    assert service.assign_lead(response.id_lead, asesor_inicial, actor=build_assignment_actor())
+    with assignment_runtime_db_connection():
+        runtime_service = SolicitudService()
+        assert runtime_service.assign_lead(
+            response.id_lead,
+            asesor_inicial,
+            actor=build_assignment_actor(),
+        )
 
     with pytest.raises(LeadAssignmentConflictError):
-        service.assign_lead(response.id_lead, asesor_secundario, actor=build_assignment_actor())
+        with assignment_runtime_db_connection():
+            runtime_service = SolicitudService()
+            runtime_service.assign_lead(
+                response.id_lead,
+                asesor_secundario,
+                actor=build_assignment_actor(),
+            )
 
     with get_db_connection(operation="integration.assignment.conflict.verify") as conn:
         with conn.cursor() as cur:
@@ -379,6 +470,7 @@ def test_assignment_rejects_invalid_or_inactive_advisor(
     service: SolicitudService,
     catalog_ids: dict[str, UUID],
     tracked_entities: dict[str, set[str]],
+    assignment_runtime_db_connection,
 ) -> None:
     asesores = service.get_asesores_disponibles_para_asignacion()
     assert asesores
@@ -414,12 +506,14 @@ def test_assignment_rejects_invalid_or_inactive_advisor(
     tracked_entities["lead_ids"].add(str(response.id_lead))
     tracked_entities["persona_ids"].add(str(response.id_persona))
 
-    with pytest.raises(LeadAssignmentValidationError, match="asesor"):
-        service.assign_lead(
-            response.id_lead,
-            UUID("00000000-0000-0000-0000-000000000000"),
-            actor=build_assignment_actor(),
-        )
+    with assignment_runtime_db_connection():
+        runtime_service = SolicitudService()
+        with pytest.raises(LeadAssignmentValidationError, match="asesor"):
+            runtime_service.assign_lead(
+                response.id_lead,
+                UUID("00000000-0000-0000-0000-000000000000"),
+                actor=build_assignment_actor(),
+            )
 
     with get_db_connection(operation="integration.assignment.inactive.toggle") as conn:
         with conn.cursor() as cur:
@@ -434,8 +528,14 @@ def test_assignment_rejects_invalid_or_inactive_advisor(
         conn.commit()
 
     try:
-        with pytest.raises(LeadAssignmentValidationError, match="habilitado"):
-            service.assign_lead(response.id_lead, asesor_inicial, actor=build_assignment_actor())
+        with assignment_runtime_db_connection():
+            runtime_service = SolicitudService()
+            with pytest.raises(LeadAssignmentValidationError, match="habilitado"):
+                runtime_service.assign_lead(
+                    response.id_lead,
+                    asesor_inicial,
+                    actor=build_assignment_actor(),
+                )
     finally:
         with get_db_connection(operation="integration.assignment.inactive.restore") as conn:
             with conn.cursor() as cur:
@@ -454,6 +554,7 @@ def test_assignment_concurrency_keeps_exactly_one_active_row(
     service: SolicitudService,
     catalog_ids: dict[str, UUID],
     tracked_entities: dict[str, set[str]],
+    assignment_runtime_db_connection,
 ) -> None:
     asesores = service.get_asesores_disponibles_para_asignacion()
     assert len(asesores) >= 2
@@ -495,11 +596,17 @@ def test_assignment_concurrency_keeps_exactly_one_active_row(
     def _attempt_assignment(asesor_id: UUID) -> str:
         barrier.wait()
         try:
-            return (
-                "ok"
-                if service.assign_lead(response.id_lead, asesor_id, actor=build_assignment_actor())
-                else "not_found"
-            )
+            with assignment_runtime_db_connection():
+                runtime_service = SolicitudService()
+                return (
+                    "ok"
+                    if runtime_service.assign_lead(
+                        response.id_lead,
+                        asesor_id,
+                        actor=build_assignment_actor(),
+                    )
+                    else "not_found"
+                )
         except LeadAssignmentConflictError:
             return "conflict"
 
@@ -614,6 +721,37 @@ def test_assignment_unique_partial_index_rolls_back_duplicate_active_rows(
                 (str(response.id_lead),),
             )
             assert cur.fetchone()["estado_lead"] == "nuevo"
+
+
+def test_assignment_runtime_role_has_exact_minimum_privileges() -> None:
+    with get_db_connection(operation="integration.assignment.privileges") as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT
+                    has_schema_privilege('tpi_assignment_runtime', 'tpi', 'USAGE') AS schema_usage,
+                    has_table_privilege('tpi_assignment_runtime', 'tpi.asesores', 'SELECT') AS asesores_select,
+                    has_table_privilege('tpi_assignment_runtime', 'tpi.asignaciones', 'SELECT') AS asignaciones_select,
+                    has_table_privilege('tpi_assignment_runtime', 'tpi.asignaciones', 'INSERT') AS asignaciones_insert,
+                    has_table_privilege('tpi_assignment_runtime', 'tpi.asignaciones', 'UPDATE') AS asignaciones_update,
+                    has_table_privilege('tpi_assignment_runtime', 'tpi.asignaciones', 'DELETE') AS asignaciones_delete,
+                    has_table_privilege('tpi_assignment_runtime', 'tpi.auditoria', 'INSERT') AS auditoria_insert,
+                    has_table_privilege('tpi_assignment_runtime', 'tpi.auditoria', 'SELECT') AS auditoria_select,
+                    has_table_privilege('tpi_assignment_runtime', 'tpi.leads', 'SELECT') AS leads_select,
+                    has_table_privilege('tpi_assignment_runtime', 'tpi.leads', 'UPDATE') AS leads_update
+                """)
+            row = cur.fetchone()
+
+    assert row is not None
+    assert row["schema_usage"] is True
+    assert row["asesores_select"] is True
+    assert row["asignaciones_select"] is True
+    assert row["asignaciones_insert"] is True
+    assert row["asignaciones_update"] is False
+    assert row["asignaciones_delete"] is False
+    assert row["auditoria_insert"] is True
+    assert row["auditoria_select"] is False
+    assert row["leads_select"] is True
+    assert row["leads_update"] is True
 
 
 def test_transaction_rollback_on_failure_leaves_no_residual_data(

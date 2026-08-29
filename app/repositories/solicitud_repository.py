@@ -765,14 +765,12 @@ class SolicitudRepository:
             UPDATE tpi.leads
             SET estado_lead = %s
             WHERE id_lead = %s
-            RETURNING id_lead
         """
         with get_db_connection(operation="update_lead_status") as conn:
             with conn.cursor() as cur:
                 cur.execute(query, (normalized_estado, str(id_lead)))
-                row = cur.fetchone()
                 conn.commit()
-                return row is not None
+                return cur.rowcount == 1
 
     @staticmethod
     def assign_lead(
@@ -789,7 +787,7 @@ class SolicitudRepository:
             FOR UPDATE
         """
         query_active_assignment = """
-            SELECT id_asignacion
+            SELECT 1
             FROM tpi.asignaciones
             WHERE id_lead = %s
               AND estado_asignacion = %s
@@ -797,10 +795,9 @@ class SolicitudRepository:
             LIMIT 1
         """
         query_asesor = """
-            SELECT id_asesor, nombre, rol, estado_disponibilidad
+            SELECT id_asesor, rol, estado_disponibilidad
             FROM tpi.asesores
             WHERE id_asesor = %s
-            FOR UPDATE
             LIMIT 1
         """
         query_lead = """
@@ -808,19 +805,16 @@ class SolicitudRepository:
             SET estado_lead = %s,
                 updated_at = NOW()
             WHERE id_lead = %s
-            RETURNING id_lead
         """
         query_assignment = """
             INSERT INTO tpi.asignaciones
                 (id_lead, id_asesor, asignado_por, regla_asignacion, estado_asignacion, observacion)
             VALUES (%s, %s, %s, %s, %s, %s)
-            RETURNING id_asignacion
         """
         query_trace = """
             INSERT INTO tpi.auditoria
                 (id_usuario, id_persona, id_lead, accion, tabla_afectada, detalle)
             VALUES (%s, %s, %s, %s, %s, %s)
-            RETURNING id_auditoria
         """
         import json
 
@@ -861,7 +855,7 @@ class SolicitudRepository:
                         raise LeadAssignmentConflictError("El lead ya tiene una asignacion activa")
 
                     cur.execute(query_lead, ("asignado", str(id_lead)))
-                    if cur.fetchone() is None:
+                    if cur.rowcount != 1:
                         return False
                     cur.execute(
                         query_assignment,
@@ -874,7 +868,7 @@ class SolicitudRepository:
                             None,
                         ),
                     )
-                    if cur.fetchone() is None:
+                    if cur.rowcount != 1:
                         raise RuntimeError("No se pudo registrar la asignacion")
                     cur.execute(
                         query_trace,
@@ -895,7 +889,7 @@ class SolicitudRepository:
                             ),
                         ),
                     )
-                    if cur.fetchone() is None:
+                    if cur.rowcount != 1:
                         raise RuntimeError("No se pudo registrar la auditoria de asignacion")
                 conn.commit()
                 return True

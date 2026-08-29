@@ -104,6 +104,14 @@ Regla actual:
 
 This value must fit the declared `VARCHAR(150)` contract.
 
+## Contrato de privilegio minimo
+
+```ini
+auditoria = append-only para tpi_app
+asesores = read-only para tpi_app
+asignaciones = create/read para H3.3 inicial
+```
+
 ## Modelo transaccional
 
 ```text

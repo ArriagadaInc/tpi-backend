@@ -146,6 +146,34 @@ CREATE TABLE IF NOT EXISTS tpi.api_idempotency (
 CREATE INDEX IF NOT EXISTS api_idempotency_expires_at_idx
     ON tpi.api_idempotency (expires_at);
 
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'tpi_assignment_runtime') THEN
+        CREATE ROLE tpi_assignment_runtime
+            LOGIN
+            PASSWORD 'tpi_assignment_runtime_password'
+            NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
+    ELSE
+        ALTER ROLE tpi_assignment_runtime
+            LOGIN
+            PASSWORD 'tpi_assignment_runtime_password'
+            NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
+    END IF;
+
+    EXECUTE format('GRANT CONNECT ON DATABASE %I TO %I', current_database(), 'tpi_assignment_runtime');
+    EXECUTE format('GRANT USAGE ON SCHEMA %I TO %I', 'tpi', 'tpi_assignment_runtime');
+    EXECUTE format('GRANT SELECT ON TABLE %I.%I TO %I', 'tpi', 'asesores', 'tpi_assignment_runtime');
+    EXECUTE format('GRANT SELECT, INSERT ON TABLE %I.%I TO %I', 'tpi', 'asignaciones', 'tpi_assignment_runtime');
+    EXECUTE format('GRANT INSERT ON TABLE %I.%I TO %I', 'tpi', 'auditoria', 'tpi_assignment_runtime');
+    EXECUTE format('GRANT SELECT, UPDATE ON TABLE %I.%I TO %I', 'tpi', 'leads', 'tpi_assignment_runtime');
+    EXECUTE format('ALTER ROLE %I IN DATABASE %I SET search_path = %I, public',
+        'tpi_assignment_runtime',
+        current_database(),
+        'tpi'
+    );
+END
+$$;
+
 INSERT INTO tpi.catalogo_genero (codigo, nombre, activo, orden_visual)
 VALUES
     ('FEMENINO', 'Femenino', TRUE, 10),

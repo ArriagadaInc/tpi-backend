@@ -52,9 +52,9 @@ Hallazgo confirmado:
 | `schema tpi` | `USAGE = true` | `USAGE = true` | `USAGE = true` | alineado |
 | `tpi.personas` | `SELECT/INSERT/UPDATE = true`, `DELETE = false` | `SELECT/INSERT/UPDATE` | fuera de alcance H3.3 | drift historico tolerado por ahora |
 | `tpi.leads` | `SELECT/INSERT/UPDATE/DELETE = true` | `SELECT/INSERT/UPDATE` | `SELECT/UPDATE` | drift de seguridad y privilegios sobrantes |
-| `tpi.asesores` | `SELECT/INSERT/UPDATE/DELETE = false` | `SELECT` | `SELECT` | AWS sin permisos; repo alineado parcialmente |
-| `tpi.asignaciones` | `SELECT/INSERT/UPDATE/DELETE = false` | `SELECT/INSERT/UPDATE` | `SELECT/INSERT` | AWS sin permisos; repo sobreconcede `UPDATE` |
-| `tpi.auditoria` | `SELECT/INSERT/UPDATE/DELETE = false` | sin grant explicito en `001_create_tpi_app_role.sql` | `INSERT` | drift de seguridad y falta de grant |
+| `tpi.asesores` | `SELECT/INSERT/UPDATE/DELETE = false` | `SELECT` | `SELECT` | AWS sin permisos; repo alineado |
+| `tpi.asignaciones` | `SELECT/INSERT/UPDATE/DELETE = false` | `SELECT/INSERT` | `SELECT/INSERT` | AWS sin permisos; repo alineado para H3.3 inicial |
+| `tpi.auditoria` | `SELECT/INSERT/UPDATE/DELETE = false` | `INSERT` | `INSERT` | AWS sin permisos; repo alineado para append-only |
 
 ## Drift de seguridad
 
@@ -99,6 +99,12 @@ Actualmente la aplicacion debe tratar esa tabla como **append-only**:
 
 El retorno de la insercion no debe depender de leer columnas de auditoria
 posteriores.
+
+En la practica operativa:
+
+- `tpi.asesores` es read-only para `tpi_app`
+- `tpi.auditoria` es append-only para `tpi_app`
+- `tpi.asignaciones` solo requiere create/read para la asignacion inicial
 
 ## Identificador tecnico del actor
 

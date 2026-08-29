@@ -66,6 +66,10 @@ It provides:
 - catalog tables
 - `tpi.api_idempotency`
 - the partial UNIQUE index for one active assignment per lead
+- a dedicated restricted runtime role for assignment tests:
+  - `tpi_assignment_runtime`
+  - `tpi_assignment_runtime_password`
+  - exact privileges needed by the H3.3 assignment flow
 
 This is how the test environment reproduces the relevant PostgreSQL contract
 without depending on AWS DEV.
@@ -107,6 +111,8 @@ If they diverge, the difference must be recorded explicitly before release.
 - `asignado_por` preserves a stable actor identifier
 - `tpi.asignaciones` remains the operational relation
 - `tpi.auditoria` contains traceability metadata without storing unnecessary PII
+- assignment tests run once under a restricted PostgreSQL role so privilege
+  regressions fail in integration instead of only in AWS
 
 ## Relevant Test Files
 
@@ -118,4 +124,3 @@ If they diverge, the difference must be recorded explicitly before release.
 - `tests/e2e/test_consulta_solicitudes.py`
 - `tests/e2e/test_registro_solicitud.py`
 - `tests/e2e/test_streamlit_app.py`
-
