@@ -730,12 +730,17 @@ def test_assignment_runtime_role_has_exact_minimum_privileges() -> None:
                 SELECT
                     has_schema_privilege('tpi_assignment_runtime', 'tpi', 'USAGE') AS schema_usage,
                     has_table_privilege('tpi_assignment_runtime', 'tpi.asesores', 'SELECT') AS asesores_select,
+                    has_table_privilege('tpi_assignment_runtime', 'tpi.asesores', 'INSERT') AS asesores_insert,
+                    has_table_privilege('tpi_assignment_runtime', 'tpi.asesores', 'UPDATE') AS asesores_update,
+                    has_table_privilege('tpi_assignment_runtime', 'tpi.asesores', 'DELETE') AS asesores_delete,
                     has_table_privilege('tpi_assignment_runtime', 'tpi.asignaciones', 'SELECT') AS asignaciones_select,
                     has_table_privilege('tpi_assignment_runtime', 'tpi.asignaciones', 'INSERT') AS asignaciones_insert,
                     has_table_privilege('tpi_assignment_runtime', 'tpi.asignaciones', 'UPDATE') AS asignaciones_update,
                     has_table_privilege('tpi_assignment_runtime', 'tpi.asignaciones', 'DELETE') AS asignaciones_delete,
                     has_table_privilege('tpi_assignment_runtime', 'tpi.auditoria', 'INSERT') AS auditoria_insert,
                     has_table_privilege('tpi_assignment_runtime', 'tpi.auditoria', 'SELECT') AS auditoria_select,
+                    has_table_privilege('tpi_assignment_runtime', 'tpi.auditoria', 'UPDATE') AS auditoria_update,
+                    has_table_privilege('tpi_assignment_runtime', 'tpi.auditoria', 'DELETE') AS auditoria_delete,
                     has_table_privilege('tpi_assignment_runtime', 'tpi.leads', 'SELECT') AS leads_select,
                     has_table_privilege('tpi_assignment_runtime', 'tpi.leads', 'UPDATE') AS leads_update
                 """)
@@ -744,12 +749,17 @@ def test_assignment_runtime_role_has_exact_minimum_privileges() -> None:
     assert row is not None
     assert row["schema_usage"] is True
     assert row["asesores_select"] is True
+    assert row["asesores_insert"] is False
+    assert row["asesores_update"] is False
+    assert row["asesores_delete"] is False
     assert row["asignaciones_select"] is True
     assert row["asignaciones_insert"] is True
     assert row["asignaciones_update"] is False
     assert row["asignaciones_delete"] is False
     assert row["auditoria_insert"] is True
     assert row["auditoria_select"] is False
+    assert row["auditoria_update"] is False
+    assert row["auditoria_delete"] is False
     assert row["leads_select"] is True
     assert row["leads_update"] is True
 

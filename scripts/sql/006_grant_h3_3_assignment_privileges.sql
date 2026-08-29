@@ -9,9 +9,17 @@
 -- Expected preflight for AWS DEV:
 --   schema tpi USAGE      = true
 --   asesores SELECT       = false
+--   asesores INSERT       = false
+--   asesores UPDATE       = false
+--   asesores DELETE       = false
 --   asignaciones SELECT   = false
 --   asignaciones INSERT   = false
+--   asignaciones UPDATE   = false
+--   asignaciones DELETE   = false
 --   auditoria INSERT      = false
+--   auditoria SELECT      = false
+--   auditoria UPDATE      = false
+--   auditoria DELETE      = false
 --   leads SELECT          = true
 --   leads UPDATE          = true
 --
@@ -24,35 +32,67 @@ DO $$
 DECLARE
     v_schema_usage boolean;
     v_asesores_select boolean;
+    v_asesores_insert boolean;
+    v_asesores_update boolean;
+    v_asesores_delete boolean;
     v_asignaciones_select boolean;
     v_asignaciones_insert boolean;
+    v_asignaciones_update boolean;
+    v_asignaciones_delete boolean;
     v_auditoria_insert boolean;
+    v_auditoria_select boolean;
+    v_auditoria_update boolean;
+    v_auditoria_delete boolean;
     v_leads_select boolean;
     v_leads_update boolean;
 BEGIN
     SELECT
         has_schema_privilege('tpi_app', 'tpi', 'USAGE'),
         has_table_privilege('tpi_app', 'tpi.asesores', 'SELECT'),
+        has_table_privilege('tpi_app', 'tpi.asesores', 'INSERT'),
+        has_table_privilege('tpi_app', 'tpi.asesores', 'UPDATE'),
+        has_table_privilege('tpi_app', 'tpi.asesores', 'DELETE'),
         has_table_privilege('tpi_app', 'tpi.asignaciones', 'SELECT'),
         has_table_privilege('tpi_app', 'tpi.asignaciones', 'INSERT'),
+        has_table_privilege('tpi_app', 'tpi.asignaciones', 'UPDATE'),
+        has_table_privilege('tpi_app', 'tpi.asignaciones', 'DELETE'),
         has_table_privilege('tpi_app', 'tpi.auditoria', 'INSERT'),
+        has_table_privilege('tpi_app', 'tpi.auditoria', 'SELECT'),
+        has_table_privilege('tpi_app', 'tpi.auditoria', 'UPDATE'),
+        has_table_privilege('tpi_app', 'tpi.auditoria', 'DELETE'),
         has_table_privilege('tpi_app', 'tpi.leads', 'SELECT'),
         has_table_privilege('tpi_app', 'tpi.leads', 'UPDATE')
     INTO
         v_schema_usage,
         v_asesores_select,
+        v_asesores_insert,
+        v_asesores_update,
+        v_asesores_delete,
         v_asignaciones_select,
         v_asignaciones_insert,
+        v_asignaciones_update,
+        v_asignaciones_delete,
         v_auditoria_insert,
+        v_auditoria_select,
+        v_auditoria_update,
+        v_auditoria_delete,
         v_leads_select,
         v_leads_update;
 
     IF NOT (
         v_schema_usage
         AND NOT v_asesores_select
+        AND NOT v_asesores_insert
+        AND NOT v_asesores_update
+        AND NOT v_asesores_delete
         AND NOT v_asignaciones_select
         AND NOT v_asignaciones_insert
+        AND NOT v_asignaciones_update
+        AND NOT v_asignaciones_delete
         AND NOT v_auditoria_insert
+        AND NOT v_auditoria_select
+        AND NOT v_auditoria_update
+        AND NOT v_auditoria_delete
         AND v_leads_select
         AND v_leads_update
     ) THEN
@@ -72,35 +112,67 @@ DO $$
 DECLARE
     v_schema_usage boolean;
     v_asesores_select boolean;
+    v_asesores_insert boolean;
+    v_asesores_update boolean;
+    v_asesores_delete boolean;
     v_asignaciones_select boolean;
     v_asignaciones_insert boolean;
+    v_asignaciones_update boolean;
+    v_asignaciones_delete boolean;
     v_auditoria_insert boolean;
+    v_auditoria_select boolean;
+    v_auditoria_update boolean;
+    v_auditoria_delete boolean;
     v_leads_select boolean;
     v_leads_update boolean;
 BEGIN
     SELECT
         has_schema_privilege('tpi_app', 'tpi', 'USAGE'),
         has_table_privilege('tpi_app', 'tpi.asesores', 'SELECT'),
+        has_table_privilege('tpi_app', 'tpi.asesores', 'INSERT'),
+        has_table_privilege('tpi_app', 'tpi.asesores', 'UPDATE'),
+        has_table_privilege('tpi_app', 'tpi.asesores', 'DELETE'),
         has_table_privilege('tpi_app', 'tpi.asignaciones', 'SELECT'),
         has_table_privilege('tpi_app', 'tpi.asignaciones', 'INSERT'),
+        has_table_privilege('tpi_app', 'tpi.asignaciones', 'UPDATE'),
+        has_table_privilege('tpi_app', 'tpi.asignaciones', 'DELETE'),
         has_table_privilege('tpi_app', 'tpi.auditoria', 'INSERT'),
+        has_table_privilege('tpi_app', 'tpi.auditoria', 'SELECT'),
+        has_table_privilege('tpi_app', 'tpi.auditoria', 'UPDATE'),
+        has_table_privilege('tpi_app', 'tpi.auditoria', 'DELETE'),
         has_table_privilege('tpi_app', 'tpi.leads', 'SELECT'),
         has_table_privilege('tpi_app', 'tpi.leads', 'UPDATE')
     INTO
         v_schema_usage,
         v_asesores_select,
+        v_asesores_insert,
+        v_asesores_update,
+        v_asesores_delete,
         v_asignaciones_select,
         v_asignaciones_insert,
+        v_asignaciones_update,
+        v_asignaciones_delete,
         v_auditoria_insert,
+        v_auditoria_select,
+        v_auditoria_update,
+        v_auditoria_delete,
         v_leads_select,
         v_leads_update;
 
     IF NOT (
         v_schema_usage
         AND v_asesores_select
+        AND NOT v_asesores_insert
+        AND NOT v_asesores_update
+        AND NOT v_asesores_delete
         AND v_asignaciones_select
         AND v_asignaciones_insert
+        AND NOT v_asignaciones_update
+        AND NOT v_asignaciones_delete
         AND v_auditoria_insert
+        AND NOT v_auditoria_select
+        AND NOT v_auditoria_update
+        AND NOT v_auditoria_delete
         AND v_leads_select
         AND v_leads_update
     ) THEN
