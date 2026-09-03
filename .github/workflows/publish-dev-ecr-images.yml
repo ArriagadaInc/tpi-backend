@@ -1,30 +1,16 @@
 name: Publish immutable DEV images to ECR
 
 on:
-  push:
-    branches:
-      - feat/h2-5-simple-dev-auth
-    paths:
-      - '.dockerignore'
-      - '.streamlit/**'
-      - 'Dockerfile'
-      - 'README.md'
-      - 'app/**'
-      - 'front/**'
-      - 'pyproject.toml'
-      - 'requirements/runtime.lock'
-      - 'scripts/**'
-      - 'deployment/caddy/**'
   workflow_dispatch:
     inputs:
       source_sha:
         description: Full immutable Git SHA to validate, build, and publish.
-        required: false
-        default: ''
+        required: true
         type: string
 
 permissions:
   contents: read
+  pull-requests: read
 
 env:
   AWS_REGION: us-east-2
@@ -33,13 +19,69 @@ env:
   ECR_CADDY_REPOSITORY: tpi-dev-caddy
 
 jobs:
+  authorize-source:
+    name: Authorize source revision
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate source SHA and repository authorization
+        uses: actions/github-script@v7
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        with:
+          script: |
+            const sourceSha = process.env.SOURCE_SHA;
+            if (!/^[0-9a-f]{40}$/.test(sourceSha)) {
+              core.setFailed('source_sha must be a full lowercase 40-character Git SHA.');
+              return;
+            }
+
+            const { owner, repo } = context.repo;
+            const commit = await github.rest.repos.getCommit({ owner, repo, ref: sourceSha });
+            if (commit.data.sha !== sourceSha) {
+              core.setFailed('source_sha does not identify the requested repository commit.');
+              return;
+            }
+
+            const comparison = await github.rest.repos.compareCommits({
+              owner,
+              repo,
+              base: 'main',
+              head: sourceSha,
+            });
+            const belongsToMain = ['identical', 'behind'].includes(comparison.data.status);
+
+            const associated = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner,
+              repo,
+              commit_sha: sourceSha,
+              per_page: 100,
+            });
+            const exactOpenPullRequest = associated.data.some((pullRequest) => (
+              pullRequest.state === 'open'
+              && pullRequest.base.ref === 'main'
+              && pullRequest.head.sha === sourceSha
+              && pullRequest.head.repo?.full_name === `${owner}/${repo}`
+            ));
+
+            if (!belongsToMain && !exactOpenPullRequest) {
+              core.setFailed(
+                'source_sha is not contained in main and is not the exact HEAD of an open same-repository PR to main.'
+              );
+              return;
+            }
+
+            core.info(
+              `Authorized ${sourceSha} via ${belongsToMain ? 'main ancestry' : 'open same-repository PR to main'}.`
+            );
+
   lint:
     name: Lint & Format
+    needs: authorize-source
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.source_sha || github.sha }}
+          ref: ${{ inputs.source_sha }}
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
@@ -48,12 +90,13 @@ jobs:
         run: |
           python -m pip install --requirement requirements/dev.lock
           python -m pip install --no-deps -e .
-      - run: ruff check app/ tests/ scripts/
-      - run: black --check app/ tests/ scripts/
+      - run: ruff check app/ tests/ scripts/ deployment/
+      - run: black --check app/ tests/ scripts/ deployment/
       - run: mypy app/ --ignore-missing-imports
 
   test:
     name: Tests
+    needs: authorize-source
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -72,7 +115,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.source_sha || github.sha }}
+          ref: ${{ inputs.source_sha }}
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
@@ -105,11 +148,12 @@ jobs:
 
   security:
     name: Security Audit
+    needs: authorize-source
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.source_sha || github.sha }}
+          ref: ${{ inputs.source_sha }}
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
@@ -123,38 +167,36 @@ jobs:
 
   docker-validate:
     name: Docker Build
+    needs: authorize-source
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.source_sha || github.sha }}
-      - run: docker build --tag tpi-dev-app:${{ inputs.source_sha || github.sha }} .
-      - run: docker build --tag tpi-dev-caddy:${{ inputs.source_sha || github.sha }} --file deployment/caddy/Dockerfile .
+          ref: ${{ inputs.source_sha }}
+      - run: docker build --tag tpi-dev-app:${{ inputs.source_sha }} .
+      - run: docker build --tag tpi-dev-caddy:${{ inputs.source_sha }} --file deployment/caddy/Dockerfile .
       - run: docker compose config --quiet
       - run: docker compose build
       - name: Validate Caddy configuration
         run: >-
           docker run --rm
           --volume "$GITHUB_WORKSPACE/deployment/caddy/Caddyfile:/etc/caddy/Caddyfile:ro"
-          tpi-dev-caddy:${{ inputs.source_sha || github.sha }}
+          tpi-dev-caddy:${{ inputs.source_sha }}
           caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 
   publish:
-    name: Publish immutable images
+    name: Publish immutable images and release bundle
     needs: [lint, test, security, docker-validate]
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pull-requests: read
       id-token: write
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.source_sha || github.sha }}
+          ref: ${{ inputs.source_sha }}
           fetch-depth: 0
-      - name: Verify the requested revision belongs to the authorized branch
-        run: |
-          git fetch origin "feat/h2-5-simple-dev-auth:refs/remotes/origin/feat/h2-5-simple-dev-auth"
-          git merge-base --is-ancestor "${{ inputs.source_sha || github.sha }}" origin/feat/h2-5-simple-dev-auth
       - name: Configure AWS credentials through GitHub OIDC
         uses: aws-actions/configure-aws-credentials@v5
         with:
@@ -165,23 +207,29 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
       - name: Build and push immutable images
+        id: images
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ inputs.source_sha || github.sha }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
-          docker build --tag "$REGISTRY/$ECR_APP_REPOSITORY:$IMAGE_TAG" .
-          docker build --tag "$REGISTRY/$ECR_CADDY_REPOSITORY:$IMAGE_TAG" --file deployment/caddy/Dockerfile .
-          docker push "$REGISTRY/$ECR_APP_REPOSITORY:$IMAGE_TAG"
-          docker push "$REGISTRY/$ECR_CADDY_REPOSITORY:$IMAGE_TAG"
-      - name: Record immutable image digests
-        env:
-          IMAGE_TAG: ${{ inputs.source_sha || github.sha }}
-        run: |
-          aws ecr describe-images --repository-name "$ECR_APP_REPOSITORY" --image-ids imageTag="$IMAGE_TAG" --query 'imageDetails[0].imageDigest' --output text
-          aws ecr describe-images --repository-name "$ECR_CADDY_REPOSITORY" --image-ids imageTag="$IMAGE_TAG" --query 'imageDetails[0].imageDigest' --output text
+          expected_registry="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          if [ "$REGISTRY" != "$expected_registry" ]; then
+            echo "Unexpected ECR registry: $REGISTRY"
+            exit 1
+          fi
+          docker build --tag "$REGISTRY/$ECR_APP_REPOSITORY:$SOURCE_SHA" .
+          docker build --tag "$REGISTRY/$ECR_CADDY_REPOSITORY:$SOURCE_SHA" --file deployment/caddy/Dockerfile .
+          docker push "$REGISTRY/$ECR_APP_REPOSITORY:$SOURCE_SHA"
+          docker push "$REGISTRY/$ECR_CADDY_REPOSITORY:$SOURCE_SHA"
+          app_digest=$(aws ecr describe-images --repository-name "$ECR_APP_REPOSITORY" --image-ids imageTag="$SOURCE_SHA" --query 'imageDetails[0].imageDigest' --output text)
+          caddy_digest=$(aws ecr describe-images --repository-name "$ECR_CADDY_REPOSITORY" --image-ids imageTag="$SOURCE_SHA" --query 'imageDetails[0].imageDigest' --output text)
+          [[ "$app_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          [[ "$caddy_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          echo "app_image=$REGISTRY/$ECR_APP_REPOSITORY@$app_digest" >> "$GITHUB_OUTPUT"
+          echo "caddy_image=$REGISTRY/$ECR_CADDY_REPOSITORY@$caddy_digest" >> "$GITHUB_OUTPUT"
       - name: Fail closed on high or critical ECR findings
         env:
-          IMAGE_TAG: ${{ inputs.source_sha || github.sha }}
+          IMAGE_TAG: ${{ inputs.source_sha }}
         run: |
           for repository in "$ECR_APP_REPOSITORY" "$ECR_CADDY_REPOSITORY"; do
             for attempt in $(seq 1 30); do
@@ -215,3 +263,44 @@ jobs:
               exit 1
             fi
           done
+      - name: Build and validate release bundle
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          APP_IMAGE: ${{ steps.images.outputs.app_image }}
+          CADDY_IMAGE: ${{ steps.images.outputs.caddy_image }}
+          DATABASE_HOST: ci-placeholder.invalid
+          DATABASE_NAME: tpi
+          DATABASE_USER: tpi_app
+          DATABASE_PASSWORD: ci-not-a-secret
+          API_IDEMPOTENCY_HMAC_SECRET: ci-not-a-secret
+          AUTH_USERS_JSON: '{"users":[]}'
+          WEB_SESSION_SECRET: ci-web-session-secret-not-for-runtime
+          TPI_PUBLIC_SITE_URL: https://dev.example.test
+          TPI_PUBLIC_SITE_ADDRESS: https://dev.example.test
+          TPI_BACKOFFICE_SITE_ADDRESS: https://backoffice.dev.example.test
+        run: |
+          bundle="dist/tpi-dev-ecr-${SOURCE_SHA:0:7}.zip"
+          python deployment/build_eb_ecr_bundle.py \
+            --template deployment/aws/docker-compose.ecr.yml \
+            --output "$bundle" \
+            --runtime-git-sha "$SOURCE_SHA" \
+            --app-image "$APP_IMAGE" \
+            --caddy-image "$CADDY_IMAGE"
+          unzip -t "$bundle"
+          bundle_dir="$(mktemp -d)"
+          trap 'rm -rf "$bundle_dir"' EXIT
+          unzip -q "$bundle" -d "$bundle_dir"
+          test "$(find "$bundle_dir" -mindepth 1 -maxdepth 1 | wc -l)" -eq 1
+          test -f "$bundle_dir/docker-compose.yml"
+          TPI_APP_IMAGE="$APP_IMAGE" TPI_CADDY_IMAGE="$CADDY_IMAGE" \
+            docker compose -f "$bundle_dir/docker-compose.yml" config --quiet
+          sha256sum "$bundle"
+          sha256sum "${bundle%.zip}.manifest.json"
+      - name: Upload DEV release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tpi-dev-ecr-${{ inputs.source_sha }}
+          path: |
+            dist/tpi-dev-ecr-*.zip
+            dist/tpi-dev-ecr-*.manifest.json
+          if-no-files-found: error

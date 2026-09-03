@@ -104,7 +104,7 @@ def build_bundle(
     """Create and validate a minimal POSIX-path ZIP plus an external manifest."""
     if not GIT_SHA_PATTERN.fullmatch(runtime_git_sha):
         raise ValueError("runtime git SHA must be a full 40-character lowercase SHA.")
-    expected_name = f"h2-5d-ecr-{runtime_git_sha[:7]}.zip"
+    expected_name = f"tpi-dev-ecr-{runtime_git_sha[:7]}.zip"
     if output.name != expected_name:
         raise ValueError(f"Bundle filename must be {expected_name}.")
 

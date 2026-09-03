@@ -141,14 +141,19 @@ jobs:
           tpi-dev-caddy:${{ github.sha }}
           caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 
-      - name: Build minimal ECR Elastic Beanstalk bundle
-        run: >-
-          python deployment/build_eb_ecr_bundle.py
-          --template deployment/aws/docker-compose.ecr.yml
-          --output dist/h2-5d-ecr-5c6a726.zip
-          --runtime-git-sha 5c6a726423a7539daefb9bcb1c35748e928e7999
-          --app-image 821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-app@sha256:1446f299deb66f40b1eb50cf91d82447fba51ceed4c8adb23a138688571a7c66
-          --caddy-image 821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-caddy@sha256:0c72b8cb2f8b7281437d128ebc4b7669105e1df5693d1e026967b2c747a77449
+      - name: Build validation-only Elastic Beanstalk bundle
+        env:
+          APP_IMAGE: ci.example.invalid/tpi-dev-app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          CADDY_IMAGE: ci.example.invalid/tpi-dev-caddy@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+        run: |
+          runtime_sha="${GITHUB_SHA}"
+          bundle="dist/tpi-dev-ecr-${runtime_sha:0:7}.zip"
+          python deployment/build_eb_ecr_bundle.py \
+            --template deployment/aws/docker-compose.ecr.yml \
+            --output "$bundle" \
+            --runtime-git-sha "$runtime_sha" \
+            --app-image "$APP_IMAGE" \
+            --caddy-image "$CADDY_IMAGE"
 
       - name: Validate Linux EB source bundle
         env:
@@ -163,10 +168,12 @@ jobs:
           TPI_PUBLIC_SITE_ADDRESS: https://dev.example.test
           TPI_BACKOFFICE_SITE_ADDRESS: https://backoffice.dev.example.test
         run: |
-          unzip -t dist/h2-5d-ecr-5c6a726.zip
-          unzip -l dist/h2-5d-ecr-5c6a726.zip
+          runtime_sha="${GITHUB_SHA}"
+          bundle="dist/tpi-dev-ecr-${runtime_sha:0:7}.zip"
+          unzip -t "$bundle"
+          unzip -l "$bundle"
           bundle_dir="$(mktemp -d)"
-          unzip -q dist/h2-5d-ecr-5c6a726.zip -d "$bundle_dir"
+          unzip -q "$bundle" -d "$bundle_dir"
           test "$(find "$bundle_dir" -mindepth 1 -maxdepth 1 | wc -l)" -eq 1
           test -f "$bundle_dir/docker-compose.yml"
           docker compose -f "$bundle_dir/docker-compose.yml" config --quiet
@@ -174,6 +181,6 @@ jobs:
       - name: Upload validated EB bundle
         uses: actions/upload-artifact@v4
         with:
-          name: h2-5d-ecr-5c6a726
-          path: dist/h2-5d-ecr-5c6a726.zip
+          name: ci-validation-only-eb-bundle-${{ github.sha }}
+          path: dist/tpi-dev-ecr-*.zip
           if-no-files-found: error
