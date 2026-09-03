@@ -1,7 +1,7 @@
 Estado: vigente
 Ambiente de referencia: AWS DEV
-Validacion fisica AWS DEV: parcial
-Ultima inspeccion: 2026-08-28
+Validacion fisica AWS DEV: completa para objetos H3.3 documentados
+Ultima inspeccion: 2026-09-03
 Fuentes complementarias: scripts versionados + init_test_database.py
 
 # 02 Esquema Fisico
@@ -143,12 +143,15 @@ Indices fisicos observados en AWS DEV:
 
 - `idx_asignaciones_lead`
 - `idx_asignaciones_asesor`
+- `asignaciones_one_active_per_lead_uq` (UNIQUE parcial sobre `id_lead`)
 - `asignaciones_pkey`
 
 Notas:
 
 - `estado_asignacion='activa'` is the canonical active value.
-- The partial unique index is pending migration `005_enforce_single_active_assignment.sql`.
+- La migracion `005_enforce_single_active_assignment.sql` creo el indice
+  UNIQUE parcial `asignaciones_one_active_per_lead_uq`, condicionado por
+  `estado_asignacion = 'activa'`.
 - The repository bootstrap may use different index names for testing.
 - Documented divergence:
   - AWS physical: `idx_asignaciones_lead`, `idx_asignaciones_asesor`,
@@ -262,8 +265,8 @@ Estado:
 
 ## Divergencias relevantes
 
-- AWS DEV already has `tpi.asignaciones` but still lacks the partial unique
-  index for one active assignment per lead.
+- AWS DEV tiene el indice UNIQUE parcial para una sola asignacion activa por
+  lead, aplicado mediante `005`.
 - `tpi.asesores.email` is not UNIQUE in the current validated contract.
 - `tpi.leads.estado_lead` and `tpi.asignaciones.estado_asignacion` are plain
   `VARCHAR` columns, not enums.

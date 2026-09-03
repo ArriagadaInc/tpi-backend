@@ -1,7 +1,7 @@
 Estado: vigente
 Ambiente de referencia: AWS DEV
 Validacion fisica AWS DEV: completa para privilegios de `tpi_app`
-Ultima inspeccion: 2026-08-28
+Ultima inspeccion: 2026-09-03
 Fuente: privilegios efectivos en AWS DEV + scripts versionados + `init_test_database.py`
 
 # 05 Seguridad y Acceso
@@ -29,7 +29,7 @@ Fuente: privilegios efectivos en AWS DEV + scripts versionados + `init_test_data
 - usado por el backoffice en local, testing, AWS DEV y futura produccion
 - debe operar con privilegios minimos
 
-## Evidencia AWS DEV
+## Evidencia AWS DEV post-006
 
 Hallazgo confirmado:
 
@@ -37,7 +37,8 @@ Hallazgo confirmado:
 - no existen membresias de roles para `tpi_app`
 - `rolinherit = false`
 - no existe herencia que explique permisos adicionales
-- `INSERT` sobre `tpi.auditoria` es `false`
+- `INSERT` sobre `tpi.auditoria` es `true`
+- la evidencia fue obtenida con `scripts/sql/inspect_dev_tpi_app_privileges_readonly.sql`
 
 ## Matriz de privilegios
 
@@ -51,14 +52,14 @@ Hallazgo confirmado:
 | ------ | ----------------- | --------------- | -------------- | ------ |
 | `schema tpi` | `USAGE = true` | `USAGE = true` | `USAGE = true` | alineado |
 | `tpi.personas` | `SELECT/INSERT/UPDATE = true`, `DELETE = false` | `SELECT/INSERT/UPDATE` | fuera de alcance H3.3 | drift historico tolerado por ahora |
-| `tpi.leads` | `SELECT/INSERT/UPDATE/DELETE = true` | `SELECT/INSERT/UPDATE` | `SELECT/UPDATE` | drift de seguridad y privilegios sobrantes |
-| `tpi.asesores` | `SELECT/INSERT/UPDATE/DELETE = false` | `SELECT` | `SELECT` | AWS sin permisos; repo alineado |
-| `tpi.asignaciones` | `SELECT/INSERT/UPDATE/DELETE = false` | `SELECT/INSERT` | `SELECT/INSERT` | AWS sin permisos; repo alineado para H3.3 inicial |
-| `tpi.auditoria` | `SELECT/INSERT/UPDATE/DELETE = false` | `INSERT` | `INSERT` | AWS sin permisos; repo alineado para append-only |
+| `tpi.leads` | `SELECT/INSERT/UPDATE/DELETE = true` | `SELECT/INSERT/UPDATE` | `SELECT/UPDATE` | drift historico fuera del alcance de 006 |
+| `tpi.asesores` | `SELECT = true`; `INSERT/UPDATE/DELETE = false` | `SELECT` | `SELECT` | alineado post-006 |
+| `tpi.asignaciones` | `SELECT/INSERT = true`; `UPDATE/DELETE = false` | `SELECT/INSERT` | `SELECT/INSERT` | alineado post-006 |
+| `tpi.auditoria` | `INSERT = true`; `SELECT/UPDATE/DELETE = false` | `INSERT` | `INSERT` | alineado post-006; append-only |
 
 ## Drift de seguridad
 
-Se confirma una divergencia real entre los tres planos:
+Antes de `006` existia una divergencia real entre los tres planos. El estado fisico observado despues de la migracion es:
 
 1. **AWS DEV observado**
 2. **repo/versionado**
@@ -66,13 +67,10 @@ Se confirma una divergencia real entre los tres planos:
 
 Ejemplos concretos:
 
-- AWS no tiene permisos sobre `tpi.asesores`
-- AWS no tiene permisos sobre `tpi.asignaciones`
-- AWS no tiene permisos sobre `tpi.auditoria`
+- AWS DEV ya tiene los permisos minimos H3.3 sobre `tpi.asesores`, `tpi.asignaciones` y `tpi.auditoria`
 - `001_create_tpi_app_role.sql` ya declara parcialmente permisos sobre
   `tpi.asesores` y `tpi.asignaciones`
-- AWS tiene `DELETE` sobre algunas tablas aunque `001_create_tpi_app_role.sql`
-  documenta que el rol no recibe `DELETE`
+- AWS conserva `DELETE` historico sobre `tpi.leads` y no se revoco mediante `006`
 
 No se debe reconciliar esta realidad silenciosamente.
 
@@ -84,6 +82,8 @@ Para la asignacion inicial, el minimo operativo es:
 - `tpi.asignaciones`: `SELECT`, `INSERT`
 - `tpi.auditoria`: `INSERT`
 - `tpi.leads`: `SELECT`, `UPDATE`
+
+Estado: OBSERVADO en AWS DEV despues de `006`.
 
 `UPDATE` y `DELETE` sobre `tpi.asignaciones` no forman parte de H3.3 inicial.
 

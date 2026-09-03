@@ -1,6 +1,6 @@
 Estado: vigente
 Ambiente de referencia: AWS DEV
-Ultima inspeccion: 2026-08-28
+Ultima inspeccion: 2026-09-03
 Fuente: privilegios efectivos en AWS DEV + scripts versionados + `init_test_database.py`
 
 # 06 Runbook Operacional
@@ -122,6 +122,13 @@ abortar en lugar de conceder permisos sobre un ambiente inesperado.
 
 No parchar drift manual cuando el cambio debe quedar versionado.
 
+Registro de ejecucion AWS DEV 2026-09-03:
+
+- `005`: preflight con 0 duplicados activos; aplicacion exitosa; indice parcial verificado.
+- `006`: preflight compatible; grants aplicados; postflight verificado.
+- datos de negocio: sin modificaciones.
+- operador y commit SHA: Pendiente de registro operativo.
+
 ## 6. Verificar una migracion
 
 Despues de `005`, verificar:
@@ -142,7 +149,7 @@ GROUP BY id_lead
 HAVING COUNT(*) > 1;
 ```
 
-Esperado:
+Resultado observado en AWS DEV el 2026-09-03:
 
 - el indice parcial unico existe
 - la consulta de duplicados no retorna filas
@@ -163,6 +170,15 @@ La verificacion debe distinguir:
 - privilegio efectivo
 - grant directo
 - privilegio heredado por membresia
+
+Resultado observado en AWS DEV el 2026-09-03:
+
+- `tpi` tiene `USAGE`
+- `asesores`: `SELECT` solamente
+- `asignaciones`: `SELECT`, `INSERT`
+- `auditoria`: `INSERT` solamente
+- `leads`: conserva `SELECT`, `INSERT`, `UPDATE`, `DELETE` historicos
+- `tpi_app` no tiene memberships y `rolinherit = false`
 
 ## 8. Rollback
 

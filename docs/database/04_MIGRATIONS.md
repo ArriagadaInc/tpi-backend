@@ -1,6 +1,7 @@
 Estado: vigente
 Ambiente de referencia: AWS DEV
-Ultima inspeccion: 2026-08-28
+Validacion fisica AWS DEV: completa para las migraciones H3.3 ejecutadas
+Ultima inspeccion: 2026-09-03
 Fuente: scripts versionados + `init_test_database.py` + evidencia AWS DEV
 
 # 04 Migraciones
@@ -21,8 +22,8 @@ scripts versionados, debe tratarse como drift.
 | `scripts/sql/003_create_api_idempotency.sql` | Crear la tabla de idempotencia de la API publica | `tpi.leads` | Versionado | Despliegue administrado | `scripts/sql/003_drop_api_idempotency.sql` |
 | `scripts/sql/003_drop_api_idempotency.sql` | Revertir la tabla de idempotencia | `tpi.api_idempotency` existente | Versionado | Despliegue administrado | Eliminar tabla y revocar grants |
 | `scripts/sql/004_create_lead_assignments.sql` | Crear `tpi.asignaciones` e indices basicos | `tpi.leads`, `tpi.asesores` | Versionado y alineado con el contrato fisico observado | Despliegue administrado | Drop controlado de tabla/indices si hiciera falta |
-| `scripts/sql/005_enforce_single_active_assignment.sql` | Garantizar una asignacion activa por lead | `tpi.asignaciones` con datos existentes | Preparado, no ejecutado todavia en AWS DEV | Despliegue administrado | `DROP INDEX IF EXISTS tpi.asignaciones_one_active_per_lead_uq` |
-| `scripts/sql/006_grant_h3_3_assignment_privileges.sql` | Agregar los privilegios minimos que requiere H3.3 inicial | `tpi_app`, `tpi.asesores`, `tpi.asignaciones`, `tpi.auditoria`, `tpi.leads` | Propuesto, no ejecutado todavia | AWS DEV existente / ambientes ya provisionados | Revoke solo de los privilegios agregados por este script, validado por preflight |
+| `scripts/sql/005_enforce_single_active_assignment.sql` | Garantizar una asignacion activa por lead | `tpi.asignaciones` con datos existentes | Ejecutado y verificado en AWS DEV el 2026-09-03; preflight: 0 duplicados activos | AWS DEV | `DROP INDEX IF EXISTS tpi.asignaciones_one_active_per_lead_uq` |
+| `scripts/sql/006_grant_h3_3_assignment_privileges.sql` | Agregar los privilegios minimos que requiere H3.3 inicial | `tpi_app`, `tpi.asesores`, `tpi.asignaciones`, `tpi.auditoria`, `tpi.leads` | Ejecutado y verificado en AWS DEV el 2026-09-03 | AWS DEV existente | Revoke solo de los privilegios agregados por este script, conforme al preflight |
 | `scripts/sql/dev/002_enable_test_cleanup.sql` | Conceder DELETE solo para limpieza controlada en DEV | `tpi.leads`, `tpi.consentimientos` | Ayuda DEV-only | AWS DEV solamente | `scripts/sql/dev/002_disable_test_cleanup.sql` |
 | `scripts/sql/dev/002_disable_test_cleanup.sql` | Revocar el DELETE DEV-only | Script de habilitacion previo | Ayuda DEV-only | AWS DEV solamente | Revocar DELETE |
 
@@ -31,13 +32,12 @@ scripts versionados, debe tratarse como drift.
 ### AWS DEV actual
 
 - `tpi.asignaciones` existe
-- la llave parcial unica para una sola asignacion activa todavia no existe
-- `tpi_app` no tiene permisos efectivos sobre `tpi.asesores`, `tpi.asignaciones`
-  ni `tpi.auditoria`
+- existe `tpi.asignaciones_one_active_per_lead_uq`, UNIQUE sobre `id_lead` cuando `estado_asignacion = 'activa'`
+- `tpi_app` tiene los privilegios H3.3 verificados sobre `tpi.asesores`, `tpi.asignaciones` y `tpi.auditoria`
 - `tpi_app` conserva privilegios efectivos adicionales sobre `tpi.leads` y
   `tpi.personas` que forman parte del estado historico del ambiente
 
-### Estado objetivo H3.3
+### Estado observado H3.3 en AWS DEV
 
 - al menos para el flujo de asignacion inicial:
   - `tpi.asesores`: `SELECT`
@@ -46,6 +46,14 @@ scripts versionados, debe tratarse como drift.
   - `tpi.leads`: `SELECT`, `UPDATE`
 - una sola asignacion activa por `id_lead`
 - trazabilidad sin ampliar privilegios mas de lo necesario
+
+Evidencia postflight del 2026-09-03:
+
+- `005`: preflight sin duplicados activos; indice parcial creado y verificado
+- `006`: privilegios postflight coinciden con el contrato H3.3
+- no se modificaron datos de negocio
+
+Operador y commit SHA de la ejecucion: Pendiente de registro operativo.
 
 ## Notas sobre `005`
 
@@ -57,6 +65,9 @@ Modelo:
 2. aborto si ya existen filas duplicadas
 3. creacion del indice parcial unico
 4. validacion posterior de que ya no existen conflictos estructurales
+
+Resultado AWS DEV 2026-09-03: aplicado correctamente; indice
+`tpi.asignaciones_one_active_per_lead_uq` verificado.
 
 ## Bootstrap vs migracion incremental
 
