@@ -54,11 +54,11 @@ jobs:
               owner,
               repo,
               commit_sha: sourceSha,
-              state: 'open',
               per_page: 100,
             });
             const exactOpenPullRequest = associated.data.some((pullRequest) => (
-              pullRequest.base.ref === 'main'
+              pullRequest.state === 'open'
+              && pullRequest.base.ref === 'main'
               && pullRequest.head.sha === sourceSha
               && pullRequest.head.repo?.full_name === `${owner}/${repo}`
             ));
@@ -296,7 +296,7 @@ jobs:
             docker compose -f "$bundle_dir/docker-compose.yml" config --quiet
           sha256sum "$bundle"
           sha256sum "${bundle%.zip}.manifest.json"
-      - name: Upload H3.3 release artifacts
+      - name: Upload DEV release artifacts
         uses: actions/upload-artifact@v4
         with:
           name: tpi-dev-ecr-${{ inputs.source_sha }}
