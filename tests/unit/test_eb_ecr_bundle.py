@@ -28,7 +28,7 @@ RUNTIME_SHA = "c" * 40
 
 
 def test_build_bundle_is_minimal_posix_and_digest_pinned(tmp_path: Path) -> None:
-    output = tmp_path / "h2-5d-ecr-ccccccc.zip"
+    output = tmp_path / "tpi-dev-ecr-ccccccc.zip"
 
     bundle, manifest = bundle_builder.build_bundle(
         template=Path("deployment/aws/docker-compose.ecr.yml"),
@@ -92,7 +92,7 @@ def test_bundle_builder_rejects_tag_reference(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="digest"):
         bundle_builder.build_bundle(
             template=Path("deployment/aws/docker-compose.ecr.yml"),
-            output=tmp_path / "h2-5d-ecr-ccccccc.zip",
+            output=tmp_path / "tpi-dev-ecr-ccccccc.zip",
             app_image="example.com/tpi-dev-app:mutable",
             caddy_image=CADDY_IMAGE,
             runtime_git_sha=RUNTIME_SHA,
@@ -103,7 +103,7 @@ def test_bundle_builder_rejects_invalid_runtime_sha(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="40-character"):
         bundle_builder.build_bundle(
             template=Path("deployment/aws/docker-compose.ecr.yml"),
-            output=tmp_path / "h2-5d-ecr-ccccccc.zip",
+            output=tmp_path / "tpi-dev-ecr-ccccccc.zip",
             app_image=APP_IMAGE,
             caddy_image=CADDY_IMAGE,
             runtime_git_sha="short-sha",
@@ -231,7 +231,7 @@ services:
 def test_main_prints_bundle_and_manifest_paths(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    output = tmp_path / "h2-5d-ecr-ccccccc.zip"
+    output = tmp_path / "tpi-dev-ecr-ccccccc.zip"
     monkeypatch.setattr(
         sys,
         "argv",
