@@ -11,7 +11,7 @@
       "Condition": {
         "StringEquals": {
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-          "token.actions.githubusercontent.com:sub": "repo:ArriagadaInc@37077654/tpi-backend@1318709295:ref:refs/heads/feat/h2-5-simple-dev-auth"
+          "token.actions.githubusercontent.com:sub": "repo:ArriagadaInc@37077654/tpi-backend@1318709295:ref:refs/heads/main"
         }
       }
     }
