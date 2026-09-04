@@ -8,10 +8,18 @@ import pytest
 from scripts.eb_dns_matching import identify_environment, matching_environments
 
 ROOT = Path(__file__).parents[2]
+PREFLIGHT_WORKFLOW = ROOT / ".github/workflows/preflight-dev-eb.yml"
 
 
 def _load_json(path: str) -> dict:
     return json.loads((ROOT / path).read_text(encoding="utf-8"))
+
+
+def test_eb_preflight_uses_valid_include_deleted_flag() -> None:
+    workflow = PREFLIGHT_WORKFLOW.read_text(encoding="utf-8")
+
+    assert "--no-include-deleted" in workflow
+    assert "--include-deleted false" not in workflow
 
 
 def test_eb_preflight_trust_is_main_only() -> None:

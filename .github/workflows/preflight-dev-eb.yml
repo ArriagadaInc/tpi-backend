@@ -53,7 +53,7 @@ jobs:
         run: |
           environments="$(aws elasticbeanstalk describe-environments \
             --region "$AWS_REGION" \
-            --include-deleted false \
+            --no-include-deleted \
             --query 'Environments[].{Application:ApplicationName,Environment:EnvironmentName,CNAME:CNAME,Status:Status,Health:Health,HealthStatus:HealthStatus,VersionLabel:VersionLabel}' \
             --output json)"
           echo "Active Elastic Beanstalk environments:"
