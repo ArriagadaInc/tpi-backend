@@ -137,9 +137,9 @@ jobs:
       - name: Verify runtime OpenSSL packages
         run: |
           docker run --rm tpi-backoffice-h21:${{ github.sha }} \
-            sh -c 'apk info -v openssl libssl3 libcrypto3'
+            sh -c 'apk info -v libssl3 libcrypto3'
           docker run --rm tpi-dev-caddy:${{ github.sha }} \
-            sh -c 'apk info -v openssl libssl3 libcrypto3'
+            sh -c 'apk info -v libssl3 libcrypto3'
 
       - name: Validate Caddy configuration
         run: >-
