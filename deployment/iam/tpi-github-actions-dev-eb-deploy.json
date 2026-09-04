@@ -32,6 +32,12 @@
       "Resource": "arn:aws:elasticbeanstalk:us-east-2:821656895812:environment/tpi-backoffice/tpi-backoffice-dev-green"
     },
     {
+      "Sid": "AllowElasticBeanstalkStorageBucketCheck",
+      "Effect": "Allow",
+      "Action": "s3:CreateBucket",
+      "Resource": "arn:aws:s3:::elasticbeanstalk-us-east-2-821656895812"
+    },
+    {
       "Sid": "ReadWriteOnlyDevReleaseBundles",
       "Effect": "Allow",
       "Action": [

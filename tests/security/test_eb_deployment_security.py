@@ -40,12 +40,12 @@ def test_deployment_policy_is_scoped_to_approved_resources() -> None:
         "elasticbeanstalk:DescribeEvents",
         "elasticbeanstalk:CreateApplicationVersion",
         "elasticbeanstalk:UpdateEnvironment",
+        "s3:CreateBucket",
         "s3:PutObject",
         "s3:GetObject",
         "s3:GetObjectVersion",
     ]
     serialized = json.dumps(policy)
-    assert "s3:CreateBucket" not in serialized
     assert "iam:PassRole" not in serialized
     assert "elasticbeanstalk:UpdateConfigurationTemplate" not in serialized
     assert "s3:DeleteObject" not in serialized
@@ -66,6 +66,20 @@ def test_deployment_policy_is_scoped_to_approved_resources() -> None:
     assert "ListAllMyBuckets" not in serialized
     assert "s3:PutObjectAcl" not in serialized
     assert "s3:GetObjectAcl" not in serialized
+    bucket_statement = next(
+        statement
+        for statement in policy["Statement"]
+        if statement["Sid"] == "AllowElasticBeanstalkStorageBucketCheck"
+    )
+    assert bucket_statement["Action"] == "s3:CreateBucket"
+    assert bucket_statement["Resource"] == ("arn:aws:s3:::elasticbeanstalk-us-east-2-821656895812")
+    assert "arn:aws:s3:::*" not in serialized
+    assert "arn:aws:s3:::elasticbeanstalk-*" not in serialized
+    assert "s3:DeleteBucket" not in serialized
+    assert "s3:PutBucketPolicy" not in serialized
+    assert "s3:PutBucketAcl" not in serialized
+    assert "s3:PutBucketOwnershipControls" not in serialized
+    assert "s3:PutBucketPublicAccessBlock" not in serialized
     assert (
         "arn:aws:elasticbeanstalk:us-east-2:821656895812:environment/tpi-backoffice/tpi-backoffice-dev-green"
         in serialized
