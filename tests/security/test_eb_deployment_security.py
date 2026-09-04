@@ -57,6 +57,8 @@ def test_deployment_workflow_is_main_only_and_pins_frozen_candidate() -> None:
 
     assert "workflow_dispatch:" in workflow
     assert 'test "$GITHUB_REF" = "refs/heads/main"' in workflow
+    assert "merge-multiple: true" in workflow
+    assert "bash scripts/release/verify_frozen_candidate.sh" in workflow
     assert "28cf009137ada707540d9ee7eba01dc45a9a260e" in workflow
     assert "33824477381" in workflow
     assert "9919549285" in workflow

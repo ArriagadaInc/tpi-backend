@@ -47,53 +47,14 @@ jobs:
           repository: ${{ github.repository }}
           run-id: ${{ env.ARTIFACT_RUN_ID }}
           path: artifact
+          merge-multiple: true
 
       - name: Verify immutable candidate artifact
         env:
           APP_IMAGE: 821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-app@${{ env.APP_DIGEST }}
           CADDY_IMAGE: 821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-caddy@${{ env.CADDY_DIGEST }}
         run: |
-          set -euo pipefail
-          bundle="artifact/$BUNDLE_NAME"
-          manifest="artifact/$MANIFEST_NAME"
-          test -f "$bundle"
-          test -f "$manifest"
-          test "$(find artifact -type f | wc -l)" -eq 2
-          test "$(sha256sum "$bundle" | cut -d' ' -f1)" = "$BUNDLE_SHA256"
-          jq -e \
-            --arg runtime "$SOURCE_SHA" \
-            --arg app "$APP_IMAGE" \
-            --arg caddy "$CADDY_IMAGE" \
-            --arg bundle_sha "$BUNDLE_SHA256" \
-            '.runtime_git_sha == $runtime
-             and .app_image == $app
-             and .caddy_image == $caddy
-             and .bundle_sha256 == $bundle_sha' \
-            "$manifest" >/dev/null
-
-          test "$(zipinfo -1 "$bundle")" = "docker-compose.yml"
-          unzip -t "$bundle"
-          bundle_dir="$(mktemp -d)"
-          trap 'rm -rf "$bundle_dir"' EXIT
-          unzip -q "$bundle" -d "$bundle_dir"
-          compose="$bundle_dir/docker-compose.yml"
-          test "$(grep -F -c "$APP_IMAGE" "$compose")" -eq 2
-          test "$(grep -F -c "$CADDY_IMAGE" "$compose")" -eq 1
-          (
-            export TPI_APP_IMAGE="$APP_IMAGE"
-            export TPI_CADDY_IMAGE="$CADDY_IMAGE"
-            export DATABASE_HOST=ci-placeholder.invalid
-            export DATABASE_NAME=tpi
-            export DATABASE_USER=tpi_app
-            export DATABASE_PASSWORD=ci-not-a-secret
-            export API_IDEMPOTENCY_HMAC_SECRET=ci-not-a-secret
-            export AUTH_USERS_JSON='{"users":[]}'
-            export WEB_SESSION_SECRET=ci-web-session-secret-not-for-runtime
-            export TPI_PUBLIC_SITE_URL=https://dev.example.test
-            export TPI_PUBLIC_SITE_ADDRESS=https://dev.example.test
-            export TPI_BACKOFFICE_SITE_ADDRESS=https://backoffice.dev.example.test
-            docker compose -f "$compose" config --quiet
-          )
+          bash scripts/release/verify_frozen_candidate.sh
 
       - name: Configure AWS credentials through GitHub OIDC
         uses: aws-actions/configure-aws-credentials@v5
