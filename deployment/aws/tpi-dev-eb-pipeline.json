@@ -54,10 +54,12 @@
               "ComputeType": "BUILD_GENERAL1_SMALL"
             },
             "commands": [
+              "for tool in aws python3 bash jq sha256sum zipinfo unzip docker; do command -v \"$tool\" >/dev/null || { echo \"ERROR: required runtime tool is unavailable: $tool\" >&2; exit 1; }; done",
+              "docker compose version >/dev/null || { echo 'ERROR: docker compose is unavailable' >&2; exit 1; }",
               "aws s3api get-object --region us-east-2 --bucket tpi-dev-release-artifacts-821656895812-us-east-2 --key trusted-tooling/v1/verify_frozen_candidate.sh /tmp/verify_frozen_candidate.sh >/dev/null",
               "echo 'a59144ff469e56231addb7c46ccf3fa7d456ff9487c7387089eec9137a045791  /tmp/verify_frozen_candidate.sh' | sha256sum --check --strict",
               "aws s3api get-object --region us-east-2 --bucket tpi-dev-release-artifacts-821656895812-us-east-2 --key trusted-tooling/v1/promote_eb_candidate.py /tmp/promote_eb_candidate.py >/dev/null",
-              "echo 'fbbbf2fdc3025612627945a312144e4d8972657b1f8240bd142a6ed13b552c86  /tmp/promote_eb_candidate.py' | sha256sum --check --strict",
+              "echo 'a284fa327418e1a598409494a03164cd52e314d94bf023a95bccb8e2833f72ad  /tmp/promote_eb_candidate.py' | sha256sum --check --strict",
               "bash /tmp/verify_frozen_candidate.sh",
               "python3 /tmp/promote_eb_candidate.py"
             ],
@@ -74,8 +76,8 @@
               {"name": "BUNDLE_SHA256", "value": "5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045", "type": "PLAINTEXT"},
               {"name": "APP_IMAGE", "value": "821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-app@sha256:45331812c93bcf905b2ae8ad9eedff9eba5f63bc4afbfd5639af85c78bb3b6ce", "type": "PLAINTEXT"},
               {"name": "CADDY_IMAGE", "value": "821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-caddy@sha256:1d7c114bf0bb98e8ed2034a37997ee4d9e4aec98cbba58dc00581bbf6b6dc4e2", "type": "PLAINTEXT"},
-              {"name": "RELEASE_BUCKET", "value": "tpi-dev-release-artifacts-821656895812-us-east-2", "type": "PLAINTEXT"},
-              {"name": "RELEASE_BUNDLE_KEY", "value": "releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.zip", "type": "PLAINTEXT"},
+              {"name": "APPROVED_BUNDLE_BUCKET", "value": "tpi-dev-release-artifacts-821656895812-us-east-2", "type": "PLAINTEXT"},
+              {"name": "APPROVED_BUNDLE_KEY", "value": "approved-releases/h3-3-crm-web-28cf009-r1/5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045.zip", "type": "PLAINTEXT"},
               {"name": "LEGACY_BUNDLE_BUCKET", "value": "elasticbeanstalk-us-east-2-821656895812", "type": "PLAINTEXT"},
               {"name": "LEGACY_BUNDLE_KEY", "value": "tpi-backoffice/dev-releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.zip", "type": "PLAINTEXT"},
               {"name": "ARTIFACT_DIR", "value": "artifact", "type": "PLAINTEXT"}

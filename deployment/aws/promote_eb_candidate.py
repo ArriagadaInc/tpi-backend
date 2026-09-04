@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
 import json
 import os
 import subprocess
 import sys
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 
 
@@ -37,10 +41,12 @@ class PromotionContract:
     environment: str
     current_version: str
     candidate_version: str
-    release_bucket: str
-    release_bundle_key: str
+    approved_bundle_bucket: str
+    approved_bundle_key: str
     legacy_bundle_bucket: str
     legacy_bundle_key: str
+    artifact_dir: str
+    bundle_name: str
     runtime_sha: str
     bundle_sha256: str
 
@@ -53,10 +59,12 @@ class PromotionContract:
             "environment": "ENVIRONMENT",
             "current_version": "EXPECTED_CURRENT_VERSION",
             "candidate_version": "VERSION_LABEL",
-            "release_bucket": "RELEASE_BUCKET",
-            "release_bundle_key": "RELEASE_BUNDLE_KEY",
+            "approved_bundle_bucket": "APPROVED_BUNDLE_BUCKET",
+            "approved_bundle_key": "APPROVED_BUNDLE_KEY",
             "legacy_bundle_bucket": "LEGACY_BUNDLE_BUCKET",
             "legacy_bundle_key": "LEGACY_BUNDLE_KEY",
+            "artifact_dir": "ARTIFACT_DIR",
+            "bundle_name": "BUNDLE_NAME",
             "runtime_sha": "SOURCE_SHA",
             "bundle_sha256": "BUNDLE_SHA256",
         }
@@ -76,7 +84,6 @@ class CandidatePromoter:
         try:
             self._verify_account()
             environment = self._environment()
-            self._verify_release_object()
             self._ensure_candidate()
             self._verify_rollback()
 
@@ -133,23 +140,6 @@ class CandidatePromoter:
             raise RuntimeError("Elastic Beanstalk environment identity mismatch")
         return environment
 
-    def _verify_release_object(self) -> None:
-        response = self.aws.json(
-            "s3api",
-            "head-object",
-            "--region",
-            self.contract.region,
-            "--bucket",
-            self.contract.release_bucket,
-            "--key",
-            self.contract.release_bundle_key,
-        )
-        metadata = response.get("Metadata", {}) if isinstance(response, dict) else {}
-        if metadata.get("runtime-git-sha") != self.contract.runtime_sha:
-            raise RuntimeError("Release object runtime SHA mismatch")
-        if metadata.get("bundle-sha256") != self.contract.bundle_sha256:
-            raise RuntimeError("Release object bundle SHA256 mismatch")
-
     def _versions(self, version_label: str) -> list[dict[str, object]]:
         response = self.aws.json(
             "elasticbeanstalk",
@@ -169,6 +159,7 @@ class CandidatePromoter:
     def _ensure_candidate(self) -> None:
         versions = self._versions(self.contract.candidate_version)
         if not versions:
+            self._materialize_approved_bundle()
             self.aws.json(
                 "elasticbeanstalk",
                 "create-application-version",
@@ -180,8 +171,8 @@ class CandidatePromoter:
                 self.contract.candidate_version,
                 "--source-bundle",
                 (
-                    f"S3Bucket={self.contract.release_bucket},"
-                    f"S3Key={self.contract.release_bundle_key}"
+                    f"S3Bucket={self.contract.approved_bundle_bucket},"
+                    f"S3Key={self.contract.approved_bundle_key}"
                 ),
                 "--no-process",
                 "--no-auto-create-application",
@@ -190,6 +181,56 @@ class CandidatePromoter:
         if len(versions) != 1:
             raise RuntimeError("Candidate application version must exist exactly once")
         self._verify_candidate(versions[0])
+
+    def _materialize_approved_bundle(self) -> None:
+        bundle = Path(self.contract.artifact_dir) / self.contract.bundle_name
+        if not bundle.is_file():
+            raise RuntimeError("Verified candidate bundle is unavailable")
+        with bundle.open("rb") as bundle_stream:
+            bundle_hash = hashlib.file_digest(bundle_stream, "sha256")
+        actual_sha256 = bundle_hash.hexdigest()
+        if not hmac.compare_digest(actual_sha256, self.contract.bundle_sha256):
+            raise RuntimeError("Verified candidate bundle SHA256 mismatch")
+
+        checksum = base64.b64encode(bundle_hash.digest()).decode("ascii")
+        self.aws.json(
+            "s3api",
+            "put-object",
+            "--region",
+            self.contract.region,
+            "--bucket",
+            self.contract.approved_bundle_bucket,
+            "--key",
+            self.contract.approved_bundle_key,
+            "--body",
+            str(bundle),
+            "--content-type",
+            "application/zip",
+            "--checksum-algorithm",
+            "SHA256",
+            "--checksum-sha256",
+            checksum,
+            "--metadata",
+            (
+                f"runtime-git-sha={self.contract.runtime_sha},"
+                f"bundle-sha256={self.contract.bundle_sha256}"
+            ),
+        )
+        response = self.aws.json(
+            "s3api",
+            "head-object",
+            "--region",
+            self.contract.region,
+            "--bucket",
+            self.contract.approved_bundle_bucket,
+            "--key",
+            self.contract.approved_bundle_key,
+            "--checksum-mode",
+            "ENABLED",
+        )
+        stored_checksum = response.get("ChecksumSHA256") if isinstance(response, dict) else None
+        if stored_checksum != checksum:
+            raise RuntimeError("Approved release object checksum mismatch")
 
     def _wait_for_candidate(self) -> list[dict[str, object]]:
         for _ in range(30):
@@ -213,7 +254,7 @@ class CandidatePromoter:
             raise RuntimeError("Candidate application version has no SourceBundle")
         actual = (source.get("S3Bucket"), source.get("S3Key"))
         approved = {
-            (self.contract.release_bucket, self.contract.release_bundle_key),
+            (self.contract.approved_bundle_bucket, self.contract.approved_bundle_key),
             (self.contract.legacy_bundle_bucket, self.contract.legacy_bundle_key),
         }
         if actual not in approved:

@@ -21,11 +21,20 @@
         "s3:GetObjectVersionTagging"
       ],
       "Resource": [
-        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.zip",
         "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/promotions/h3-3-crm-web-28cf009-r1/candidate-data.zip",
         "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/trusted-tooling/v1/verify_frozen_candidate.sh",
         "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/trusted-tooling/v1/promote_eb_candidate.py"
       ]
+    },
+    {
+      "Sid": "MaterializeOnlyVerifiedApprovedBundle",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:GetObjectVersion"
+      ],
+      "Resource": "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/approved-releases/h3-3-crm-web-28cf009-r1/5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045.zip"
     },
     {
       "Sid": "UseDedicatedPipelineArtifactStore",

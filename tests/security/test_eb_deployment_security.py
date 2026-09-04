@@ -84,6 +84,16 @@ def test_pipeline_targets_only_approved_dev_environment_and_candidate() -> None:
     assert 'PollForSourceChanges": "false' in serialized
 
     commands = pipeline["stages"][1]["actions"][0]["commands"]
+    required_tools = commands[0]
+    assert all(
+        tool in required_tools
+        for tool in ("aws", "python3", "bash", "jq", "sha256sum", "zipinfo", "unzip", "docker")
+    )
+    assert "docker compose version" in commands[1]
+    assert not any(
+        installer in " ".join(commands)
+        for installer in ("apt-get", "apk add", "pip install", "yum install")
+    )
     assert any("trusted-tooling/v1/verify_frozen_candidate.sh" in item for item in commands)
     assert any("trusted-tooling/v1/promote_eb_candidate.py" in item for item in commands)
     assert sum("sha256sum --check --strict" in item for item in commands) == 2
@@ -156,12 +166,58 @@ def test_github_cannot_write_trusted_tooling_and_source_key_is_fixed() -> None:
     source = pipeline["stages"][0]["actions"][0]["configuration"]
 
     assert "trusted-tooling" not in release_resources
+    assert "approved-releases" not in release_resources
+    assert "releases/h3-3" not in release_resources
+    s3_statement = next(
+        statement
+        for statement in release_policy["Statement"]
+        if "s3:PutObject"
+        in (statement["Action"] if isinstance(statement["Action"], list) else [statement["Action"]])
+    )
+    assert s3_statement["Resource"] == (
+        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/"
+        "promotions/h3-3-crm-web-28cf009-r1/candidate-data.zip"
+    )
     assert source == {
         "S3Bucket": "tpi-dev-release-artifacts-821656895812-us-east-2",
         "S3ObjectKey": "promotions/h3-3-crm-web-28cf009-r1/candidate-data.zip",
         "PollForSourceChanges": "false",
         "AllowOverrideForS3ObjectKey": "false",
     }
+
+
+def test_only_pipeline_can_materialize_the_exact_approved_bundle() -> None:
+    release_policy = _load_json("deployment/iam/tpi-github-actions-dev-release.json")
+    pipeline_policy = _load_json("deployment/iam/tpi-codepipeline-dev-eb.json")
+    approved_resource = (
+        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/"
+        "approved-releases/h3-3-crm-web-28cf009-r1/"
+        "5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045.zip"
+    )
+
+    assert approved_resource not in json.dumps(release_policy)
+    materialize = next(
+        statement
+        for statement in pipeline_policy["Statement"]
+        if statement["Sid"] == "MaterializeOnlyVerifiedApprovedBundle"
+    )
+    assert materialize == {
+        "Sid": "MaterializeOnlyVerifiedApprovedBundle",
+        "Effect": "Allow",
+        "Action": ["s3:PutObject", "s3:GetObject", "s3:GetObjectVersion"],
+        "Resource": approved_resource,
+    }
+
+
+def test_external_release_object_cannot_become_candidate_source() -> None:
+    pipeline = _load_json("deployment/aws/tpi-dev-eb-pipeline.json")["pipeline"]
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    serialized_pipeline = json.dumps(pipeline)
+
+    assert "RELEASE_BUNDLE_KEY" not in workflow
+    assert "/releases/h3-3-crm-web-28cf009-r1" not in workflow
+    assert "/releases/h3-3-crm-web-28cf009-r1" not in serialized_pipeline
+    assert "approved-releases/h3-3-crm-web-28cf009-r1" in serialized_pipeline
 
 
 def test_pipeline_pins_exact_trusted_tooling_hashes() -> None:

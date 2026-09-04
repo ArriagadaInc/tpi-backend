@@ -64,7 +64,7 @@ aws s3api put-public-access-block \
 test "$(sha256sum scripts/release/verify_frozen_candidate.sh | cut -d' ' -f1)" = \
   a59144ff469e56231addb7c46ccf3fa7d456ff9487c7387089eec9137a045791
 test "$(sha256sum deployment/aws/promote_eb_candidate.py | cut -d' ' -f1)" = \
-  fbbbf2fdc3025612627945a312144e4d8972657b1f8240bd142a6ed13b552c86
+  a284fa327418e1a598409494a03164cd52e314d94bf023a95bccb8e2833f72ad
 aws s3api put-object \
   --bucket tpi-dev-release-artifacts-821656895812-us-east-2 \
   --key trusted-tooling/v1/verify_frozen_candidate.sh \
@@ -122,7 +122,7 @@ Ejecutar primero el workflow con `execute_promotion=false`. Debe:
 3. Confirmar cuenta, aplicación y environment.
 4. Aceptar solo el rollback o candidato en `Ready / Green / Ok`.
 5. Confirmar rollback utilizable.
-6. Confirmar candidato ausente o coincidente con el source legacy aprobado.
+6. Confirmar candidato ausente o coincidente con el source legacy o aprobado exacto.
 7. Finalizar sin objetos S3 nuevos ni ejecución de CodePipeline.
 
 ## Promoción autorizada
@@ -130,16 +130,22 @@ Ejecutar primero el workflow con `execute_promotion=false`. Debe:
 Solo tras aprobar el preflight:
 
 1. Ejecutar una vez con `execute_promotion=true`.
-2. GitHub publica bundle, manifest y source data-only en el bucket TPI.
+2. GitHub publica únicamente el source data-only versionado en el bucket TPI.
 3. GitHub inicia únicamente `tpi-backoffice-dev-promotion`, fijando solo el
    `VersionId`; la clave source no puede sobrescribirse.
-4. CodePipeline descarga el tooling desde el prefijo protegido, verifica ambos
+4. CodePipeline comprueba `aws`, `python3`, `bash`, `jq`, `sha256sum`, `zipinfo`,
+   `unzip`, `docker` y `docker compose`; no instala herramientas en runtime.
+5. CodePipeline descarga el tooling desde el prefijo protegido, verifica ambos
    hashes y recién entonces ejecuta la validación/promoción.
-5. CodePipeline valida el objeto, crea o reutiliza la versión exacta y conserva
-   `h2-5d-ecr-47fa0c9`.
-6. Si procede, actualiza solo `tpi-backoffice-dev-green`.
-7. Exige `h3-3-crm-web-28cf009-r1`, `Ready / Green / Ok`.
-8. GitHub recoge action executions, estado EB y eventos con el rol read-only.
+6. Si la versión no existe, el promotor recalcula el hash del bundle verificado,
+   lo materializa con checksum S3 bajo el objeto exacto de `approved-releases/`
+   y comprueba el checksum almacenado antes de crear la Application Version.
+7. Si la versión ya existe, solo acepta el source legacy exacto o el objeto
+   aprobado exacto. Cualquier tercer source aborta.
+8. CodePipeline conserva `h2-5d-ecr-47fa0c9`.
+9. Si procede, actualiza solo `tpi-backoffice-dev-green`.
+10. Exige `h3-3-crm-web-28cf009-r1`, `Ready / Green / Ok`.
+11. GitHub recoge action executions, estado EB y eventos con el rol read-only.
 
 ## Rollback
 

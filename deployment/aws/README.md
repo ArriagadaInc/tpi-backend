@@ -29,5 +29,7 @@ CodePipeline declared in `tpi-dev-eb-pipeline.json`. GitHub publishes a
 data-only candidate to a fixed S3 key and starts that single pipeline with an
 immutable `VersionId`; it does not call Elastic Beanstalk write APIs. The
 pipeline downloads hash-pinned promotion tooling from a protected S3 prefix
-that the GitHub role cannot modify, then uses its AWS service role and the
-version-aware implementation in `promote_eb_candidate.py`.
+that the GitHub role cannot modify. After verification, the trusted promoter
+materializes the exact verified bundle under an AWS-controlled, checksum-named
+`approved-releases/` object. Elastic Beanstalk consumes only that object for a
+new Application Version; the existing frozen legacy source remains reusable.

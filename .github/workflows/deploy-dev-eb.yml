@@ -33,7 +33,7 @@ env:
   APP_DIGEST: sha256:45331812c93bcf905b2ae8ad9eedff9eba5f63bc4afbfd5639af85c78bb3b6ce
   CADDY_DIGEST: sha256:1d7c114bf0bb98e8ed2034a37997ee4d9e4aec98cbba58dc00581bbf6b6dc4e2
   VERSION_LABEL: h3-3-crm-web-28cf009-r1
-  RELEASE_BUNDLE_KEY: releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.zip
+  APPROVED_BUNDLE_KEY: approved-releases/h3-3-crm-web-28cf009-r1/5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045.zip
   LEGACY_BUNDLE_BUCKET: elasticbeanstalk-us-east-2-821656895812
   LEGACY_BUNDLE_KEY: tpi-backoffice/dev-releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.zip
 
@@ -115,14 +115,14 @@ jobs:
             '[.[] | select(.VersionLabel == $rollback and .Status != "FAILED" and .SourceBundle != null)] | length == 1' \
             <<< "$versions" >/dev/null
           jq -e --arg candidate "$VERSION_LABEL" --arg legacy_bucket "$LEGACY_BUNDLE_BUCKET" \
-            --arg legacy_key "$LEGACY_BUNDLE_KEY" --arg release_bucket "$RELEASE_BUCKET" \
-            --arg release_key "$RELEASE_BUNDLE_KEY" \
+            --arg legacy_key "$LEGACY_BUNDLE_KEY" --arg approved_bucket "$RELEASE_BUCKET" \
+            --arg approved_key "$APPROVED_BUNDLE_KEY" \
             '[.[] | select(.VersionLabel == $candidate)]
              | (length == 0) or (length == 1 and .[0].Status != "FAILED"
                 and (((.[0].SourceBundle.S3Bucket == $legacy_bucket)
                       and (.[0].SourceBundle.S3Key == $legacy_key))
-                     or ((.[0].SourceBundle.S3Bucket == $release_bucket)
-                         and (.[0].SourceBundle.S3Key == $release_key))))' \
+                     or ((.[0].SourceBundle.S3Bucket == $approved_bucket)
+                         and (.[0].SourceBundle.S3Key == $approved_key))))' \
             <<< "$versions" >/dev/null
 
       - name: Validate-only completed without AWS writes
@@ -138,22 +138,15 @@ jobs:
           role-session-name: tpi-dev-release-${{ github.run_id }}
           unset-current-credentials: true
 
-      - name: Publish approved release objects
+      - name: Publish candidate data
         if: ${{ inputs.execute_promotion }}
         id: publish
         env:
-          RELEASE_PREFIX: releases/h3-3-crm-web-28cf009-r1
           PROMOTION_KEY: promotions/h3-3-crm-web-28cf009-r1/candidate-data.zip
         run: |
           set -euo pipefail
           test "$(aws sts get-caller-identity --query Account --output text)" = "$AWS_ACCOUNT_ID"
           metadata="runtime-git-sha=$SOURCE_SHA,bundle-sha256=$BUNDLE_SHA256"
-          aws s3api put-object --region "$AWS_REGION" --bucket "$RELEASE_BUCKET" \
-            --key "$RELEASE_PREFIX/$BUNDLE_NAME" --body "artifact/$BUNDLE_NAME" \
-            --content-type application/zip --metadata "$metadata" >/dev/null
-          aws s3api put-object --region "$AWS_REGION" --bucket "$RELEASE_BUCKET" \
-            --key "$RELEASE_PREFIX/$MANIFEST_NAME" --body "artifact/$MANIFEST_NAME" \
-            --content-type application/json --metadata "$metadata" >/dev/null
           result="$(aws s3api put-object --region "$AWS_REGION" --bucket "$RELEASE_BUCKET" \
             --key "$PROMOTION_KEY" --body dist/tpi-dev-candidate-data-28cf009.zip \
             --content-type application/zip --metadata "$metadata")"

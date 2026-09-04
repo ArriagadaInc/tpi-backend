@@ -37,8 +37,8 @@ acepta `ApplicationName` y `EnvironmentName`; no permite fijar ni reutilizar un
 | Principal | Trust | Responsabilidad | Escrituras permitidas |
 | --- | --- | --- | --- |
 | `tpi-github-actions-dev-eb-role` | OIDC GitHub, `main` exacto | Preflight/postflight | Ninguna |
-| `tpi-github-actions-dev-release-role` | OIDC GitHub, `main` exacto | Publicar artefacto e iniciar/observar un pipeline | Objetos bajo prefijos TPI y ejecución del pipeline DEV |
-| `tpi-codepipeline-dev-eb-role` | `codepipeline.amazonaws.com` | Crear/reutilizar versión y actualizar un único environment | EB DEV y contrato S3 exacto |
+| `tpi-github-actions-dev-release-role` | OIDC GitHub, `main` exacto | Publicar candidate data e iniciar/observar un pipeline | Un objeto versionado exacto y ejecución del pipeline DEV |
+| `tpi-codepipeline-dev-eb-role` | `codepipeline.amazonaws.com` | Verificar, materializar el bundle aprobado, crear/reutilizar versión y actualizar un único environment | Objeto aprobado exacto, EB DEV y contrato S3 exacto |
 | Service role de Elastic Beanstalk | `elasticbeanstalk.amazonaws.com` | Operación interna del environment | Según configuración AWS existente |
 | Instance profile de Elastic Beanstalk | EC2 | Pull ECR y runtime | Según configuración AWS existente |
 
@@ -53,8 +53,8 @@ Se propone el bucket dedicado y versionado
 y cifrado SSE-S3. Separa artefactos propiedad de TPI del bucket administrado por
 Elastic Beanstalk.
 
-El workflow descarga el artefacto GitHub existente, verifica el ZIP y manifest,
-y los publica sin reconstruir imágenes ni bundle. El source del pipeline es un
+El workflow descarga el artefacto GitHub existente y verifica el ZIP y manifest
+sin reconstruir imágenes ni bundle. Publica únicamente un
 ZIP **data-only** que contiene exclusivamente esos dos archivos. La clave S3
 está fijada en la definición del pipeline; GitHub solo aporta el `VersionId`
 inmutable. `AllowOverrideForS3ObjectKey` está deshabilitado y el pipeline no
@@ -67,6 +67,16 @@ GitHub no puede escribir ni leer ese prefijo. Antes de ejecutar cada archivo,
 la acción `Commands` lo descarga y valida su hash. Por tanto, modificar el
 source data-only, conservar su nombre o intentar incluir scripts no cambia el
 código ejecutado con el service role.
+
+Tras la verificación, el promotor confiable recalcula el SHA-256 de los bytes
+del bundle extraído y los publica con checksum S3 en el objeto exacto:
+
+`approved-releases/h3-3-crm-web-28cf009-r1/5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045.zip`
+
+Luego vuelve a leer el checksum almacenado. Solo después puede crear una
+Application Version usando ese objeto. GitHub no tiene acceso de escritura a
+`approved-releases/` ni publica una segunda copia del bundle. La metadata S3 es
+solo observabilidad y no constituye la prueba de integridad.
 
 El artifact store interno de CodePipeline usa un segundo bucket,
 `tpi-dev-codepipeline-artifacts-821656895812-us-east-2`, que GitHub tampoco
@@ -84,8 +94,9 @@ Contrato H3.3 inmutable:
 
 La versión H3.3 existente puede conservar el `SourceBundle` histórico del
 bucket EB, pero solo se reutiliza si bucket y clave coinciden con el contrato
-legacy exacto. Una versión nueva se crea desde el objeto equivalente del bucket
-TPI dedicado. Cualquier tercera ubicación aborta.
+legacy exacto. También se reutiliza si apunta al objeto aprobado exacto. Una
+versión ausente se crea exclusivamente desde el objeto AWS-controlled bajo
+`approved-releases/`. Cualquier tercera ubicación aborta.
 
 ## Recursos con `Resource: "*"`
 
@@ -122,7 +133,8 @@ role de CodePipeline y no al principal OIDC de GitHub. No se adjunta
 
 ## Reanudabilidad
 
-- Candidato ausente: se crea desde el bundle TPI verificado.
+- Candidato ausente: CodePipeline materializa el bundle verificado en el objeto
+  aprobado y crea la versión desde ese objeto.
 - Candidato existente y source aprobado: se reutiliza.
 - Candidato existente con source distinto o `FAILED`: se aborta.
 - Environment ya ejecutando el candidato en `Ready / Green / Ok`: no se llama
