@@ -1,0 +1,92 @@
+# Runbook de deployment controlado en Elastic Beanstalk DEV
+
+Estado: preparado, no ejecutado
+Ambiente: AWS DEV (`us-east-2`)
+Última validación física del baseline: 2026-09-04
+Fuente: preflight EB, artifact ECR publicado y políticas IAM versionadas
+
+## Alcance
+
+Este runbook describe el deployment controlado del candidato congelado H3.3.
+El workflow asociado es manual, solo puede ejecutarse desde `main` y no modifica
+la configuración del environment. Su única actualización de runtime es cambiar
+`VersionLabel` en `tpi-backoffice-dev-green`.
+
+El rol de preflight `tpi-github-actions-dev-eb-role` permanece read-only. El
+deployment usa el rol separado `tpi-github-actions-dev-eb-deploy-role`.
+
+## Baseline aprobado
+
+| Elemento | Valor |
+| --- | --- |
+| Cuenta | `821656895812` |
+| Región | `us-east-2` |
+| Aplicación | `tpi-backoffice` |
+| Environment | `tpi-backoffice-dev-green` |
+| CNAME EB | `tpi-backoffice-dev-ecr.us-east-2.elasticbeanstalk.com` |
+| Versión actual | `h2-5d-ecr-47fa0c9` |
+| Rollback | `h2-5d-ecr-3074bf1-r2` |
+| Runtime SHA | `28cf009137ada707540d9ee7eba01dc45a9a260e` |
+| Nueva versión EB | `h3-3-crm-web-28cf009-r1` |
+| Artifact ECR | Run `33824477381`, artifact `9919549285` |
+
+El artifact contiene `tpi-dev-ecr-28cf009.zip` y su manifest. El workflow
+verifica el SHA-256 del ZIP, el runtime SHA, ambos digests ECR y que el ZIP
+contenga únicamente `docker-compose.yml` antes de asumir AWS.
+
+## IAM
+
+Trust OIDC del rol de deployment:
+
+- `aud`: `sts.amazonaws.com`.
+- `sub`: repositorio exacto y `refs/heads/main`.
+- Sin wildcard y sin autorización de `pull_request`.
+
+Permisos versionados:
+
+- `elasticbeanstalk:DescribeApplications`.
+- `elasticbeanstalk:DescribeEnvironments`.
+- `elasticbeanstalk:DescribeApplicationVersions`.
+- `elasticbeanstalk:DescribeEvents`.
+- `elasticbeanstalk:CreateApplicationVersion` sobre `tpi-backoffice`.
+- `elasticbeanstalk:UpdateEnvironment` únicamente sobre `tpi-backoffice-dev-green`.
+- `s3:PutObject` únicamente bajo `tpi-backoffice/dev-releases/*` del bucket EB existente.
+
+No se conceden `s3:CreateBucket`, `iam:PassRole`, acciones IAM, cambios DNS,
+cambios RDS, `UpdateConfigurationTemplate`, `DeleteObject` ni permisos para
+modificar variables del environment.
+
+## Flujo controlado
+
+1. Ejecutar el workflow `Deploy frozen DEV candidate to Elastic Beanstalk` desde `main`.
+2. Verificar cuenta, región, aplicación, environment, versión actual y estado `Ready / Green / Ok`.
+3. Verificar que el rollback `h2-5d-ecr-3074bf1-r2` continúa disponible.
+4. Subir el ZIP al prefijo de release del bucket EB.
+5. Crear `h3-3-crm-web-28cf009-r1` apuntando al objeto exacto.
+6. Verificar la aplicación version y el rollback antes de actualizar el environment.
+7. Ejecutar `UpdateEnvironment` solo con `--version-label`, sin opciones de configuración.
+8. Esperar `Ready / Green / Ok` y confirmar la nueva versión.
+9. Revisar los últimos eventos de Elastic Beanstalk.
+
+Si una validación falla, el workflow termina antes de escribir. Si falla la
+actualización posterior a crear la application version, el environment no se
+considera desplegado; no se borra automáticamente ninguna versión ni objeto.
+
+## Rollback
+
+El rollback se realiza actualizando exclusivamente el mismo environment a la
+versión previamente verificada `h2-5d-ecr-3074bf1-r2`, usando el rol de
+deployment o un operador autorizado. Luego se espera `Ready / Green / Ok` y se
+confirma `VersionLabel`.
+
+No modificar variables, CNAME, configuración, RDS, IAM ni el bucket durante el
+rollback. La application version nueva y el objeto S3 se conservan para
+auditoría hasta aplicar la política de retención aprobada.
+
+## No ejecutar durante este PR
+
+- No ejecutar el workflow de deployment.
+- No ejecutar migraciones RDS.
+- No regenerar imágenes ni bundle.
+- No rebasear PR #14.
+- No hacer smoke funcional ni mergear PR #14.
