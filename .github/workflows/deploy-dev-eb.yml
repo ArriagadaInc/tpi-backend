@@ -17,7 +17,8 @@ permissions:
 env:
   AWS_REGION: us-east-2
   AWS_ACCOUNT_ID: '821656895812'
-  EB_ROLE_ARN: arn:aws:iam::821656895812:role/tpi-github-actions-dev-eb-deploy-role
+  EB_READ_ROLE_ARN: arn:aws:iam::821656895812:role/tpi-github-actions-dev-eb-role
+  EB_DEPLOY_ROLE_ARN: arn:aws:iam::821656895812:role/tpi-github-actions-dev-eb-deploy-role
   APPLICATION: tpi-backoffice
   ENVIRONMENT: tpi-backoffice-dev-green
   EXPECTED_CURRENT_VERSION: h2-5d-ecr-47fa0c9
@@ -68,10 +69,19 @@ jobs:
         run: |
           bash scripts/release/verify_frozen_candidate.sh
 
-      - name: Configure AWS credentials through GitHub OIDC
+      - name: Configure AWS credentials through GitHub OIDC (read-only)
+        if: ${{ success() && !inputs.execute_deploy }}
         uses: aws-actions/configure-aws-credentials@v5
         with:
-          role-to-assume: ${{ env.EB_ROLE_ARN }}
+          role-to-assume: ${{ env.EB_READ_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: tpi-dev-eb-validate-${{ github.run_id }}
+
+      - name: Configure AWS credentials through GitHub OIDC (deployment)
+        if: ${{ success() && inputs.execute_deploy }}
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ env.EB_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: tpi-dev-eb-deploy-${{ github.run_id }}
 

@@ -95,6 +95,30 @@ def test_deployment_writes_require_explicit_execute_deploy() -> None:
     assert "Validate-only completed without AWS writes" in workflow
 
 
+def test_deployment_selects_role_by_execution_mode() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+
+    read_only_start = workflow.index(
+        "Configure AWS credentials through GitHub OIDC (read-only)"
+    )
+    deployment_start = workflow.index(
+        "Configure AWS credentials through GitHub OIDC (deployment)"
+    )
+    preflight_start = workflow.index("Verify account and deployment preflight")
+
+    read_only_block = workflow[read_only_start:deployment_start]
+    deployment_block = workflow[deployment_start:preflight_start]
+
+    assert "if: ${{ success() && !inputs.execute_deploy }}" in read_only_block
+    assert "role-to-assume: ${{ env.EB_READ_ROLE_ARN }}" in read_only_block
+    assert "tpi-github-actions-dev-eb-role" in workflow
+    assert "tpi-github-actions-dev-eb-deploy-role" in workflow
+    assert "if: ${{ success() && inputs.execute_deploy }}" in deployment_block
+    assert "role-to-assume: ${{ env.EB_DEPLOY_ROLE_ARN }}" in deployment_block
+    assert "EB_DEPLOY_ROLE_ARN" not in read_only_block
+    assert "EB_READ_ROLE_ARN" not in deployment_block
+
+
 def test_ci_validates_release_artifact_with_shared_verifier() -> None:
     workflow = CI_WORKFLOW.read_text(encoding="utf-8")
 
