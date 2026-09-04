@@ -1,0 +1,92 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadReleaseSourceAndUseArtifactStore",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetBucketVersioning",
+        "s3:GetBucketAcl",
+        "s3:GetBucketLocation"
+      ],
+      "Resource": "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2"
+    },
+    {
+      "Sid": "ReadReleaseObjectsAndUsePipelineArtifacts",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion",
+        "s3:GetObjectTagging",
+        "s3:GetObjectVersionTagging",
+        "s3:PutObject"
+      ],
+      "Resource": "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/*"
+    },
+    {
+      "Sid": "ReadLegacyFrozenCandidateBundle",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion"
+      ],
+      "Resource": "arn:aws:s3:::elasticbeanstalk-us-east-2-821656895812/tpi-backoffice/dev-releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.zip"
+    },
+    {
+      "Sid": "ManageOnlyApprovedElasticBeanstalkRelease",
+      "Effect": "Allow",
+      "Action": [
+        "elasticbeanstalk:DescribeApplications",
+        "elasticbeanstalk:DescribeEnvironments",
+        "elasticbeanstalk:DescribeApplicationVersions",
+        "elasticbeanstalk:DescribeEvents",
+        "elasticbeanstalk:CreateApplicationVersion"
+      ],
+      "Resource": [
+        "arn:aws:elasticbeanstalk:us-east-2:821656895812:application/tpi-backoffice",
+        "arn:aws:elasticbeanstalk:us-east-2:821656895812:applicationversion/tpi-backoffice/h2-5d-ecr-47fa0c9",
+        "arn:aws:elasticbeanstalk:us-east-2:821656895812:applicationversion/tpi-backoffice/h3-3-crm-web-28cf009-r1",
+        "arn:aws:elasticbeanstalk:us-east-2:821656895812:environment/tpi-backoffice/tpi-backoffice-dev-green"
+      ]
+    },
+    {
+      "Sid": "UpdateOnlyApprovedDevEnvironment",
+      "Effect": "Allow",
+      "Action": "elasticbeanstalk:UpdateEnvironment",
+      "Resource": "arn:aws:elasticbeanstalk:us-east-2:821656895812:environment/tpi-backoffice/tpi-backoffice-dev-green",
+      "Condition": {
+        "ArnEquals": {
+          "elasticbeanstalk:FromApplicationVersion": "arn:aws:elasticbeanstalk:us-east-2:821656895812:applicationversion/tpi-backoffice/h3-3-crm-web-28cf009-r1"
+        }
+      }
+    },
+    {
+      "Sid": "ElasticBeanstalkManagedStorageContract",
+      "Effect": "Allow",
+      "Action": [
+        "s3:CreateBucket",
+        "s3:GetBucketLocation",
+        "s3:GetBucketPolicy",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:GetBucketOwnershipControls",
+        "s3:PutBucketPolicy",
+        "s3:PutBucketPublicAccessBlock",
+        "s3:PutBucketOwnershipControls"
+      ],
+      "Resource": "arn:aws:s3:::elasticbeanstalk-us-east-2-821656895812"
+    },
+    {
+      "Sid": "WritePromotionLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": [
+        "arn:aws:logs:us-east-2:821656895812:log-group:/aws/codepipeline/tpi-backoffice-dev-promotion",
+        "arn:aws:logs:us-east-2:821656895812:log-group:/aws/codepipeline/tpi-backoffice-dev-promotion:*"
+      ]
+    }
+  ]
+}

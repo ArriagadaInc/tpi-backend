@@ -234,6 +234,10 @@ jobs:
           export SOURCE_SHA="$runtime_sha"
           bash scripts/release/verify_frozen_candidate.sh
 
+          export PROMOTION_OUTPUT="dist/tpi-dev-promotion-${runtime_sha:0:7}.zip"
+          bash scripts/release/build_dev_promotion_source.sh
+          zipinfo -1 "$PROMOTION_OUTPUT" | sort
+
       - name: Run actionlint
         run: |
           # actionlint 1.7.7 does not know the documented artifact-ids input.

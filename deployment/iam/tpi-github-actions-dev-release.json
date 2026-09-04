@@ -1,0 +1,34 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublishApprovedDevReleaseObjects",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:GetObjectVersion"
+      ],
+      "Resource": [
+        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/releases/*",
+        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/promotions/*"
+      ]
+    },
+    {
+      "Sid": "StartOnlyApprovedDevPipeline",
+      "Effect": "Allow",
+      "Action": "codepipeline:StartPipelineExecution",
+      "Resource": "arn:aws:codepipeline:us-east-2:821656895812:tpi-backoffice-dev-promotion"
+    },
+    {
+      "Sid": "ObserveOnlyApprovedDevPipeline",
+      "Effect": "Allow",
+      "Action": [
+        "codepipeline:GetPipelineExecution",
+        "codepipeline:GetPipelineState",
+        "codepipeline:ListActionExecutions"
+      ],
+      "Resource": "arn:aws:codepipeline:us-east-2:821656895812:tpi-backoffice-dev-promotion"
+    }
+  ]
+}

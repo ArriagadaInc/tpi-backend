@@ -1,0 +1,92 @@
+{
+  "pipeline": {
+    "name": "tpi-backoffice-dev-promotion",
+    "roleArn": "arn:aws:iam::821656895812:role/tpi-codepipeline-dev-eb-role",
+    "artifactStore": {
+      "type": "S3",
+      "location": "tpi-dev-release-artifacts-821656895812-us-east-2"
+    },
+    "pipelineType": "V2",
+    "executionMode": "QUEUED",
+    "stages": [
+      {
+        "name": "Source",
+        "actions": [
+          {
+            "name": "ApprovedReleaseSource",
+            "actionTypeId": {
+              "category": "Source",
+              "owner": "AWS",
+              "provider": "S3",
+              "version": "1"
+            },
+            "runOrder": 1,
+            "configuration": {
+              "S3Bucket": "tpi-dev-release-artifacts-821656895812-us-east-2",
+              "S3ObjectKey": "promotions/not-authorized.zip",
+              "PollForSourceChanges": "false",
+              "AllowOverrideForS3ObjectKey": "true"
+            },
+            "outputArtifacts": [
+              {
+                "name": "ApprovedCandidate"
+              }
+            ],
+            "inputArtifacts": [],
+            "region": "us-east-2"
+          }
+        ]
+      },
+      {
+        "name": "Promote",
+        "actions": [
+          {
+            "name": "PromoteExactElasticBeanstalkVersion",
+            "actionTypeId": {
+              "category": "Compute",
+              "owner": "AWS",
+              "provider": "Commands",
+              "version": "1"
+            },
+            "runOrder": 1,
+            "configuration": {
+              "EnvironmentType": "LINUX_CONTAINER",
+              "ComputeType": "BUILD_GENERAL1_SMALL"
+            },
+            "commands": [
+              "bash scripts/release/verify_frozen_candidate.sh",
+              "python3 deployment/aws/promote_eb_candidate.py"
+            ],
+            "environmentVariables": [
+              {"name": "AWS_ACCOUNT_ID", "value": "821656895812", "type": "PLAINTEXT"},
+              {"name": "AWS_REGION", "value": "us-east-2", "type": "PLAINTEXT"},
+              {"name": "APPLICATION", "value": "tpi-backoffice", "type": "PLAINTEXT"},
+              {"name": "ENVIRONMENT", "value": "tpi-backoffice-dev-green", "type": "PLAINTEXT"},
+              {"name": "EXPECTED_CURRENT_VERSION", "value": "h2-5d-ecr-47fa0c9", "type": "PLAINTEXT"},
+              {"name": "VERSION_LABEL", "value": "h3-3-crm-web-28cf009-r1", "type": "PLAINTEXT"},
+              {"name": "SOURCE_SHA", "value": "28cf009137ada707540d9ee7eba01dc45a9a260e", "type": "PLAINTEXT"},
+              {"name": "BUNDLE_NAME", "value": "tpi-dev-ecr-28cf009.zip", "type": "PLAINTEXT"},
+              {"name": "MANIFEST_NAME", "value": "tpi-dev-ecr-28cf009.manifest.json", "type": "PLAINTEXT"},
+              {"name": "BUNDLE_SHA256", "value": "5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045", "type": "PLAINTEXT"},
+              {"name": "APP_IMAGE", "value": "821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-app@sha256:45331812c93bcf905b2ae8ad9eedff9eba5f63bc4afbfd5639af85c78bb3b6ce", "type": "PLAINTEXT"},
+              {"name": "CADDY_IMAGE", "value": "821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-caddy@sha256:1d7c114bf0bb98e8ed2034a37997ee4d9e4aec98cbba58dc00581bbf6b6dc4e2", "type": "PLAINTEXT"},
+              {"name": "RELEASE_BUCKET", "value": "tpi-dev-release-artifacts-821656895812-us-east-2", "type": "PLAINTEXT"},
+              {"name": "RELEASE_BUNDLE_KEY", "value": "releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.zip", "type": "PLAINTEXT"},
+              {"name": "LEGACY_BUNDLE_BUCKET", "value": "elasticbeanstalk-us-east-2-821656895812", "type": "PLAINTEXT"},
+              {"name": "LEGACY_BUNDLE_KEY", "value": "tpi-backoffice/dev-releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.zip", "type": "PLAINTEXT"},
+              {"name": "ARTIFACT_DIR", "value": "artifact", "type": "PLAINTEXT"}
+            ],
+            "inputArtifacts": [
+              {
+                "name": "ApprovedCandidate"
+              }
+            ],
+            "outputArtifacts": [],
+            "region": "us-east-2"
+          }
+        ]
+      }
+    ],
+    "version": 1
+  }
+}
