@@ -231,6 +231,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ inputs.source_sha }}
         run: |
+          scan_failed=0
           for repository in "$ECR_APP_REPOSITORY" "$ECR_CADDY_REPOSITORY"; do
             for attempt in $(seq 1 30); do
               status=$(aws ecr describe-image-scan-findings \
@@ -245,7 +246,8 @@ jobs:
             done
             if [ "$status" != "COMPLETE" ]; then
               echo "ECR scan did not complete for $repository within five minutes."
-              exit 1
+              scan_failed=1
+              continue
             fi
             critical=$(aws ecr describe-image-scan-findings \
               --repository-name "$repository" \
@@ -259,10 +261,19 @@ jobs:
               --output text)
             echo "$repository: CRITICAL=$critical HIGH=$high"
             if [ "$critical" != "0" ] || [ "$high" != "0" ]; then
+              echo "Relevant ECR findings for $repository:"
+              aws ecr describe-image-scan-findings \
+                --repository-name "$repository" \
+                --image-id imageTag="$IMAGE_TAG" \
+                --query 'imageScanFindings.findings[?severity==`CRITICAL` || severity==`HIGH`].{severity:severity,name:name,description:description,uri:uri,attributes:attributes}' \
+                --output json
+              scan_failed=1
               echo "ECR deployment eligibility requires CRITICAL=0 and HIGH=0 for $repository."
-              exit 1
             fi
           done
+          if [ "$scan_failed" -ne 0 ]; then
+            exit 1
+          fi
       - name: Build and validate release bundle
         env:
           SOURCE_SHA: ${{ inputs.source_sha }}
