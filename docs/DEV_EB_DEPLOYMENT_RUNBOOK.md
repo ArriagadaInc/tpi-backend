@@ -60,17 +60,29 @@ modificar variables del environment.
 
 1. Ejecutar el workflow `Deploy frozen DEV candidate to Elastic Beanstalk` desde `main`.
 2. Verificar cuenta, región, aplicación, environment, versión actual y estado `Ready / Green / Ok`.
-3. Verificar que el rollback `h2-5d-ecr-3074bf1-r2` continúa disponible.
+3. Verificar que el rollback `h2-5d-ecr-3074bf1-r2` existe exactamente una vez, no está en estado `FAILED` y tiene eventos read-only asociados a su despliegue previo con evidencia textual de éxito/completitud/despliegue.
 4. Subir el ZIP al prefijo de release del bucket EB.
-5. Crear `h3-3-crm-web-28cf009-r1` apuntando al objeto exacto.
-6. Verificar la aplicación version y el rollback antes de actualizar el environment.
-7. Ejecutar `UpdateEnvironment` solo con `--version-label`, sin opciones de configuración.
-8. Esperar `Ready / Green / Ok` y confirmar la nueva versión.
-9. Revisar los últimos eventos de Elastic Beanstalk.
+5. Crear `h3-3-crm-web-28cf009-r1` apuntando al objeto exacto y con procesamiento habilitado.
+6. Esperar `PROCESSING → PROCESSED`; abortar ante `FAILED`, estado desconocido o timeout.
+7. Verificar la application version procesada y el rollback antes de actualizar el environment.
+8. Ejecutar `UpdateEnvironment` solo con `--version-label`, sin opciones de configuración.
+9. Esperar `Ready / Green / Ok` y confirmar la nueva versión.
+10. Revisar los últimos eventos de Elastic Beanstalk, incluso si falla la espera posterior al update.
 
-Si una validación falla, el workflow termina antes de escribir. Si falla la
-actualización posterior a crear la application version, el environment no se
-considera desplegado; no se borra automáticamente ninguna versión ni objeto.
+La validación del artifact y el preflight terminan antes de cualquier escritura.
+Después de `PutObject` y `CreateApplicationVersion` puede fallar el procesamiento,
+quedando un objeto S3 y/o una application version sin tocar todavía el
+environment. Si falla `UpdateEnvironment` o la espera de estabilidad, el
+environment puede haber iniciado un cambio y debe verificarse antes de ejecutar
+rollback; los eventos se recopilan para ese diagnóstico.
+
+Resumen de efectos:
+
+| Fase | Resultado ante fallo |
+| --- | --- |
+| Validación del artifact/preflight | Cero escrituras |
+| Procesamiento de application version | Puede quedar objeto S3/application version; environment intacto |
+| `UpdateEnvironment` o espera posterior | Puede haber iniciado un deployment; revisar eventos y ejecutar rollback si corresponde |
 
 ## Rollback
 

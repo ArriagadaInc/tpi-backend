@@ -67,3 +67,36 @@ def test_deployment_workflow_is_main_only_and_pins_frozen_candidate() -> None:
     assert '--version-label "$VERSION_LABEL"' in workflow
     assert "--configuration-settings" not in workflow
     assert "--option-settings" not in workflow
+
+
+def test_deployment_workflow_accepts_known_unprocessed_rollback_version() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+
+    assert '.[0].Status != "FAILED"' in workflow
+    assert '--version-label "$ROLLBACK_VERSION"' in workflow
+    assert 'length > 0 and any(.[]; .VersionLabel == "h2-5d-ecr-3074bf1-r2"' in workflow
+    assert "rollback_events" in workflow
+
+
+def test_deployment_workflow_processes_version_before_environment_update() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+
+    assert "            --process \\\n" in workflow
+    assert 'case "$status" in' in workflow
+    assert "PROCESSED)" in workflow
+    assert "FAILED)" in workflow
+    assert 'PROCESSING|"")' in workflow
+    processing_start = workflow.index("Wait for application version processing")
+    update_start = workflow.index("Update only the approved DEV environment")
+    processing_block = workflow[processing_start:update_start]
+
+    assert "exit 1" in processing_block
+    assert "UpdateEnvironment" not in processing_block
+    assert processing_start < update_start
+
+
+def test_deployment_workflow_collects_events_after_update_failure() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+
+    assert "Show deployment events after update failure" in workflow
+    assert "if: failure() && steps.update_environment.outcome == 'success'" in workflow

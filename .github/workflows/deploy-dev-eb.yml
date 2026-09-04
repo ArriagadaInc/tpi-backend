@@ -142,8 +142,21 @@ jobs:
             --version-labels "$ROLLBACK_VERSION" \
             --query 'ApplicationVersions' \
             --output json)"
-          jq -e 'length == 1 and .[0].VersionLabel == "h2-5d-ecr-3074bf1-r2" and .[0].Status == "PROCESSED"' \
+          jq -e 'length == 1 and .[0].VersionLabel == "h2-5d-ecr-3074bf1-r2" and .[0].Status != "FAILED"' \
             <<< "$rollback" >/dev/null
+
+          rollback_events="$(aws elasticbeanstalk describe-events \
+            --region "$AWS_REGION" \
+            --application-name "$APPLICATION" \
+            --environment-name "$ENVIRONMENT" \
+            --version-label "$ROLLBACK_VERSION" \
+            --max-items 100 \
+            --query 'Events[].{EventDate:EventDate,Severity:Severity,Status:Status,VersionLabel:VersionLabel,Message:Message}' \
+            --output json)"
+          echo "Rollback version deployment events:"
+          echo "$rollback_events" | jq -r '.[] | [.EventDate, .Severity, .Status, .VersionLabel, .Message] | @tsv'
+          jq -e 'length > 0 and any(.[]; .VersionLabel == "h2-5d-ecr-3074bf1-r2" and (.Severity // "") != "ERROR" and (.Severity // "") != "FATAL" and ((.Message // "") | test("success|successfully|deployed|completed"; "i")))' \
+            <<< "$rollback_events" >/dev/null
 
           existing="$(aws elasticbeanstalk describe-application-versions \
             --region "$AWS_REGION" \
@@ -177,7 +190,40 @@ jobs:
             --version-label "$VERSION_LABEL" \
             --description "H3.3 frozen candidate $SOURCE_SHA" \
             --source-bundle "S3Bucket=$EB_BUCKET,S3Key=$S3_KEY" \
+            --process \
             --no-auto-create-application
+
+      - name: Wait for application version processing
+        run: |
+          set -euo pipefail
+          status=""
+          for attempt in $(seq 1 30); do
+            version="$(aws elasticbeanstalk describe-application-versions \
+              --region "$AWS_REGION" \
+              --application-name "$APPLICATION" \
+              --version-labels "$VERSION_LABEL" \
+              --query 'ApplicationVersions[0]' \
+              --output json)"
+            status="$(jq -r '.Status // ""' <<< "$version")"
+            echo "Application version processing status: ${status:-NOT_FOUND}"
+            case "$status" in
+              PROCESSED)
+                break
+                ;;
+              FAILED)
+                echo "Elastic Beanstalk rejected application version processing."
+                exit 1
+                ;;
+              PROCESSING|"")
+                sleep 10
+                ;;
+              *)
+                echo "Unexpected application version status: $status"
+                exit 1
+                ;;
+            esac
+          done
+          test "$status" = PROCESSED
 
       - name: Verify version and rollback remain available
         env:
@@ -209,6 +255,7 @@ jobs:
           test "$rollback_count" = 1
 
       - name: Update only the approved DEV environment
+        id: update_environment
         run: |
           set -euo pipefail
           aws elasticbeanstalk update-environment \
@@ -242,12 +289,23 @@ jobs:
           echo "Elastic Beanstalk did not reach Ready/Green/Ok with the target version."
           exit 1
 
-      - name: Show recent deployment events
+      - name: Show recent deployment events after successful deployment
         run: |
           aws elasticbeanstalk describe-events \
             --region "$AWS_REGION" \
             --application-name "$APPLICATION" \
             --environment-name "$ENVIRONMENT" \
             --max-items 10 \
+            --query 'Events[].{EventDate:EventDate,Severity:Severity,Status:Status,Message:Message}' \
+            --output table
+
+      - name: Show deployment events after update failure
+        if: failure() && steps.update_environment.outcome == 'success'
+        run: |
+          aws elasticbeanstalk describe-events \
+            --region "$AWS_REGION" \
+            --application-name "$APPLICATION" \
+            --environment-name "$ENVIRONMENT" \
+            --max-items 20 \
             --query 'Events[].{EventDate:EventDate,Severity:Severity,Status:Status,Message:Message}' \
             --output table
