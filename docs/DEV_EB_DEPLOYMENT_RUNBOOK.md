@@ -64,7 +64,7 @@ aws s3api put-public-access-block \
 test "$(sha256sum scripts/release/verify_frozen_candidate.sh | cut -d' ' -f1)" = \
   a59144ff469e56231addb7c46ccf3fa7d456ff9487c7387089eec9137a045791
 test "$(sha256sum deployment/aws/promote_eb_candidate.py | cut -d' ' -f1)" = \
-  a284fa327418e1a598409494a03164cd52e314d94bf023a95bccb8e2833f72ad
+  4ba84447a948238ff877fa95e60e52f9b52e0b9bc2bad3e80fd236a03a9675f9
 aws s3api put-object \
   --bucket tpi-dev-release-artifacts-821656895812-us-east-2 \
   --key trusted-tooling/v1/verify_frozen_candidate.sh \
@@ -110,8 +110,10 @@ aws codepipeline create-pipeline --region us-east-2 \
    `get-pipeline`. Comparar además los SHA-256 del tooling descargado. No iniciar
    promoción en esta fase.
 
-7. Tras validar el nuevo flujo, retirar el rol físico histórico
-   `tpi-github-actions-dev-eb-deploy-role`. No reutilizarlo ni ampliarlo.
+7. Tras aprovisionar y validar el pipeline, retirar o deshabilitar el rol físico
+   histórico `tpi-github-actions-dev-eb-deploy-role` **antes** de la primera
+   ejecución con `execute_promotion=true`. Confirmar que ya no constituye un
+   trust path alternativo desde GitHub. No reutilizarlo ni ampliarlo.
 
 ## Preflight de promoción
 
@@ -141,7 +143,9 @@ Solo tras aprobar el preflight:
    lo materializa con checksum S3 bajo el objeto exacto de `approved-releases/`
    y comprueba el checksum almacenado antes de crear la Application Version.
 7. Si la versión ya existe, solo acepta el source legacy exacto o el objeto
-   aprobado exacto. Cualquier tercer source aborta.
+   aprobado exacto. Además descarga y calcula SHA-256 del legacy, o consulta y
+   compara `ChecksumSHA256` del objeto aprobado, antes de permitir el update.
+   Cualquier tercer source o contenido discrepante aborta.
 8. CodePipeline conserva `h2-5d-ecr-47fa0c9`.
 9. Si procede, actualiza solo `tpi-backoffice-dev-green`.
 10. Exige `h3-3-crm-web-28cf009-r1`, `Ready / Green / Ok`.
@@ -153,6 +157,8 @@ El rollback requiere autorización separada. Actualizar únicamente
 `tpi-backoffice-dev-green` a `h2-5d-ecr-47fa0c9`, esperar
 `Ready / Green / Ok` y conservar artefactos y application versions para
 auditoría. No modificar variables, DNS, RDS, roles del environment ni buckets.
+El rollback no depende del rol histórico de GitHub: ante una emergencia se
+ejecuta desde una sesión AWS administrativa controlada y auditada.
 
 ## Matriz de fallos
 

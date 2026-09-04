@@ -12,6 +12,9 @@ import pytest
 
 from deployment.aws.promote_eb_candidate import CandidatePromoter, PromotionContract
 
+FROZEN_BUNDLE_SHA = "5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045"
+FROZEN_S3_CHECKSUM = base64.b64encode(bytes.fromhex(FROZEN_BUNDLE_SHA)).decode()
+
 
 class FakeAws:
     def __init__(self, *, candidate: dict[str, object] | None, environment_version: str) -> None:
@@ -19,8 +22,9 @@ class FakeAws:
         self.environment_version = environment_version
         self.calls: list[tuple[str, ...]] = []
         self.fail_update = False
-        self.stored_checksum: str | None = None
+        self.stored_checksum: str | None = FROZEN_S3_CHECKSUM
         self.head_checksum_override: str | None = None
+        self.legacy_bundle_bytes = b""
 
     def json(self, *arguments: str) -> object:
         self.calls.append(arguments)
@@ -32,6 +36,9 @@ class FakeAws:
             return {"ChecksumSHA256": self.stored_checksum}
         if "s3api head-object" in command:
             return {"ChecksumSHA256": self.head_checksum_override or self.stored_checksum}
+        if "s3api get-object" in command:
+            Path(arguments[-1]).write_bytes(self.legacy_bundle_bytes)
+            return {}
         if "describe-environments" in command:
             return {
                 "Environments": [
@@ -93,7 +100,7 @@ def contract() -> PromotionContract:
         artifact_dir="artifact",
         bundle_name="tpi-dev-ecr-28cf009.zip",
         runtime_sha="28cf009137ada707540d9ee7eba01dc45a9a260e",
-        bundle_sha256="5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045",
+        bundle_sha256=FROZEN_BUNDLE_SHA,
     )
 
 
@@ -180,7 +187,7 @@ def test_storage_checksum_mismatch_aborts_before_application_version_creation(
     assert not any("create-application-version" in call for call in commands)
 
 
-def test_matching_existing_candidate_is_reused() -> None:
+def test_matching_existing_approved_candidate_with_valid_checksum_is_reused() -> None:
     aws = FakeAws(candidate=candidate_version(), environment_version="h2-5d-ecr-47fa0c9")
 
     CandidatePromoter(aws, contract()).run()
@@ -190,7 +197,19 @@ def test_matching_existing_candidate_is_reused() -> None:
     assert sum("update-environment" in call for call in commands) == 1
 
 
-def test_matching_existing_legacy_candidate_is_reused() -> None:
+def test_matching_existing_approved_candidate_with_wrong_checksum_aborts() -> None:
+    aws = FakeAws(candidate=candidate_version(), environment_version="h2-5d-ecr-47fa0c9")
+    aws.head_checksum_override = "wrong-checksum"
+
+    with pytest.raises(RuntimeError, match="object checksum mismatch"):
+        CandidatePromoter(aws, contract()).run()
+
+    assert not any("update-environment" in " ".join(call) for call in aws.calls)
+
+
+def test_matching_existing_legacy_candidate_with_valid_bytes_is_reused(tmp_path: Path) -> None:
+    bundle = b"verified legacy bundle"
+    promotion_contract = materializable_contract(tmp_path, bundle)
     legacy = candidate_version(
         SourceBundle={
             "S3Bucket": "elasticbeanstalk-us-east-2-821656895812",
@@ -200,12 +219,32 @@ def test_matching_existing_legacy_candidate_is_reused() -> None:
         }
     )
     aws = FakeAws(candidate=legacy, environment_version="h2-5d-ecr-47fa0c9")
+    aws.legacy_bundle_bytes = bundle
 
-    CandidatePromoter(aws, contract()).run()
+    CandidatePromoter(aws, promotion_contract).run()
 
     commands = [" ".join(call) for call in aws.calls]
     assert not any("create-application-version" in call for call in commands)
     assert sum("update-environment" in call for call in commands) == 1
+
+
+def test_matching_existing_legacy_candidate_with_wrong_bytes_aborts(tmp_path: Path) -> None:
+    promotion_contract = materializable_contract(tmp_path, b"expected legacy bundle")
+    legacy = candidate_version(
+        SourceBundle={
+            "S3Bucket": "elasticbeanstalk-us-east-2-821656895812",
+            "S3Key": (
+                "tpi-backoffice/dev-releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.zip"
+            ),
+        }
+    )
+    aws = FakeAws(candidate=legacy, environment_version="h2-5d-ecr-47fa0c9")
+    aws.legacy_bundle_bytes = b"different legacy bytes"
+
+    with pytest.raises(RuntimeError, match="Legacy SourceBundle SHA256 mismatch"):
+        CandidatePromoter(aws, promotion_contract).run()
+
+    assert not any("update-environment" in " ".join(call) for call in aws.calls)
 
 
 def test_mismatched_existing_candidate_aborts_before_update() -> None:

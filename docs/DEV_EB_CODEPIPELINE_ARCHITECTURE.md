@@ -98,6 +98,13 @@ legacy exacto. También se reutiliza si apunta al objeto aprobado exacto. Una
 versión ausente se crea exclusivamente desde el objeto AWS-controlled bajo
 `approved-releases/`. Cualquier tercera ubicación aborta.
 
+La reutilización también valida bytes. Para el source aprobado se exige el
+`ChecksumSHA256` S3 correspondiente al bundle congelado. Para el source legacy,
+que no dispone necesariamente de ese checksum, CodePipeline descarga el objeto
+y calcula SHA-256 localmente. Bucket y clave correctos con contenido distinto
+aborta antes de `UpdateEnvironment`; la metadata histórica no se considera
+prueba de integridad.
+
 ## Recursos con `Resource: "*"`
 
 La propuesta no concede acciones con `Resource: "*"`. Los permisos

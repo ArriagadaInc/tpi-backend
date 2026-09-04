@@ -216,6 +216,10 @@ class CandidatePromoter:
                 f"bundle-sha256={self.contract.bundle_sha256}"
             ),
         )
+        self._verify_approved_bundle_checksum(checksum)
+
+    def _verify_approved_bundle_checksum(self, expected_checksum: str | None = None) -> None:
+        checksum = expected_checksum or self._expected_s3_checksum()
         response = self.aws.json(
             "s3api",
             "head-object",
@@ -231,6 +235,39 @@ class CandidatePromoter:
         stored_checksum = response.get("ChecksumSHA256") if isinstance(response, dict) else None
         if stored_checksum != checksum:
             raise RuntimeError("Approved release object checksum mismatch")
+
+    def _verify_legacy_bundle_bytes(self) -> None:
+        destination = Path(self.contract.artifact_dir) / ".legacy-source-bundle.zip"
+        destination.unlink(missing_ok=True)
+        try:
+            self.aws.json(
+                "s3api",
+                "get-object",
+                "--region",
+                self.contract.region,
+                "--bucket",
+                self.contract.legacy_bundle_bucket,
+                "--key",
+                self.contract.legacy_bundle_key,
+                str(destination),
+            )
+            if not destination.is_file():
+                raise RuntimeError("Legacy SourceBundle download did not produce a file")
+            with destination.open("rb") as source_stream:
+                actual_sha256 = hashlib.file_digest(source_stream, "sha256").hexdigest()
+            if not hmac.compare_digest(actual_sha256, self.contract.bundle_sha256):
+                raise RuntimeError("Legacy SourceBundle SHA256 mismatch")
+        finally:
+            destination.unlink(missing_ok=True)
+
+    def _expected_s3_checksum(self) -> str:
+        try:
+            digest = bytes.fromhex(self.contract.bundle_sha256)
+        except ValueError as error:
+            raise RuntimeError("Bundle SHA256 contract is invalid") from error
+        if len(digest) != hashlib.sha256().digest_size:
+            raise RuntimeError("Bundle SHA256 contract is invalid")
+        return base64.b64encode(digest).decode("ascii")
 
     def _wait_for_candidate(self) -> list[dict[str, object]]:
         for _ in range(30):
@@ -253,11 +290,13 @@ class CandidatePromoter:
         if not isinstance(source, dict):
             raise RuntimeError("Candidate application version has no SourceBundle")
         actual = (source.get("S3Bucket"), source.get("S3Key"))
-        approved = {
-            (self.contract.approved_bundle_bucket, self.contract.approved_bundle_key),
-            (self.contract.legacy_bundle_bucket, self.contract.legacy_bundle_key),
-        }
-        if actual not in approved:
+        approved = (self.contract.approved_bundle_bucket, self.contract.approved_bundle_key)
+        legacy = (self.contract.legacy_bundle_bucket, self.contract.legacy_bundle_key)
+        if actual == approved:
+            self._verify_approved_bundle_checksum()
+        elif actual == legacy:
+            self._verify_legacy_bundle_bytes()
+        else:
             raise RuntimeError("Candidate SourceBundle does not match an approved immutable source")
 
     def _verify_rollback(self) -> None:
