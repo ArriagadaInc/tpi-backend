@@ -123,13 +123,16 @@ def test_ci_validates_release_artifact_with_shared_verifier() -> None:
     assert "rhysd/actionlint:1.7.7" in workflow
 
 
-def test_deployment_workflow_accepts_known_unprocessed_rollback_version() -> None:
+def test_deployment_workflow_uses_healthy_current_version_as_rollback() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
 
     assert '.[0].Status != "FAILED"' in workflow
-    assert '--version-label "$ROLLBACK_VERSION"' in workflow
-    assert 'length > 0 and any(.[]; .VersionLabel == "h2-5d-ecr-3074bf1-r2"' in workflow
-    assert "rollback_events" in workflow
+    assert '.[0].SourceBundle != null' in workflow
+    assert '--version-labels "$EXPECTED_CURRENT_VERSION"' in workflow
+    assert "ROLLBACK_VERSION" not in workflow
+    preflight_start = workflow.index("Verify account and deployment preflight")
+    upload_start = workflow.index("Upload approved bundle")
+    assert "describe-events" not in workflow[preflight_start:upload_start]
 
 
 def test_deployment_workflow_processes_version_before_environment_update() -> None:
