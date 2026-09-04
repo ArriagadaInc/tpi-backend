@@ -1,0 +1,311 @@
+name: Deploy frozen DEV candidate to Elastic Beanstalk
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: us-east-2
+  AWS_ACCOUNT_ID: '821656895812'
+  EB_ROLE_ARN: arn:aws:iam::821656895812:role/tpi-github-actions-dev-eb-deploy-role
+  APPLICATION: tpi-backoffice
+  ENVIRONMENT: tpi-backoffice-dev-green
+  EXPECTED_CURRENT_VERSION: h2-5d-ecr-47fa0c9
+  ROLLBACK_VERSION: h2-5d-ecr-3074bf1-r2
+  SOURCE_SHA: 28cf009137ada707540d9ee7eba01dc45a9a260e
+  ARTIFACT_RUN_ID: '33824477381'
+  ARTIFACT_ID: '9919549285'
+  BUNDLE_NAME: tpi-dev-ecr-28cf009.zip
+  MANIFEST_NAME: tpi-dev-ecr-28cf009.manifest.json
+  BUNDLE_SHA256: 5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045
+  APP_DIGEST: sha256:45331812c93bcf905b2ae8ad9eedff9eba5f63bc4afbfd5639af85c78bb3b6ce
+  CADDY_DIGEST: sha256:1d7c114bf0bb98e8ed2034a37997ee4d9e4aec98cbba58dc00581bbf6b6dc4e2
+  EB_BUCKET: elasticbeanstalk-us-east-2-821656895812
+  VERSION_LABEL: h3-3-crm-web-28cf009-r1
+
+jobs:
+  deploy:
+    name: Deploy frozen candidate to DEV GREEN
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require main ref
+        run: |
+          test "$GITHUB_REF" = "refs/heads/main" || {
+            echo "This workflow is executable only from refs/heads/main."
+            exit 1
+          }
+
+      - name: Download approved ECR artifact
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ env.ARTIFACT_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.ARTIFACT_RUN_ID }}
+          path: artifact
+
+      - name: Verify immutable candidate artifact
+        env:
+          APP_IMAGE: 821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-app@${{ env.APP_DIGEST }}
+          CADDY_IMAGE: 821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-caddy@${{ env.CADDY_DIGEST }}
+        run: |
+          set -euo pipefail
+          bundle="artifact/$BUNDLE_NAME"
+          manifest="artifact/$MANIFEST_NAME"
+          test -f "$bundle"
+          test -f "$manifest"
+          test "$(find artifact -type f | wc -l)" -eq 2
+          test "$(sha256sum "$bundle" | cut -d' ' -f1)" = "$BUNDLE_SHA256"
+          jq -e \
+            --arg runtime "$SOURCE_SHA" \
+            --arg app "$APP_IMAGE" \
+            --arg caddy "$CADDY_IMAGE" \
+            --arg bundle_sha "$BUNDLE_SHA256" \
+            '.runtime_git_sha == $runtime
+             and .app_image == $app
+             and .caddy_image == $caddy
+             and .bundle_sha256 == $bundle_sha' \
+            "$manifest" >/dev/null
+
+          test "$(zipinfo -1 "$bundle")" = "docker-compose.yml"
+          unzip -t "$bundle"
+          bundle_dir="$(mktemp -d)"
+          trap 'rm -rf "$bundle_dir"' EXIT
+          unzip -q "$bundle" -d "$bundle_dir"
+          compose="$bundle_dir/docker-compose.yml"
+          test "$(grep -F -c "$APP_IMAGE" "$compose")" -eq 2
+          test "$(grep -F -c "$CADDY_IMAGE" "$compose")" -eq 1
+          (
+            export TPI_APP_IMAGE="$APP_IMAGE"
+            export TPI_CADDY_IMAGE="$CADDY_IMAGE"
+            export DATABASE_HOST=ci-placeholder.invalid
+            export DATABASE_NAME=tpi
+            export DATABASE_USER=tpi_app
+            export DATABASE_PASSWORD=ci-not-a-secret
+            export API_IDEMPOTENCY_HMAC_SECRET=ci-not-a-secret
+            export AUTH_USERS_JSON='{"users":[]}'
+            export WEB_SESSION_SECRET=ci-web-session-secret-not-for-runtime
+            export TPI_PUBLIC_SITE_URL=https://dev.example.test
+            export TPI_PUBLIC_SITE_ADDRESS=https://dev.example.test
+            export TPI_BACKOFFICE_SITE_ADDRESS=https://backoffice.dev.example.test
+            docker compose -f "$compose" config --quiet
+          )
+
+      - name: Configure AWS credentials through GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ env.EB_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: tpi-dev-eb-deploy-${{ github.run_id }}
+
+      - name: Verify account and deployment preflight
+        run: |
+          set -euo pipefail
+          identity="$(aws sts get-caller-identity --output json)"
+          echo "$identity"
+          test "$(jq -r '.Account' <<< "$identity")" = "$AWS_ACCOUNT_ID"
+          test "$AWS_REGION" = us-east-2
+
+          application_count="$(aws elasticbeanstalk describe-applications \
+            --region "$AWS_REGION" \
+            --application-names "$APPLICATION" \
+            --query 'Applications | length(@)' \
+            --output text)"
+          test "$application_count" = 1
+
+          environment="$(aws elasticbeanstalk describe-environments \
+            --region "$AWS_REGION" \
+            --application-name "$APPLICATION" \
+            --environment-names "$ENVIRONMENT" \
+            --query 'Environments[0].{ApplicationName:ApplicationName,EnvironmentName:EnvironmentName,CNAME:CNAME,Status:Status,Health:Health,HealthStatus:HealthStatus,VersionLabel:VersionLabel}' \
+            --output json)"
+          echo "$environment"
+          jq -e \
+            --arg application "$APPLICATION" \
+            --arg environment "$ENVIRONMENT" \
+            --arg current "$EXPECTED_CURRENT_VERSION" \
+            '(.ApplicationName == $application)
+             and (.EnvironmentName == $environment)
+             and (.Status == "Ready")
+             and (.Health == "Green")
+             and (.HealthStatus == "Ok")
+             and (.VersionLabel == $current)' \
+            <<< "$environment" >/dev/null
+
+          rollback="$(aws elasticbeanstalk describe-application-versions \
+            --region "$AWS_REGION" \
+            --application-name "$APPLICATION" \
+            --version-labels "$ROLLBACK_VERSION" \
+            --query 'ApplicationVersions' \
+            --output json)"
+          jq -e 'length == 1 and .[0].VersionLabel == "h2-5d-ecr-3074bf1-r2" and .[0].Status != "FAILED"' \
+            <<< "$rollback" >/dev/null
+
+          rollback_events="$(aws elasticbeanstalk describe-events \
+            --region "$AWS_REGION" \
+            --application-name "$APPLICATION" \
+            --environment-name "$ENVIRONMENT" \
+            --version-label "$ROLLBACK_VERSION" \
+            --max-items 100 \
+            --query 'Events[].{EventDate:EventDate,Severity:Severity,Status:Status,VersionLabel:VersionLabel,Message:Message}' \
+            --output json)"
+          echo "Rollback version deployment events:"
+          echo "$rollback_events" | jq -r '.[] | [.EventDate, .Severity, .Status, .VersionLabel, .Message] | @tsv'
+          jq -e 'length > 0 and any(.[]; .VersionLabel == "h2-5d-ecr-3074bf1-r2" and (.Severity // "") != "ERROR" and (.Severity // "") != "FATAL" and ((.Message // "") | test("success|successfully|deployed|completed"; "i")))' \
+            <<< "$rollback_events" >/dev/null
+
+          existing="$(aws elasticbeanstalk describe-application-versions \
+            --region "$AWS_REGION" \
+            --application-name "$APPLICATION" \
+            --version-labels "$VERSION_LABEL" \
+            --query 'ApplicationVersions' \
+            --output json)"
+          test "$(jq 'length' <<< "$existing")" -eq 0
+
+      - name: Upload approved bundle
+        env:
+          S3_KEY: tpi-backoffice/dev-releases/${{ env.VERSION_LABEL }}/${{ env.BUNDLE_NAME }}
+        run: |
+          set -euo pipefail
+          aws s3api put-object \
+            --region "$AWS_REGION" \
+            --bucket "$EB_BUCKET" \
+            --key "$S3_KEY" \
+            --body "artifact/$BUNDLE_NAME" \
+            --content-type application/zip \
+            --metadata "runtime-git-sha=$SOURCE_SHA,bundle-sha256=$BUNDLE_SHA256"
+
+      - name: Create application version
+        env:
+          S3_KEY: tpi-backoffice/dev-releases/${{ env.VERSION_LABEL }}/${{ env.BUNDLE_NAME }}
+        run: |
+          set -euo pipefail
+          aws elasticbeanstalk create-application-version \
+            --region "$AWS_REGION" \
+            --application-name "$APPLICATION" \
+            --version-label "$VERSION_LABEL" \
+            --description "H3.3 frozen candidate $SOURCE_SHA" \
+            --source-bundle "S3Bucket=$EB_BUCKET,S3Key=$S3_KEY" \
+            --process \
+            --no-auto-create-application
+
+      - name: Wait for application version processing
+        run: |
+          set -euo pipefail
+          status=""
+          for attempt in $(seq 1 30); do
+            version="$(aws elasticbeanstalk describe-application-versions \
+              --region "$AWS_REGION" \
+              --application-name "$APPLICATION" \
+              --version-labels "$VERSION_LABEL" \
+              --query 'ApplicationVersions[0]' \
+              --output json)"
+            status="$(jq -r '.Status // ""' <<< "$version")"
+            echo "Application version processing status: ${status:-NOT_FOUND}"
+            case "$status" in
+              PROCESSED)
+                break
+                ;;
+              FAILED)
+                echo "Elastic Beanstalk rejected application version processing."
+                exit 1
+                ;;
+              PROCESSING|"")
+                sleep 10
+                ;;
+              *)
+                echo "Unexpected application version status: $status"
+                exit 1
+                ;;
+            esac
+          done
+          test "$status" = PROCESSED
+
+      - name: Verify version and rollback remain available
+        env:
+          S3_KEY: tpi-backoffice/dev-releases/${{ env.VERSION_LABEL }}/${{ env.BUNDLE_NAME }}
+        run: |
+          set -euo pipefail
+          version="$(aws elasticbeanstalk describe-application-versions \
+            --region "$AWS_REGION" \
+            --application-name "$APPLICATION" \
+            --version-labels "$VERSION_LABEL" \
+            --query 'ApplicationVersions[0]' \
+            --output json)"
+          jq -e \
+            --arg label "$VERSION_LABEL" \
+            --arg bucket "$EB_BUCKET" \
+            --arg key "$S3_KEY" \
+            '(.VersionLabel == $label)
+             and (.Status == "PROCESSED")
+             and (.SourceBundle.S3Bucket == $bucket)
+             and (.SourceBundle.S3Key == $key)' \
+            <<< "$version" >/dev/null
+
+          rollback_count="$(aws elasticbeanstalk describe-application-versions \
+            --region "$AWS_REGION" \
+            --application-name "$APPLICATION" \
+            --version-labels "$ROLLBACK_VERSION" \
+            --query 'ApplicationVersions | length(@)' \
+            --output text)"
+          test "$rollback_count" = 1
+
+      - name: Update only the approved DEV environment
+        id: update_environment
+        run: |
+          set -euo pipefail
+          aws elasticbeanstalk update-environment \
+            --region "$AWS_REGION" \
+            --application-name "$APPLICATION" \
+            --environment-name "$ENVIRONMENT" \
+            --version-label "$VERSION_LABEL"
+
+      - name: Wait for stable deployment and verify version
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            environment="$(aws elasticbeanstalk describe-environments \
+              --region "$AWS_REGION" \
+              --application-name "$APPLICATION" \
+              --environment-names "$ENVIRONMENT" \
+              --query 'Environments[0].{Status:Status,Health:Health,HealthStatus:HealthStatus,VersionLabel:VersionLabel}' \
+              --output json)"
+            echo "$environment"
+            if jq -e \
+              --arg version "$VERSION_LABEL" \
+              '(.Status == "Ready")
+               and (.Health == "Green")
+               and (.HealthStatus == "Ok")
+               and (.VersionLabel == $version)' \
+              <<< "$environment" >/dev/null; then
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "Elastic Beanstalk did not reach Ready/Green/Ok with the target version."
+          exit 1
+
+      - name: Show recent deployment events after successful deployment
+        run: |
+          aws elasticbeanstalk describe-events \
+            --region "$AWS_REGION" \
+            --application-name "$APPLICATION" \
+            --environment-name "$ENVIRONMENT" \
+            --max-items 10 \
+            --query 'Events[].{EventDate:EventDate,Severity:Severity,Status:Status,Message:Message}' \
+            --output table
+
+      - name: Show deployment events after update failure
+        if: failure() && steps.update_environment.outcome == 'success'
+        run: |
+          aws elasticbeanstalk describe-events \
+            --region "$AWS_REGION" \
+            --application-name "$APPLICATION" \
+            --environment-name "$ENVIRONMENT" \
+            --max-items 20 \
+            --query 'Events[].{EventDate:EventDate,Severity:Severity,Status:Status,Message:Message}' \
+            --output table
