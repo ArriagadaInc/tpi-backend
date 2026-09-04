@@ -1,113 +1,173 @@
-# Runbook de deployment controlado en Elastic Beanstalk DEV
+# Runbook de promoción controlada a Elastic Beanstalk DEV
 
-Estado: preparado, no ejecutado
-Ambiente: AWS DEV (`us-east-2`)
+Estado: preparado, no aprovisionado ni ejecutado
+Ambiente: AWS DEV (`821656895812`, `us-east-2`)
 Última validación física del baseline: 2026-09-04
-Fuente: preflight EB, artifact ECR publicado y políticas IAM versionadas
+Fuente: preflight EB, candidato ECR congelado y contratos versionados
 
-## Alcance
-
-Este runbook describe el deployment controlado del candidato congelado H3.3.
-El workflow asociado es manual, solo puede ejecutarse desde `main` y no modifica
-la configuración del environment. Su única actualización de runtime es cambiar
-`VersionLabel` en `tpi-backoffice-dev-green`.
-
-El rol de preflight `tpi-github-actions-dev-eb-role` permanece read-only. El
-deployment usa el rol separado `tpi-github-actions-dev-eb-deploy-role`.
-
-## Baseline aprobado
+## Baseline
 
 | Elemento | Valor |
 | --- | --- |
-| Cuenta | `821656895812` |
-| Región | `us-east-2` |
 | Aplicación | `tpi-backoffice` |
 | Environment | `tpi-backoffice-dev-green` |
-| CNAME EB | `tpi-backoffice-dev-ecr.us-east-2.elasticbeanstalk.com` |
-| Versión actual | `h2-5d-ecr-47fa0c9` |
-| Rollback | `h2-5d-ecr-47fa0c9` (versión saludable observada) |
+| Estado previo | `h2-5d-ecr-47fa0c9`, `Ready / Green / Ok` |
+| Rollback | `h2-5d-ecr-47fa0c9` |
+| Candidato | `h3-3-crm-web-28cf009-r1` |
 | Runtime SHA | `28cf009137ada707540d9ee7eba01dc45a9a260e` |
-| Nueva versión EB | `h3-3-crm-web-28cf009-r1` |
-| Artifact ECR | Run `33824477381`, artifact `9919549285` |
+| Artifact GitHub | Run `33824477381`, ID `9919549285` |
 
-El artifact contiene `tpi-dev-ecr-28cf009.zip` y su manifest. El workflow
-verifica el SHA-256 del ZIP, el runtime SHA, ambos digests ECR y que el ZIP
-contenga únicamente `docker-compose.yml` antes de asumir AWS.
+La arquitectura y límites de confianza están en
+`docs/DEV_EB_CODEPIPELINE_ARCHITECTURE.md`.
 
-## IAM
+## Aprovisionamiento pendiente
 
-Trust OIDC del rol de deployment:
+Ejecutar desde una sesión administrativa controlada y validada en la cuenta
+`821656895812`. Estos comandos son instrucciones; no han sido ejecutados por
+este PR.
 
-- `aud`: `sts.amazonaws.com`.
-- `sub`: repositorio exacto y `refs/heads/main`.
-- Sin wildcard y sin autorización de `pull_request`.
+1. Crear los buckets dedicados de release y artifact store. Activar versionado
+   en el bucket de release y cifrado/bloqueo público en ambos:
 
-Permisos versionados:
+```bash
+aws s3api create-bucket --region us-east-2 \
+  --bucket tpi-dev-release-artifacts-821656895812-us-east-2 \
+  --create-bucket-configuration LocationConstraint=us-east-2
+aws s3api put-bucket-versioning \
+  --bucket tpi-dev-release-artifacts-821656895812-us-east-2 \
+  --versioning-configuration Status=Enabled
+aws s3api put-bucket-encryption \
+  --bucket tpi-dev-release-artifacts-821656895812-us-east-2 \
+  --server-side-encryption-configuration \
+  '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+aws s3api put-public-access-block \
+  --bucket tpi-dev-release-artifacts-821656895812-us-east-2 \
+  --public-access-block-configuration \
+  BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+aws s3api create-bucket --region us-east-2 \
+  --bucket tpi-dev-codepipeline-artifacts-821656895812-us-east-2 \
+  --create-bucket-configuration LocationConstraint=us-east-2
+aws s3api put-bucket-encryption \
+  --bucket tpi-dev-codepipeline-artifacts-821656895812-us-east-2 \
+  --server-side-encryption-configuration \
+  '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+aws s3api put-public-access-block \
+  --bucket tpi-dev-codepipeline-artifacts-821656895812-us-east-2 \
+  --public-access-block-configuration \
+  BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+```
 
-- `elasticbeanstalk:DescribeApplications`.
-- `elasticbeanstalk:DescribeEnvironments`.
-- `elasticbeanstalk:DescribeApplicationVersions`.
-- `elasticbeanstalk:DescribeEvents`.
-- `elasticbeanstalk:CreateApplicationVersion` sobre `tpi-backoffice`.
-- `elasticbeanstalk:UpdateEnvironment` únicamente sobre `tpi-backoffice-dev-green`.
-- `s3:PutObject`, `s3:GetObject` y `s3:GetObjectVersion` únicamente bajo
-  `tpi-backoffice/dev-releases/*` del bucket EB existente. `CreateApplicationVersion`
-  necesita que el principal de deployment pueda volver a leer el source bundle
-  después de subirlo.
-No se conceden `iam:PassRole`, acciones IAM, cambios DNS, cambios RDS,
-`UpdateConfigurationTemplate`, `CreateBucket`, `DeleteBucket`, permisos de
-administración del bucket, `ListAllMyBuckets` ni permisos para modificar variables
-del environment.
+2. Publicar el tooling privilegiado desde el commit aprobado usando un operador
+   AWS, nunca el rol GitHub. Fallar si los hashes no coinciden:
 
-## Flujo controlado
+```bash
+test "$(sha256sum scripts/release/verify_frozen_candidate.sh | cut -d' ' -f1)" = \
+  a59144ff469e56231addb7c46ccf3fa7d456ff9487c7387089eec9137a045791
+test "$(sha256sum deployment/aws/promote_eb_candidate.py | cut -d' ' -f1)" = \
+  4ba84447a948238ff877fa95e60e52f9b52e0b9bc2bad3e80fd236a03a9675f9
+aws s3api put-object \
+  --bucket tpi-dev-release-artifacts-821656895812-us-east-2 \
+  --key trusted-tooling/v1/verify_frozen_candidate.sh \
+  --body scripts/release/verify_frozen_candidate.sh
+aws s3api put-object \
+  --bucket tpi-dev-release-artifacts-821656895812-us-east-2 \
+  --key trusted-tooling/v1/promote_eb_candidate.py \
+  --body deployment/aws/promote_eb_candidate.py
+```
 
-1. Ejecutar el workflow `Deploy frozen DEV candidate to Elastic Beanstalk` desde `main`.
-2. Verificar cuenta, región, aplicación, environment, versión actual y estado `Ready / Green / Ok`.
-3. Verificar que la versión actualmente desplegada `h2-5d-ecr-47fa0c9` existe exactamente una vez, no está en estado `FAILED` y tiene `SourceBundle` informado. Esa versión saludable observada es el rollback del release; no se requieren eventos históricos para demostrarlo.
-4. Subir el ZIP al prefijo de release del bucket EB.
-5. Crear `h3-3-crm-web-28cf009-r1` apuntando al objeto exacto, sin solicitar
-   preprocesamiento a Elastic Beanstalk. Para source bundles S3, `Process` es opcional;
-   el pipeline ya valida localmente el ZIP, Docker Compose y los digests inmutables.
-6. Aceptar `UNPROCESSED` o `PROCESSED`; esperar mientras el estado sea `PROCESSING`
-   y abortar ante `FAILED`, estado desconocido o timeout. `UNPROCESSED` indica que
-   Elastic Beanstalk validará la configuración durante el deployment.
-7. Verificar `VersionLabel`, `SourceBundle.S3Bucket`, `SourceBundle.S3Key` y
-   `Status != FAILED`, además de conservar el rollback antes de actualizar el environment.
-8. Ejecutar `UpdateEnvironment` solo con `--version-label`, sin opciones de configuración.
-9. Esperar `Ready / Green / Ok` y confirmar la nueva versión.
-10. Revisar los últimos eventos de Elastic Beanstalk, incluso si falla la espera posterior al update.
+3. Crear el service role de CodePipeline y adjuntar exclusivamente la policy
+   versionada:
 
-La validación del artifact y el preflight terminan antes de cualquier escritura.
-Después de `PutObject` y `CreateApplicationVersion` puede fallar la validación
-posterior, quedando un objeto S3 y/o una application version sin tocar todavía el
-environment. Si falla `UpdateEnvironment` o la espera de estabilidad, el
-environment puede haber iniciado un cambio y debe verificarse antes de ejecutar
-rollback; los eventos se recopilan para ese diagnóstico.
+```bash
+aws iam create-role --role-name tpi-codepipeline-dev-eb-role \
+  --assume-role-policy-document \
+  file://deployment/iam/tpi-codepipeline-dev-eb-role-trust.json
+aws iam put-role-policy --role-name tpi-codepipeline-dev-eb-role \
+  --policy-name TpiCodePipelineDevElasticBeanstalk \
+  --policy-document file://deployment/iam/tpi-codepipeline-dev-eb.json
+```
 
-Resumen de efectos:
+4. Crear el rol OIDC de orquestación GitHub:
 
-| Fase | Resultado ante fallo |
-| --- | --- |
-| Validación del artifact/preflight | Cero escrituras |
-| Registro y validación de application version | Puede quedar objeto S3/application version; environment intacto |
-| `UpdateEnvironment` o espera posterior | Puede haber iniciado un deployment; revisar eventos y ejecutar rollback si corresponde |
+```bash
+aws iam create-role --role-name tpi-github-actions-dev-release-role \
+  --assume-role-policy-document \
+  file://deployment/iam/tpi-github-actions-dev-release-role-trust.json
+aws iam put-role-policy --role-name tpi-github-actions-dev-release-role \
+  --policy-name TpiGithubDevReleaseOrchestration \
+  --policy-document file://deployment/iam/tpi-github-actions-dev-release.json
+```
+
+5. Crear el pipeline V2 sin ejecutarlo:
+
+```bash
+aws codepipeline create-pipeline --region us-east-2 \
+  --cli-input-json file://deployment/aws/tpi-dev-eb-pipeline.json
+```
+
+6. Verificar trust, policies, buckets, objetos de tooling y pipeline mediante `get-role`,
+   `get-role-policy`, `get-bucket-versioning`, `get-public-access-block` y
+   `get-pipeline`. Comparar además los SHA-256 del tooling descargado. No iniciar
+   promoción en esta fase.
+
+7. Tras aprovisionar y validar el pipeline, retirar o deshabilitar el rol físico
+   histórico `tpi-github-actions-dev-eb-deploy-role` **antes** de la primera
+   ejecución con `execute_promotion=true`. Confirmar que ya no constituye un
+   trust path alternativo desde GitHub. No reutilizarlo ni ampliarlo.
+
+## Preflight de promoción
+
+Ejecutar primero el workflow con `execute_promotion=false`. Debe:
+
+1. Verificar el artifact GitHub y sus cuatro anclajes inmutables.
+2. Asumir únicamente `tpi-github-actions-dev-eb-role`.
+3. Confirmar cuenta, aplicación y environment.
+4. Aceptar solo el rollback o candidato en `Ready / Green / Ok`.
+5. Confirmar rollback utilizable.
+6. Confirmar candidato ausente o coincidente con el source legacy o aprobado exacto.
+7. Finalizar sin objetos S3 nuevos ni ejecución de CodePipeline.
+
+## Promoción autorizada
+
+Solo tras aprobar el preflight:
+
+1. Ejecutar una vez con `execute_promotion=true`.
+2. GitHub publica únicamente el source data-only versionado en el bucket TPI.
+3. GitHub inicia únicamente `tpi-backoffice-dev-promotion`, fijando solo el
+   `VersionId`; la clave source no puede sobrescribirse.
+4. CodePipeline comprueba `aws`, `python3`, `bash`, `jq`, `sha256sum`, `zipinfo`,
+   `unzip`, `docker` y `docker compose`; no instala herramientas en runtime.
+5. CodePipeline descarga el tooling desde el prefijo protegido, verifica ambos
+   hashes y recién entonces ejecuta la validación/promoción.
+6. Si la versión no existe, el promotor recalcula el hash del bundle verificado,
+   lo materializa con checksum S3 bajo el objeto exacto de `approved-releases/`
+   y comprueba el checksum almacenado antes de crear la Application Version.
+7. Si la versión ya existe, solo acepta el source legacy exacto o el objeto
+   aprobado exacto. Además descarga y calcula SHA-256 del legacy, o consulta y
+   compara `ChecksumSHA256` del objeto aprobado, antes de permitir el update.
+   Cualquier tercer source o contenido discrepante aborta.
+8. CodePipeline conserva `h2-5d-ecr-47fa0c9`.
+9. Si procede, actualiza solo `tpi-backoffice-dev-green`.
+10. Exige `h3-3-crm-web-28cf009-r1`, `Ready / Green / Ok`.
+11. GitHub recoge action executions, estado EB y eventos con el rol read-only.
 
 ## Rollback
 
-El rollback se realiza actualizando exclusivamente el mismo environment a la
-versión saludable observada inmediatamente antes del deployment,
-`h2-5d-ecr-47fa0c9`, usando el rol de
-deployment o un operador autorizado. Luego se espera `Ready / Green / Ok` y se
-confirma `VersionLabel`.
+El rollback requiere autorización separada. Actualizar únicamente
+`tpi-backoffice-dev-green` a `h2-5d-ecr-47fa0c9`, esperar
+`Ready / Green / Ok` y conservar artefactos y application versions para
+auditoría. No modificar variables, DNS, RDS, roles del environment ni buckets.
+El rollback no depende del rol histórico de GitHub: ante una emergencia se
+ejecuta desde una sesión AWS administrativa controlada y auditada.
 
-No modificar variables, CNAME, configuración, RDS, IAM ni el bucket durante el
-rollback. La application version nueva y el objeto S3 se conservan para
-auditoría hasta aplicar la política de retención aprobada.
+## Matriz de fallos
 
-## No ejecutar durante este PR
+| Fase | Efecto posible | Acción |
+| --- | --- | --- |
+| Verificación/preflight | Sin escrituras | Corregir evidencia, no promover |
+| Publicación | Objetos versionados en bucket TPI | Conservar y diagnosticar |
+| Pipeline antes de update | Puede existir Application Version | Reanudar solo si source coincide |
+| Pipeline después de update | Environment puede estar cambiando | Recoger eventos; no reintentar ni hacer rollback automático |
 
-- No ejecutar el workflow de deployment.
-- No ejecutar migraciones RDS.
-- No regenerar imágenes ni bundle.
-- No rebasear PR #14.
-- No hacer smoke funcional ni mergear PR #14.
+No borrar `h3-3-crm-web-28cf009-r1` para reanudar. Una discrepancia de source
+requiere detenerse, no sobrescribir ni eliminar automáticamente.

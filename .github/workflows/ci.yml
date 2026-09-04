@@ -234,6 +234,15 @@ jobs:
           export SOURCE_SHA="$runtime_sha"
           bash scripts/release/verify_frozen_candidate.sh
 
+          promotion_output="dist/tpi-dev-candidate-data-${runtime_sha:0:7}.zip"
+          python deployment/aws/build_promotion_data.py \
+            --artifact-dir artifact \
+            --bundle-name "$bundle_name" \
+            --manifest-name "$manifest_name" \
+            --output "$promotion_output"
+          test "$(zipinfo -1 "$promotion_output" | sort)" = \
+            $'artifact/'"$manifest_name"$'\nartifact/'"$bundle_name"
+
       - name: Run actionlint
         run: |
           # actionlint 1.7.7 does not know the documented artifact-ids input.

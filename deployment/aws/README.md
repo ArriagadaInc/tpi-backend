@@ -23,3 +23,13 @@ After the ECR scan reports zero HIGH and CRITICAL findings, the workflow
 creates `tpi-dev-ecr-<sha7>.zip` and its manifest with the resolved immutable
 digests. The bundle is uploaded as a release artifact and is not deployed
 automatically.
+
+Promotion to Elastic Beanstalk is orchestrated through the dedicated V2
+CodePipeline declared in `tpi-dev-eb-pipeline.json`. GitHub publishes a
+data-only candidate to a fixed S3 key and starts that single pipeline with an
+immutable `VersionId`; it does not call Elastic Beanstalk write APIs. The
+pipeline downloads hash-pinned promotion tooling from a protected S3 prefix
+that the GitHub role cannot modify. After verification, the trusted promoter
+materializes the exact verified bundle under an AWS-controlled, checksum-named
+`approved-releases/` object. Elastic Beanstalk consumes only that object for a
+new Application Version; the existing frozen legacy source remains reusable.

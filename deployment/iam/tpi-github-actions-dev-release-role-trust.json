@@ -2,7 +2,7 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "AllowTpiRepositoryMainEbDeployment",
+      "Sid": "AllowTpiRepositoryMainReleaseOrchestration",
       "Effect": "Allow",
       "Principal": {
         "Federated": "arn:aws:iam::821656895812:oidc-provider/token.actions.githubusercontent.com"
