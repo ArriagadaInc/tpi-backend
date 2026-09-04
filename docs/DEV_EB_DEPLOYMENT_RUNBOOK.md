@@ -50,7 +50,10 @@ Permisos versionados:
 - `elasticbeanstalk:DescribeEvents`.
 - `elasticbeanstalk:CreateApplicationVersion` sobre `tpi-backoffice`.
 - `elasticbeanstalk:UpdateEnvironment` únicamente sobre `tpi-backoffice-dev-green`.
-- `s3:PutObject` únicamente bajo `tpi-backoffice/dev-releases/*` del bucket EB existente.
+- `s3:PutObject`, `s3:GetObject` y `s3:GetObjectVersion` únicamente bajo
+  `tpi-backoffice/dev-releases/*` del bucket EB existente. `CreateApplicationVersion`
+  necesita que el principal de deployment pueda volver a leer el source bundle
+  después de subirlo.
 
 No se conceden `s3:CreateBucket`, `iam:PassRole`, acciones IAM, cambios DNS,
 cambios RDS, `UpdateConfigurationTemplate`, `DeleteObject` ni permisos para

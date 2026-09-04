@@ -41,12 +41,31 @@ def test_deployment_policy_is_scoped_to_approved_resources() -> None:
         "elasticbeanstalk:CreateApplicationVersion",
         "elasticbeanstalk:UpdateEnvironment",
         "s3:PutObject",
+        "s3:GetObject",
+        "s3:GetObjectVersion",
     ]
     serialized = json.dumps(policy)
     assert "s3:CreateBucket" not in serialized
     assert "iam:PassRole" not in serialized
     assert "elasticbeanstalk:UpdateConfigurationTemplate" not in serialized
     assert "s3:DeleteObject" not in serialized
+    s3_statement = next(
+        statement
+        for statement in policy["Statement"]
+        if statement["Sid"] == "ReadWriteOnlyDevReleaseBundles"
+    )
+    assert s3_statement["Action"] == [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:GetObjectVersion",
+    ]
+    assert s3_statement["Resource"] == (
+        "arn:aws:s3:::elasticbeanstalk-us-east-2-821656895812/tpi-backoffice/dev-releases/*"
+    )
+    assert "s3:*" not in serialized
+    assert "ListAllMyBuckets" not in serialized
+    assert "s3:PutObjectAcl" not in serialized
+    assert "s3:GetObjectAcl" not in serialized
     assert (
         "arn:aws:elasticbeanstalk:us-east-2:821656895812:environment/tpi-backoffice/tpi-backoffice-dev-green"
         in serialized
