@@ -1,0 +1,155 @@
+name: Preflight DEV Elastic Beanstalk
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: us-east-2
+  AWS_ACCOUNT_ID: '821656895812'
+  EB_ROLE_ARN: arn:aws:iam::821656895812:role/tpi-github-actions-dev-eb-role
+
+jobs:
+  preflight:
+    name: Inspect DEV Elastic Beanstalk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require main ref
+        run: |
+          test "$GITHUB_REF" = "refs/heads/main" || {
+            echo "This workflow is executable only from refs/heads/main."
+            exit 1
+          }
+
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Configure AWS credentials through GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ env.EB_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: tpi-dev-eb-preflight-${{ github.run_id }}
+
+      - name: Verify AWS account
+        run: |
+          identity="$(aws sts get-caller-identity --output json)"
+          echo "$identity"
+          account="$(printf '%s' "$identity" | jq -r '.Account')"
+          test "$account" = "$AWS_ACCOUNT_ID" || {
+            echo "Unexpected AWS account: $account"
+            exit 1
+          }
+
+      - name: Discover environments and identify DEV by DNS
+        id: environment
+        env:
+          DEV_DOMAINS: dev.tupensioninteligente.cl backoffice.dev.tupensioninteligente.cl
+        run: |
+          environments="$(aws elasticbeanstalk describe-environments \
+            --region "$AWS_REGION" \
+            --include-deleted false \
+            --query 'Environments[].{Application:ApplicationName,Environment:EnvironmentName,CNAME:CNAME,Status:Status,Health:Health,HealthStatus:HealthStatus,VersionLabel:VersionLabel}' \
+            --output json)"
+          echo "Active Elastic Beanstalk environments:"
+          printf '%s\n' "$environments" | jq -r \
+            '.[] | [.Application, .Environment, (.CNAME // ""), .Status, .Health, .HealthStatus, (.VersionLabel // "")] | @tsv' \
+            | column -t -s $'\t'
+
+          matched_file="$RUNNER_TEMP/eb-dns-matches.txt"
+          : > "$matched_file"
+          for domain in $DEV_DOMAINS; do
+            cname="$(dig +short CNAME "$domain" | sed '/^$/d' | sed 's/\.$//' | head -n 1)"
+            addresses="$(dig +short A "$domain" | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+            echo "$domain: CNAME=${cname:-not-observed} A=${addresses:-not-observed}"
+            test -n "$cname" || {
+              echo "Cannot identify $domain: DNS CNAME was not observed."
+              exit 1
+            }
+            matches="$(printf '%s' "$environments" | jq -r --arg cname "$cname" \
+              '.[] | select((.CNAME // "" | ascii_downcase | rtrimstr(".")) == ($cname | ascii_downcase | rtrimstr("."))) | [.Application, .Environment, .CNAME, .VersionLabel] | @tsv')"
+            test -n "$matches" || {
+              echo "No active Elastic Beanstalk environment matches $domain CNAME $cname."
+              exit 1
+            }
+            printf '%s\n' "$matches" | tee -a "$matched_file"
+          done
+
+          unique_environments="$(cut -f 1,2 "$matched_file" | sort -u)"
+          test "$(printf '%s\n' "$unique_environments" | sed '/^$/d' | wc -l)" -eq 1 || {
+            echo "The public DEV domains do not identify one unique environment."
+            exit 1
+          }
+          application="$(cut -f 1 "$matched_file" | head -n 1)"
+          environment="$(cut -f 2 "$matched_file" | head -n 1)"
+          current_version="$(printf '%s' "$environments" | jq -r --arg app "$application" --arg env "$environment" \
+            '.[] | select(.Application == $app and .Environment == $env) | (.VersionLabel // "")')"
+          test -n "$current_version" || {
+            echo "The identified environment has no deployed VersionLabel."
+            exit 1
+          }
+          printf 'application=%s\n' "$application" >> "$GITHUB_OUTPUT"
+          printf 'environment=%s\n' "$environment" >> "$GITHUB_OUTPUT"
+          printf 'current_version=%s\n' "$current_version" >> "$GITHUB_OUTPUT"
+
+      - name: Require stable environment
+        env:
+          APPLICATION: ${{ steps.environment.outputs.application }}
+          ENVIRONMENT: ${{ steps.environment.outputs.environment }}
+        run: |
+          environment="$(aws elasticbeanstalk describe-environments \
+            --region "$AWS_REGION" \
+            --application-name "$APPLICATION" \
+            --environment-names "$ENVIRONMENT" \
+            --query 'Environments[0].{Status:Status,Health:Health,HealthStatus:HealthStatus}' \
+            --output json)"
+          echo "$environment"
+          test "$(printf '%s' "$environment" | jq -r '.Status')" = Ready
+          test "$(printf '%s' "$environment" | jq -r '.Health')" = Green
+          test "$(printf '%s' "$environment" | jq -r '.HealthStatus')" = Ok
+
+      - name: List application variable names only
+        env:
+          APPLICATION: ${{ steps.environment.outputs.application }}
+          ENVIRONMENT: ${{ steps.environment.outputs.environment }}
+        run: |
+          names="$(aws elasticbeanstalk describe-configuration-settings \
+            --region "$AWS_REGION" \
+            --application-name "$APPLICATION" \
+            --environment-name "$ENVIRONMENT" \
+            --query "ConfigurationSettings[0].OptionSettings[?Namespace=='aws:elasticbeanstalk:application:environment'].OptionName" \
+            --output json)"
+          echo "Application environment variable names:"
+          printf '%s' "$names" | jq -r '.[]' | sort
+          required='DATABASE_HOST DATABASE_NAME DATABASE_USER DATABASE_PASSWORD API_IDEMPOTENCY_HMAC_SECRET AUTH_USERS_JSON WEB_SESSION_SECRET TPI_PUBLIC_SITE_URL TPI_PUBLIC_SITE_ADDRESS TPI_BACKOFFICE_SITE_ADDRESS'
+          for name in $required; do
+            if printf '%s' "$names" | jq -e --arg name "$name" 'index($name) != null' >/dev/null; then
+              echo "$name=present"
+            else
+              echo "$name=missing"
+              exit 1
+            fi
+          done
+
+      - name: List recent application versions and rollback candidate
+        env:
+          APPLICATION: ${{ steps.environment.outputs.application }}
+          CURRENT_VERSION: ${{ steps.environment.outputs.current_version }}
+        run: |
+          versions="$(aws elasticbeanstalk describe-application-versions \
+            --region "$AWS_REGION" \
+            --application-name "$APPLICATION" \
+            --query 'ApplicationVersions[].{VersionLabel:VersionLabel,DateCreated:DateCreated,DateUpdated:DateUpdated,Status:Status}' \
+            --output json)"
+          echo "Recent application versions:"
+          printf '%s' "$versions" | jq -r 'sort_by(.DateUpdated) | reverse | .[:10][] | [.VersionLabel, .DateUpdated, .Status] | @tsv' \
+            | column -t -s $'\t'
+          rollback="$(printf '%s' "$versions" | jq -r --arg current "$CURRENT_VERSION" '
+            [ .[] | select(.VersionLabel != $current and .Status == "PROCESSED") ]
+            | sort_by(.DateUpdated) | last | (.VersionLabel // "NOT_FOUND")')"
+          echo "Previous processed version candidate for rollback: $rollback"
