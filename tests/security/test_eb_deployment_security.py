@@ -127,7 +127,7 @@ def test_deployment_workflow_uses_healthy_current_version_as_rollback() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
 
     assert '.[0].Status != "FAILED"' in workflow
-    assert '.[0].SourceBundle != null' in workflow
+    assert ".[0].SourceBundle != null" in workflow
     assert '--version-labels "$EXPECTED_CURRENT_VERSION"' in workflow
     assert "ROLLBACK_VERSION" not in workflow
     preflight_start = workflow.index("Verify account and deployment preflight")
