@@ -25,7 +25,7 @@ deployment usa el rol separado `tpi-github-actions-dev-eb-deploy-role`.
 | Environment | `tpi-backoffice-dev-green` |
 | CNAME EB | `tpi-backoffice-dev-ecr.us-east-2.elasticbeanstalk.com` |
 | Versión actual | `h2-5d-ecr-47fa0c9` |
-| Rollback | `h2-5d-ecr-3074bf1-r2` |
+| Rollback | `h2-5d-ecr-47fa0c9` (versión saludable observada) |
 | Runtime SHA | `28cf009137ada707540d9ee7eba01dc45a9a260e` |
 | Nueva versión EB | `h3-3-crm-web-28cf009-r1` |
 | Artifact ECR | Run `33824477381`, artifact `9919549285` |
@@ -60,7 +60,7 @@ modificar variables del environment.
 
 1. Ejecutar el workflow `Deploy frozen DEV candidate to Elastic Beanstalk` desde `main`.
 2. Verificar cuenta, región, aplicación, environment, versión actual y estado `Ready / Green / Ok`.
-3. Verificar que el rollback `h2-5d-ecr-3074bf1-r2` existe exactamente una vez, no está en estado `FAILED` y tiene eventos read-only asociados a su despliegue previo con evidencia textual de éxito/completitud/despliegue.
+3. Verificar que la versión actualmente desplegada `h2-5d-ecr-47fa0c9` existe exactamente una vez, no está en estado `FAILED` y tiene `SourceBundle` informado. Esa versión saludable observada es el rollback del release; no se requieren eventos históricos para demostrarlo.
 4. Subir el ZIP al prefijo de release del bucket EB.
 5. Crear `h3-3-crm-web-28cf009-r1` apuntando al objeto exacto y con procesamiento habilitado.
 6. Esperar `PROCESSING → PROCESSED`; abortar ante `FAILED`, estado desconocido o timeout.
@@ -87,7 +87,8 @@ Resumen de efectos:
 ## Rollback
 
 El rollback se realiza actualizando exclusivamente el mismo environment a la
-versión previamente verificada `h2-5d-ecr-3074bf1-r2`, usando el rol de
+versión saludable observada inmediatamente antes del deployment,
+`h2-5d-ecr-47fa0c9`, usando el rol de
 deployment o un operador autorizado. Luego se espera `Ready / Green / Ok` y se
 confirma `VersionLabel`.
 
