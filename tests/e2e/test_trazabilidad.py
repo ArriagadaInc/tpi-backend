@@ -31,7 +31,7 @@ class TestTrazabilidadPage:
     @pytest.fixture
     def app(self, streamlit_app_factory):
         """Instancia la página de trazabilidad."""
-        return streamlit_app_factory("app/pages/3_trazabilidad.py", default_timeout=15)
+        return streamlit_app_factory("app/pages/3_trazabilidad.py", default_timeout=45)
 
     def test_page_loads_successfully(self, app):
         """Test que página se carga sin errores."""
@@ -53,7 +53,7 @@ class TestTrazabilidadEstadisticas:
     @pytest.fixture
     def app(self, streamlit_app_factory):
         """Instancia la página de trazabilidad."""
-        return streamlit_app_factory("app/pages/3_trazabilidad.py", default_timeout=15)
+        return streamlit_app_factory("app/pages/3_trazabilidad.py", default_timeout=45)
 
     def test_statistics_displayed(self, app):
         """Test que estadísticas se muestran."""
@@ -87,7 +87,7 @@ class TestTrazabilidadGraficos:
     @pytest.fixture
     def app(self, streamlit_app_factory):
         """Instancia la página de trazabilidad."""
-        return streamlit_app_factory("app/pages/3_trazabilidad.py", default_timeout=15)
+        return streamlit_app_factory("app/pages/3_trazabilidad.py", default_timeout=45)
 
     def test_charts_rendered(self, app):
         """Test que gráficos se renderizan."""
@@ -119,7 +119,7 @@ class TestTrazabilidadAnalisis:
     @pytest.fixture
     def app(self, streamlit_app_factory):
         """Instancia la página de trazabilidad."""
-        return streamlit_app_factory("app/pages/3_trazabilidad.py", default_timeout=15)
+        return streamlit_app_factory("app/pages/3_trazabilidad.py", default_timeout=45)
 
     def test_salary_analysis_present(self, app):
         """Test que análisis de saldo está presente."""

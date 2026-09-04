@@ -432,10 +432,8 @@ class Settings(BaseSettings):
         if missing_fields:
             raise ValueError("Missing required database settings: " + ", ".join(missing_fields))
 
-        assert host is not None
-        assert port is not None
-        assert database is not None
-        assert user is not None
+        if host is None or port is None or database is None or user is None:
+            raise RuntimeError("Validated database settings are missing required values")
 
         sslmode = self.database_sslmode or _default_sslmode(self.normalized_app_env)
         config = DatabaseConnectionConfig(

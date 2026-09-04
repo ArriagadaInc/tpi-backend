@@ -11,8 +11,10 @@ from datetime import UTC, date, datetime, time
 from typing import Any
 from uuid import UUID
 
-from psycopg.errors import ForeignKeyViolation
+from psycopg import sql
+from psycopg.errors import ForeignKeyViolation, UniqueViolation
 
+from app.auth.models import AuthenticatedUser
 from app.database.connection import get_db_connection
 from app.database.errors import DevLeadCleanupBlockedError
 from app.models.crm_states import (
@@ -21,6 +23,11 @@ from app.models.crm_states import (
     normalize_crm_state_for_write,
 )
 from app.models.idempotency import IdempotencyConflictError, IdempotentSolicitudResult
+from app.models.lead_assignment import (
+    ASSIGNMENT_ACTIVE_STATE,
+    LeadAssignmentConflictError,
+    LeadAssignmentValidationError,
+)
 from app.models.solicitud import (
     ConsentimientosData,
     PersonaData,
@@ -418,6 +425,11 @@ class SolicitudRepository:
                 l.comentarios,
                 l.estado_lead,
                 l.created_at,
+                ass.id_asesor,
+                ass.asesor_nombre,
+                ass.asignado_por,
+                ass.estado_asignacion AS estado_nuevo,
+                ass.fecha_asignacion AS asignado_en,
                 c.id_consentimiento,
                 c.acepta_terminos,
                 c.acepta_politica_privacidad,
@@ -427,6 +439,19 @@ class SolicitudRepository:
             LEFT JOIN tpi.catalogo_genero cg ON l.genero_id = cg.id
             LEFT JOIN tpi.catalogo_estado_civil cec ON l.estado_civil_id = cec.id
             LEFT JOIN tpi.catalogo_afp ca ON l.afp_id = ca.id
+            LEFT JOIN LATERAL (
+                SELECT
+                    a.id_asesor,
+                    ases.nombre AS asesor_nombre,
+                    a.asignado_por,
+                    a.estado_asignacion,
+                    a.fecha_asignacion
+                FROM tpi.asignaciones a
+                LEFT JOIN tpi.asesores ases ON ases.id_asesor = a.id_asesor
+                WHERE a.id_lead = l.id_lead
+                ORDER BY a.fecha_asignacion DESC, a.id_asignacion DESC
+                LIMIT 1
+            ) ass ON TRUE
             LEFT JOIN tpi.consentimientos c ON l.id_lead = c.id_lead
             WHERE l.id_lead = %s
             LIMIT 1
@@ -564,14 +589,14 @@ class SolicitudRepository:
             date_to=date_to,
         )
         order_column, direction = cls._normalize_crm_sort(sort_by, sort_direction)
-        query_count = f"""
+        query_count = sql.SQL("""
             SELECT COUNT(*) AS total
             FROM tpi.leads l
             INNER JOIN tpi.personas p ON l.id_persona = p.id_persona
             LEFT JOIN tpi.catalogo_afp ca ON l.afp_id = ca.id
             {where_clause}
-        """
-        query_data = f"""
+        """).format(where_clause=sql.SQL(where_clause))
+        query_data = sql.SQL("""
             SELECT
                 l.id_lead,
                 l.id_persona,
@@ -588,16 +613,29 @@ class SolicitudRepository:
                 l.saldo_afp,
                 l.comentarios,
                 l.estado_lead,
-                l.created_at
+                l.created_at,
+                ass.id_asesor,
+                ass.asesor_nombre
             FROM tpi.leads l
             INNER JOIN tpi.personas p ON l.id_persona = p.id_persona
             LEFT JOIN tpi.catalogo_genero cg ON l.genero_id = cg.id
             LEFT JOIN tpi.catalogo_estado_civil cec ON l.estado_civil_id = cec.id
             LEFT JOIN tpi.catalogo_afp ca ON l.afp_id = ca.id
+            LEFT JOIN LATERAL (
+                SELECT a.id_asesor, ases.nombre AS asesor_nombre, a.fecha_asignacion
+                FROM tpi.asignaciones a
+                LEFT JOIN tpi.asesores ases ON ases.id_asesor = a.id_asesor
+                WHERE a.id_lead = l.id_lead
+                ORDER BY a.fecha_asignacion DESC, a.id_asignacion DESC
+                LIMIT 1
+            ) ass ON TRUE
             {where_clause}
-            ORDER BY {order_column} {direction}, l.created_at DESC, l.id_lead DESC
+            ORDER BY {order_clause}
             LIMIT %s OFFSET %s
-        """
+        """).format(
+            where_clause=sql.SQL(where_clause),
+            order_clause=sql.SQL(f"{order_column} {direction}, l.created_at DESC, l.id_lead DESC"),
+        )
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(query_count, where_params)
@@ -670,6 +708,51 @@ class SolicitudRepository:
                 return [dict(row) for row in rows]
 
     @staticmethod
+    def get_asesores_disponibles_para_asignacion() -> list[dict[str, Any]]:
+        """Return active advisors eligible for assignment."""
+        query = """
+            SELECT
+                id_asesor,
+                nombre,
+                rol,
+                estado_disponibilidad,
+                especialidad,
+                carga_activa
+            FROM tpi.asesores
+            WHERE rol = 'asesor'
+              AND estado_disponibilidad = 'activo'
+            ORDER BY nombre, id_asesor
+        """
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query)
+                rows = cur.fetchall()
+                return [dict(row) for row in rows]
+
+    @staticmethod
+    def get_asesor_by_id(id_asesor: UUID) -> dict[str, Any] | None:
+        """Return one advisor row by identifier."""
+        query = """
+            SELECT
+                id_asesor,
+                nombre,
+                email,
+                rol,
+                estado_disponibilidad,
+                especialidad,
+                carga_activa,
+                created_at
+            FROM tpi.asesores
+            WHERE id_asesor = %s
+            LIMIT 1
+        """
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (str(id_asesor),))
+                row = cur.fetchone()
+                return dict(row) if row else None
+
+    @staticmethod
     def get_crm_estado_lead_options() -> list[str]:
         """Return the canonical lead states accepted by the CRM."""
         return list(CRM_STATE_CONTRACT)
@@ -682,14 +765,142 @@ class SolicitudRepository:
             UPDATE tpi.leads
             SET estado_lead = %s
             WHERE id_lead = %s
-            RETURNING id_lead
         """
         with get_db_connection(operation="update_lead_status") as conn:
             with conn.cursor() as cur:
                 cur.execute(query, (normalized_estado, str(id_lead)))
-                row = cur.fetchone()
                 conn.commit()
-                return row is not None
+                return cur.rowcount == 1
+
+    @staticmethod
+    def assign_lead(
+        id_lead: UUID,
+        id_asesor: UUID,
+        *,
+        actor: AuthenticatedUser,
+    ) -> bool:
+        """Assign a lead and mark it as assigned in the same transaction."""
+        query_lock = """
+            SELECT estado_lead, id_persona
+            FROM tpi.leads
+            WHERE id_lead = %s
+            FOR UPDATE
+        """
+        query_active_assignment = """
+            SELECT 1
+            FROM tpi.asignaciones
+            WHERE id_lead = %s
+              AND estado_asignacion = %s
+            ORDER BY fecha_asignacion DESC, id_asignacion DESC
+            LIMIT 1
+        """
+        query_asesor = """
+            SELECT id_asesor, rol, estado_disponibilidad
+            FROM tpi.asesores
+            WHERE id_asesor = %s
+            LIMIT 1
+        """
+        query_lead = """
+            UPDATE tpi.leads
+            SET estado_lead = %s,
+                updated_at = NOW()
+            WHERE id_lead = %s
+        """
+        query_assignment = """
+            INSERT INTO tpi.asignaciones
+                (id_lead, id_asesor, asignado_por, regla_asignacion, estado_asignacion, observacion)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        query_trace = """
+            INSERT INTO tpi.auditoria
+                (id_usuario, id_persona, id_lead, accion, tabla_afectada, detalle)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        import json
+
+        assigned_by = actor.subject.strip()
+        if not assigned_by:
+            raise ValueError("El actor autenticado no posee un identificador estable")
+        if len(assigned_by) > 150:
+            raise ValueError("El identificador tecnico del actor excede la longitud permitida")
+
+        with get_db_connection(operation="assign_lead") as conn:
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(query_lock, (str(id_lead),))
+                    current_row = cur.fetchone()
+                    if current_row is None:
+                        return False
+                    estado_anterior = str(current_row["estado_lead"])
+                    id_persona = current_row.get("id_persona")
+
+                    cur.execute(query_asesor, (str(id_asesor),))
+                    asesor_row = cur.fetchone()
+                    if asesor_row is None:
+                        raise LeadAssignmentValidationError("El asesor seleccionado no existe")
+                    if str(asesor_row["rol"]).strip().casefold() != "asesor":
+                        raise LeadAssignmentValidationError(
+                            "El asesor seleccionado no esta habilitado"
+                        )
+                    if str(asesor_row["estado_disponibilidad"]).strip().casefold() != "activo":
+                        raise LeadAssignmentValidationError(
+                            "El asesor seleccionado no esta habilitado"
+                        )
+
+                    cur.execute(
+                        query_active_assignment,
+                        (str(id_lead), ASSIGNMENT_ACTIVE_STATE),
+                    )
+                    if cur.fetchone() is not None:
+                        raise LeadAssignmentConflictError("El lead ya tiene una asignacion activa")
+
+                    cur.execute(query_lead, ("asignado", str(id_lead)))
+                    if cur.rowcount != 1:
+                        return False
+                    cur.execute(
+                        query_assignment,
+                        (
+                            str(id_lead),
+                            str(id_asesor),
+                            assigned_by,
+                            "manual",
+                            ASSIGNMENT_ACTIVE_STATE,
+                            None,
+                        ),
+                    )
+                    if cur.rowcount != 1:
+                        raise RuntimeError("No se pudo registrar la asignacion")
+                    cur.execute(
+                        query_trace,
+                        (
+                            None,
+                            str(id_persona) if id_persona is not None else None,
+                            str(id_lead),
+                            "asignacion_lead",
+                            "tpi.asignaciones",
+                            json.dumps(
+                                {
+                                    "actor_subject": assigned_by,
+                                    "id_asesor": str(id_asesor),
+                                    "estado_anterior": estado_anterior,
+                                    "estado_nuevo": "asignado",
+                                    "estado_asignacion": ASSIGNMENT_ACTIVE_STATE,
+                                }
+                            ),
+                        ),
+                    )
+                    if cur.rowcount != 1:
+                        raise RuntimeError("No se pudo registrar la auditoria de asignacion")
+                conn.commit()
+                return True
+            except UniqueViolation as exc:
+                conn.rollback()
+                raise LeadAssignmentConflictError(
+                    "Una asignacion activa ya existe para este lead"
+                ) from exc
+            except Exception:
+                conn.rollback()
+                raise
 
     @staticmethod
     def append_lead_comment(id_lead: UUID, new_fragment: str) -> bool:

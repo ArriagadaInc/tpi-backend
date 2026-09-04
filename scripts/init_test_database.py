@@ -70,6 +70,41 @@ CREATE TABLE IF NOT EXISTS tpi.leads (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS tpi.asesores (
+    id_asesor UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nombre VARCHAR(150) NOT NULL,
+    email VARCHAR(150),
+    rol VARCHAR(50) NOT NULL,
+    estado_disponibilidad VARCHAR(50) NOT NULL,
+    especialidad VARCHAR(100),
+    carga_activa INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS asesores_nombre_lower_uq
+    ON tpi.asesores (lower(nombre));
+
+CREATE TABLE IF NOT EXISTS tpi.asignaciones (
+    id_asignacion UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id_lead UUID NOT NULL REFERENCES tpi.leads(id_lead),
+    id_asesor UUID NOT NULL REFERENCES tpi.asesores(id_asesor),
+    fecha_asignacion TIMESTAMPTZ NOT NULL DEFAULT now(),
+    asignado_por VARCHAR(150),
+    regla_asignacion VARCHAR(100),
+    estado_asignacion VARCHAR(50) NOT NULL DEFAULT 'activa',
+    observacion TEXT
+);
+
+CREATE INDEX IF NOT EXISTS asignaciones_id_lead_idx
+    ON tpi.asignaciones (id_lead);
+
+CREATE INDEX IF NOT EXISTS asignaciones_id_asesor_idx
+    ON tpi.asignaciones (id_asesor);
+
+CREATE UNIQUE INDEX IF NOT EXISTS asignaciones_one_active_per_lead_uq
+    ON tpi.asignaciones (id_lead)
+    WHERE estado_asignacion = 'activa';
+
 CREATE TABLE IF NOT EXISTS tpi.consentimientos (
     id_consentimiento UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     id_persona UUID NOT NULL REFERENCES tpi.personas(id_persona),
@@ -111,6 +146,34 @@ CREATE TABLE IF NOT EXISTS tpi.api_idempotency (
 CREATE INDEX IF NOT EXISTS api_idempotency_expires_at_idx
     ON tpi.api_idempotency (expires_at);
 
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'tpi_assignment_runtime') THEN
+        CREATE ROLE tpi_assignment_runtime
+            LOGIN
+            PASSWORD 'tpi_assignment_runtime_password'
+            NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
+    ELSE
+        ALTER ROLE tpi_assignment_runtime
+            LOGIN
+            PASSWORD 'tpi_assignment_runtime_password'
+            NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT;
+    END IF;
+
+    EXECUTE format('GRANT CONNECT ON DATABASE %I TO %I', current_database(), 'tpi_assignment_runtime');
+    EXECUTE format('GRANT USAGE ON SCHEMA %I TO %I', 'tpi', 'tpi_assignment_runtime');
+    EXECUTE format('GRANT SELECT ON TABLE %I.%I TO %I', 'tpi', 'asesores', 'tpi_assignment_runtime');
+    EXECUTE format('GRANT SELECT, INSERT ON TABLE %I.%I TO %I', 'tpi', 'asignaciones', 'tpi_assignment_runtime');
+    EXECUTE format('GRANT INSERT ON TABLE %I.%I TO %I', 'tpi', 'auditoria', 'tpi_assignment_runtime');
+    EXECUTE format('GRANT SELECT, UPDATE ON TABLE %I.%I TO %I', 'tpi', 'leads', 'tpi_assignment_runtime');
+    EXECUTE format('ALTER ROLE %I IN DATABASE %I SET search_path = %I, public',
+        'tpi_assignment_runtime',
+        current_database(),
+        'tpi'
+    );
+END
+$$;
+
 INSERT INTO tpi.catalogo_genero (codigo, nombre, activo, orden_visual)
 VALUES
     ('FEMENINO', 'Femenino', TRUE, 10),
@@ -135,6 +198,23 @@ VALUES
     ('PROVIDA', 'Provida', TRUE, 60),
     ('UNO', 'Uno', TRUE, 70)
 ON CONFLICT (codigo) DO NOTHING;
+
+INSERT INTO tpi.asesores (
+    id_asesor,
+    nombre,
+    email,
+    rol,
+    estado_disponibilidad,
+    especialidad,
+    carga_activa,
+    created_at
+)
+VALUES
+    ('44444444-4444-4444-4444-444444444441', 'Asesor Demo 1', 'asesor1@example.com', 'asesor', 'activo', 'General', 0, now()),
+    ('44444444-4444-4444-4444-444444444442', 'Asesor Demo 2', 'asesor2@example.com', 'asesor', 'activo', 'General', 0, now()),
+    ('44444444-4444-4444-4444-444444444443', 'Asesor Demo 3', 'asesor3@example.com', 'asesor', 'activo', 'General', 0, now()),
+    ('44444444-4444-4444-4444-444444444444', 'Asesor Demo 4', 'asesor4@example.com', 'asesor', 'activo', 'General', 0, now())
+ON CONFLICT (id_asesor) DO NOTHING;
 """
 
 

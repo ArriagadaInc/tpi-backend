@@ -20,6 +20,11 @@
           </span>
           <span class="meta-divider">·</span>
           <span class="meta-item">
+            <span>Ejecutivo:</span>
+            <strong>{{ selected_lead.asesor_nombre or selected_lead.id_asesor or 'Sin asignar' }}</strong>
+          </span>
+          <span class="meta-divider">·</span>
+          <span class="meta-item">
             <span>Solicitud recibida:</span>
             <strong>
               {{ selected_lead.created_at.strftime('%d/%m/%Y %H:%M') if selected_lead.created_at else 'N/A' }}
@@ -38,10 +43,10 @@
             data-simulator-link
             data-simulator-url="{{ simulator_url }}"
           >
-            Abrir simulador ↗
+            Abrir simulación →
           </a>
         {% else %}
-          <span class="btn-primary-simulator disabled">Abrir simulador ↗</span>
+          <span class="btn-primary-simulator disabled">Abrir simulación →</span>
         {% endif %}
       </div>
     </section>
@@ -124,11 +129,32 @@
           </div>
           <div>
             <dt>Saldo Previsional</dt>
-            <dd>{{ selected_lead.saldo_afp }}</dd>
+            <dd>{{ selected_lead.saldo_afp|format_currency_clp }}</dd>
           </div>
         </dl>
       </article>
     </section>
+
+    {% if can_assign %}
+      <section class="state-control-bar card" aria-label="Asignación de lead">
+        <div class="state-info">
+          <span class="state-label">Asignación actual</span>
+          <strong>{{ selected_lead.asesor_nombre or selected_lead.id_asesor or 'Sin asignar' }}</strong>
+        </div>
+        <form class="state-action-group" method="post" action="/leads/{{ selected_lead_id }}/assign">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="return_to" value="{{ return_to_url or '/leads' }}">
+          <label class="sr-only" for="id_asesor">Asignar ejecutivo</label>
+          <select id="id_asesor" name="id_asesor" class="select-compact">
+            <option value="">Selecciona un ejecutivo</option>
+            {% for asesor in assignment_asesores %}
+              <option value="{{ asesor.id_asesor }}">{{ asesor.nombre }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn-save-state" type="submit">Asignar</button>
+        </form>
+      </section>
+    {% endif %}
 
     <section class="story-card">
       <div class="story-card-head">

@@ -10,6 +10,10 @@ venv/
 
 # Testing
 .pytest_cache
+.pytest-process-tmp
+.pytest-tmp
+.pytest-eb-ecr-bundle
+pytest-cache-files-*
 .coverage
 htmlcov/
 .tox

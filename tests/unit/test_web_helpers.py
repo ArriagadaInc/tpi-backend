@@ -53,10 +53,12 @@ def test_dependency_helpers_reuse_real_service_and_resolve_simulator_url(
         lambda: Settings(
             _env_file=None,
             APP_ENV="aws-dev",
-            TPI_PUBLIC_SITE_URL="https://dev.genialabs.cl/",
+            TPI_PUBLIC_SITE_URL="https://dev.tupensioninteligente.cl/",
         ),
     )
-    assert resolve_web_simulator_url() == "https://dev.genialabs.cl/simulador.html"
+    assert resolve_web_simulator_url() == (
+        "https://dev.tupensioninteligente.cl/simulador.html#simulador-interactivo"
+    )
 
 
 def test_mock_web_service_filters_sorts_and_updates_rows() -> None:
