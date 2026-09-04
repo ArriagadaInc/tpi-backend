@@ -134,6 +134,13 @@ jobs:
       - name: Build custom Caddy image
         run: docker build --tag tpi-dev-caddy:${{ github.sha }} --file deployment/caddy/Dockerfile .
 
+      - name: Verify runtime OpenSSL packages
+        run: |
+          docker run --rm tpi-backoffice-h21:${{ github.sha }} \
+            sh -c 'apk info -v openssl libssl3 libcrypto3'
+          docker run --rm tpi-dev-caddy:${{ github.sha }} \
+            sh -c 'apk info -v openssl libssl3 libcrypto3'
+
       - name: Validate Caddy configuration
         run: >-
           docker run --rm
