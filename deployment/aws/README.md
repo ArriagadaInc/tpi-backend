@@ -25,7 +25,9 @@ digests. The bundle is uploaded as a release artifact and is not deployed
 automatically.
 
 Promotion to Elastic Beanstalk is orchestrated through the dedicated V2
-CodePipeline declared in `tpi-dev-eb-pipeline.json`. GitHub publishes verified
-objects to a versioned TPI release bucket and starts that single pipeline; it
-does not call Elastic Beanstalk write APIs. The pipeline uses its AWS service
-role and the version-aware implementation in `promote_eb_candidate.py`.
+CodePipeline declared in `tpi-dev-eb-pipeline.json`. GitHub publishes a
+data-only candidate to a fixed S3 key and starts that single pipeline with an
+immutable `VersionId`; it does not call Elastic Beanstalk write APIs. The
+pipeline downloads hash-pinned promotion tooling from a protected S3 prefix
+that the GitHub role cannot modify, then uses its AWS service role and the
+version-aware implementation in `promote_eb_candidate.py`.

@@ -2,7 +2,7 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "ReadReleaseSourceAndUseArtifactStore",
+      "Sid": "ReadReleaseSourceBucketMetadata",
       "Effect": "Allow",
       "Action": [
         "s3:GetBucketVersioning",
@@ -12,16 +12,39 @@
       "Resource": "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2"
     },
     {
-      "Sid": "ReadReleaseObjectsAndUsePipelineArtifacts",
+      "Sid": "ReadExactReleaseDataAndTrustedTooling",
       "Effect": "Allow",
       "Action": [
         "s3:GetObject",
         "s3:GetObjectVersion",
         "s3:GetObjectTagging",
-        "s3:GetObjectVersionTagging",
+        "s3:GetObjectVersionTagging"
+      ],
+      "Resource": [
+        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.zip",
+        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/promotions/h3-3-crm-web-28cf009-r1/candidate-data.zip",
+        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/trusted-tooling/v1/verify_frozen_candidate.sh",
+        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/trusted-tooling/v1/promote_eb_candidate.py"
+      ]
+    },
+    {
+      "Sid": "UseDedicatedPipelineArtifactStore",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion",
         "s3:PutObject"
       ],
-      "Resource": "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/*"
+      "Resource": "arn:aws:s3:::tpi-dev-codepipeline-artifacts-821656895812-us-east-2/*"
+    },
+    {
+      "Sid": "ReadDedicatedPipelineArtifactStoreConfiguration",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetBucketAcl",
+        "s3:GetBucketLocation"
+      ],
+      "Resource": "arn:aws:s3:::tpi-dev-codepipeline-artifacts-821656895812-us-east-2"
     },
     {
       "Sid": "ReadLegacyFrozenCandidateBundle",
@@ -65,15 +88,23 @@
       "Effect": "Allow",
       "Action": [
         "s3:CreateBucket",
-        "s3:GetBucketLocation",
-        "s3:GetBucketPolicy",
-        "s3:GetBucketPublicAccessBlock",
-        "s3:GetBucketOwnershipControls",
+        "s3:GetBucket*",
+        "s3:ListBucket",
         "s3:PutBucketPolicy",
         "s3:PutBucketPublicAccessBlock",
         "s3:PutBucketOwnershipControls"
       ],
       "Resource": "arn:aws:s3:::elasticbeanstalk-us-east-2-821656895812"
+    },
+    {
+      "Sid": "ElasticBeanstalkManagedStorageObjectContract",
+      "Effect": "Allow",
+      "Action": [
+        "s3:Get*",
+        "s3:Put*",
+        "s3:Delete*"
+      ],
+      "Resource": "arn:aws:s3:::elasticbeanstalk-us-east-2-821656895812/*"
     },
     {
       "Sid": "WritePromotionLogs",

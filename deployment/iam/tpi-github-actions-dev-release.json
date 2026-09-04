@@ -10,8 +10,9 @@
         "s3:GetObjectVersion"
       ],
       "Resource": [
-        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/releases/*",
-        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/promotions/*"
+        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.zip",
+        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.manifest.json",
+        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/promotions/h3-3-crm-web-28cf009-r1/candidate-data.zip"
       ]
     },
     {

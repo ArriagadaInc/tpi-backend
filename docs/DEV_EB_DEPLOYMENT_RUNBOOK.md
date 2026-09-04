@@ -26,8 +26,8 @@ Ejecutar desde una sesión administrativa controlada y validada en la cuenta
 `821656895812`. Estos comandos son instrucciones; no han sido ejecutados por
 este PR.
 
-1. Crear el bucket de release dedicado, activar versionado, cifrado y bloqueo
-   público:
+1. Crear los buckets dedicados de release y artifact store. Activar versionado
+   en el bucket de release y cifrado/bloqueo público en ambos:
 
 ```bash
 aws s3api create-bucket --region us-east-2 \
@@ -44,9 +44,38 @@ aws s3api put-public-access-block \
   --bucket tpi-dev-release-artifacts-821656895812-us-east-2 \
   --public-access-block-configuration \
   BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+aws s3api create-bucket --region us-east-2 \
+  --bucket tpi-dev-codepipeline-artifacts-821656895812-us-east-2 \
+  --create-bucket-configuration LocationConstraint=us-east-2
+aws s3api put-bucket-encryption \
+  --bucket tpi-dev-codepipeline-artifacts-821656895812-us-east-2 \
+  --server-side-encryption-configuration \
+  '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+aws s3api put-public-access-block \
+  --bucket tpi-dev-codepipeline-artifacts-821656895812-us-east-2 \
+  --public-access-block-configuration \
+  BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
 ```
 
-2. Crear el service role de CodePipeline y adjuntar exclusivamente la policy
+2. Publicar el tooling privilegiado desde el commit aprobado usando un operador
+   AWS, nunca el rol GitHub. Fallar si los hashes no coinciden:
+
+```bash
+test "$(sha256sum scripts/release/verify_frozen_candidate.sh | cut -d' ' -f1)" = \
+  a59144ff469e56231addb7c46ccf3fa7d456ff9487c7387089eec9137a045791
+test "$(sha256sum deployment/aws/promote_eb_candidate.py | cut -d' ' -f1)" = \
+  fbbbf2fdc3025612627945a312144e4d8972657b1f8240bd142a6ed13b552c86
+aws s3api put-object \
+  --bucket tpi-dev-release-artifacts-821656895812-us-east-2 \
+  --key trusted-tooling/v1/verify_frozen_candidate.sh \
+  --body scripts/release/verify_frozen_candidate.sh
+aws s3api put-object \
+  --bucket tpi-dev-release-artifacts-821656895812-us-east-2 \
+  --key trusted-tooling/v1/promote_eb_candidate.py \
+  --body deployment/aws/promote_eb_candidate.py
+```
+
+3. Crear el service role de CodePipeline y adjuntar exclusivamente la policy
    versionada:
 
 ```bash
@@ -58,7 +87,7 @@ aws iam put-role-policy --role-name tpi-codepipeline-dev-eb-role \
   --policy-document file://deployment/iam/tpi-codepipeline-dev-eb.json
 ```
 
-3. Crear el rol OIDC de orquestación GitHub:
+4. Crear el rol OIDC de orquestación GitHub:
 
 ```bash
 aws iam create-role --role-name tpi-github-actions-dev-release-role \
@@ -69,18 +98,19 @@ aws iam put-role-policy --role-name tpi-github-actions-dev-release-role \
   --policy-document file://deployment/iam/tpi-github-actions-dev-release.json
 ```
 
-4. Crear el pipeline V2 sin ejecutarlo:
+5. Crear el pipeline V2 sin ejecutarlo:
 
 ```bash
 aws codepipeline create-pipeline --region us-east-2 \
   --cli-input-json file://deployment/aws/tpi-dev-eb-pipeline.json
 ```
 
-5. Verificar trust, policies, bucket y pipeline mediante `get-role`,
+6. Verificar trust, policies, buckets, objetos de tooling y pipeline mediante `get-role`,
    `get-role-policy`, `get-bucket-versioning`, `get-public-access-block` y
-   `get-pipeline`. No iniciar promoción en esta fase.
+   `get-pipeline`. Comparar además los SHA-256 del tooling descargado. No iniciar
+   promoción en esta fase.
 
-6. Tras validar el nuevo flujo, retirar el rol físico histórico
+7. Tras validar el nuevo flujo, retirar el rol físico histórico
    `tpi-github-actions-dev-eb-deploy-role`. No reutilizarlo ni ampliarlo.
 
 ## Preflight de promoción
@@ -100,14 +130,16 @@ Ejecutar primero el workflow con `execute_promotion=false`. Debe:
 Solo tras aprobar el preflight:
 
 1. Ejecutar una vez con `execute_promotion=true`.
-2. GitHub publica bundle, manifest y sobre de promoción en el bucket TPI.
-3. GitHub inicia únicamente `tpi-backoffice-dev-promotion`, fijando clave y
-   `VersionId` S3.
-4. CodePipeline valida el objeto, crea o reutiliza la versión exacta y conserva
+2. GitHub publica bundle, manifest y source data-only en el bucket TPI.
+3. GitHub inicia únicamente `tpi-backoffice-dev-promotion`, fijando solo el
+   `VersionId`; la clave source no puede sobrescribirse.
+4. CodePipeline descarga el tooling desde el prefijo protegido, verifica ambos
+   hashes y recién entonces ejecuta la validación/promoción.
+5. CodePipeline valida el objeto, crea o reutiliza la versión exacta y conserva
    `h2-5d-ecr-47fa0c9`.
-5. Si procede, actualiza solo `tpi-backoffice-dev-green`.
-6. Exige `h3-3-crm-web-28cf009-r1`, `Ready / Green / Ok`.
-7. GitHub recoge action executions, estado EB y eventos con el rol read-only.
+6. Si procede, actualiza solo `tpi-backoffice-dev-green`.
+7. Exige `h3-3-crm-web-28cf009-r1`, `Ready / Green / Ok`.
+8. GitHub recoge action executions, estado EB y eventos con el rol read-only.
 
 ## Rollback
 

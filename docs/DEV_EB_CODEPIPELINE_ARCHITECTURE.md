@@ -54,10 +54,23 @@ y cifrado SSE-S3. Separa artefactos propiedad de TPI del bucket administrado por
 Elastic Beanstalk.
 
 El workflow descarga el artefacto GitHub existente, verifica el ZIP y manifest,
-y los publica sin reconstruir imágenes ni bundle. Luego crea un sobre de
-promoción que contiene el bundle original, manifest y scripts versionados. La
-acción S3 del pipeline recibe la clave y `VersionId` exactos mediante source
-override. El pipeline no sondea el bucket.
+y los publica sin reconstruir imágenes ni bundle. El source del pipeline es un
+ZIP **data-only** que contiene exclusivamente esos dos archivos. La clave S3
+está fijada en la definición del pipeline; GitHub solo aporta el `VersionId`
+inmutable. `AllowOverrideForS3ObjectKey` está deshabilitado y el pipeline no
+sondea el bucket.
+
+Los ejecutables `verify_frozen_candidate.sh` y `promote_eb_candidate.py` viven
+en `trusted-tooling/v1/`. Un operador AWS los publica durante el provisioning,
+después de verificar los SHA-256 fijados en la definición del pipeline. El rol
+GitHub no puede escribir ni leer ese prefijo. Antes de ejecutar cada archivo,
+la acción `Commands` lo descarga y valida su hash. Por tanto, modificar el
+source data-only, conservar su nombre o intentar incluir scripts no cambia el
+código ejecutado con el service role.
+
+El artifact store interno de CodePipeline usa un segundo bucket,
+`tpi-dev-codepipeline-artifacts-821656895812-us-east-2`, que GitHub tampoco
+puede consultar ni modificar.
 
 Contrato H3.3 inmutable:
 
@@ -76,12 +89,36 @@ TPI dedicado. Cualquier tercera ubicación aborta.
 
 ## Recursos con `Resource: "*"`
 
-La propuesta no concede acciones de negocio con `Resource: "*"`. Los permisos
+La propuesta no concede acciones con `Resource: "*"`. Los permisos
 EB se limitan a aplicación, application versions y environment aprobados; S3 se
-limita a dos buckets y prefijos exactos; CloudWatch Logs se limita al log group
+limita a tres buckets y recursos exactos; CloudWatch Logs se limita al log group
 del pipeline. No se replica la policy amplia publicada como referencia para el
 provider EB nativo porque esta arquitectura usa una acción `Commands` y las APIs
 explícitas del promotor.
+
+## Contrato S3 administrado por Elastic Beanstalk
+
+La policy AWS vigente para Elastic Beanstalk contempla el siguiente contrato
+sobre buckets `elasticbeanstalk-*`. Se adopta completo para evitar ampliaciones
+reactivas, pero se restringe al bucket físico exacto de la cuenta DEV:
+
+| Nivel | Referencia AWS | Contrato propuesto | Scope |
+| --- | --- | --- | --- |
+| Bucket | `CreateBucket` | Incluido | bucket EB exacto |
+| Bucket | `GetBucket*` | Incluido | bucket EB exacto |
+| Bucket | `ListBucket` | Incluido | bucket EB exacto |
+| Bucket | `PutBucketPolicy` | Incluido | bucket EB exacto |
+| Bucket | `PutBucketPublicAccessBlock` | Incluido | bucket EB exacto |
+| Bucket | `PutBucketOwnershipControls` | Incluido | bucket EB exacto |
+| Objetos | `Get*` | Incluido | objetos del bucket EB exacto |
+| Objetos | `Put*` | Incluido | objetos del bucket EB exacto |
+| Objetos | `Delete*` | Incluido | objetos del bucket EB exacto |
+
+No se excluye ninguna acción de ese contrato S3 publicado. La reducción se
+realiza por recurso: no hay wildcard de nombre de bucket, otros buckets, otras
+cuentas ni otras regiones. Estos permisos pertenecen exclusivamente al service
+role de CodePipeline y no al principal OIDC de GitHub. No se adjunta
+`AdministratorAccess-AWSElasticBeanstalk`.
 
 ## Reanudabilidad
 
