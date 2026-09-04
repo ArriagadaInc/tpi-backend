@@ -40,7 +40,6 @@ def test_deployment_policy_is_scoped_to_approved_resources() -> None:
         "elasticbeanstalk:DescribeEvents",
         "elasticbeanstalk:CreateApplicationVersion",
         "elasticbeanstalk:UpdateEnvironment",
-        "s3:CreateBucket",
         "s3:PutObject",
         "s3:GetObject",
         "s3:GetObjectVersion",
@@ -66,13 +65,7 @@ def test_deployment_policy_is_scoped_to_approved_resources() -> None:
     assert "ListAllMyBuckets" not in serialized
     assert "s3:PutObjectAcl" not in serialized
     assert "s3:GetObjectAcl" not in serialized
-    bucket_statement = next(
-        statement
-        for statement in policy["Statement"]
-        if statement["Sid"] == "AllowElasticBeanstalkStorageBucketCheck"
-    )
-    assert bucket_statement["Action"] == "s3:CreateBucket"
-    assert bucket_statement["Resource"] == ("arn:aws:s3:::elasticbeanstalk-us-east-2-821656895812")
+    assert "s3:CreateBucket" not in serialized
     assert "arn:aws:s3:::*" not in serialized
     assert "arn:aws:s3:::elasticbeanstalk-*" not in serialized
     assert "s3:DeleteBucket" not in serialized
@@ -168,21 +161,33 @@ def test_deployment_workflow_uses_healthy_current_version_as_rollback() -> None:
     assert "describe-events" not in workflow[preflight_start:upload_start]
 
 
-def test_deployment_workflow_processes_version_before_environment_update() -> None:
+def test_deployment_workflow_accepts_unprocessed_s3_source_bundle() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
 
-    assert "            --process \\\n" in workflow
+    create_start = workflow.index("Create application version")
+    wait_start = workflow.index("Wait for application version availability")
+    create_block = workflow[create_start:wait_start]
+
+    assert "--no-process" in create_block
+    assert "            --process \\\n" not in create_block
     assert 'case "$status" in' in workflow
-    assert "PROCESSED)" in workflow
+    assert "UNPROCESSED|PROCESSED)" in workflow
     assert "FAILED)" in workflow
     assert 'PROCESSING|"")' in workflow
-    processing_start = workflow.index("Wait for application version processing")
     update_start = workflow.index("Update only the approved DEV environment")
-    processing_block = workflow[processing_start:update_start]
+    availability_block = workflow[wait_start:update_start]
 
-    assert "exit 1" in processing_block
-    assert "UpdateEnvironment" not in processing_block
-    assert processing_start < update_start
+    assert "exit 1" in availability_block
+    assert 'test "$status" = PROCESSED' not in availability_block
+    assert "UpdateEnvironment" not in availability_block
+    assert wait_start < update_start
+
+    verify_start = workflow.index("Verify version and known-good rollback remain available")
+    verify_block = workflow[verify_start:update_start]
+    assert "(.VersionLabel == $label)" in verify_block
+    assert '(.Status != "FAILED")' in verify_block
+    assert "(.SourceBundle.S3Bucket == $bucket)" in verify_block
+    assert "(.SourceBundle.S3Key == $key)" in verify_block
 
 
 def test_deployment_workflow_collects_events_after_update_failure() -> None:

@@ -166,10 +166,10 @@ jobs:
             --version-label "$VERSION_LABEL" \
             --description "H3.3 frozen candidate $SOURCE_SHA" \
             --source-bundle "S3Bucket=$EB_BUCKET,S3Key=$S3_KEY" \
-            --process \
+            --no-process \
             --no-auto-create-application
 
-      - name: Wait for application version processing
+      - name: Wait for application version availability
         if: ${{ success() && inputs.execute_deploy }}
         run: |
           set -euo pipefail
@@ -182,13 +182,13 @@ jobs:
               --query 'ApplicationVersions[0]' \
               --output json)"
             status="$(jq -r '.Status // ""' <<< "$version")"
-            echo "Application version processing status: ${status:-NOT_FOUND}"
+            echo "Application version status: ${status:-NOT_FOUND}"
             case "$status" in
-              PROCESSED)
+              UNPROCESSED|PROCESSED)
                 break
                 ;;
               FAILED)
-                echo "Elastic Beanstalk rejected application version processing."
+                echo "Elastic Beanstalk reported an unusable application version."
                 exit 1
                 ;;
               PROCESSING|"")
@@ -200,7 +200,13 @@ jobs:
                 ;;
             esac
           done
-          test "$status" = PROCESSED
+          case "$status" in
+            UNPROCESSED|PROCESSED) ;;
+            *)
+              echo "Timed out waiting for a usable application version."
+              exit 1
+              ;;
+          esac
 
       - name: Verify version and known-good rollback remain available
         if: ${{ success() && inputs.execute_deploy }}
@@ -219,7 +225,7 @@ jobs:
             --arg bucket "$EB_BUCKET" \
             --arg key "$S3_KEY" \
             '(.VersionLabel == $label)
-             and (.Status == "PROCESSED")
+             and (.Status != "FAILED")
              and (.SourceBundle.S3Bucket == $bucket)
              and (.SourceBundle.S3Key == $key)' \
             <<< "$version" >/dev/null

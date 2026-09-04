@@ -54,13 +54,10 @@ Permisos versionados:
   `tpi-backoffice/dev-releases/*` del bucket EB existente. `CreateApplicationVersion`
   necesita que el principal de deployment pueda volver a leer el source bundle
   después de subirlo.
-- Elastic Beanstalk puede requerir `s3:CreateBucket` al usar su storage location
-  administrada, incluso cuando el bucket ya existe. El permiso queda limitado al
-  nombre exacto del bucket existente.
-
 No se conceden `iam:PassRole`, acciones IAM, cambios DNS, cambios RDS,
-`UpdateConfigurationTemplate`, `DeleteBucket`, permisos de ACL/policy del bucket,
-`ListAllMyBuckets` ni permisos para modificar variables del environment.
+`UpdateConfigurationTemplate`, `CreateBucket`, `DeleteBucket`, permisos de
+administración del bucket, `ListAllMyBuckets` ni permisos para modificar variables
+del environment.
 
 ## Flujo controlado
 
@@ -68,16 +65,21 @@ No se conceden `iam:PassRole`, acciones IAM, cambios DNS, cambios RDS,
 2. Verificar cuenta, región, aplicación, environment, versión actual y estado `Ready / Green / Ok`.
 3. Verificar que la versión actualmente desplegada `h2-5d-ecr-47fa0c9` existe exactamente una vez, no está en estado `FAILED` y tiene `SourceBundle` informado. Esa versión saludable observada es el rollback del release; no se requieren eventos históricos para demostrarlo.
 4. Subir el ZIP al prefijo de release del bucket EB.
-5. Crear `h3-3-crm-web-28cf009-r1` apuntando al objeto exacto y con procesamiento habilitado.
-6. Esperar `PROCESSING → PROCESSED`; abortar ante `FAILED`, estado desconocido o timeout.
-7. Verificar la application version procesada y el rollback antes de actualizar el environment.
+5. Crear `h3-3-crm-web-28cf009-r1` apuntando al objeto exacto, sin solicitar
+   preprocesamiento a Elastic Beanstalk. Para source bundles S3, `Process` es opcional;
+   el pipeline ya valida localmente el ZIP, Docker Compose y los digests inmutables.
+6. Aceptar `UNPROCESSED` o `PROCESSED`; esperar mientras el estado sea `PROCESSING`
+   y abortar ante `FAILED`, estado desconocido o timeout. `UNPROCESSED` indica que
+   Elastic Beanstalk validará la configuración durante el deployment.
+7. Verificar `VersionLabel`, `SourceBundle.S3Bucket`, `SourceBundle.S3Key` y
+   `Status != FAILED`, además de conservar el rollback antes de actualizar el environment.
 8. Ejecutar `UpdateEnvironment` solo con `--version-label`, sin opciones de configuración.
 9. Esperar `Ready / Green / Ok` y confirmar la nueva versión.
 10. Revisar los últimos eventos de Elastic Beanstalk, incluso si falla la espera posterior al update.
 
 La validación del artifact y el preflight terminan antes de cualquier escritura.
-Después de `PutObject` y `CreateApplicationVersion` puede fallar el procesamiento,
-quedando un objeto S3 y/o una application version sin tocar todavía el
+Después de `PutObject` y `CreateApplicationVersion` puede fallar la validación
+posterior, quedando un objeto S3 y/o una application version sin tocar todavía el
 environment. Si falla `UpdateEnvironment` o la espera de estabilidad, el
 environment puede haber iniciado un cambio y debe verificarse antes de ejecutar
 rollback; los eventos se recopilan para ese diagnóstico.
@@ -87,7 +89,7 @@ Resumen de efectos:
 | Fase | Resultado ante fallo |
 | --- | --- |
 | Validación del artifact/preflight | Cero escrituras |
-| Procesamiento de application version | Puede quedar objeto S3/application version; environment intacto |
+| Registro y validación de application version | Puede quedar objeto S3/application version; environment intacto |
 | `UpdateEnvironment` o espera posterior | Puede haber iniciado un deployment; revisar eventos y ejecutar rollback si corresponde |
 
 ## Rollback
