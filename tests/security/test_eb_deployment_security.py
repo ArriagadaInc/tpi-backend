@@ -98,12 +98,8 @@ def test_deployment_writes_require_explicit_execute_deploy() -> None:
 def test_deployment_selects_role_by_execution_mode() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
 
-    read_only_start = workflow.index(
-        "Configure AWS credentials through GitHub OIDC (read-only)"
-    )
-    deployment_start = workflow.index(
-        "Configure AWS credentials through GitHub OIDC (deployment)"
-    )
+    read_only_start = workflow.index("Configure AWS credentials through GitHub OIDC (read-only)")
+    deployment_start = workflow.index("Configure AWS credentials through GitHub OIDC (deployment)")
     preflight_start = workflow.index("Verify account and deployment preflight")
 
     read_only_block = workflow[read_only_start:deployment_start]
