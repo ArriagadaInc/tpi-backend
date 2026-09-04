@@ -241,7 +241,7 @@ jobs:
             --manifest-name "$manifest_name" \
             --output "$promotion_output"
           test "$(zipinfo -1 "$promotion_output" | sort)" = \
-            $'artifact/'"$bundle_name"$'\nartifact/'"$manifest_name"
+            $'artifact/'"$manifest_name"$'\nartifact/'"$bundle_name"
 
       - name: Run actionlint
         run: |
