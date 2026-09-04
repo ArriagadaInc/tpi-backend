@@ -54,10 +54,13 @@ Permisos versionados:
   `tpi-backoffice/dev-releases/*` del bucket EB existente. `CreateApplicationVersion`
   necesita que el principal de deployment pueda volver a leer el source bundle
   después de subirlo.
+- Elastic Beanstalk puede requerir `s3:CreateBucket` al usar su storage location
+  administrada, incluso cuando el bucket ya existe. El permiso queda limitado al
+  nombre exacto del bucket existente.
 
-No se conceden `s3:CreateBucket`, `iam:PassRole`, acciones IAM, cambios DNS,
-cambios RDS, `UpdateConfigurationTemplate`, `DeleteObject` ni permisos para
-modificar variables del environment.
+No se conceden `iam:PassRole`, acciones IAM, cambios DNS, cambios RDS,
+`UpdateConfigurationTemplate`, `DeleteBucket`, permisos de ACL/policy del bucket,
+`ListAllMyBuckets` ni permisos para modificar variables del environment.
 
 ## Flujo controlado
 
