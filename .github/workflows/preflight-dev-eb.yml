@@ -61,32 +61,39 @@ jobs:
             '.[] | [.Application, .Environment, (.CNAME // ""), .Status, .Health, .HealthStatus, (.VersionLabel // "")] | @tsv' \
             | column -t -s $'\t'
 
-          matched_file="$RUNNER_TEMP/eb-dns-matches.txt"
-          : > "$matched_file"
+          environment_addresses='{}'
+          while IFS= read -r environment_cname; do
+            test -n "$environment_cname" || continue
+            addresses="$(dig +short A "$environment_cname" | sed '/^$/d' | jq -Rsc 'split("\n") | map(select(length > 0))')"
+            environment_addresses="$(jq -c \
+              --arg cname "$environment_cname" \
+              --argjson addresses "$addresses" \
+              '. + {($cname | ascii_downcase | rtrimstr(".")): $addresses}' \
+              <<< "$environment_addresses")"
+            echo "EB CNAME $environment_cname: A=$(printf '%s' "$addresses" | jq -r 'join(" ")')"
+          done < <(printf '%s' "$environments" | jq -r '.[].CNAME // empty' | sed 's/\.$//' | sort -u)
+
+          domain_records='{}'
           for domain in $DEV_DOMAINS; do
             cname="$(dig +short CNAME "$domain" | sed '/^$/d' | sed 's/\.$//' | head -n 1)"
-            addresses="$(dig +short A "$domain" | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
-            echo "$domain: CNAME=${cname:-not-observed} A=${addresses:-not-observed}"
-            test -n "$cname" || {
-              echo "Cannot identify $domain: DNS CNAME was not observed."
-              exit 1
-            }
-            matches="$(printf '%s' "$environments" | jq -r --arg cname "$cname" \
-              '.[] | select((.CNAME // "" | ascii_downcase | rtrimstr(".")) == ($cname | ascii_downcase | rtrimstr("."))) | [.Application, .Environment, .CNAME, .VersionLabel] | @tsv')"
-            test -n "$matches" || {
-              echo "No active Elastic Beanstalk environment matches $domain CNAME $cname."
-              exit 1
-            }
-            printf '%s\n' "$matches" | tee -a "$matched_file"
+            addresses="$(dig +short A "$domain" | sed '/^$/d' | jq -Rsc 'split("\n") | map(select(length > 0))')"
+            echo "$domain: CNAME=${cname:-not-observed} A=$(printf '%s' "$addresses" | jq -r 'join(" ")')"
+            domain_records="$(jq -c \
+              --arg domain "$domain" \
+              --arg cname "$cname" \
+              --argjson addresses "$addresses" \
+              '. + {($domain): {cname: (if $cname == "" then null else $cname end), addresses: $addresses}}' \
+              <<< "$domain_records")"
           done
 
-          unique_environments="$(cut -f 1,2 "$matched_file" | sort -u)"
-          test "$(printf '%s\n' "$unique_environments" | sed '/^$/d' | wc -l)" -eq 1 || {
-            echo "The public DEV domains do not identify one unique environment."
-            exit 1
-          }
-          application="$(cut -f 1 "$matched_file" | head -n 1)"
-          environment="$(cut -f 2 "$matched_file" | head -n 1)"
+          dns_input="$(jq -n \
+            --argjson environments "$environments" \
+            --argjson domain_records "$domain_records" \
+            --argjson environment_addresses "$environment_addresses" \
+            '{environments: $environments, domain_records: $domain_records, environment_addresses: $environment_addresses}')"
+          selected="$(printf '%s' "$dns_input" | python scripts/eb_dns_matching.py)"
+          application="$(printf '%s' "$selected" | jq -r '.Application')"
+          environment="$(printf '%s' "$selected" | jq -r '.Environment')"
           current_version="$(printf '%s' "$environments" | jq -r --arg app "$application" --arg env "$environment" \
             '.[] | select(.Application == $app and .Environment == $env) | (.VersionLabel // "")')"
           test -n "$current_version" || {
