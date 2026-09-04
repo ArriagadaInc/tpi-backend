@@ -2,6 +2,12 @@ name: Deploy frozen DEV candidate to Elastic Beanstalk
 
 on:
   workflow_dispatch:
+    inputs:
+      execute_deploy:
+        description: Allow AWS writes and EB deployment
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   actions: read
@@ -11,7 +17,8 @@ permissions:
 env:
   AWS_REGION: us-east-2
   AWS_ACCOUNT_ID: '821656895812'
-  EB_ROLE_ARN: arn:aws:iam::821656895812:role/tpi-github-actions-dev-eb-deploy-role
+  EB_READ_ROLE_ARN: arn:aws:iam::821656895812:role/tpi-github-actions-dev-eb-role
+  EB_DEPLOY_ROLE_ARN: arn:aws:iam::821656895812:role/tpi-github-actions-dev-eb-deploy-role
   APPLICATION: tpi-backoffice
   ENVIRONMENT: tpi-backoffice-dev-green
   EXPECTED_CURRENT_VERSION: h2-5d-ecr-47fa0c9
@@ -39,6 +46,12 @@ jobs:
             exit 1
           }
 
+      - name: Checkout deployment tooling
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
       - name: Download approved ECR artifact
         uses: actions/download-artifact@v4
         with:
@@ -56,10 +69,19 @@ jobs:
         run: |
           bash scripts/release/verify_frozen_candidate.sh
 
-      - name: Configure AWS credentials through GitHub OIDC
+      - name: Configure AWS credentials through GitHub OIDC (read-only)
+        if: ${{ success() && !inputs.execute_deploy }}
         uses: aws-actions/configure-aws-credentials@v5
         with:
-          role-to-assume: ${{ env.EB_ROLE_ARN }}
+          role-to-assume: ${{ env.EB_READ_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: tpi-dev-eb-validate-${{ github.run_id }}
+
+      - name: Configure AWS credentials through GitHub OIDC (deployment)
+        if: ${{ success() && inputs.execute_deploy }}
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ env.EB_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: tpi-dev-eb-deploy-${{ github.run_id }}
 
@@ -128,6 +150,7 @@ jobs:
           test "$(jq 'length' <<< "$existing")" -eq 0
 
       - name: Upload approved bundle
+        if: ${{ success() && inputs.execute_deploy }}
         env:
           S3_KEY: tpi-backoffice/dev-releases/${{ env.VERSION_LABEL }}/${{ env.BUNDLE_NAME }}
         run: |
@@ -141,6 +164,7 @@ jobs:
             --metadata "runtime-git-sha=$SOURCE_SHA,bundle-sha256=$BUNDLE_SHA256"
 
       - name: Create application version
+        if: ${{ success() && inputs.execute_deploy }}
         env:
           S3_KEY: tpi-backoffice/dev-releases/${{ env.VERSION_LABEL }}/${{ env.BUNDLE_NAME }}
         run: |
@@ -155,6 +179,7 @@ jobs:
             --no-auto-create-application
 
       - name: Wait for application version processing
+        if: ${{ success() && inputs.execute_deploy }}
         run: |
           set -euo pipefail
           status=""
@@ -187,6 +212,7 @@ jobs:
           test "$status" = PROCESSED
 
       - name: Verify version and rollback remain available
+        if: ${{ success() && inputs.execute_deploy }}
         env:
           S3_KEY: tpi-backoffice/dev-releases/${{ env.VERSION_LABEL }}/${{ env.BUNDLE_NAME }}
         run: |
@@ -217,6 +243,7 @@ jobs:
 
       - name: Update only the approved DEV environment
         id: update_environment
+        if: ${{ success() && inputs.execute_deploy }}
         run: |
           set -euo pipefail
           aws elasticbeanstalk update-environment \
@@ -226,6 +253,7 @@ jobs:
             --version-label "$VERSION_LABEL"
 
       - name: Wait for stable deployment and verify version
+        if: ${{ success() && inputs.execute_deploy }}
         run: |
           set -euo pipefail
           for attempt in $(seq 1 60); do
@@ -251,6 +279,7 @@ jobs:
           exit 1
 
       - name: Show recent deployment events after successful deployment
+        if: ${{ success() && inputs.execute_deploy }}
         run: |
           aws elasticbeanstalk describe-events \
             --region "$AWS_REGION" \
@@ -261,7 +290,7 @@ jobs:
             --output table
 
       - name: Show deployment events after update failure
-        if: failure() && steps.update_environment.outcome == 'success'
+        if: ${{ inputs.execute_deploy && failure() && steps.update_environment.outcome == 'success' }}
         run: |
           aws elasticbeanstalk describe-events \
             --region "$AWS_REGION" \
@@ -270,3 +299,7 @@ jobs:
             --max-items 20 \
             --query 'Events[].{EventDate:EventDate,Severity:Severity,Status:Status,Message:Message}' \
             --output table
+
+      - name: Validate-only completed without AWS writes
+        if: ${{ success() && !inputs.execute_deploy }}
+        run: echo "Artifact and read-only AWS preflight passed; deployment writes were not requested."

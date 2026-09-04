@@ -5,6 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
 WORKFLOW = ROOT / ".github/workflows/deploy-dev-eb.yml"
+CI_WORKFLOW = ROOT / ".github/workflows/ci.yml"
 
 
 def _load_json(path: str) -> dict:
@@ -57,6 +58,13 @@ def test_deployment_workflow_is_main_only_and_pins_frozen_candidate() -> None:
 
     assert "workflow_dispatch:" in workflow
     assert 'test "$GITHUB_REF" = "refs/heads/main"' in workflow
+    assert "execute_deploy:" in workflow
+    assert "type: boolean" in workflow
+    assert "default: false" in workflow
+    checkout_start = workflow.index("Checkout deployment tooling")
+    download_start = workflow.index("Download approved ECR artifact")
+    verify_start = workflow.index("Verify immutable candidate artifact")
+    assert checkout_start < download_start < verify_start
     assert "merge-multiple: true" in workflow
     assert "bash scripts/release/verify_frozen_candidate.sh" in workflow
     assert "28cf009137ada707540d9ee7eba01dc45a9a260e" in workflow
@@ -69,6 +77,50 @@ def test_deployment_workflow_is_main_only_and_pins_frozen_candidate() -> None:
     assert '--version-label "$VERSION_LABEL"' in workflow
     assert "--configuration-settings" not in workflow
     assert "--option-settings" not in workflow
+
+
+def test_deployment_writes_require_explicit_execute_deploy() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+
+    for step_name in (
+        "Upload approved bundle",
+        "Create application version",
+        "Update only the approved DEV environment",
+    ):
+        step_start = workflow.index(step_name)
+        step_end = workflow.find("\n      - name:", step_start + 1)
+        step_block = workflow[step_start : step_end if step_end != -1 else None]
+        assert "if: ${{ success() && inputs.execute_deploy }}" in step_block
+
+    assert "Validate-only completed without AWS writes" in workflow
+
+
+def test_deployment_selects_role_by_execution_mode() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+
+    read_only_start = workflow.index("Configure AWS credentials through GitHub OIDC (read-only)")
+    deployment_start = workflow.index("Configure AWS credentials through GitHub OIDC (deployment)")
+    preflight_start = workflow.index("Verify account and deployment preflight")
+
+    read_only_block = workflow[read_only_start:deployment_start]
+    deployment_block = workflow[deployment_start:preflight_start]
+
+    assert "if: ${{ success() && !inputs.execute_deploy }}" in read_only_block
+    assert "role-to-assume: ${{ env.EB_READ_ROLE_ARN }}" in read_only_block
+    assert "tpi-github-actions-dev-eb-role" in workflow
+    assert "tpi-github-actions-dev-eb-deploy-role" in workflow
+    assert "if: ${{ success() && inputs.execute_deploy }}" in deployment_block
+    assert "role-to-assume: ${{ env.EB_DEPLOY_ROLE_ARN }}" in deployment_block
+    assert "EB_DEPLOY_ROLE_ARN" not in read_only_block
+    assert "EB_READ_ROLE_ARN" not in deployment_block
+
+
+def test_ci_validates_release_artifact_with_shared_verifier() -> None:
+    workflow = CI_WORKFLOW.read_text(encoding="utf-8")
+
+    assert "release-tooling-validation:" in workflow
+    assert "bash scripts/release/verify_frozen_candidate.sh" in workflow
+    assert "rhysd/actionlint:1.7.7" in workflow
 
 
 def test_deployment_workflow_accepts_known_unprocessed_rollback_version() -> None:
@@ -101,4 +153,7 @@ def test_deployment_workflow_collects_events_after_update_failure() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
 
     assert "Show deployment events after update failure" in workflow
-    assert "if: failure() && steps.update_environment.outcome == 'success'" in workflow
+    assert (
+        "if: ${{ inputs.execute_deploy && failure() && "
+        "steps.update_environment.outcome == 'success' }}" in workflow
+    )
