@@ -41,13 +41,13 @@ def test_bootstrap_requires_expected_source_failure_and_preserves_eb() -> None:
     assert 'test "$execution_status" = "Failed"' in script
     assert 'test "$execution_trigger" = "CreatePipeline"' in script
     assert '.stageName == "Source" and .status == "Failed"' in script
-    assert '.[0].VersionLabel == $version' in script
+    assert ".[0].VersionLabel == $version" in script
     assert '.[0].Status == "Ready"' in script
     assert '.[0].Health == "Green"' in script
     assert '.[0].HealthStatus == "Ok"' in script
     assert '.[0].Status != "FAILED"' in script
-    assert '.[0].SourceBundle.S3Bucket == $bucket' in script
-    assert '.[0].SourceBundle.S3Key == $key' in script
+    assert ".[0].SourceBundle.S3Bucket == $bucket" in script
+    assert ".[0].SourceBundle.S3Key == $key" in script
     assert "start-pipeline-execution" not in script
     assert "update-environment" not in script
     assert "create-application-version" not in script
