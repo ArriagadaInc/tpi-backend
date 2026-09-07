@@ -96,8 +96,6 @@
       "Sid": "OrchestrateOnlyPhysicalDevEnvironmentStack",
       "Effect": "Allow",
       "Action": [
-        "cloudformation:CancelUpdateStack",
-        "cloudformation:ContinueUpdateRollback",
         "cloudformation:DescribeStackEvents",
         "cloudformation:DescribeStackResource",
         "cloudformation:DescribeStackResources",
@@ -108,6 +106,58 @@
         "cloudformation:UpdateStack"
       ],
       "Resource": "arn:aws:cloudformation:us-east-2:821656895812:stack/awseb-e-sd5gmkxr5r-stack/*"
+    },
+    {
+      "Sid": "InspectOnlyObservedDevComputeResources",
+      "Effect": "Allow",
+      "Action": [
+        "autoscaling:DescribeAutoScalingGroups",
+        "autoscaling:DescribeAutoScalingInstances",
+        "autoscaling:DescribeScalingActivities",
+        "autoscaling:DescribeScalingProcessTypes",
+        "ec2:DescribeAddresses",
+        "ec2:DescribeLaunchTemplates",
+        "ec2:DescribeLaunchTemplateVersions"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "UpdateOnlyObservedDevAutoScalingGroup",
+      "Effect": "Allow",
+      "Action": [
+        "autoscaling:ResumeProcesses",
+        "autoscaling:SuspendProcesses",
+        "autoscaling:TerminateInstanceInAutoScalingGroup",
+        "autoscaling:UpdateAutoScalingGroup"
+      ],
+      "Resource": "arn:aws:autoscaling:us-east-2:821656895812:autoScalingGroup:*:autoScalingGroupName/awseb-e-sd5gmkxr5r-*",
+      "Condition": {
+        "StringEquals": {
+          "autoscaling:ResourceTag/aws:cloudformation:stack-name": "awseb-e-sd5gmkxr5r-stack",
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "VersionOnlyObservedDevLaunchTemplate",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateLaunchTemplateVersion",
+        "ec2:DeleteLaunchTemplateVersions",
+        "ec2:ModifyLaunchTemplate"
+      ],
+      "Resource": "arn:aws:ec2:us-east-2:821656895812:launch-template/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2",
+          "aws:ResourceTag/aws:cloudformation:stack-name": "awseb-e-sd5gmkxr5r-stack"
+        }
+      }
     },
     {
       "Sid": "ElasticBeanstalkManagedStorageContract",

@@ -217,8 +217,6 @@ def test_pipeline_role_scopes_cloudformation_to_physical_dev_stack() -> None:
         "arn:aws:cloudformation:us-east-2:821656895812:stack/awseb-e-sd5gmkxr5r-stack/*"
     )
     assert set(cloudformation["Action"]) == {
-        "cloudformation:CancelUpdateStack",
-        "cloudformation:ContinueUpdateRollback",
         "cloudformation:DescribeStackEvents",
         "cloudformation:DescribeStackResource",
         "cloudformation:DescribeStackResources",
@@ -228,11 +226,79 @@ def test_pipeline_role_scopes_cloudformation_to_physical_dev_stack() -> None:
         "cloudformation:SignalResource",
         "cloudformation:UpdateStack",
     }
-    assert all(statement["Resource"] != "*" for statement in policy["Statement"])
     assert "cloudformation:CreateStack" not in _actions(policy)
     assert "cloudformation:DeleteStack" not in _actions(policy)
     assert "cloudformation:TagResource" not in _actions(policy)
     assert "cloudformation:UntagResource" not in _actions(policy)
+
+
+def test_pipeline_role_models_only_observed_stack_compute_dependencies() -> None:
+    policy = _load_json("deployment/iam/tpi-codepipeline-dev-eb.json")
+    statements = {statement["Sid"]: statement for statement in policy["Statement"]}
+
+    inspection = statements["InspectOnlyObservedDevComputeResources"]
+    assert inspection["Resource"] == "*"
+    assert inspection["Condition"] == {"StringEquals": {"aws:RequestedRegion": "us-east-2"}}
+    assert set(inspection["Action"]) == {
+        "autoscaling:DescribeAutoScalingGroups",
+        "autoscaling:DescribeAutoScalingInstances",
+        "autoscaling:DescribeScalingActivities",
+        "autoscaling:DescribeScalingProcessTypes",
+        "ec2:DescribeAddresses",
+        "ec2:DescribeLaunchTemplates",
+        "ec2:DescribeLaunchTemplateVersions",
+    }
+
+    autoscaling = statements["UpdateOnlyObservedDevAutoScalingGroup"]
+    assert autoscaling["Resource"] == (
+        "arn:aws:autoscaling:us-east-2:821656895812:autoScalingGroup:*:"
+        "autoScalingGroupName/awseb-e-sd5gmkxr5r-*"
+    )
+    assert set(autoscaling["Action"]) == {
+        "autoscaling:ResumeProcesses",
+        "autoscaling:SuspendProcesses",
+        "autoscaling:TerminateInstanceInAutoScalingGroup",
+        "autoscaling:UpdateAutoScalingGroup",
+    }
+    assert autoscaling["Condition"]["StringEquals"] == {
+        "autoscaling:ResourceTag/aws:cloudformation:stack-name": ("awseb-e-sd5gmkxr5r-stack"),
+        "aws:RequestedRegion": "us-east-2",
+    }
+
+    launch_template = statements["VersionOnlyObservedDevLaunchTemplate"]
+    assert launch_template["Resource"] == ("arn:aws:ec2:us-east-2:821656895812:launch-template/*")
+    assert set(launch_template["Action"]) == {
+        "ec2:CreateLaunchTemplateVersion",
+        "ec2:DeleteLaunchTemplateVersions",
+        "ec2:ModifyLaunchTemplate",
+    }
+    assert launch_template["Condition"]["StringEquals"] == {
+        "aws:RequestedRegion": "us-east-2",
+        "aws:ResourceTag/aws:cloudformation:stack-name": "awseb-e-sd5gmkxr5r-stack",
+    }
+
+    wildcard_statements = [
+        statement for statement in policy["Statement"] if statement["Resource"] == "*"
+    ]
+    assert wildcard_statements == [inspection]
+
+    actions = _actions(policy)
+    for excluded in (
+        "autoscaling:CreateAutoScalingGroup",
+        "autoscaling:DeleteAutoScalingGroup",
+        "ec2:AllocateAddress",
+        "ec2:AssociateAddress",
+        "ec2:CreateLaunchTemplate",
+        "ec2:DeleteLaunchTemplate",
+        "ec2:DisassociateAddress",
+        "ec2:ReleaseAddress",
+        "ec2:RunInstances",
+        "iam:PassRole",
+    ):
+        assert excluded not in actions
+    assert not any(
+        action.startswith(("elasticloadbalancing:", "rds:", "ecs:")) for action in actions
+    )
 
 
 def test_update_environment_keeps_exact_application_version_condition() -> None:
@@ -264,6 +330,11 @@ def test_control_plane_inspection_is_read_only_and_scoped() -> None:
     assert "list-stack-resources" in normalized
     assert "get-template" in normalized
     assert "templatebody.resources.*.type" in normalized
+    assert "physicalresourceid" not in normalized
+    assert "physicalid" not in normalized
+    assert "logicalresourceid:logicalresourceid" in normalized
+    assert "resourcetype:resourcetype" in normalized
+    assert "resourcestatus:resourcestatus" in normalized
     for forbidden in (
         "update-environment",
         "create-application-version",

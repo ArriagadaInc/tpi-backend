@@ -39,7 +39,7 @@ echo "$stack" | jq .
 aws cloudformation list-stack-resources \
   --region "$REGION" \
   --stack-name "$STACK_NAME" \
-  --query 'StackResourceSummaries[].{LogicalId:LogicalResourceId,PhysicalId:PhysicalResourceId,Type:ResourceType,Status:ResourceStatus}' \
+  --query 'StackResourceSummaries[].{LogicalResourceId:LogicalResourceId,ResourceType:ResourceType,ResourceStatus:ResourceStatus}' \
   --output table
 
 aws cloudformation get-template \

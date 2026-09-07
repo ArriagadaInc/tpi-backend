@@ -81,3 +81,36 @@ def test_fails_when_visibility_retry_window_is_exhausted() -> None:
             ),
             sleeper=lambda _seconds: None,
         )
+
+
+def test_fails_immediately_when_visible_execution_disappears() -> None:
+    sleeps: list[float] = []
+    with pytest.raises(PipelineObservationError, match="disappeared after.*observed"):
+        wait_for_execution(
+            pipeline_name="pipeline",
+            execution_id="execution",
+            region="us-east-2",
+            runner=_runner(
+                [
+                    CommandResult(254, "", "PipelineExecutionNotFoundException: pending"),
+                    CommandResult(0, "InProgress", ""),
+                    CommandResult(254, "", "PipelineExecutionNotFoundException: missing"),
+                ]
+            ),
+            sleeper=sleeps.append,
+            poll_seconds=20,
+        )
+
+    assert sleeps == [5, 20]
+
+
+@pytest.mark.parametrize("status", ["Cancelled", "Failed", "Stopped", "Superseded"])
+def test_fails_closed_on_every_negative_terminal_status(status: str) -> None:
+    with pytest.raises(PipelineObservationError, match=rf"ended with status {status}"):
+        wait_for_execution(
+            pipeline_name="pipeline",
+            execution_id="execution",
+            region="us-east-2",
+            runner=_runner([CommandResult(0, status, "")]),
+            sleeper=lambda _seconds: None,
+        )

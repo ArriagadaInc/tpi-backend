@@ -30,6 +30,8 @@ La arquitectura y límites de confianza están en
 | Promote | `Failed` |
 | Causa original | `cloudformation:GetTemplate` denegado al service role de CodePipeline |
 | Stack físico | `awseb-e-sd5gmkxr5r-stack` |
+| Stack status / role | `UPDATE_COMPLETE`; `RoleARN = null` |
+| Tipos del stack | ASG, Launch Template, EIP, WaitCondition y WaitConditionHandle |
 | Estado EB posterior | `h2-5d-ecr-47fa0c9`, sin cambio |
 
 El source versionado, el tooling confiable y el artifact congelado fueron
@@ -38,9 +40,11 @@ policy caller-side versionada. El error original se conserva aunque la
 recolección posterior de diagnósticos falle.
 
 `UpdateEnvironment` no es una llamada aislada: Elastic Beanstalk usa permisos
-del caller para orquestar CloudFormation y recursos subyacentes. Antes de aplicar
-la policy, un operador autorizado debe comparar el stack físico y sus recursos
-con el alcance versionado. No se adjunta
+del caller para orquestar CloudFormation y recursos subyacentes. La inspección
+física debe ocurrir antes de revisar o aplicar IAM. En este environment,
+`RoleARN = null`, por lo que CloudFormation utiliza credenciales derivadas del
+caller para actualizar el ASG y el Launch Template. El EIP solo se inspecciona;
+la promoción no autoriza modificarlo. No se adjunta
 `AdministratorAccess-AWSElasticBeanstalk` ni se agregan permisos por sucesivos
 reintentos de deployment.
 
@@ -60,9 +64,11 @@ bash scripts/release/inspect_dev_eb_control_plane_readonly.sh
 
 La inspección falla si la cuenta, application, environment o stack no coinciden
 con el contrato. Solo usa STS, `DescribeEnvironments`, `DescribeStacks`,
-`ListStackResources` y `GetTemplate`; de la plantilla imprime exclusivamente
-los tipos de recursos. La salida física debe conservarse con la evidencia del
-cambio IAM antes de autorizar otra promoción.
+`ListStackResources` y `GetTemplate`. Del inventario imprime exclusivamente
+`LogicalId`, `ResourceType` y `ResourceStatus`; nunca `PhysicalResourceId`, que
+puede contener URLs prefirmadas. De la plantilla imprime solo los tipos. La
+salida física debe conservarse antes de definir el contrato IAM y antes de
+autorizar otra promoción.
 
 1. Crear los buckets dedicados de release y artifact store. Activar versionado
    en el bucket de release y cifrado/bloqueo público en ambos:
@@ -236,8 +242,11 @@ La observación de CodePipeline tolera de forma acotada solamente
 `PipelineExecutionNotFoundException` inmediatamente después de
 `StartPipelineExecution`, porque el ID puede tardar en ser visible. Se realizan
 como máximo seis reintentos con backoff de 5, 10, 15, 20, 25 y 30 segundos. Un
-error AWS distinto aborta inmediatamente; el polling completo vence tras 90
-observaciones y entrega el execution ID y el último estado como diagnóstico.
+`NotFound` posterior a la primera observación válida aborta inmediatamente. Los
+estados terminales negativos `Cancelled`, `Failed`, `Stopped` y `Superseded`
+también abortan de forma explícita. Cualquier otro error AWS aborta; el polling
+completo vence tras 90 observaciones y entrega el execution ID y el último
+estado como diagnóstico.
 
 ## Rollback
 

@@ -47,6 +47,7 @@ def wait_for_execution(
         raise ValueError("Polling limits must be positive")
 
     not_found_count = 0
+    has_been_visible = False
     command = [
         "aws",
         "codepipeline",
@@ -71,6 +72,11 @@ def wait_for_execution(
                 raise PipelineObservationError(
                     f"Unable to observe CodePipeline execution {execution_id}: {diagnostic}"
                 )
+            if has_been_visible:
+                raise PipelineObservationError(
+                    "CodePipeline execution disappeared after it had already been observed: "
+                    f"{execution_id}; error: {diagnostic}"
+                )
             not_found_count += 1
             if not_found_count > visibility_attempts:
                 raise PipelineObservationError(
@@ -85,11 +91,12 @@ def wait_for_execution(
             sleeper(delay)
             continue
 
+        has_been_visible = True
         status = result.stdout.strip()
         print(f"CodePipeline execution status: {status}")
         if status == "Succeeded":
             return status
-        if status in {"Failed", "Stopped", "Superseded"}:
+        if status in {"Cancelled", "Failed", "Stopped", "Superseded"}:
             raise PipelineObservationError(
                 f"CodePipeline execution {execution_id} ended with status {status}"
             )
