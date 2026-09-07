@@ -278,7 +278,10 @@ def test_pipeline_role_models_only_observed_stack_compute_dependencies() -> None
     wildcard_statements = [
         statement for statement in policy["Statement"] if statement["Resource"] == "*"
     ]
-    assert wildcard_statements == [inspection]
+    assert {statement["Sid"] for statement in wildcard_statements} == {
+        "InspectOnlyObservedDevComputeResources",
+        "InspectElasticBeanstalkEnvironmentHealthLogs",
+    }
 
     actions = _actions(policy)
     for excluded in (
@@ -298,6 +301,45 @@ def test_pipeline_role_models_only_observed_stack_compute_dependencies() -> None
     assert not any(
         action.startswith(("elasticloadbalancing:", "rds:", "ecs:")) for action in actions
     )
+
+
+def test_pipeline_role_limits_environment_health_log_permissions() -> None:
+    policy = _load_json("deployment/iam/tpi-codepipeline-dev-eb.json")
+    statements = {statement["Sid"]: statement for statement in policy["Statement"]}
+
+    inspection = statements["InspectElasticBeanstalkEnvironmentHealthLogs"]
+    assert inspection == {
+        "Sid": "InspectElasticBeanstalkEnvironmentHealthLogs",
+        "Effect": "Allow",
+        "Action": "logs:DescribeLogGroups",
+        "Resource": "*",
+        "Condition": {"StringEquals": {"aws:RequestedRegion": "us-east-2"}},
+    }
+
+    retention = statements["ManageExactElasticBeanstalkHealthLogRetention"]
+    assert retention == {
+        "Sid": "ManageExactElasticBeanstalkHealthLogRetention",
+        "Effect": "Allow",
+        "Action": "logs:PutRetentionPolicy",
+        "Resource": (
+            "arn:aws:logs:us-east-2:821656895812:log-group:"
+            "/aws/elasticbeanstalk/tpi-backoffice-dev-green/environment-health.log"
+        ),
+        "Condition": {"StringEquals": {"aws:RequestedRegion": "us-east-2"}},
+    }
+
+    log_actions = {action for action in _actions(policy) if action.startswith("logs:")}
+    assert log_actions == {
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:DescribeLogGroups",
+        "logs:PutLogEvents",
+        "logs:PutRetentionPolicy",
+    }
+    assert "logs:Describe*" not in log_actions
+    assert "logs:*" not in log_actions
+    assert "logs:DeleteLogGroup" not in log_actions
+    assert "logs:PutResourcePolicy" not in log_actions
 
 
 def test_update_environment_keeps_exact_application_version_condition() -> None:
