@@ -110,14 +110,28 @@ bash scripts/release/bootstrap_dev_codepipeline.sh
    la transición inbound de `Promote` con la razón
    `Promotion not authorized - provisioning validation` y conserva evidencia de
    la ejecución automática. El bootstrap debe fallar en `Source` con estado
-   `Failed`; la evidencia debe demostrar que no llegó a `Promote` ninguna action
-   execution.
+   `Failed`; la evidencia autoritativa es exactamente una action execution
+   `Source / ApprovedReleaseSource / Failed`, la ausencia posterior del source
+   exacto y cero action executions en `Promote`. El mensaje de error de AWS es evidencia
+   diagnóstica opcional y puede estar ausente.
    Cualquier error distinto de `404/NotFound` al comprobar S3 aborta antes de
    crear el pipeline; si el objeto existe, no se elimina automáticamente.
 
-6. Conservar como evidencia el ID, trigger, estado, action executions y error de
-   `Source` emitidos por el script. Verificar trust, policies, buckets, objetos
-   de tooling y pipeline mediante `get-role`, `get-role-policy`,
+6. Conservar como evidencia el ID, trigger, estado y action executions emitidos
+   por el script. El error o resumen externo de `Source`, cuando AWS lo entrega,
+   se conserva solo como diagnóstico. Para revalidar de forma read-only e
+   idempotente un pipeline ya creado, ejecutar:
+
+```bash
+bash scripts/release/validate_dev_codepipeline_bootstrap.sh \
+  cb585cf4-ceec-4dd3-9482-6853f441a2ac
+```
+
+   El validador vuelve a comprobar el pipeline físico, la ejecución exacta, una
+   sola action `Source / ApprovedReleaseSource / Failed`, el source S3 ausente,
+   cero `Promote`, la transición inbound deshabilitada, el baseline EB y el
+   candidato intacto. Verificar además trust, policies, buckets, objetos de
+   tooling y pipeline mediante `get-role`, `get-role-policy`,
    `get-bucket-versioning`, `get-public-access-block`, `get-pipeline` y
    `get-pipeline-state`. Confirmar físicamente:
 
