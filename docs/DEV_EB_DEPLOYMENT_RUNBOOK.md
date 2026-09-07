@@ -98,22 +98,51 @@ aws iam put-role-policy --role-name tpi-github-actions-dev-release-role \
   --policy-document file://deployment/iam/tpi-github-actions-dev-release.json
 ```
 
-5. Crear el pipeline V2 sin ejecutarlo:
+5. Comprobar de forma fail-closed que el source del candidato está ausente y
+   ejecutar el bootstrap seguro:
 
 ```bash
-aws codepipeline create-pipeline --region us-east-2 \
-  --cli-input-json file://deployment/aws/tpi-dev-eb-pipeline.json
+bash scripts/release/bootstrap_dev_codepipeline.sh
 ```
 
-6. Verificar trust, policies, buckets, objetos de tooling y pipeline mediante `get-role`,
-   `get-role-policy`, `get-bucket-versioning`, `get-public-access-block` y
-   `get-pipeline`. Comparar además los SHA-256 del tooling descargado. No iniciar
-   promoción en esta fase.
+   `CreatePipeline genera una ejecución automática`. El script exige que
+   `candidate-data.zip` no exista, crea el pipeline, deshabilita inmediatamente
+   la transición inbound de `Promote` con la razón
+   `Promotion not authorized - provisioning validation` y conserva evidencia de
+   la ejecución automática. El bootstrap debe fallar en `Source` con estado
+   `Failed`; la evidencia debe demostrar que no llegó a `Promote` ninguna action
+   execution.
+   Cualquier error distinto de `404/NotFound` al comprobar S3 aborta antes de
+   crear el pipeline; si el objeto existe, no se elimina automáticamente.
+
+6. Conservar como evidencia el ID, trigger, estado, action executions y error de
+   `Source` emitidos por el script. Verificar trust, policies, buckets, objetos
+   de tooling y pipeline mediante `get-role`, `get-role-policy`,
+   `get-bucket-versioning`, `get-public-access-block`, `get-pipeline` y
+   `get-pipeline-state`. Confirmar físicamente:
+
+   - `pipelineType = V2` y `executionMode = QUEUED`;
+   - bucket y key source exactos;
+   - `AllowOverrideForS3ObjectKey = false` y `PollForSourceChanges = false`;
+   - service role exacto;
+   - transición inbound de `Promote` deshabilitada;
+   - cero action executions en `Promote`;
+   - EB continúa en `h2-5d-ecr-47fa0c9`, `Ready / Green / Ok`;
+   - `h3-3-crm-web-28cf009-r1` permanece intacta.
+
+   Comparar además los SHA-256 del tooling descargado. El fallo inicial de
+   `Source` es el resultado seguro esperado del provisioning, no una promoción
+   fallida. No habilitar `Promote` ni iniciar promoción en esta fase.
 
 7. Tras aprovisionar y validar el pipeline, retirar o deshabilitar el rol físico
    histórico `tpi-github-actions-dev-eb-deploy-role` **antes** de la primera
    ejecución con `execute_promotion=true`. Confirmar que ya no constituye un
    trust path alternativo desde GitHub. No reutilizarlo ni ampliarlo.
+
+8. Ejecutar `execute_promotion=false`, comprobar nuevamente EB en
+   `h2-5d-ecr-47fa0c9`, `Ready / Green / Ok`, y detenerse. La transición inbound
+   de `Promote` permanece deshabilitada hasta una autorización separada para la
+   promoción H3.3.
 
 ## Preflight de promoción
 
