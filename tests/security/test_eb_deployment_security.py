@@ -214,8 +214,7 @@ def test_pipeline_role_scopes_cloudformation_to_physical_dev_stack() -> None:
     )
 
     assert cloudformation["Resource"] == (
-        "arn:aws:cloudformation:us-east-2:821656895812:"
-        "stack/awseb-e-sd5gmkxr5r-stack/*"
+        "arn:aws:cloudformation:us-east-2:821656895812:stack/awseb-e-sd5gmkxr5r-stack/*"
     )
     assert set(cloudformation["Action"]) == {
         "cloudformation:CancelUpdateStack",
