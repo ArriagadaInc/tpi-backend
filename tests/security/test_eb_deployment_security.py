@@ -266,16 +266,14 @@ def test_pipeline_role_models_only_observed_stack_compute_dependencies() -> None
     }
 
     launch_template = statements["VersionOnlyObservedDevLaunchTemplate"]
-    assert launch_template["Resource"] == ("arn:aws:ec2:us-east-2:821656895812:launch-template/*")
+    assert launch_template["Resource"] == (
+        "arn:aws:ec2:us-east-2:821656895812:launch-template/lt-0c69191d0013fa448"
+    )
     assert set(launch_template["Action"]) == {
         "ec2:CreateLaunchTemplateVersion",
         "ec2:DeleteLaunchTemplateVersions",
-        "ec2:ModifyLaunchTemplate",
     }
-    assert launch_template["Condition"]["StringEquals"] == {
-        "aws:RequestedRegion": "us-east-2",
-        "aws:ResourceTag/aws:cloudformation:stack-name": "awseb-e-sd5gmkxr5r-stack",
-    }
+    assert "Condition" not in launch_template
 
     wildcard_statements = [
         statement for statement in policy["Statement"] if statement["Resource"] == "*"
@@ -291,6 +289,7 @@ def test_pipeline_role_models_only_observed_stack_compute_dependencies() -> None
         "ec2:CreateLaunchTemplate",
         "ec2:DeleteLaunchTemplate",
         "ec2:DisassociateAddress",
+        "ec2:ModifyLaunchTemplate",
         "ec2:ReleaseAddress",
         "ec2:RunInstances",
         "iam:PassRole",

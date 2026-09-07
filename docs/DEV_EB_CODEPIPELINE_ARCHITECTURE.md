@@ -123,6 +123,12 @@ está en `UPDATE_COMPLETE` y contiene exclusivamente estos tipos:
 - `AWS::CloudFormation::WaitCondition`;
 - `AWS::CloudFormation::WaitConditionHandle`.
 
+El ASG observado es
+`awseb-e-sd5gmkxr5r-stack-AWSEBAutoScalingGroup-MkPjH46TJf2L`, conserva el tag
+`aws:cloudformation:stack-name = awseb-e-sd5gmkxr5r-stack` y usa
+`AWSServiceRoleForAutoScaling`. El Launch Template observado es
+`lt-0c69191d0013fa448`, versión 1, y no tiene tags de CloudFormation.
+
 La policy administrada `AdministratorAccess-AWSElasticBeanstalk` se usa solo
 como referencia de acciones; no se adjunta ni se copia completa. Para H3.3 se
 incorpora el subconjunto aplicable a actualizar el stack existente:
@@ -146,14 +152,23 @@ manual: no forman parte de la promoción normal H3.3.
 | `autoscaling:DescribeAutoScalingGroups`, `DescribeAutoScalingInstances`, `DescribeScalingActivities`, `DescribeScalingProcessTypes` | Inspeccionar el ASG y el rolling update | `*`, porque estas APIs no admiten resource-level scope; limitado a `us-east-2` |
 | `autoscaling:UpdateAutoScalingGroup`, `SuspendProcesses`, `ResumeProcesses`, `TerminateInstanceInAutoScalingGroup` | Actualizar la referencia del Launch Template y ejecutar el rolling update | ASG `awseb-e-sd5gmkxr5r-*`, tag del stack exacto y región DEV |
 | `ec2:DescribeLaunchTemplates`, `DescribeLaunchTemplateVersions` | Resolver versiones del Launch Template | `*`, limitado por región porque estas APIs no admiten ARN |
-| `ec2:CreateLaunchTemplateVersion`, `ModifyLaunchTemplate`, `DeleteLaunchTemplateVersions` | Crear/seleccionar la versión con el nuevo source bundle y limpiar versiones de esa actualización | Launch Templates de la cuenta/región con tag CloudFormation del stack exacto |
+| `ec2:CreateLaunchTemplateVersion`, `DeleteLaunchTemplateVersions` | Crear la versión con el nuevo source bundle y limpiar versiones de esa actualización | ARN exacto `launch-template/lt-0c69191d0013fa448` |
 | `ec2:DescribeAddresses` | Reconciliar el `AWS::EC2::EIP` observado sin modificarlo | `*`, limitado por región |
 
 No se conceden mutaciones EIP porque cambiar la Application Version no cambia
-ese recurso. Tampoco `RunInstances`, `CreateLaunchTemplate`,
-`DeleteLaunchTemplate`, `CreateAutoScalingGroup`, `DeleteAutoScalingGroup` ni
-`iam:PassRole`: son operaciones de lifecycle o identidad fuera de H3.3. No se
-agregan ELB, RDS o ECS porque esos tipos no existen en el stack inspeccionado.
+ese recurso. Tampoco `ModifyLaunchTemplate`: CloudFormation administra las
+versiones del recurso, no su versión default. Se excluyen además `RunInstances`,
+`CreateLaunchTemplate`, `DeleteLaunchTemplate`, `CreateAutoScalingGroup`,
+`DeleteAutoScalingGroup` e `iam:PassRole`, por ser operaciones de lifecycle o
+identidad fuera de H3.3. Los lanzamientos posteriores del ASG usan su
+service-linked role observado, no el service role de CodePipeline. No se agregan
+ELB, RDS o ECS porque esos tipos no existen en el stack inspeccionado.
+
+`CreateLaunchTemplateVersion` es una capacidad privilegiada: una versión puede
+referenciar un instance profile. Los controles compensatorios son el ARN exacto
+del Launch Template, el service role no asumible directamente por GitHub, el
+tooling privilegiado fuera del control de escritura de GitHub, sus hashes
+SHA-256, el candidate congelado y el pipeline/Application Version exactos.
 
 Referencias usadas para derivar el contrato:
 

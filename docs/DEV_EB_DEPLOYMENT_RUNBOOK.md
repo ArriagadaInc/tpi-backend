@@ -32,6 +32,9 @@ La arquitectura y límites de confianza están en
 | Stack físico | `awseb-e-sd5gmkxr5r-stack` |
 | Stack status / role | `UPDATE_COMPLETE`; `RoleARN = null` |
 | Tipos del stack | ASG, Launch Template, EIP, WaitCondition y WaitConditionHandle |
+| ASG | `awseb-e-sd5gmkxr5r-stack-AWSEBAutoScalingGroup-MkPjH46TJf2L`; tag del stack exacto |
+| ASG service-linked role | `AWSServiceRoleForAutoScaling` |
+| Launch Template | `lt-0c69191d0013fa448`, versión 1, sin tags CloudFormation |
 | Estado EB posterior | `h2-5d-ecr-47fa0c9`, sin cambio |
 
 El source versionado, el tooling confiable y el artifact congelado fueron
@@ -44,7 +47,10 @@ del caller para orquestar CloudFormation y recursos subyacentes. La inspección
 física debe ocurrir antes de revisar o aplicar IAM. En este environment,
 `RoleARN = null`, por lo que CloudFormation utiliza credenciales derivadas del
 caller para actualizar el ASG y el Launch Template. El EIP solo se inspecciona;
-la promoción no autoriza modificarlo. No se adjunta
+la promoción no autoriza modificarlo. El ASG usa el service-linked role de
+Auto Scaling para lanzar instancias, por lo que el service role de CodePipeline
+no recibe `ec2:RunInstances`. El Launch Template se limita a su ARN físico exacto
+y a crear/eliminar versiones; no se autoriza modificar su versión default. No se adjunta
 `AdministratorAccess-AWSElasticBeanstalk` ni se agregan permisos por sucesivos
 reintentos de deployment.
 

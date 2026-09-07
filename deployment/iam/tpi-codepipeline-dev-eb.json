@@ -148,16 +148,9 @@
       "Effect": "Allow",
       "Action": [
         "ec2:CreateLaunchTemplateVersion",
-        "ec2:DeleteLaunchTemplateVersions",
-        "ec2:ModifyLaunchTemplate"
+        "ec2:DeleteLaunchTemplateVersions"
       ],
-      "Resource": "arn:aws:ec2:us-east-2:821656895812:launch-template/*",
-      "Condition": {
-        "StringEquals": {
-          "aws:RequestedRegion": "us-east-2",
-          "aws:ResourceTag/aws:cloudformation:stack-name": "awseb-e-sd5gmkxr5r-stack"
-        }
-      }
+      "Resource": "arn:aws:ec2:us-east-2:821656895812:launch-template/lt-0c69191d0013fa448"
     },
     {
       "Sid": "ElasticBeanstalkManagedStorageContract",
