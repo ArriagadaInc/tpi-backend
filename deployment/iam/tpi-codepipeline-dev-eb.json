@@ -176,6 +176,28 @@
       "Resource": "arn:aws:s3:::elasticbeanstalk-us-east-2-821656895812/*"
     },
     {
+      "Sid": "InspectElasticBeanstalkEnvironmentHealthLogs",
+      "Effect": "Allow",
+      "Action": "logs:DescribeLogGroups",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
+      "Sid": "ManageExactElasticBeanstalkHealthLogRetention",
+      "Effect": "Allow",
+      "Action": "logs:PutRetentionPolicy",
+      "Resource": "arn:aws:logs:us-east-2:821656895812:log-group:/aws/elasticbeanstalk/tpi-backoffice-dev-green/environment-health.log",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
       "Sid": "WritePromotionLogs",
       "Effect": "Allow",
       "Action": [
