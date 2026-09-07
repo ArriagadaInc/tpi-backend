@@ -1,8 +1,8 @@
 # Arquitectura de promoción a Elastic Beanstalk DEV
 
-Estado: propuesta versionada, no aprovisionada
+Estado: aprovisionada; hardening caller-side pendiente de aplicar
 Ambiente: AWS DEV (`821656895812`, `us-east-2`)
-Última validación del baseline: 2026-09-04
+Última validación del baseline: 2026-09-07
 Fuente: evidencia AWS DEV, artefacto H3.3 congelado y contratos IAM versionados
 
 ## Decisión
@@ -105,14 +105,85 @@ y calcula SHA-256 localmente. Bucket y clave correctos con contenido distinto
 aborta antes de `UpdateEnvironment`; la metadata histórica no se considera
 prueba de integridad.
 
+## Contrato caller-side de Elastic Beanstalk
+
+`UpdateEnvironment` es una operación compuesta. Aunque el environment conserva
+sus propios roles, Elastic Beanstalk también comprueba permisos del caller sobre
+CloudFormation y los recursos que CloudFormation actualiza. La ejecución
+`fbd91cee-1fe7-4535-8025-cd9f98a58fc9` confirmó esta frontera al denegar
+`cloudformation:GetTemplate` sobre `awseb-e-sd5gmkxr5r-stack`.
+
+La inspección física posterior confirmó `RoleARN = null`: el stack no tiene un
+service role de CloudFormation y usa credenciales derivadas del caller. El stack
+está en `UPDATE_COMPLETE` y contiene exclusivamente estos tipos:
+
+- `AWS::AutoScaling::AutoScalingGroup`;
+- `AWS::EC2::LaunchTemplate`;
+- `AWS::EC2::EIP`;
+- `AWS::CloudFormation::WaitCondition`;
+- `AWS::CloudFormation::WaitConditionHandle`.
+
+El ASG observado es
+`awseb-e-sd5gmkxr5r-stack-AWSEBAutoScalingGroup-MkPjH46TJf2L`, conserva el tag
+`aws:cloudformation:stack-name = awseb-e-sd5gmkxr5r-stack` y usa
+`AWSServiceRoleForAutoScaling`. El Launch Template observado es
+`lt-0c69191d0013fa448`, versión 1, y no tiene tags de CloudFormation.
+
+La policy administrada `AdministratorAccess-AWSElasticBeanstalk` se usa solo
+como referencia de acciones; no se adjunta ni se copia completa. Para H3.3 se
+incorpora el subconjunto aplicable a actualizar el stack existente:
+
+- inspección: `DescribeStackEvents`, `DescribeStackResource`,
+  `DescribeStackResources`, `DescribeStacks`, `GetTemplate` y
+  `ListStackResources`;
+- actualización controlada: `UpdateStack` y `SignalResource`.
+
+Todas se restringen a
+`arn:aws:cloudformation:us-east-2:821656895812:stack/awseb-e-sd5gmkxr5r-stack/*`.
+No se conceden operaciones de creación/eliminación del stack ni recuperación
+manual: no forman parte de la promoción normal H3.3.
+
+### Matriz caller-side observada
+
+| AWS action | Motivo | Resource scope |
+| --- | --- | --- |
+| `cloudformation:DescribeStack*`, `GetTemplate`, `ListStackResources` | Inspección y reconciliación del stack existente | ARN exacto `awseb-e-sd5gmkxr5r-stack/*` |
+| `cloudformation:UpdateStack`, `SignalResource` | Aplicar la Application Version y coordinar sus `WaitCondition` | ARN exacto del stack |
+| `autoscaling:DescribeAutoScalingGroups`, `DescribeAutoScalingInstances`, `DescribeScalingActivities`, `DescribeScalingProcessTypes` | Inspeccionar el ASG y el rolling update | `*`, porque estas APIs no admiten resource-level scope; limitado a `us-east-2` |
+| `autoscaling:UpdateAutoScalingGroup`, `SuspendProcesses`, `ResumeProcesses`, `TerminateInstanceInAutoScalingGroup` | Actualizar la referencia del Launch Template y ejecutar el rolling update | ASG `awseb-e-sd5gmkxr5r-*`, tag del stack exacto y región DEV |
+| `ec2:DescribeLaunchTemplates`, `DescribeLaunchTemplateVersions` | Resolver versiones del Launch Template | `*`, limitado por región porque estas APIs no admiten ARN |
+| `ec2:CreateLaunchTemplateVersion`, `DeleteLaunchTemplateVersions` | Crear la versión con el nuevo source bundle y limpiar versiones de esa actualización | ARN exacto `launch-template/lt-0c69191d0013fa448` |
+| `ec2:DescribeAddresses` | Reconciliar el `AWS::EC2::EIP` observado sin modificarlo | `*`, limitado por región |
+
+No se conceden mutaciones EIP porque cambiar la Application Version no cambia
+ese recurso. Tampoco `ModifyLaunchTemplate`: CloudFormation administra las
+versiones del recurso, no su versión default. Se excluyen además `RunInstances`,
+`CreateLaunchTemplate`, `DeleteLaunchTemplate`, `CreateAutoScalingGroup`,
+`DeleteAutoScalingGroup` e `iam:PassRole`, por ser operaciones de lifecycle o
+identidad fuera de H3.3. Los lanzamientos posteriores del ASG usan su
+service-linked role observado, no el service role de CodePipeline. No se agregan
+ELB, RDS o ECS porque esos tipos no existen en el stack inspeccionado.
+
+`CreateLaunchTemplateVersion` es una capacidad privilegiada: una versión puede
+referenciar un instance profile. Los controles compensatorios son el ARN exacto
+del Launch Template, el service role no asumible directamente por GitHub, el
+tooling privilegiado fuera del control de escritura de GitHub, sus hashes
+SHA-256, el candidate congelado y el pipeline/Application Version exactos.
+
+Referencias usadas para derivar el contrato:
+
+- [policy administrada vigente de Elastic Beanstalk](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AdministratorAccess-AWSElasticBeanstalk.html), solo como límite superior de acciones;
+- [permisos caller-side de Elastic Beanstalk](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/concepts-roles-user.html);
+- [permisos requeridos para Launch Templates](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/environments-cfg-autoscaling-launch-templates.html);
+- [acciones y recursos de Auto Scaling](https://docs.aws.amazon.com/service-authorization/latest/reference/list_autoscaling.html).
+
 ## Recursos con `Resource: "*"`
 
-La propuesta no concede acciones con `Resource: "*"`. Los permisos
-EB se limitan a aplicación, application versions y environment aprobados; S3 se
-limita a tres buckets y recursos exactos; CloudWatch Logs se limita al log group
-del pipeline. No se replica la policy amplia publicada como referencia para el
-provider EB nativo porque esta arquitectura usa una acción `Commands` y las APIs
-explícitas del promotor.
+La única statement con `Resource: "*"` contiene exclusivamente operaciones
+`Describe` de Auto Scaling y EC2 que no admiten resource-level permissions. Se
+limita con `aws:RequestedRegion = us-east-2`. Todas las mutaciones usan ARN y
+tags del stack DEV. Una acción futura que no admita resource-level permissions
+requerirá evidencia física, justificación y revisión separada.
 
 ## Contrato S3 administrado por Elastic Beanstalk
 

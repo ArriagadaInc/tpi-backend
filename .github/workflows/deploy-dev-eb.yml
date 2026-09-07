@@ -167,20 +167,10 @@ jobs:
               "actionName=ApprovedReleaseSource,revisionType=S3_OBJECT_VERSION_ID,revisionValue=$PROMOTION_VERSION_ID" \
             --query pipelineExecutionId --output text)"
           echo "execution_id=$execution_id" >> "$GITHUB_OUTPUT"
-          for attempt in $(seq 1 90); do
-            status="$(aws codepipeline get-pipeline-execution --region "$AWS_REGION" \
-              --pipeline-name "$PIPELINE_NAME" --pipeline-execution-id "$execution_id" \
-              --query 'pipelineExecution.status' --output text)"
-            echo "CodePipeline execution status: $status"
-            case "$status" in
-              Succeeded) exit 0 ;;
-              Failed|Stopped|Superseded) exit 1 ;;
-              InProgress|Stopping) sleep 20 ;;
-              *) echo "Unexpected CodePipeline status: $status"; exit 1 ;;
-            esac
-          done
-          echo "Timed out waiting for CodePipeline execution"
-          exit 1
+          python deployment/aws/wait_for_codepipeline_execution.py \
+            --region "$AWS_REGION" \
+            --pipeline-name "$PIPELINE_NAME" \
+            --execution-id "$execution_id"
 
       - name: Show pipeline diagnostics
         if: ${{ always() && inputs.execute_promotion }}
