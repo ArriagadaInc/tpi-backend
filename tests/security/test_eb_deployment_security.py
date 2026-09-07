@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import shlex
 from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
@@ -97,8 +98,70 @@ def test_pipeline_targets_only_approved_dev_environment_and_candidate() -> None:
     assert any("trusted-tooling/v1/verify_frozen_candidate.sh" in item for item in commands)
     assert any("trusted-tooling/v1/promote_eb_candidate.py" in item for item in commands)
     assert sum("sha256sum --check --strict" in item for item in commands) == 2
-    assert "bash /tmp/verify_frozen_candidate.sh" in commands
-    assert "python3 /tmp/promote_eb_candidate.py" in commands
+    assert any(command.endswith("bash /tmp/verify_frozen_candidate.sh") for command in commands)
+    assert any(command.endswith("python3 /tmp/promote_eb_candidate.py") for command in commands)
+
+
+def test_pipeline_commands_respect_aws_quotas_and_keep_frozen_contract() -> None:
+    pipeline = _load_json("deployment/aws/tpi-dev-eb-pipeline.json")["pipeline"]
+    action = pipeline["stages"][1]["actions"][0]
+    commands = action["commands"]
+
+    assert "environmentVariables" not in action
+    assert 1 <= len(commands) <= 50
+    assert all(1 <= len(command) <= 1000 for command in commands)
+
+    verifier = next(
+        command for command in commands if command.endswith("bash /tmp/verify_frozen_candidate.sh")
+    )
+    promoter = next(
+        command for command in commands if command.endswith("python3 /tmp/promote_eb_candidate.py")
+    )
+
+    verifier_tokens = shlex.split(verifier)
+    promoter_tokens = shlex.split(promoter)
+    verifier_environment = dict(token.split("=", 1) for token in verifier_tokens[:-2])
+    promoter_environment = dict(token.split("=", 1) for token in promoter_tokens[:-2])
+
+    assert verifier_environment == {
+        "ARTIFACT_DIR": "artifact",
+        "BUNDLE_NAME": "tpi-dev-ecr-28cf009.zip",
+        "MANIFEST_NAME": "tpi-dev-ecr-28cf009.manifest.json",
+        "BUNDLE_SHA256": "5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045",
+        "SOURCE_SHA": "28cf009137ada707540d9ee7eba01dc45a9a260e",
+        "APP_IMAGE": (
+            "821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-app@"
+            "sha256:45331812c93bcf905b2ae8ad9eedff9eba5f63bc4afbfd5639af85c78bb3b6ce"
+        ),
+        "CADDY_IMAGE": (
+            "821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-caddy@"
+            "sha256:1d7c114bf0bb98e8ed2034a37997ee4d9e4aec98cbba58dc00581bbf6b6dc4e2"
+        ),
+    }
+    assert verifier_tokens[-2:] == ["bash", "/tmp/verify_frozen_candidate.sh"]
+
+    assert promoter_environment == {
+        "AWS_ACCOUNT_ID": "821656895812",
+        "AWS_REGION": "us-east-2",
+        "APPLICATION": "tpi-backoffice",
+        "ENVIRONMENT": "tpi-backoffice-dev-green",
+        "EXPECTED_CURRENT_VERSION": "h2-5d-ecr-47fa0c9",
+        "VERSION_LABEL": "h3-3-crm-web-28cf009-r1",
+        "APPROVED_BUNDLE_BUCKET": "tpi-dev-release-artifacts-821656895812-us-east-2",
+        "APPROVED_BUNDLE_KEY": (
+            "approved-releases/h3-3-crm-web-28cf009-r1/"
+            "5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045.zip"
+        ),
+        "LEGACY_BUNDLE_BUCKET": "elasticbeanstalk-us-east-2-821656895812",
+        "LEGACY_BUNDLE_KEY": (
+            "tpi-backoffice/dev-releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.zip"
+        ),
+        "ARTIFACT_DIR": "artifact",
+        "BUNDLE_NAME": "tpi-dev-ecr-28cf009.zip",
+        "SOURCE_SHA": "28cf009137ada707540d9ee7eba01dc45a9a260e",
+        "BUNDLE_SHA256": "5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045",
+    }
+    assert promoter_tokens[-2:] == ["python3", "/tmp/promote_eb_candidate.py"]
 
 
 def test_pipeline_role_scopes_eb_write_and_documents_bucket_level_boundary() -> None:
@@ -232,6 +295,14 @@ def test_pipeline_pins_exact_trusted_tooling_hashes() -> None:
         "promote_eb_candidate.py": hashlib.sha256(
             (ROOT / "deployment/aws/promote_eb_candidate.py").read_text(encoding="utf-8").encode()
         ).hexdigest(),
+    }
+    assert expected == {
+        "verify_frozen_candidate.sh": (
+            "a59144ff469e56231addb7c46ccf3fa7d456ff9487c7387089eec9137a045791"
+        ),
+        "promote_eb_candidate.py": (
+            "4ba84447a948238ff877fa95e60e52f9b52e0b9bc2bad3e80fd236a03a9675f9"
+        ),
     }
 
     for filename, digest in expected.items():
