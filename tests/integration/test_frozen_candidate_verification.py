@@ -96,3 +96,19 @@ def test_verifier_rejects_nested_download_layout(tmp_path: Path) -> None:
 
     assert result.returncode != 0
     assert "expected bundle not found" in result.stdout
+
+
+def test_verifier_rejects_modified_bundle_with_same_name(tmp_path: Path) -> None:
+    if shutil.which("bash") is None:
+        pytest.fail("bash is required to execute the release verifier")
+
+    artifact_dir = tmp_path / "artifact"
+    artifact_dir.mkdir()
+    approved_sha = _build_artifact(artifact_dir)
+    with zipfile.ZipFile(artifact_dir / BUNDLE_NAME, "a") as archive:
+        archive.writestr("injected.sh", "echo untrusted")
+
+    result = _run_verifier(artifact_dir, approved_sha)
+
+    assert result.returncode != 0
+    assert "bundle SHA256 mismatch" in result.stdout
