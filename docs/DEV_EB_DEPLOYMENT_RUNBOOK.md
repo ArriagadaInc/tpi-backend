@@ -1,8 +1,8 @@
 # Runbook de promoción controlada a Elastic Beanstalk DEV
 
-Estado: preparado, no aprovisionado ni ejecutado
+Estado: aprovisionado; promoción H3.3 fallida antes de cambiar el environment
 Ambiente: AWS DEV (`821656895812`, `us-east-2`)
-Última validación física del baseline: 2026-09-04
+Última validación física del baseline: 2026-09-07
 Fuente: preflight EB, candidato ECR congelado y contratos versionados
 
 ## Baseline
@@ -20,11 +20,49 @@ Fuente: preflight EB, candidato ECR congelado y contratos versionados
 La arquitectura y límites de confianza están en
 `docs/DEV_EB_CODEPIPELINE_ARCHITECTURE.md`.
 
-## Aprovisionamiento pendiente
+## Evidencia de la promoción detenida
 
-Ejecutar desde una sesión administrativa controlada y validada en la cuenta
-`821656895812`. Estos comandos son instrucciones; no han sido ejecutados por
-este PR.
+| Elemento | Evidencia |
+| --- | --- |
+| GitHub Actions | Run `34147747678` |
+| CodePipeline | `fbd91cee-1fe7-4535-8025-cd9f98a58fc9` |
+| Source | `Succeeded` |
+| Promote | `Failed` |
+| Causa original | `cloudformation:GetTemplate` denegado al service role de CodePipeline |
+| Stack físico | `awseb-e-sd5gmkxr5r-stack` |
+| Estado EB posterior | `h2-5d-ecr-47fa0c9`, sin cambio |
+
+El source versionado, el tooling confiable y el artifact congelado fueron
+validados antes del fallo. No se debe reintentar hasta aplicar y verificar la
+policy caller-side versionada. El error original se conserva aunque la
+recolección posterior de diagnósticos falle.
+
+`UpdateEnvironment` no es una llamada aislada: Elastic Beanstalk usa permisos
+del caller para orquestar CloudFormation y recursos subyacentes. Antes de aplicar
+la policy, un operador autorizado debe comparar el stack físico y sus recursos
+con el alcance versionado. No se adjunta
+`AdministratorAccess-AWSElasticBeanstalk` ni se agregan permisos por sucesivos
+reintentos de deployment.
+
+## Contrato de aprovisionamiento aplicado
+
+El plano fue aprovisionado desde una sesión administrativa controlada en la
+cuenta `821656895812`. Los comandos siguientes se conservan como contrato
+reproducible; no deben repetirse sobre recursos existentes sin un preflight y
+una autorización independientes.
+
+Antes de aplicar una revisión de la policy del service role, capturar el
+inventario físico sin parámetros ni valores de configuración:
+
+```bash
+bash scripts/release/inspect_dev_eb_control_plane_readonly.sh
+```
+
+La inspección falla si la cuenta, application, environment o stack no coinciden
+con el contrato. Solo usa STS, `DescribeEnvironments`, `DescribeStacks`,
+`ListStackResources` y `GetTemplate`; de la plantilla imprime exclusivamente
+los tipos de recursos. La salida física debe conservarse con la evidencia del
+cambio IAM antes de autorizar otra promoción.
 
 1. Crear los buckets dedicados de release y artifact store. Activar versionado
    en el bucket de release y cifrado/bloqueo público en ambos:
@@ -193,6 +231,13 @@ Solo tras aprobar el preflight:
 9. Si procede, actualiza solo `tpi-backoffice-dev-green`.
 10. Exige `h3-3-crm-web-28cf009-r1`, `Ready / Green / Ok`.
 11. GitHub recoge action executions, estado EB y eventos con el rol read-only.
+
+La observación de CodePipeline tolera de forma acotada solamente
+`PipelineExecutionNotFoundException` inmediatamente después de
+`StartPipelineExecution`, porque el ID puede tardar en ser visible. Se realizan
+como máximo seis reintentos con backoff de 5, 10, 15, 20, 25 y 30 segundos. Un
+error AWS distinto aborta inmediatamente; el polling completo vence tras 90
+observaciones y entrega el execution ID y el último estado como diagnóstico.
 
 ## Rollback
 

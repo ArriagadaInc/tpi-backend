@@ -7,6 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
 WORKFLOW = ROOT / ".github/workflows/deploy-dev-eb.yml"
+CONTROL_PLANE_INSPECTION = ROOT / "scripts/release/inspect_dev_eb_control_plane_readonly.sh"
 
 
 def _load_json(path: str) -> dict:
@@ -204,6 +205,78 @@ def test_pipeline_role_scopes_eb_write_and_documents_bucket_level_boundary() -> 
     assert "iam:PassRole" not in serialized
 
 
+def test_pipeline_role_scopes_cloudformation_to_physical_dev_stack() -> None:
+    policy = _load_json("deployment/iam/tpi-codepipeline-dev-eb.json")
+    cloudformation = next(
+        item
+        for item in policy["Statement"]
+        if item["Sid"] == "OrchestrateOnlyPhysicalDevEnvironmentStack"
+    )
+
+    assert cloudformation["Resource"] == (
+        "arn:aws:cloudformation:us-east-2:821656895812:"
+        "stack/awseb-e-sd5gmkxr5r-stack/*"
+    )
+    assert set(cloudformation["Action"]) == {
+        "cloudformation:CancelUpdateStack",
+        "cloudformation:ContinueUpdateRollback",
+        "cloudformation:DescribeStackEvents",
+        "cloudformation:DescribeStackResource",
+        "cloudformation:DescribeStackResources",
+        "cloudformation:DescribeStacks",
+        "cloudformation:GetTemplate",
+        "cloudformation:ListStackResources",
+        "cloudformation:SignalResource",
+        "cloudformation:UpdateStack",
+    }
+    assert all(statement["Resource"] != "*" for statement in policy["Statement"])
+    assert "cloudformation:CreateStack" not in _actions(policy)
+    assert "cloudformation:DeleteStack" not in _actions(policy)
+    assert "cloudformation:TagResource" not in _actions(policy)
+    assert "cloudformation:UntagResource" not in _actions(policy)
+
+
+def test_update_environment_keeps_exact_application_version_condition() -> None:
+    policy = _load_json("deployment/iam/tpi-codepipeline-dev-eb.json")
+    update = next(
+        item for item in policy["Statement"] if item["Sid"] == "UpdateOnlyApprovedDevEnvironment"
+    )
+
+    assert update["Action"] == "elasticbeanstalk:UpdateEnvironment"
+    assert update["Condition"] == {
+        "ArnEquals": {
+            "elasticbeanstalk:FromApplicationVersion": (
+                "arn:aws:elasticbeanstalk:us-east-2:821656895812:"
+                "applicationversion/tpi-backoffice/h3-3-crm-web-28cf009-r1"
+            )
+        }
+    }
+
+
+def test_control_plane_inspection_is_read_only_and_scoped() -> None:
+    script = CONTROL_PLANE_INSPECTION.read_text(encoding="utf-8")
+    normalized = script.lower()
+
+    assert 'readonly account_id="821656895812"' in normalized
+    assert 'readonly region="us-east-2"' in normalized
+    assert 'readonly stack_name="awseb-e-sd5gmkxr5r-stack"' in normalized
+    assert "describe-environments" in normalized
+    assert "describe-stacks" in normalized
+    assert "list-stack-resources" in normalized
+    assert "get-template" in normalized
+    assert "templatebody.resources.*.type" in normalized
+    for forbidden in (
+        "update-environment",
+        "create-application-version",
+        "create-stack",
+        "update-stack",
+        "delete-stack",
+        "put-object",
+        "put-role-policy",
+    ):
+        assert forbidden not in normalized
+
+
 def test_workflow_uses_read_role_then_orchestrator_without_direct_eb_write() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
 
@@ -220,6 +293,8 @@ def test_workflow_uses_read_role_then_orchestrator_without_direct_eb_write() -> 
     assert "EB_DEPLOY_ROLE_ARN" not in workflow
     assert "Show pipeline diagnostics" in workflow
     assert "Collect independent EB postflight and events" in workflow
+    assert "deployment/aws/wait_for_codepipeline_execution.py" in workflow
+    assert "for attempt in $(seq 1 90)" not in workflow
 
 
 def test_github_cannot_write_trusted_tooling_and_source_key_is_fixed() -> None:

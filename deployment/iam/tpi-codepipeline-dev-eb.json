@@ -93,6 +93,23 @@
       }
     },
     {
+      "Sid": "OrchestrateOnlyPhysicalDevEnvironmentStack",
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:CancelUpdateStack",
+        "cloudformation:ContinueUpdateRollback",
+        "cloudformation:DescribeStackEvents",
+        "cloudformation:DescribeStackResource",
+        "cloudformation:DescribeStackResources",
+        "cloudformation:DescribeStacks",
+        "cloudformation:GetTemplate",
+        "cloudformation:ListStackResources",
+        "cloudformation:SignalResource",
+        "cloudformation:UpdateStack"
+      ],
+      "Resource": "arn:aws:cloudformation:us-east-2:821656895812:stack/awseb-e-sd5gmkxr5r-stack/*"
+    },
+    {
       "Sid": "ElasticBeanstalkManagedStorageContract",
       "Effect": "Allow",
       "Action": [

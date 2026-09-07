@@ -1,8 +1,8 @@
 # Arquitectura de promoción a Elastic Beanstalk DEV
 
-Estado: propuesta versionada, no aprovisionada
+Estado: aprovisionada; hardening caller-side pendiente de aplicar
 Ambiente: AWS DEV (`821656895812`, `us-east-2`)
-Última validación del baseline: 2026-09-04
+Última validación del baseline: 2026-09-07
 Fuente: evidencia AWS DEV, artefacto H3.3 congelado y contratos IAM versionados
 
 ## Decisión
@@ -105,14 +105,43 @@ y calcula SHA-256 localmente. Bucket y clave correctos con contenido distinto
 aborta antes de `UpdateEnvironment`; la metadata histórica no se considera
 prueba de integridad.
 
+## Contrato caller-side de Elastic Beanstalk
+
+`UpdateEnvironment` es una operación compuesta. Aunque el environment conserva
+sus propios service roles, Elastic Beanstalk también comprueba permisos del
+caller sobre CloudFormation y otros servicios usados para orquestar la
+actualización. La ejecución `fbd91cee-1fe7-4535-8025-cd9f98a58fc9` confirmó
+físicamente esta frontera al denegar `cloudformation:GetTemplate` sobre
+`awseb-e-sd5gmkxr5r-stack`.
+
+La policy administrada `AdministratorAccess-AWSElasticBeanstalk` se usa solo
+como referencia de acciones; no se adjunta ni se copia completa. Para H3.3 se
+incorpora el subconjunto CloudFormation aplicable a actualizar y recuperar el
+stack existente:
+
+- inspección: `DescribeStackEvents`, `DescribeStackResource`,
+  `DescribeStackResources`, `DescribeStacks`, `GetTemplate` y
+  `ListStackResources`;
+- actualización controlada: `UpdateStack`, `CancelUpdateStack`,
+  `ContinueUpdateRollback` y `SignalResource`.
+
+Todas se restringen a
+`arn:aws:cloudformation:us-east-2:821656895812:stack/awseb-e-sd5gmkxr5r-stack/*`.
+No se conceden `CreateStack`, `DeleteStack`, `TagResource` ni `UntagResource`:
+H3.3 actualiza una Application Version de un environment existente, no crea,
+elimina o retaggea el stack. Tampoco se agregan permisos IAM, RDS, SNS, SQS,
+ECS, EC2, Auto Scaling, ELB o CloudWatch de escritura sin evidencia de que la
+actualización de este stack concreto los delega al caller. Los roles propios de
+EB continúan siendo responsables de sus operaciones configuradas.
+
 ## Recursos con `Resource: "*"`
 
-La propuesta no concede acciones con `Resource: "*"`. Los permisos
-EB se limitan a aplicación, application versions y environment aprobados; S3 se
-limita a tres buckets y recursos exactos; CloudWatch Logs se limita al log group
-del pipeline. No se replica la policy amplia publicada como referencia para el
-provider EB nativo porque esta arquitectura usa una acción `Commands` y las APIs
-explícitas del promotor.
+La propuesta no concede acciones con `Resource: "*"`. Los permisos EB se
+limitan a aplicación, application versions y environment aprobados; el contrato
+CloudFormation al stack físico; S3 a tres buckets y recursos exactos; y
+CloudWatch Logs al log group del pipeline. Una acción futura que no admita
+resource-level permissions requerirá evidencia física, justificación y revisión
+separada antes de incorporarse.
 
 ## Contrato S3 administrado por Elastic Beanstalk
 
