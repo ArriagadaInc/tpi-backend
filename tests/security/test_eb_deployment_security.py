@@ -328,6 +328,34 @@ def test_pipeline_role_limits_environment_health_log_permissions() -> None:
         "Condition": {"StringEquals": {"aws:RequestedRegion": "us-east-2"}},
     }
 
+    create_log_groups = statements["CreateOnlyDevElasticBeanstalkLogGroups"]
+    assert create_log_groups == {
+        "Sid": "CreateOnlyDevElasticBeanstalkLogGroups",
+        "Effect": "Allow",
+        "Action": "logs:CreateLogGroup",
+        "Resource": (
+            "arn:aws:logs:us-east-2:821656895812:log-group:"
+            "/aws/elasticbeanstalk/tpi-backoffice-dev-green/*"
+        ),
+        "Condition": {"StringEquals": {"aws:RequestedRegion": "us-east-2"}},
+    }
+
+    assert statements["WritePromotionLogs"] == {
+        "Sid": "WritePromotionLogs",
+        "Effect": "Allow",
+        "Action": [
+            "logs:CreateLogGroup",
+            "logs:CreateLogStream",
+            "logs:PutLogEvents",
+        ],
+        "Resource": [
+            "arn:aws:logs:us-east-2:821656895812:log-group:"
+            "/aws/codepipeline/tpi-backoffice-dev-promotion",
+            "arn:aws:logs:us-east-2:821656895812:log-group:"
+            "/aws/codepipeline/tpi-backoffice-dev-promotion:*",
+        ],
+    }
+
     log_actions = {action for action in _actions(policy) if action.startswith("logs:")}
     assert log_actions == {
         "logs:CreateLogGroup",
