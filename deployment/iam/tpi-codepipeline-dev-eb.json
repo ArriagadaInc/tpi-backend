@@ -198,6 +198,17 @@
       }
     },
     {
+      "Sid": "CreateOnlyDevElasticBeanstalkLogGroups",
+      "Effect": "Allow",
+      "Action": "logs:CreateLogGroup",
+      "Resource": "arn:aws:logs:us-east-2:821656895812:log-group:/aws/elasticbeanstalk/tpi-backoffice-dev-green/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-2"
+        }
+      }
+    },
+    {
       "Sid": "WritePromotionLogs",
       "Effect": "Allow",
       "Action": [
