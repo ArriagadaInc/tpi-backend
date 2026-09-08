@@ -8,7 +8,8 @@
         "elasticbeanstalk:DescribeApplications",
         "elasticbeanstalk:DescribeEnvironments",
         "elasticbeanstalk:DescribeConfigurationSettings",
-        "elasticbeanstalk:DescribeApplicationVersions"
+        "elasticbeanstalk:DescribeApplicationVersions",
+        "elasticbeanstalk:DescribeEvents"
       ],
       "Resource": "*"
     }

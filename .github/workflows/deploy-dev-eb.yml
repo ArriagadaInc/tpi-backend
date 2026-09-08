@@ -196,12 +196,22 @@ jobs:
       - name: Collect independent EB postflight and events
         if: ${{ always() && inputs.execute_promotion }}
         run: |
+          set +e
           aws elasticbeanstalk describe-environments --region "$AWS_REGION" \
             --application-name "$APPLICATION" --environment-names "$ENVIRONMENT" \
             --no-include-deleted \
             --query 'Environments[0].{VersionLabel:VersionLabel,Status:Status,Health:Health,HealthStatus:HealthStatus}' \
-            --output table || true
+            --output table
+          environment_status=$?
+
           aws elasticbeanstalk describe-events --region "$AWS_REGION" \
             --application-name "$APPLICATION" --environment-name "$ENVIRONMENT" \
             --max-records 20 --query 'Events[].{Date:EventDate,Severity:Severity,Message:Message}' \
-            --output table || true
+            --output table
+          events_status=$?
+          set -e
+
+          if (( environment_status != 0 || events_status != 0 )); then
+            echo "ERROR: EB postflight collection failed: describe-environments=$environment_status describe-events=$events_status"
+            exit 1
+          fi

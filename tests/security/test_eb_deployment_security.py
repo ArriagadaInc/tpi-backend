@@ -408,6 +408,24 @@ def test_workflow_uses_read_role_then_orchestrator_without_direct_eb_write() -> 
     assert "for attempt in $(seq 1 90)" not in workflow
 
 
+def test_postflight_collects_all_eb_evidence_before_failing() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    postflight = workflow.split("- name: Collect independent EB postflight and events", 1)[1]
+
+    assert "set +e" in postflight
+    assert "elasticbeanstalk describe-environments" in postflight
+    assert "environment_status=$?" in postflight
+    assert "elasticbeanstalk describe-events" in postflight
+    assert "events_status=$?" in postflight
+    assert "set -e" in postflight
+    assert "environment_status != 0 || events_status != 0" in postflight
+    assert postflight.index("environment_status=$?") < postflight.index(
+        "elasticbeanstalk describe-events"
+    )
+    assert postflight.index("events_status=$?") < postflight.index("exit 1")
+    assert "|| true" not in postflight
+
+
 def test_github_cannot_write_trusted_tooling_and_source_key_is_fixed() -> None:
     release_policy = _load_json("deployment/iam/tpi-github-actions-dev-release.json")
     pipeline = _load_json("deployment/aws/tpi-dev-eb-pipeline.json")["pipeline"]

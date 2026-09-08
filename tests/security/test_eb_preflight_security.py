@@ -43,8 +43,23 @@ def test_eb_preflight_permissions_are_describe_only() -> None:
         "elasticbeanstalk:DescribeEnvironments",
         "elasticbeanstalk:DescribeConfigurationSettings",
         "elasticbeanstalk:DescribeApplicationVersions",
+        "elasticbeanstalk:DescribeEvents",
     ]
     assert all(action.split(":", 1)[1].startswith("Describe") for action in actions)
+    assert not any(
+        action.startswith(
+            (
+                "elasticbeanstalk:Create",
+                "elasticbeanstalk:Delete",
+                "elasticbeanstalk:Rebuild",
+                "elasticbeanstalk:Restart",
+                "elasticbeanstalk:Swap",
+                "elasticbeanstalk:Terminate",
+                "elasticbeanstalk:Update",
+            )
+        )
+        for action in actions
+    )
 
 
 def test_dns_matching_uses_exact_environment_cname() -> None:
