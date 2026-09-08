@@ -316,14 +316,14 @@ def test_pipeline_role_limits_environment_health_log_permissions() -> None:
         "Condition": {"StringEquals": {"aws:RequestedRegion": "us-east-2"}},
     }
 
-    retention = statements["ManageExactElasticBeanstalkHealthLogRetention"]
+    retention = statements["ManageOnlyDevElasticBeanstalkLogRetention"]
     assert retention == {
-        "Sid": "ManageExactElasticBeanstalkHealthLogRetention",
+        "Sid": "ManageOnlyDevElasticBeanstalkLogRetention",
         "Effect": "Allow",
         "Action": "logs:PutRetentionPolicy",
         "Resource": (
             "arn:aws:logs:us-east-2:821656895812:log-group:"
-            "/aws/elasticbeanstalk/tpi-backoffice-dev-green/environment-health.log"
+            "/aws/elasticbeanstalk/tpi-backoffice-dev-green/*"
         ),
         "Condition": {"StringEquals": {"aws:RequestedRegion": "us-east-2"}},
     }
@@ -366,6 +366,7 @@ def test_pipeline_role_limits_environment_health_log_permissions() -> None:
     }
     assert "logs:Describe*" not in log_actions
     assert "logs:*" not in log_actions
+    assert "logs:DeleteRetentionPolicy" not in log_actions
     assert "logs:DeleteLogGroup" not in log_actions
     assert "logs:PutResourcePolicy" not in log_actions
 
