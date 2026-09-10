@@ -187,10 +187,10 @@
       }
     },
     {
-      "Sid": "ManageExactElasticBeanstalkHealthLogRetention",
+      "Sid": "ManageOnlyDevElasticBeanstalkLogRetention",
       "Effect": "Allow",
       "Action": "logs:PutRetentionPolicy",
-      "Resource": "arn:aws:logs:us-east-2:821656895812:log-group:/aws/elasticbeanstalk/tpi-backoffice-dev-green/environment-health.log",
+      "Resource": "arn:aws:logs:us-east-2:821656895812:log-group:/aws/elasticbeanstalk/tpi-backoffice-dev-green/*",
       "Condition": {
         "StringEquals": {
           "aws:RequestedRegion": "us-east-2"
