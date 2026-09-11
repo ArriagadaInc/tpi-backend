@@ -23,19 +23,17 @@ env:
   RELEASE_BUCKET: tpi-dev-release-artifacts-821656895812-us-east-2
   APPLICATION: tpi-backoffice
   ENVIRONMENT: tpi-backoffice-dev-green
-  EXPECTED_CURRENT_VERSION: h2-5d-ecr-47fa0c9
-  SOURCE_SHA: 28cf009137ada707540d9ee7eba01dc45a9a260e
-  ARTIFACT_RUN_ID: '33824477381'
-  ARTIFACT_ID: '9919549285'
-  BUNDLE_NAME: tpi-dev-ecr-28cf009.zip
-  MANIFEST_NAME: tpi-dev-ecr-28cf009.manifest.json
-  BUNDLE_SHA256: 5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045
-  APP_DIGEST: sha256:45331812c93bcf905b2ae8ad9eedff9eba5f63bc4afbfd5639af85c78bb3b6ce
-  CADDY_DIGEST: sha256:1d7c114bf0bb98e8ed2034a37997ee4d9e4aec98cbba58dc00581bbf6b6dc4e2
-  VERSION_LABEL: h3-3-crm-web-28cf009-r1
-  APPROVED_BUNDLE_KEY: approved-releases/h3-3-crm-web-28cf009-r1/5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045.zip
-  LEGACY_BUNDLE_BUCKET: elasticbeanstalk-us-east-2-821656895812
-  LEGACY_BUNDLE_KEY: tpi-backoffice/dev-releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.zip
+  EXPECTED_CURRENT_VERSION: h3-3-crm-web-28cf009-r1
+  SOURCE_SHA: 43101be7835088f93267bee85b0f11c8bc879867
+  ARTIFACT_RUN_ID: '34552291649'
+  ARTIFACT_ID: '10181369499'
+  BUNDLE_NAME: tpi-dev-ecr-43101be.zip
+  MANIFEST_NAME: tpi-dev-ecr-43101be.manifest.json
+  BUNDLE_SHA256: 7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb
+  APP_DIGEST: sha256:79737222a5901871857f59143c8dc696879b2e88aa740eb7304225ffa4cd9631
+  CADDY_DIGEST: sha256:30ace9145a21209f41799d345f4d6f641f0b882478fede76d0e19a575656aaaf
+  VERSION_LABEL: h3-3-crm-web-43101be-r1
+  APPROVED_BUNDLE_KEY: approved-releases/h3-3-crm-web-43101be-r1/7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb.zip
 
 jobs:
   promote:
@@ -81,7 +79,7 @@ jobs:
             --artifact-dir artifact \
             --bundle-name "$BUNDLE_NAME" \
             --manifest-name "$MANIFEST_NAME" \
-            --output dist/tpi-dev-candidate-data-28cf009.zip
+            --output dist/tpi-dev-candidate-data-43101be.zip
 
       - name: Configure read-only AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
@@ -115,15 +113,12 @@ jobs:
           jq -e --arg rollback "$EXPECTED_CURRENT_VERSION" \
             '[.[] | select(.VersionLabel == $rollback and .Status != "FAILED" and .SourceBundle != null)] | length == 1' \
             <<< "$versions" >/dev/null
-          jq -e --arg candidate "$VERSION_LABEL" --arg legacy_bucket "$LEGACY_BUNDLE_BUCKET" \
-            --arg legacy_key "$LEGACY_BUNDLE_KEY" --arg approved_bucket "$RELEASE_BUCKET" \
+          jq -e --arg candidate "$VERSION_LABEL" --arg approved_bucket "$RELEASE_BUCKET" \
             --arg approved_key "$APPROVED_BUNDLE_KEY" \
             '[.[] | select(.VersionLabel == $candidate)]
              | (length == 0) or (length == 1 and .[0].Status != "FAILED"
-                and (((.[0].SourceBundle.S3Bucket == $legacy_bucket)
-                      and (.[0].SourceBundle.S3Key == $legacy_key))
-                     or ((.[0].SourceBundle.S3Bucket == $approved_bucket)
-                         and (.[0].SourceBundle.S3Key == $approved_key))))' \
+                and ((.[0].SourceBundle.S3Bucket == $approved_bucket)
+                     and (.[0].SourceBundle.S3Key == $approved_key)))' \
              <<< "$versions" >/dev/null
 
           contract="$(aws elasticbeanstalk describe-configuration-settings \
@@ -132,7 +127,15 @@ jobs:
             --environment-name "$ENVIRONMENT" \
             --query "ConfigurationSettings[0].OptionSettings[?Namespace=='aws:elasticbeanstalk:application:environment' && (OptionName=='TPI_PUBLIC_SITE_URL' || OptionName=='TPI_PUBLIC_SITE_ADDRESS' || OptionName=='TPI_BACKOFFICE_SITE_ADDRESS' || OptionName=='TPI_ROUTE53_HOSTED_ZONE_ID')].{Name:OptionName,Value:Value}" \
             --output json)"
-          printf '%s' "$contract" | python scripts/release/validate_dev_environment_contract.py
+          if jq -e --arg source "$EXPECTED_CURRENT_VERSION" \
+            '.VersionLabel == $source' <<< "$environment" >/dev/null; then
+            printf '%s' "$contract" | python scripts/release/validate_h3_3_cutover_contract.py \
+              --state source
+          else
+            printf '%s' "$contract" | python scripts/release/validate_h3_3_cutover_contract.py \
+              --state target
+            printf '%s' "$contract" | python scripts/release/validate_dev_environment_contract.py
+          fi
 
       - name: Validate-only completed without AWS writes
         if: ${{ !inputs.execute_promotion }}
@@ -151,13 +154,13 @@ jobs:
         if: ${{ inputs.execute_promotion }}
         id: publish
         env:
-          PROMOTION_KEY: promotions/h3-3-crm-web-28cf009-r1/candidate-data.zip
+          PROMOTION_KEY: promotions/h3-3-crm-web-43101be-r1/candidate-data.zip
         run: |
           set -euo pipefail
           test "$(aws sts get-caller-identity --query Account --output text)" = "$AWS_ACCOUNT_ID"
           metadata="runtime-git-sha=$SOURCE_SHA,bundle-sha256=$BUNDLE_SHA256"
           result="$(aws s3api put-object --region "$AWS_REGION" --bucket "$RELEASE_BUCKET" \
-            --key "$PROMOTION_KEY" --body dist/tpi-dev-candidate-data-28cf009.zip \
+            --key "$PROMOTION_KEY" --body dist/tpi-dev-candidate-data-43101be.zip \
             --content-type application/zip --metadata "$metadata")"
           version_id="$(jq -r '.VersionId // empty' <<< "$result")"
           test -n "$version_id" || { echo "Versioned release bucket returned no VersionId"; exit 1; }
@@ -213,6 +216,32 @@ jobs:
             --output table
           environment_status=$?
 
+          target_environment="$(aws elasticbeanstalk describe-environments --region "$AWS_REGION" \
+            --application-name "$APPLICATION" --environment-names "$ENVIRONMENT" \
+            --no-include-deleted \
+            --query 'Environments[0].{VersionLabel:VersionLabel,Status:Status,Health:Health,HealthStatus:HealthStatus}' \
+            --output json)"
+          jq -e --arg candidate "$VERSION_LABEL" \
+            '(.VersionLabel == $candidate) and (.Status == "Ready")
+             and (.Health == "Green") and (.HealthStatus == "Ok")' \
+            <<< "$target_environment" >/dev/null
+          target_environment_status=$?
+
+          contract="$(aws elasticbeanstalk describe-configuration-settings \
+            --region "$AWS_REGION" \
+            --application-name "$APPLICATION" \
+            --environment-name "$ENVIRONMENT" \
+            --query "ConfigurationSettings[0].OptionSettings[?Namespace=='aws:elasticbeanstalk:application:environment' && (OptionName=='TPI_PUBLIC_SITE_URL' || OptionName=='TPI_PUBLIC_SITE_ADDRESS' || OptionName=='TPI_BACKOFFICE_SITE_ADDRESS' || OptionName=='TPI_ROUTE53_HOSTED_ZONE_ID')].{Name:OptionName,Value:Value}" \
+            --output json)"
+          printf '%s' "$contract" | python scripts/release/validate_h3_3_cutover_contract.py --state target
+          contract_status=$?
+
+          tls_status=0
+          for hostname in dev.tupensioninteligente.cl backoffice.dev.tupensioninteligente.cl; do
+            curl --silent --show-error --max-time 30 --proto '=https' --tlsv1.2 \
+              --output /dev/null "https://$hostname/" || tls_status=1
+          done
+
           aws elasticbeanstalk describe-events --region "$AWS_REGION" \
             --application-name "$APPLICATION" --environment-name "$ENVIRONMENT" \
             --max-records 20 --query 'Events[].{Date:EventDate,Severity:Severity,Message:Message}' \
@@ -220,7 +249,7 @@ jobs:
           events_status=$?
           set -e
 
-          if (( environment_status != 0 || events_status != 0 )); then
-            echo "ERROR: EB postflight collection failed: describe-environments=$environment_status describe-events=$events_status"
+          if (( environment_status != 0 || target_environment_status != 0 || contract_status != 0 || tls_status != 0 || events_status != 0 )); then
+            echo "ERROR: EB postflight failed: describe-environments=$environment_status target-environment=$target_environment_status contract=$contract_status tls=$tls_status describe-events=$events_status"
             exit 1
           fi

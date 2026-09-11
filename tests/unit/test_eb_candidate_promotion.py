@@ -1,4 +1,4 @@
-"""Unit tests for resumable Elastic Beanstalk candidate promotion."""
+"""Regression tests for the H3.3 atomic Elastic Beanstalk cutover."""
 
 from __future__ import annotations
 
@@ -10,9 +10,16 @@ from typing import Any
 
 import pytest
 
-from deployment.aws.promote_eb_candidate import CandidatePromoter, PromotionContract
+from deployment.aws.promote_eb_candidate import (
+    SOURCE_DEV_ENVIRONMENT,
+    TARGET_DEV_ENVIRONMENT,
+    CandidatePromoter,
+    PromotionContract,
+)
 
-FROZEN_BUNDLE_SHA = "5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045"
+SOURCE_VERSION = "h3-3-crm-web-28cf009-r1"
+CANDIDATE_VERSION = "h3-3-crm-web-43101be-r1"
+FROZEN_BUNDLE_SHA = "7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb"
 FROZEN_S3_CHECKSUM = base64.b64encode(bytes.fromhex(FROZEN_BUNDLE_SHA)).decode()
 
 
@@ -20,11 +27,16 @@ class FakeAws:
     def __init__(self, *, candidate: dict[str, object] | None, environment_version: str) -> None:
         self.candidate = candidate
         self.environment_version = environment_version
+        self.environment_contract = (
+            dict(TARGET_DEV_ENVIRONMENT)
+            if environment_version == CANDIDATE_VERSION
+            else dict(SOURCE_DEV_ENVIRONMENT)
+        )
         self.calls: list[tuple[str, ...]] = []
         self.fail_update = False
+        self.corrupt_target_contract = False
         self.stored_checksum: str | None = FROZEN_S3_CHECKSUM
         self.head_checksum_override: str | None = None
-        self.legacy_bundle_bytes = b""
 
     def json(self, *arguments: str) -> object:
         self.calls.append(arguments)
@@ -36,9 +48,6 @@ class FakeAws:
             return {"ChecksumSHA256": self.stored_checksum}
         if "s3api head-object" in command:
             return {"ChecksumSHA256": self.head_checksum_override or self.stored_checksum}
-        if "s3api get-object" in command:
-            Path(arguments[-1]).write_bytes(self.legacy_bundle_bytes)
-            return {}
         if "describe-environments" in command:
             return {
                 "Environments": [
@@ -52,14 +61,18 @@ class FakeAws:
                     }
                 ]
             }
+        if "describe-configuration-settings" in command:
+            return [
+                {"Name": name, "Value": value} for name, value in self.environment_contract.items()
+            ]
         if "describe-application-versions" in command:
             label = arguments[arguments.index("--version-labels") + 1]
-            if label == "h2-5d-ecr-47fa0c9":
+            if label == SOURCE_VERSION:
                 return {
                     "ApplicationVersions": [
                         {
-                            "VersionLabel": label,
-                            "Status": "UNPROCESSED",
+                            "VersionLabel": SOURCE_VERSION,
+                            "Status": "PROCESSED",
                             "SourceBundle": {"S3Bucket": "known", "S3Key": "known.zip"},
                         }
                     ]
@@ -73,7 +86,23 @@ class FakeAws:
         if "update-environment" in command:
             if self.fail_update:
                 raise RuntimeError("original update failure")
-            self.environment_version = "h3-3-crm-web-28cf009-r1"
+            version = arguments[arguments.index("--version-label") + 1]
+            self.environment_version = version
+            settings_start = arguments.index("--option-settings") + 1
+            settings_end = (
+                arguments.index("--options-to-remove")
+                if "--options-to-remove" in arguments
+                else len(arguments)
+            )
+            settings = arguments[settings_start:settings_end]
+            self.environment_contract = {
+                item.split(",OptionName=", 1)[1].split(",Value=", 1)[0]: item.rsplit(",Value=", 1)[
+                    1
+                ]
+                for item in settings
+            }
+            if version == CANDIDATE_VERSION and self.corrupt_target_contract:
+                self.environment_contract = dict(SOURCE_DEV_ENVIRONMENT)
             return {}
         if "describe-events" in command:
             return {"Events": [{"Message": "diagnostic event"}]}
@@ -86,20 +115,16 @@ def contract() -> PromotionContract:
         region="us-east-2",
         application="tpi-backoffice",
         environment="tpi-backoffice-dev-green",
-        current_version="h2-5d-ecr-47fa0c9",
-        candidate_version="h3-3-crm-web-28cf009-r1",
+        current_version=SOURCE_VERSION,
+        candidate_version=CANDIDATE_VERSION,
         approved_bundle_bucket="tpi-dev-release-artifacts-821656895812-us-east-2",
         approved_bundle_key=(
-            "approved-releases/h3-3-crm-web-28cf009-r1/"
-            "5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045.zip"
-        ),
-        legacy_bundle_bucket="elasticbeanstalk-us-east-2-821656895812",
-        legacy_bundle_key=(
-            "tpi-backoffice/dev-releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.zip"
+            "approved-releases/h3-3-crm-web-43101be-r1/"
+            "7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb.zip"
         ),
         artifact_dir="artifact",
-        bundle_name="tpi-dev-ecr-28cf009.zip",
-        runtime_sha="28cf009137ada707540d9ee7eba01dc45a9a260e",
+        bundle_name="tpi-dev-ecr-43101be.zip",
+        runtime_sha="43101be7835088f93267bee85b0f11c8bc879867",
         bundle_sha256=FROZEN_BUNDLE_SHA,
     )
 
@@ -109,25 +134,25 @@ def materializable_contract(
 ) -> PromotionContract:
     artifact_dir = tmp_path / "artifact"
     artifact_dir.mkdir()
-    (artifact_dir / "tpi-dev-ecr-28cf009.zip").write_bytes(content)
+    (artifact_dir / "tpi-dev-ecr-43101be.zip").write_bytes(content)
     digest = hashlib.sha256(content).hexdigest()
     return replace(
         contract(),
         artifact_dir=str(artifact_dir),
         bundle_sha256=digest,
-        approved_bundle_key=f"approved-releases/h3-3-crm-web-28cf009-r1/{digest}.zip",
+        approved_bundle_key=f"approved-releases/h3-3-crm-web-43101be-r1/{digest}.zip",
     )
 
 
 def candidate_version(**overrides: Any) -> dict[str, object]:
     value: dict[str, object] = {
-        "VersionLabel": "h3-3-crm-web-28cf009-r1",
+        "VersionLabel": CANDIDATE_VERSION,
         "Status": "UNPROCESSED",
         "SourceBundle": {
             "S3Bucket": "tpi-dev-release-artifacts-821656895812-us-east-2",
             "S3Key": (
-                "approved-releases/h3-3-crm-web-28cf009-r1/"
-                "5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045.zip"
+                "approved-releases/h3-3-crm-web-43101be-r1/"
+                "7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb.zip"
             ),
         },
     }
@@ -135,144 +160,124 @@ def candidate_version(**overrides: Any) -> dict[str, object]:
     return value
 
 
-def test_candidate_is_created_from_materialized_verified_bundle_when_absent(tmp_path: Path) -> None:
-    aws = FakeAws(candidate=None, environment_version="h2-5d-ecr-47fa0c9")
+def test_candidate_is_created_from_verified_bundle_before_atomic_update(tmp_path: Path) -> None:
+    aws = FakeAws(candidate=None, environment_version=SOURCE_VERSION)
     promotion_contract = materializable_contract(tmp_path)
 
     CandidatePromoter(aws, promotion_contract).run()
 
     commands = list(map(" ".join, aws.calls))
-    put_index = next(index for index, call in enumerate(commands) if "s3api put-object" in call)
-    create_index = next(
-        index for index, call in enumerate(commands) if "create-application-version" in call
-    )
-    assert put_index < create_index
-    expected_checksum = base64.b64encode(hashlib.sha256(b"verified bundle").digest()).decode()
-    assert aws.stored_checksum == expected_checksum
-    assert promotion_contract.approved_bundle_key in commands[put_index]
-    assert promotion_contract.approved_bundle_key in commands[create_index]
-    assert aws.environment_version == "h3-3-crm-web-28cf009-r1"
+    assert commands.index(
+        next(call for call in commands if "s3api put-object" in call)
+    ) < commands.index(next(call for call in commands if "create-application-version" in call))
+    updates = [call for call in aws.calls if "update-environment" in " ".join(call)]
+    assert len(updates) == 1
+    assert updates[0][updates[0].index("--version-label") + 1] == CANDIDATE_VERSION
+    assert "--options-to-remove" not in updates[0]
+    assert set(updates[0][updates[0].index("--option-settings") + 1 :]) == {
+        f"Namespace=aws:elasticbeanstalk:application:environment,OptionName={name},Value={value}"
+        for name, value in TARGET_DEV_ENVIRONMENT.items()
+    }
+    assert aws.environment_contract == TARGET_DEV_ENVIRONMENT
 
 
-def test_incorrect_bundle_bytes_cannot_be_materialized_even_with_plausible_metadata(
+def test_source_contract_mismatch_aborts_before_candidate_or_environment_write(
     tmp_path: Path,
 ) -> None:
-    promotion_contract = materializable_contract(tmp_path, b"incorrect bytes")
-    promotion_contract = replace(
-        promotion_contract,
-        bundle_sha256="5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045",
-    )
-    aws = FakeAws(candidate=None, environment_version="h2-5d-ecr-47fa0c9")
+    aws = FakeAws(candidate=None, environment_version=SOURCE_VERSION)
+    aws.environment_contract["TPI_PUBLIC_SITE_URL"] = "https://dev.example.invalid/"
 
-    with pytest.raises(RuntimeError, match="bundle SHA256 mismatch"):
-        CandidatePromoter(aws, promotion_contract).run()
+    with pytest.raises(RuntimeError, match="source domain contract mismatch"):
+        CandidatePromoter(aws, materializable_contract(tmp_path)).run()
 
     commands = [" ".join(call) for call in aws.calls]
     assert not any("s3api put-object" in call for call in commands)
-    assert not any("create-application-version" in call for call in commands)
+    assert not any("update-environment" in call for call in commands)
 
 
-def test_storage_checksum_mismatch_aborts_before_application_version_creation(
-    tmp_path: Path,
-) -> None:
-    promotion_contract = materializable_contract(tmp_path)
-    aws = FakeAws(candidate=None, environment_version="h2-5d-ecr-47fa0c9")
-    aws.head_checksum_override = "different-stored-bytes"
+def test_invalid_bundle_or_existing_candidate_source_aborts_before_update(tmp_path: Path) -> None:
+    bad_contract = replace(
+        materializable_contract(tmp_path, b"incorrect bytes"), bundle_sha256=FROZEN_BUNDLE_SHA
+    )
+    aws = FakeAws(candidate=None, environment_version=SOURCE_VERSION)
 
-    with pytest.raises(RuntimeError, match="object checksum mismatch"):
-        CandidatePromoter(aws, promotion_contract).run()
-
-    commands = [" ".join(call) for call in aws.calls]
-    assert any("s3api put-object" in call for call in commands)
-    assert not any("create-application-version" in call for call in commands)
-
-
-def test_matching_existing_approved_candidate_with_valid_checksum_is_reused() -> None:
-    aws = FakeAws(candidate=candidate_version(), environment_version="h2-5d-ecr-47fa0c9")
-
-    CandidatePromoter(aws, contract()).run()
-
-    commands = [" ".join(call) for call in aws.calls]
-    assert not any("create-application-version" in call for call in commands)
-    assert sum("update-environment" in call for call in commands) == 1
-
-
-def test_matching_existing_approved_candidate_with_wrong_checksum_aborts() -> None:
-    aws = FakeAws(candidate=candidate_version(), environment_version="h2-5d-ecr-47fa0c9")
-    aws.head_checksum_override = "wrong-checksum"
-
-    with pytest.raises(RuntimeError, match="object checksum mismatch"):
-        CandidatePromoter(aws, contract()).run()
-
+    with pytest.raises(RuntimeError, match="bundle SHA256 mismatch"):
+        CandidatePromoter(aws, bad_contract).run()
     assert not any("update-environment" in " ".join(call) for call in aws.calls)
 
-
-def test_matching_existing_legacy_candidate_with_valid_bytes_is_reused(tmp_path: Path) -> None:
-    bundle = b"verified legacy bundle"
-    promotion_contract = materializable_contract(tmp_path, bundle)
-    legacy = candidate_version(
-        SourceBundle={
-            "S3Bucket": "elasticbeanstalk-us-east-2-821656895812",
-            "S3Key": (
-                "tpi-backoffice/dev-releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.zip"
-            ),
-        }
-    )
-    aws = FakeAws(candidate=legacy, environment_version="h2-5d-ecr-47fa0c9")
-    aws.legacy_bundle_bytes = bundle
-
-    CandidatePromoter(aws, promotion_contract).run()
-
-    commands = [" ".join(call) for call in aws.calls]
-    assert not any("create-application-version" in call for call in commands)
-    assert sum("update-environment" in call for call in commands) == 1
-
-
-def test_matching_existing_legacy_candidate_with_wrong_bytes_aborts(tmp_path: Path) -> None:
-    promotion_contract = materializable_contract(tmp_path, b"expected legacy bundle")
-    legacy = candidate_version(
-        SourceBundle={
-            "S3Bucket": "elasticbeanstalk-us-east-2-821656895812",
-            "S3Key": (
-                "tpi-backoffice/dev-releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.zip"
-            ),
-        }
-    )
-    aws = FakeAws(candidate=legacy, environment_version="h2-5d-ecr-47fa0c9")
-    aws.legacy_bundle_bytes = b"different legacy bytes"
-
-    with pytest.raises(RuntimeError, match="Legacy SourceBundle SHA256 mismatch"):
-        CandidatePromoter(aws, promotion_contract).run()
-
-    assert not any("update-environment" in " ".join(call) for call in aws.calls)
-
-
-def test_mismatched_existing_candidate_aborts_before_update() -> None:
-    mismatched = candidate_version(SourceBundle={"S3Bucket": "unexpected", "S3Key": "other.zip"})
-    aws = FakeAws(candidate=mismatched, environment_version="h2-5d-ecr-47fa0c9")
-
+    bad_source = candidate_version(SourceBundle={"S3Bucket": "unexpected", "S3Key": "other.zip"})
+    aws = FakeAws(candidate=bad_source, environment_version=SOURCE_VERSION)
     with pytest.raises(RuntimeError, match="SourceBundle"):
         CandidatePromoter(aws, contract()).run()
-
     assert not any("update-environment" in " ".join(call) for call in aws.calls)
 
 
-def test_already_deployed_candidate_continues_to_postflight_without_update() -> None:
-    aws = FakeAws(candidate=candidate_version(), environment_version="h3-3-crm-web-28cf009-r1")
+def test_candidate_uses_only_the_approved_immutable_source() -> None:
+    aws = FakeAws(candidate=candidate_version(), environment_version=SOURCE_VERSION)
+
+    CandidatePromoter(aws, contract()).run()
+
+    assert not any("s3api put-object" in " ".join(call) for call in aws.calls)
+
+
+def test_healthy_target_is_postflight_only() -> None:
+    aws = FakeAws(candidate=candidate_version(), environment_version=CANDIDATE_VERSION)
 
     CandidatePromoter(aws, contract()).run()
 
     assert not any("update-environment" in " ".join(call) for call in aws.calls)
 
 
-def test_update_failure_keeps_original_error_and_collects_events(
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    aws = FakeAws(candidate=candidate_version(), environment_version="h2-5d-ecr-47fa0c9")
+def test_failed_request_does_not_trigger_rollback() -> None:
+    aws = FakeAws(candidate=candidate_version(), environment_version=SOURCE_VERSION)
     aws.fail_update = True
 
     with pytest.raises(RuntimeError, match="original update failure"):
         CandidatePromoter(aws, contract()).run()
 
+    updates = [call for call in aws.calls if "update-environment" in " ".join(call)]
+    assert len(updates) == 1
     assert any("describe-events" in " ".join(call) for call in aws.calls)
-    assert "diagnostic event" in capsys.readouterr().out
+
+
+def test_degraded_target_executes_one_atomic_rollback_with_legacy_contract() -> None:
+    aws = FakeAws(candidate=candidate_version(), environment_version=SOURCE_VERSION)
+    aws.corrupt_target_contract = True
+
+    with pytest.raises(RuntimeError, match="target domain contract mismatch"):
+        CandidatePromoter(aws, contract()).run()
+
+    updates = [call for call in aws.calls if "update-environment" in " ".join(call)]
+    assert len(updates) == 2
+    rollback = updates[1]
+    assert rollback[rollback.index("--version-label") + 1] == SOURCE_VERSION
+    assert "--options-to-remove" in rollback
+    assert rollback[rollback.index("--options-to-remove") + 1] == (
+        "Namespace=aws:elasticbeanstalk:application:environment,"
+        "OptionName=TPI_ROUTE53_HOSTED_ZONE_ID"
+    )
+    assert aws.environment_contract == SOURCE_DEV_ENVIRONMENT
+
+
+def test_legacy_source_exception_cannot_be_reused_for_another_candidate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    values = {
+        "AWS_ACCOUNT_ID": "821656895812",
+        "AWS_REGION": "us-east-2",
+        "APPLICATION": "tpi-backoffice",
+        "ENVIRONMENT": "tpi-backoffice-dev-green",
+        "EXPECTED_CURRENT_VERSION": SOURCE_VERSION,
+        "VERSION_LABEL": "h3-3-crm-web-future-r1",
+        "APPROVED_BUNDLE_BUCKET": "bucket",
+        "APPROVED_BUNDLE_KEY": "key",
+        "ARTIFACT_DIR": "artifact",
+        "BUNDLE_NAME": "bundle.zip",
+        "SOURCE_SHA": "0" * 40,
+        "BUNDLE_SHA256": "0" * 64,
+    }
+    for name, value in values.items():
+        monkeypatch.setenv(name, value)
+
+    with pytest.raises(ValueError, match="authorized H3.3 cutover"):
+        PromotionContract.from_environment()

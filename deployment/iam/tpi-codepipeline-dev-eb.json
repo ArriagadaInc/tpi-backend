@@ -21,9 +21,9 @@
         "s3:GetObjectVersionTagging"
       ],
       "Resource": [
-        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/promotions/h3-3-crm-web-28cf009-r1/candidate-data.zip",
+        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/promotions/h3-3-crm-web-43101be-r1/candidate-data.zip",
         "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/trusted-tooling/v1/verify_frozen_candidate.sh",
-        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/trusted-tooling/v1/promote_eb_candidate.py"
+        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/trusted-tooling/h3-3-43101be/dfbdbadfe16133db937c44cd25add127e5b68be089869416338630e6f685d144/promote_eb_candidate.py"
       ]
     },
     {
@@ -34,7 +34,7 @@
         "s3:GetObject",
         "s3:GetObjectVersion"
       ],
-      "Resource": "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/approved-releases/h3-3-crm-web-28cf009-r1/5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045.zip"
+      "Resource": "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/approved-releases/h3-3-crm-web-43101be-r1/7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb.zip"
     },
     {
       "Sid": "UseDedicatedPipelineArtifactStore",
@@ -56,15 +56,6 @@
       "Resource": "arn:aws:s3:::tpi-dev-codepipeline-artifacts-821656895812-us-east-2"
     },
     {
-      "Sid": "ReadLegacyFrozenCandidateBundle",
-      "Effect": "Allow",
-      "Action": [
-        "s3:GetObject",
-        "s3:GetObjectVersion"
-      ],
-      "Resource": "arn:aws:s3:::elasticbeanstalk-us-east-2-821656895812/tpi-backoffice/dev-releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.zip"
-    },
-    {
       "Sid": "ManageOnlyApprovedElasticBeanstalkRelease",
       "Effect": "Allow",
       "Action": [
@@ -76,8 +67,8 @@
       ],
       "Resource": [
         "arn:aws:elasticbeanstalk:us-east-2:821656895812:application/tpi-backoffice",
-        "arn:aws:elasticbeanstalk:us-east-2:821656895812:applicationversion/tpi-backoffice/h2-5d-ecr-47fa0c9",
         "arn:aws:elasticbeanstalk:us-east-2:821656895812:applicationversion/tpi-backoffice/h3-3-crm-web-28cf009-r1",
+        "arn:aws:elasticbeanstalk:us-east-2:821656895812:applicationversion/tpi-backoffice/h3-3-crm-web-43101be-r1",
         "arn:aws:elasticbeanstalk:us-east-2:821656895812:environment/tpi-backoffice/tpi-backoffice-dev-green"
       ]
     },
@@ -88,7 +79,10 @@
       "Resource": "arn:aws:elasticbeanstalk:us-east-2:821656895812:environment/tpi-backoffice/tpi-backoffice-dev-green",
       "Condition": {
         "ArnEquals": {
-          "elasticbeanstalk:FromApplicationVersion": "arn:aws:elasticbeanstalk:us-east-2:821656895812:applicationversion/tpi-backoffice/h3-3-crm-web-28cf009-r1"
+          "elasticbeanstalk:FromApplicationVersion": [
+            "arn:aws:elasticbeanstalk:us-east-2:821656895812:applicationversion/tpi-backoffice/h3-3-crm-web-28cf009-r1",
+            "arn:aws:elasticbeanstalk:us-east-2:821656895812:applicationversion/tpi-backoffice/h3-3-crm-web-43101be-r1"
+          ]
         }
       }
     },
