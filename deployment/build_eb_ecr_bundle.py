@@ -154,9 +154,10 @@ def build_domain_baseline_bundle(
     compose = render_compose(template, app_image, caddy_image)
     output.parent.mkdir(parents=True, exist_ok=True)
     info = zipfile.ZipInfo(filename=ARCHIVE_ENTRY, date_time=(1980, 1, 1, 0, 0, 0))
-    info.compress_type = zipfile.ZIP_DEFLATED
+    info.compress_type = zipfile.ZIP_STORED
+    info.create_system = 3
     info.external_attr = 0o100644 << 16
-    with zipfile.ZipFile(output, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
+    with zipfile.ZipFile(output, mode="w", compression=zipfile.ZIP_STORED) as archive:
         archive.writestr(info, compose.encode("utf-8"))
 
     validate_bundle(output)
