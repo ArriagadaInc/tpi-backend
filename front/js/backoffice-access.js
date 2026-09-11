@@ -4,7 +4,7 @@
   // Only approved DEV hosts expose the private backoffice entrypoint.
   const approvedHosts = new Map([
     ['tpi.localhost', 'backoffice.tpi.localhost'],
-    ['dev.genialabs.cl', 'backoffice.dev.genialabs.cl'],
+    ['dev.tupensioninteligente.cl', 'backoffice.dev.tupensioninteligente.cl'],
   ]);
 
   const link = document.querySelector('[data-backoffice-access]');

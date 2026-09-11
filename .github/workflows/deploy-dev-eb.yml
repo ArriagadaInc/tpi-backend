@@ -69,6 +69,7 @@ jobs:
         env:
           APP_IMAGE: 821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-app@${{ env.APP_DIGEST }}
           CADDY_IMAGE: 821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-caddy@${{ env.CADDY_DIGEST }}
+          TPI_ROUTE53_HOSTED_ZONE_ID: Z00000000000000000000
         run: bash scripts/release/verify_frozen_candidate.sh
 
       - name: Build data-only promotion artifact
@@ -123,7 +124,15 @@ jobs:
                       and (.[0].SourceBundle.S3Key == $legacy_key))
                      or ((.[0].SourceBundle.S3Bucket == $approved_bucket)
                          and (.[0].SourceBundle.S3Key == $approved_key))))' \
-            <<< "$versions" >/dev/null
+             <<< "$versions" >/dev/null
+
+          contract="$(aws elasticbeanstalk describe-configuration-settings \
+            --region "$AWS_REGION" \
+            --application-name "$APPLICATION" \
+            --environment-name "$ENVIRONMENT" \
+            --query "ConfigurationSettings[0].OptionSettings[?Namespace=='aws:elasticbeanstalk:application:environment' && (OptionName=='TPI_PUBLIC_SITE_URL' || OptionName=='TPI_PUBLIC_SITE_ADDRESS' || OptionName=='TPI_BACKOFFICE_SITE_ADDRESS' || OptionName=='TPI_ROUTE53_HOSTED_ZONE_ID')].{Name:OptionName,Value:Value}" \
+            --output json)"
+          printf '%s' "$contract" | python scripts/release/validate_dev_environment_contract.py
 
       - name: Validate-only completed without AWS writes
         if: ${{ !inputs.execute_promotion }}
