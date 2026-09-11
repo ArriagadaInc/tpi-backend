@@ -131,6 +131,53 @@ def build_bundle(
     return output, manifest_path
 
 
+def build_domain_baseline_bundle(
+    *,
+    template: Path,
+    output: Path,
+    app_image: str,
+    caddy_image: str,
+    app_git_sha: str,
+    caddy_git_sha: str,
+) -> tuple[Path, Path]:
+    """Create a hybrid domain-baseline bundle combining two distinct runtimes.
+
+    The manifest records the app and Caddy runtimes separately instead of a single
+    ``runtime_git_sha``, because a domain baseline intentionally mixes an old app
+    with the newer (env-driven-zone) Caddy.
+    """
+    if not GIT_SHA_PATTERN.fullmatch(app_git_sha):
+        raise ValueError("app git SHA must be a full 40-character lowercase SHA.")
+    if not GIT_SHA_PATTERN.fullmatch(caddy_git_sha):
+        raise ValueError("Caddy git SHA must be a full 40-character lowercase SHA.")
+
+    compose = render_compose(template, app_image, caddy_image)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    info = zipfile.ZipInfo(filename=ARCHIVE_ENTRY, date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.external_attr = 0o100644 << 16
+    with zipfile.ZipFile(output, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(info, compose.encode("utf-8"))
+
+    validate_bundle(output)
+    manifest = {
+        "artifact_type": "domain-baseline",
+        "app_git_sha": app_git_sha,
+        "app_image": app_image,
+        "app_image_digest": app_image.rsplit("@", 1)[1],
+        "bundle_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+        "caddy_git_sha": caddy_git_sha,
+        "caddy_image": caddy_image,
+        "caddy_image_digest": caddy_image.rsplit("@", 1)[1],
+        "generated_at": datetime.now(UTC).isoformat(),
+    }
+    manifest_path = output.with_suffix(".manifest.json")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return output, manifest_path
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--template", type=Path, required=True)
