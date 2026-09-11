@@ -134,12 +134,29 @@ jobs:
       - name: Build custom Caddy image
         run: docker build --tag tpi-dev-caddy:${{ github.sha }} --file deployment/caddy/Dockerfile .
 
-      - name: Verify runtime OpenSSL packages
+      - name: Verify runtime Alpine package contracts
         run: |
+          base_image='python:3.12.14-alpine3.24@sha256:b64631e04e4920160c50fbe8d8df828f7f35f06f425cb44aa09bca53e708a35a'
+          base_packages="$(docker run --rm "$base_image" sh -c 'apk info -v | LC_ALL=C sort')"
+          app_packages="$(docker run --rm tpi-backoffice-h21:${{ github.sha }} sh -c 'apk info -v | LC_ALL=C sort')"
+          package_diff="$(diff -U0 <(printf '%s\n' "$base_packages") <(printf '%s\n' "$app_packages") | awk '/^[+-][^+-]/ {print}')"
+
+          test "$package_diff" = $'-libuuid-2.42.1-r0\n+libuuid-2.42.3-r1'
           docker run --rm tpi-backoffice-h21:${{ github.sha }} \
-            sh -c 'apk info -v libssl3 libcrypto3 && apk list --installed | grep -E "^lib(ssl3|crypto3)-"'
+            sh -ec 'test "$(python --version)" = "Python 3.12.14" && apk info -e libuuid=2.42.3-r1 && apk info -v libssl3 libcrypto3 && apk list --installed | grep -E "^lib(ssl3|crypto3)-"'
           docker run --rm tpi-dev-caddy:${{ github.sha }} \
             sh -c 'apk info -v libssl3 libcrypto3 && apk list --installed | grep -E "^lib(ssl3|crypto3)-"'
+
+      - name: Verify application container readiness
+        run: >-
+          docker compose -f docker-compose.yml -f docker-compose.local.yml
+          up --build --wait --wait-timeout 180 postgres db-init backoffice
+
+      - name: Collect container smoke logs
+        if: always()
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.local.yml logs --no-color backoffice db-init postgres
+          docker compose -f docker-compose.yml -f docker-compose.local.yml down --volumes --remove-orphans
 
       - name: Validate Caddy configuration
         run: >-

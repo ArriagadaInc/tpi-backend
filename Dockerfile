@@ -9,6 +9,10 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
+# Keep the Python 3.12.14/Alpine 3.24 base pinned while remediating the
+# only vulnerable Alpine runtime package reported by ECR.
+RUN apk add --no-cache libuuid=2.42.3-r1
+
 RUN adduser -S -D -h /home/appuser -s /sbin/nologin appuser
 
 COPY --chown=appuser:appuser pyproject.toml README.md ./
