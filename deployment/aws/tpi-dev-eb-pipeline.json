@@ -23,7 +23,7 @@
             "runOrder": 1,
             "configuration": {
               "S3Bucket": "tpi-dev-release-artifacts-821656895812-us-east-2",
-              "S3ObjectKey": "promotions/h3-3-crm-web-28cf009-r1/candidate-data.zip",
+              "S3ObjectKey": "promotions/h3-3-crm-web-43101be-r1/candidate-data.zip",
               "PollForSourceChanges": "false",
               "AllowOverrideForS3ObjectKey": "false"
             },
@@ -58,10 +58,10 @@
               "docker compose version >/dev/null || { echo 'ERROR: docker compose is unavailable' >&2; exit 1; }",
               "aws s3api get-object --region us-east-2 --bucket tpi-dev-release-artifacts-821656895812-us-east-2 --key trusted-tooling/v1/verify_frozen_candidate.sh /tmp/verify_frozen_candidate.sh >/dev/null",
               "echo 'a59144ff469e56231addb7c46ccf3fa7d456ff9487c7387089eec9137a045791  /tmp/verify_frozen_candidate.sh' | sha256sum --check --strict",
-              "aws s3api get-object --region us-east-2 --bucket tpi-dev-release-artifacts-821656895812-us-east-2 --key trusted-tooling/v1/promote_eb_candidate.py /tmp/promote_eb_candidate.py >/dev/null",
-              "echo '4ba84447a948238ff877fa95e60e52f9b52e0b9bc2bad3e80fd236a03a9675f9  /tmp/promote_eb_candidate.py' | sha256sum --check --strict",
-              "ARTIFACT_DIR=artifact BUNDLE_NAME=tpi-dev-ecr-28cf009.zip MANIFEST_NAME=tpi-dev-ecr-28cf009.manifest.json BUNDLE_SHA256=5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045 SOURCE_SHA=28cf009137ada707540d9ee7eba01dc45a9a260e APP_IMAGE=821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-app@sha256:45331812c93bcf905b2ae8ad9eedff9eba5f63bc4afbfd5639af85c78bb3b6ce CADDY_IMAGE=821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-caddy@sha256:1d7c114bf0bb98e8ed2034a37997ee4d9e4aec98cbba58dc00581bbf6b6dc4e2 bash /tmp/verify_frozen_candidate.sh",
-              "AWS_ACCOUNT_ID=821656895812 AWS_REGION=us-east-2 APPLICATION=tpi-backoffice ENVIRONMENT=tpi-backoffice-dev-green EXPECTED_CURRENT_VERSION=h2-5d-ecr-47fa0c9 VERSION_LABEL=h3-3-crm-web-28cf009-r1 APPROVED_BUNDLE_BUCKET=tpi-dev-release-artifacts-821656895812-us-east-2 APPROVED_BUNDLE_KEY=approved-releases/h3-3-crm-web-28cf009-r1/5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045.zip LEGACY_BUNDLE_BUCKET=elasticbeanstalk-us-east-2-821656895812 LEGACY_BUNDLE_KEY=tpi-backoffice/dev-releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.zip ARTIFACT_DIR=artifact BUNDLE_NAME=tpi-dev-ecr-28cf009.zip SOURCE_SHA=28cf009137ada707540d9ee7eba01dc45a9a260e BUNDLE_SHA256=5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045 python3 /tmp/promote_eb_candidate.py"
+              "aws s3api get-object --region us-east-2 --bucket tpi-dev-release-artifacts-821656895812-us-east-2 --key trusted-tooling/h3-3-43101be/dfbdbadfe16133db937c44cd25add127e5b68be089869416338630e6f685d144/promote_eb_candidate.py /tmp/promote_eb_candidate.py >/dev/null",
+              "echo 'dfbdbadfe16133db937c44cd25add127e5b68be089869416338630e6f685d144  /tmp/promote_eb_candidate.py' | sha256sum --check --strict",
+              "ARTIFACT_DIR=artifact BUNDLE_NAME=tpi-dev-ecr-43101be.zip MANIFEST_NAME=tpi-dev-ecr-43101be.manifest.json BUNDLE_SHA256=7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb SOURCE_SHA=43101be7835088f93267bee85b0f11c8bc879867 APP_IMAGE=821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-app@sha256:79737222a5901871857f59143c8dc696879b2e88aa740eb7304225ffa4cd9631 CADDY_IMAGE=821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-caddy@sha256:30ace9145a21209f41799d345f4d6f641f0b882478fede76d0e19a575656aaaf TPI_ROUTE53_HOSTED_ZONE_ID=Z07053592LX0W8GJXNI1C bash /tmp/verify_frozen_candidate.sh",
+              "AWS_ACCOUNT_ID=821656895812 AWS_REGION=us-east-2 APPLICATION=tpi-backoffice ENVIRONMENT=tpi-backoffice-dev-green EXPECTED_CURRENT_VERSION=h3-3-crm-web-28cf009-r1 VERSION_LABEL=h3-3-crm-web-43101be-r1 APPROVED_BUNDLE_BUCKET=tpi-dev-release-artifacts-821656895812-us-east-2 APPROVED_BUNDLE_KEY=approved-releases/h3-3-crm-web-43101be-r1/7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb.zip ARTIFACT_DIR=artifact BUNDLE_NAME=tpi-dev-ecr-43101be.zip SOURCE_SHA=43101be7835088f93267bee85b0f11c8bc879867 BUNDLE_SHA256=7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb python3 /tmp/promote_eb_candidate.py"
             ],
             "inputArtifacts": [
               {

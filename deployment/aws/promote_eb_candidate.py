@@ -1,4 +1,4 @@
-"""Idempotent promotion of one immutable DEV candidate to Elastic Beanstalk."""
+"""Promote one immutable H3.3 DEV candidate with an atomic domain-contract cutover."""
 
 from __future__ import annotations
 
@@ -12,7 +12,24 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Final, Protocol
+
+ENVIRONMENT_NAMESPACE: Final = "aws:elasticbeanstalk:application:environment"
+CUTOVER_SOURCE_VERSION: Final = "h3-3-crm-web-28cf009-r1"
+CUTOVER_CANDIDATE_VERSION: Final = "h3-3-crm-web-43101be-r1"
+# One-time observed H3.3 source state; the version guard below prevents its reuse.
+SOURCE_DEV_ENVIRONMENT: Final = {
+    "TPI_PUBLIC_SITE_URL": "https://dev.genialabs.cl/",
+    "TPI_PUBLIC_SITE_ADDRESS": "https://dev.genialabs.cl",
+    "TPI_BACKOFFICE_SITE_ADDRESS": "https://backoffice.dev.genialabs.cl",
+}
+TARGET_DEV_ENVIRONMENT: Final = {
+    "TPI_PUBLIC_SITE_URL": "https://dev.tupensioninteligente.cl/",
+    "TPI_PUBLIC_SITE_ADDRESS": "https://dev.tupensioninteligente.cl",
+    "TPI_BACKOFFICE_SITE_ADDRESS": "https://backoffice.dev.tupensioninteligente.cl",
+    "TPI_ROUTE53_HOSTED_ZONE_ID": "Z07053592LX0W8GJXNI1C",
+}
+CONTRACT_VARIABLES: Final = tuple(TARGET_DEV_ENVIRONMENT)
 
 
 class AwsCommandError(RuntimeError):
@@ -43,8 +60,6 @@ class PromotionContract:
     candidate_version: str
     approved_bundle_bucket: str
     approved_bundle_key: str
-    legacy_bundle_bucket: str
-    legacy_bundle_key: str
     artifact_dir: str
     bundle_name: str
     runtime_sha: str
@@ -61,8 +76,6 @@ class PromotionContract:
             "candidate_version": "VERSION_LABEL",
             "approved_bundle_bucket": "APPROVED_BUNDLE_BUCKET",
             "approved_bundle_key": "APPROVED_BUNDLE_KEY",
-            "legacy_bundle_bucket": "LEGACY_BUNDLE_BUCKET",
-            "legacy_bundle_key": "LEGACY_BUNDLE_KEY",
             "artifact_dir": "ARTIFACT_DIR",
             "bundle_name": "BUNDLE_NAME",
             "runtime_sha": "SOURCE_SHA",
@@ -71,44 +84,51 @@ class PromotionContract:
         missing = [variable for variable in names.values() if not os.getenv(variable)]
         if missing:
             raise ValueError(f"Missing required environment variables: {', '.join(missing)}")
-        return cls(**{field: os.environ[variable] for field, variable in names.items()})
+        values = {field: os.environ[variable] for field, variable in names.items()}
+        if (
+            values["current_version"] != CUTOVER_SOURCE_VERSION
+            or values["candidate_version"] != CUTOVER_CANDIDATE_VERSION
+        ):
+            raise ValueError("This promoter is restricted to the authorized H3.3 cutover")
+        return cls(**values)
 
 
 class CandidatePromoter:
     def __init__(self, aws: AwsCli, contract: PromotionContract) -> None:
         self.aws = aws
         self.contract = contract
-        self.update_requested = False
+        self.environment_update_accepted = False
 
     def run(self) -> None:
         try:
             self._verify_account()
             environment = self._environment()
-            self._ensure_candidate()
             self._verify_rollback()
 
             if self._is_healthy(environment, self.contract.candidate_version):
-                print("Candidate is already deployed and healthy; continuing to postflight.")
+                self._require_environment_contract(TARGET_DEV_ENVIRONMENT, "target")
+                self._ensure_candidate()
+                print("Candidate is already deployed with the target domain contract.")
             else:
                 self._require_healthy(environment, self.contract.current_version)
-                self.update_requested = True
-                self.aws.json(
-                    "elasticbeanstalk",
-                    "update-environment",
-                    "--region",
-                    self.contract.region,
-                    "--application-name",
-                    self.contract.application,
-                    "--environment-name",
-                    self.contract.environment,
-                    "--version-label",
-                    self.contract.candidate_version,
+                self._require_environment_contract(SOURCE_DEV_ENVIRONMENT, "source")
+                self._ensure_candidate()
+                self._promote_atomically()
+                self._wait_for_healthy_contract(
+                    self.contract.candidate_version, TARGET_DEV_ENVIRONMENT, "target"
                 )
-                self._wait_for_healthy_candidate()
 
             self._verify_rollback()
             self._require_healthy(self._environment(), self.contract.candidate_version)
+            self._require_environment_contract(TARGET_DEV_ENVIRONMENT, "target")
         except Exception:
+            try:
+                self._rollback_if_environment_is_degraded()
+            except Exception as rollback_error:  # noqa: BLE001
+                print(
+                    f"Atomic rollback failed after promotion failure: {rollback_error}",
+                    file=sys.stderr,
+                )
             self._show_events()
             raise
 
@@ -139,6 +159,53 @@ class CandidatePromoter:
         ):
             raise RuntimeError("Elastic Beanstalk environment identity mismatch")
         return environment
+
+    def _environment_contract(self) -> dict[str, str]:
+        names = " || ".join(f"OptionName=='{name}'" for name in CONTRACT_VARIABLES)
+        response = self.aws.json(
+            "elasticbeanstalk",
+            "describe-configuration-settings",
+            "--region",
+            self.contract.region,
+            "--application-name",
+            self.contract.application,
+            "--environment-name",
+            self.contract.environment,
+            "--query",
+            (
+                "ConfigurationSettings[0].OptionSettings[?"
+                f"Namespace=='{ENVIRONMENT_NAMESPACE}' && ({names})]"
+                ".{Name:OptionName,Value:Value}"
+            ),
+        )
+        if not isinstance(response, list):
+            raise RuntimeError("Unexpected Elastic Beanstalk domain-contract response")
+
+        observed: dict[str, str] = {}
+        duplicates: set[str] = set()
+        for item in response:
+            if not isinstance(item, dict):
+                raise RuntimeError("Unexpected Elastic Beanstalk domain-contract item")
+            name = item.get("Name")
+            value = item.get("Value")
+            if name not in CONTRACT_VARIABLES or not isinstance(value, str):
+                raise RuntimeError("Unexpected Elastic Beanstalk domain-contract item")
+            if name in observed:
+                duplicates.add(name)
+            observed[name] = value
+        if duplicates:
+            raise RuntimeError("Duplicate Elastic Beanstalk domain-contract variables")
+        return observed
+
+    def _require_environment_contract(self, expected: dict[str, str], label: str) -> None:
+        observed = self._environment_contract()
+        mismatches = sorted(
+            name for name in CONTRACT_VARIABLES if observed.get(name) != expected.get(name)
+        )
+        if mismatches:
+            raise RuntimeError(
+                f"Elastic Beanstalk {label} domain contract mismatch: {', '.join(mismatches)}"
+            )
 
     def _versions(self, version_label: str) -> list[dict[str, object]]:
         response = self.aws.json(
@@ -236,30 +303,6 @@ class CandidatePromoter:
         if stored_checksum != checksum:
             raise RuntimeError("Approved release object checksum mismatch")
 
-    def _verify_legacy_bundle_bytes(self) -> None:
-        destination = Path(self.contract.artifact_dir) / ".legacy-source-bundle.zip"
-        destination.unlink(missing_ok=True)
-        try:
-            self.aws.json(
-                "s3api",
-                "get-object",
-                "--region",
-                self.contract.region,
-                "--bucket",
-                self.contract.legacy_bundle_bucket,
-                "--key",
-                self.contract.legacy_bundle_key,
-                str(destination),
-            )
-            if not destination.is_file():
-                raise RuntimeError("Legacy SourceBundle download did not produce a file")
-            with destination.open("rb") as source_stream:
-                actual_sha256 = hashlib.file_digest(source_stream, "sha256").hexdigest()
-            if not hmac.compare_digest(actual_sha256, self.contract.bundle_sha256):
-                raise RuntimeError("Legacy SourceBundle SHA256 mismatch")
-        finally:
-            destination.unlink(missing_ok=True)
-
     def _expected_s3_checksum(self) -> str:
         try:
             digest = bytes.fromhex(self.contract.bundle_sha256)
@@ -289,15 +332,14 @@ class CandidatePromoter:
         source = version.get("SourceBundle")
         if not isinstance(source, dict):
             raise RuntimeError("Candidate application version has no SourceBundle")
-        actual = (source.get("S3Bucket"), source.get("S3Key"))
-        approved = (self.contract.approved_bundle_bucket, self.contract.approved_bundle_key)
-        legacy = (self.contract.legacy_bundle_bucket, self.contract.legacy_bundle_key)
-        if actual == approved:
-            self._verify_approved_bundle_checksum()
-        elif actual == legacy:
-            self._verify_legacy_bundle_bytes()
-        else:
-            raise RuntimeError("Candidate SourceBundle does not match an approved immutable source")
+        if (source.get("S3Bucket"), source.get("S3Key")) != (
+            self.contract.approved_bundle_bucket,
+            self.contract.approved_bundle_key,
+        ):
+            raise RuntimeError(
+                "Candidate SourceBundle does not match the approved immutable source"
+            )
+        self._verify_approved_bundle_checksum()
 
     def _verify_rollback(self) -> None:
         versions = self._versions(self.contract.current_version)
@@ -322,13 +364,82 @@ class CandidatePromoter:
         if not self._is_healthy(environment, version):
             raise RuntimeError(f"Environment is not healthy on required version {version}")
 
-    def _wait_for_healthy_candidate(self) -> None:
+    @staticmethod
+    def _option_settings(values: dict[str, str]) -> tuple[str, ...]:
+        return tuple(
+            f"Namespace={ENVIRONMENT_NAMESPACE},OptionName={name},Value={value}"
+            for name, value in values.items()
+        )
+
+    def _update_environment_atomically(
+        self, version: str, values: dict[str, str], *, remove_hosted_zone_id: bool
+    ) -> None:
+        arguments = [
+            "elasticbeanstalk",
+            "update-environment",
+            "--region",
+            self.contract.region,
+            "--application-name",
+            self.contract.application,
+            "--environment-name",
+            self.contract.environment,
+            "--version-label",
+            version,
+            "--option-settings",
+            *self._option_settings(values),
+        ]
+        if remove_hosted_zone_id:
+            arguments.extend(
+                [
+                    "--options-to-remove",
+                    f"Namespace={ENVIRONMENT_NAMESPACE},OptionName=TPI_ROUTE53_HOSTED_ZONE_ID",
+                ]
+            )
+        self.aws.json(*arguments)
+
+    def _promote_atomically(self) -> None:
+        self._update_environment_atomically(
+            self.contract.candidate_version, TARGET_DEV_ENVIRONMENT, remove_hosted_zone_id=False
+        )
+        self.environment_update_accepted = True
+
+    def _wait_for_healthy_contract(
+        self, version: str, expected: dict[str, str], label: str
+    ) -> None:
         for _ in range(60):
             environment = self._environment()
-            if self._is_healthy(environment, self.contract.candidate_version):
+            if self._is_healthy(environment, version):
+                self._require_environment_contract(expected, label)
                 return
             time.sleep(30)
-        raise TimeoutError("Timed out waiting for Ready/Green/Ok candidate deployment")
+        raise TimeoutError(f"Timed out waiting for Ready/Green/Ok {label} deployment")
+
+    def _rollback_if_environment_is_degraded(self) -> None:
+        if not self.environment_update_accepted:
+            return
+        environment = self._environment()
+        if self._is_healthy(environment, self.contract.current_version):
+            try:
+                self._require_environment_contract(SOURCE_DEV_ENVIRONMENT, "source")
+            except RuntimeError:
+                pass
+            else:
+                return
+        if self._is_healthy(environment, self.contract.candidate_version):
+            try:
+                self._require_environment_contract(TARGET_DEV_ENVIRONMENT, "target")
+            except RuntimeError:
+                pass
+            else:
+                return
+
+        print("Environment is degraded after the accepted promotion; executing atomic rollback.")
+        self._update_environment_atomically(
+            self.contract.current_version, SOURCE_DEV_ENVIRONMENT, remove_hosted_zone_id=True
+        )
+        self._wait_for_healthy_contract(
+            self.contract.current_version, SOURCE_DEV_ENVIRONMENT, "source"
+        )
 
     def _show_events(self) -> None:
         try:

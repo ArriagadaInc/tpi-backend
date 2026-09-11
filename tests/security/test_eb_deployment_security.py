@@ -75,13 +75,13 @@ def test_pipeline_targets_only_approved_dev_environment_and_candidate() -> None:
     assert pipeline["pipelineType"] == "V2"
     assert "tpi-backoffice-dev-green" in serialized
     assert "tpi-backoffice" in serialized
-    assert "h3-3-crm-web-28cf009-r1" in serialized
-    assert "28cf009137ada707540d9ee7eba01dc45a9a260e" in serialized
-    assert "5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045" in serialized
-    assert "sha256:45331812c93bcf905b2ae8ad9eedff9eba5f63bc4afbfd5639af85c78bb3b6ce" in serialized
-    assert "sha256:1d7c114bf0bb98e8ed2034a37997ee4d9e4aec98cbba58dc00581bbf6b6dc4e2" in serialized
+    assert "h3-3-crm-web-43101be-r1" in serialized
+    assert "43101be7835088f93267bee85b0f11c8bc879867" in serialized
+    assert "7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb" in serialized
+    assert "sha256:79737222a5901871857f59143c8dc696879b2e88aa740eb7304225ffa4cd9631" in serialized
+    assert "sha256:30ace9145a21209f41799d345f4d6f641f0b882478fede76d0e19a575656aaaf" in serialized
     source = pipeline["stages"][0]["actions"][0]["configuration"]
-    assert source["S3ObjectKey"] == ("promotions/h3-3-crm-web-28cf009-r1/candidate-data.zip")
+    assert source["S3ObjectKey"] == ("promotions/h3-3-crm-web-43101be-r1/candidate-data.zip")
     assert source["AllowOverrideForS3ObjectKey"] == "false"
     assert 'PollForSourceChanges": "false' in serialized
 
@@ -97,7 +97,7 @@ def test_pipeline_targets_only_approved_dev_environment_and_candidate() -> None:
         for installer in ("apt-get", "apk add", "pip install", "yum install")
     )
     assert any("trusted-tooling/v1/verify_frozen_candidate.sh" in item for item in commands)
-    assert any("trusted-tooling/v1/promote_eb_candidate.py" in item for item in commands)
+    assert any("trusted-tooling/h3-3-43101be/" in item for item in commands)
     assert sum("sha256sum --check --strict" in item for item in commands) == 2
     assert any(command.endswith("bash /tmp/verify_frozen_candidate.sh") for command in commands)
     assert any(command.endswith("python3 /tmp/promote_eb_candidate.py") for command in commands)
@@ -126,18 +126,19 @@ def test_pipeline_commands_respect_aws_quotas_and_keep_frozen_contract() -> None
 
     assert verifier_environment == {
         "ARTIFACT_DIR": "artifact",
-        "BUNDLE_NAME": "tpi-dev-ecr-28cf009.zip",
-        "MANIFEST_NAME": "tpi-dev-ecr-28cf009.manifest.json",
-        "BUNDLE_SHA256": "5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045",
-        "SOURCE_SHA": "28cf009137ada707540d9ee7eba01dc45a9a260e",
+        "BUNDLE_NAME": "tpi-dev-ecr-43101be.zip",
+        "MANIFEST_NAME": "tpi-dev-ecr-43101be.manifest.json",
+        "BUNDLE_SHA256": "7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb",
+        "SOURCE_SHA": "43101be7835088f93267bee85b0f11c8bc879867",
         "APP_IMAGE": (
             "821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-app@"
-            "sha256:45331812c93bcf905b2ae8ad9eedff9eba5f63bc4afbfd5639af85c78bb3b6ce"
+            "sha256:79737222a5901871857f59143c8dc696879b2e88aa740eb7304225ffa4cd9631"
         ),
         "CADDY_IMAGE": (
             "821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-caddy@"
-            "sha256:1d7c114bf0bb98e8ed2034a37997ee4d9e4aec98cbba58dc00581bbf6b6dc4e2"
+            "sha256:30ace9145a21209f41799d345f4d6f641f0b882478fede76d0e19a575656aaaf"
         ),
+        "TPI_ROUTE53_HOSTED_ZONE_ID": "Z07053592LX0W8GJXNI1C",
     }
     assert verifier_tokens[-2:] == ["bash", "/tmp/verify_frozen_candidate.sh"]
 
@@ -146,21 +147,17 @@ def test_pipeline_commands_respect_aws_quotas_and_keep_frozen_contract() -> None
         "AWS_REGION": "us-east-2",
         "APPLICATION": "tpi-backoffice",
         "ENVIRONMENT": "tpi-backoffice-dev-green",
-        "EXPECTED_CURRENT_VERSION": "h2-5d-ecr-47fa0c9",
-        "VERSION_LABEL": "h3-3-crm-web-28cf009-r1",
+        "EXPECTED_CURRENT_VERSION": "h3-3-crm-web-28cf009-r1",
+        "VERSION_LABEL": "h3-3-crm-web-43101be-r1",
         "APPROVED_BUNDLE_BUCKET": "tpi-dev-release-artifacts-821656895812-us-east-2",
         "APPROVED_BUNDLE_KEY": (
-            "approved-releases/h3-3-crm-web-28cf009-r1/"
-            "5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045.zip"
-        ),
-        "LEGACY_BUNDLE_BUCKET": "elasticbeanstalk-us-east-2-821656895812",
-        "LEGACY_BUNDLE_KEY": (
-            "tpi-backoffice/dev-releases/h3-3-crm-web-28cf009-r1/tpi-dev-ecr-28cf009.zip"
+            "approved-releases/h3-3-crm-web-43101be-r1/"
+            "7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb.zip"
         ),
         "ARTIFACT_DIR": "artifact",
-        "BUNDLE_NAME": "tpi-dev-ecr-28cf009.zip",
-        "SOURCE_SHA": "28cf009137ada707540d9ee7eba01dc45a9a260e",
-        "BUNDLE_SHA256": "5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045",
+        "BUNDLE_NAME": "tpi-dev-ecr-43101be.zip",
+        "SOURCE_SHA": "43101be7835088f93267bee85b0f11c8bc879867",
+        "BUNDLE_SHA256": "7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb",
     }
     assert promoter_tokens[-2:] == ["python3", "/tmp/promote_eb_candidate.py"]
 
@@ -181,9 +178,12 @@ def test_pipeline_role_scopes_eb_write_and_documents_bucket_level_boundary() -> 
         "arn:aws:elasticbeanstalk:us-east-2:821656895812:environment/"
         "tpi-backoffice/tpi-backoffice-dev-green"
     )
-    assert update["Condition"]["ArnEquals"]["elasticbeanstalk:FromApplicationVersion"].endswith(
-        "/tpi-backoffice/h3-3-crm-web-28cf009-r1"
-    )
+    assert update["Condition"]["ArnEquals"]["elasticbeanstalk:FromApplicationVersion"] == [
+        "arn:aws:elasticbeanstalk:us-east-2:821656895812:applicationversion/"
+        "tpi-backoffice/h3-3-crm-web-28cf009-r1",
+        "arn:aws:elasticbeanstalk:us-east-2:821656895812:applicationversion/"
+        "tpi-backoffice/h3-3-crm-web-43101be-r1",
+    ]
     assert storage["Resource"] == "arn:aws:s3:::elasticbeanstalk-us-east-2-821656895812"
     assert storage["Action"] == [
         "s3:CreateBucket",
@@ -380,10 +380,12 @@ def test_update_environment_keeps_exact_application_version_condition() -> None:
     assert update["Action"] == "elasticbeanstalk:UpdateEnvironment"
     assert update["Condition"] == {
         "ArnEquals": {
-            "elasticbeanstalk:FromApplicationVersion": (
+            "elasticbeanstalk:FromApplicationVersion": [
                 "arn:aws:elasticbeanstalk:us-east-2:821656895812:"
-                "applicationversion/tpi-backoffice/h3-3-crm-web-28cf009-r1"
-            )
+                "applicationversion/tpi-backoffice/h3-3-crm-web-28cf009-r1",
+                "arn:aws:elasticbeanstalk:us-east-2:821656895812:"
+                "applicationversion/tpi-backoffice/h3-3-crm-web-43101be-r1",
+            ]
         }
     }
 
@@ -437,6 +439,17 @@ def test_workflow_uses_read_role_then_orchestrator_without_direct_eb_write() -> 
     assert "for attempt in $(seq 1 90)" not in workflow
 
 
+def test_workflow_allows_the_legacy_contract_only_for_the_authorized_source_version() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+
+    assert "EXPECTED_CURRENT_VERSION: h3-3-crm-web-28cf009-r1" in workflow
+    assert "VERSION_LABEL: h3-3-crm-web-43101be-r1" in workflow
+    assert "validate_h3_3_cutover_contract.py" in workflow
+    assert "--state source" in workflow
+    assert "--state target" in workflow
+    assert "LEGACY_BUNDLE" not in workflow
+
+
 def test_postflight_collects_all_eb_evidence_before_failing() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
     postflight = workflow.split("- name: Collect independent EB postflight and events", 1)[1]
@@ -447,11 +460,18 @@ def test_postflight_collects_all_eb_evidence_before_failing() -> None:
     assert "elasticbeanstalk describe-events" in postflight
     assert "events_status=$?" in postflight
     assert "set -e" in postflight
-    assert "environment_status != 0 || events_status != 0" in postflight
+    assert "target_environment_status != 0" in postflight
+    assert "contract_status != 0" in postflight
+    assert "tls_status != 0" in postflight
+    assert "events_status != 0" in postflight
     assert postflight.index("environment_status=$?") < postflight.index(
         "elasticbeanstalk describe-events"
     )
     assert postflight.index("events_status=$?") < postflight.index("exit 1")
+    assert "validate_h3_3_cutover_contract.py --state target" in postflight
+    assert "dev.tupensioninteligente.cl" in postflight
+    assert "backoffice.dev.tupensioninteligente.cl" in postflight
+    assert "--proto '=https'" in postflight
     assert "|| true" not in postflight
 
 
@@ -472,11 +492,11 @@ def test_github_cannot_write_trusted_tooling_and_source_key_is_fixed() -> None:
     )
     assert s3_statement["Resource"] == (
         "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/"
-        "promotions/h3-3-crm-web-28cf009-r1/candidate-data.zip"
+        "promotions/h3-3-crm-web-43101be-r1/candidate-data.zip"
     )
     assert source == {
         "S3Bucket": "tpi-dev-release-artifacts-821656895812-us-east-2",
-        "S3ObjectKey": "promotions/h3-3-crm-web-28cf009-r1/candidate-data.zip",
+        "S3ObjectKey": "promotions/h3-3-crm-web-43101be-r1/candidate-data.zip",
         "PollForSourceChanges": "false",
         "AllowOverrideForS3ObjectKey": "false",
     }
@@ -487,8 +507,8 @@ def test_only_pipeline_can_materialize_the_exact_approved_bundle() -> None:
     pipeline_policy = _load_json("deployment/iam/tpi-codepipeline-dev-eb.json")
     approved_resource = (
         "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/"
-        "approved-releases/h3-3-crm-web-28cf009-r1/"
-        "5e998cadee8b2ee08a4fa08f487a8203555c6971da5465427645f66ffb923045.zip"
+        "approved-releases/h3-3-crm-web-43101be-r1/"
+        "7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb.zip"
     )
 
     assert approved_resource not in json.dumps(release_policy)
@@ -505,15 +525,38 @@ def test_only_pipeline_can_materialize_the_exact_approved_bundle() -> None:
     }
 
 
+def test_pipeline_role_drops_the_old_candidate_source_and_reads_one_hashed_promoter() -> None:
+    policy = _load_json("deployment/iam/tpi-codepipeline-dev-eb.json")
+    serialized = json.dumps(policy)
+    read = next(
+        statement
+        for statement in policy["Statement"]
+        if statement["Sid"] == "ReadExactReleaseDataAndTrustedTooling"
+    )
+
+    assert "trusted-tooling/v1/promote_eb_candidate.py" not in serialized
+    assert "elasticbeanstalk-us-east-2-821656895812/tpi-backoffice/dev-releases" not in serialized
+    assert read["Resource"] == [
+        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/"
+        "promotions/h3-3-crm-web-43101be-r1/candidate-data.zip",
+        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/"
+        "trusted-tooling/v1/verify_frozen_candidate.sh",
+        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/"
+        "trusted-tooling/h3-3-43101be/"
+        "dfbdbadfe16133db937c44cd25add127e5b68be089869416338630e6f685d144/"
+        "promote_eb_candidate.py",
+    ]
+
+
 def test_external_release_object_cannot_become_candidate_source() -> None:
     pipeline = _load_json("deployment/aws/tpi-dev-eb-pipeline.json")["pipeline"]
     workflow = WORKFLOW.read_text(encoding="utf-8")
     serialized_pipeline = json.dumps(pipeline)
 
     assert "RELEASE_BUNDLE_KEY" not in workflow
-    assert "/releases/h3-3-crm-web-28cf009-r1" not in workflow
-    assert "/releases/h3-3-crm-web-28cf009-r1" not in serialized_pipeline
-    assert "approved-releases/h3-3-crm-web-28cf009-r1" in serialized_pipeline
+    assert "/releases/h3-3-crm-web-43101be-r1" not in workflow
+    assert "/releases/h3-3-crm-web-43101be-r1" not in serialized_pipeline
+    assert "approved-releases/h3-3-crm-web-43101be-r1" in serialized_pipeline
 
 
 def test_pipeline_pins_exact_trusted_tooling_hashes() -> None:
@@ -534,7 +577,7 @@ def test_pipeline_pins_exact_trusted_tooling_hashes() -> None:
             "a59144ff469e56231addb7c46ccf3fa7d456ff9487c7387089eec9137a045791"
         ),
         "promote_eb_candidate.py": (
-            "4ba84447a948238ff877fa95e60e52f9b52e0b9bc2bad3e80fd236a03a9675f9"
+            "dfbdbadfe16133db937c44cd25add127e5b68be089869416338630e6f685d144"
         ),
     }
 

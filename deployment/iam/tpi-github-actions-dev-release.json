@@ -9,7 +9,7 @@
         "s3:GetObject",
         "s3:GetObjectVersion"
       ],
-      "Resource": "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/promotions/h3-3-crm-web-28cf009-r1/candidate-data.zip"
+      "Resource": "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/promotions/h3-3-crm-web-43101be-r1/candidate-data.zip"
     },
     {
       "Sid": "StartOnlyApprovedDevPipeline",
