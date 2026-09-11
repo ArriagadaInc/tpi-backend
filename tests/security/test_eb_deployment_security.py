@@ -439,15 +439,25 @@ def test_workflow_uses_read_role_then_orchestrator_without_direct_eb_write() -> 
     assert "for attempt in $(seq 1 90)" not in workflow
 
 
-def test_workflow_allows_the_legacy_contract_only_for_the_authorized_source_version() -> None:
+def test_workflow_pins_authorized_versions_without_reading_environment_contract() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
 
     assert "EXPECTED_CURRENT_VERSION: h3-3-crm-web-28cf009-r1" in workflow
     assert "VERSION_LABEL: h3-3-crm-web-43101be-r1" in workflow
-    assert "validate_h3_3_cutover_contract.py" in workflow
-    assert "--state source" in workflow
-    assert "--state target" in workflow
+    assert "describe-configuration-settings" not in workflow
+    assert "validate_h3_3_cutover_contract.py" not in workflow
+    assert "validate_dev_environment_contract.py" not in workflow
     assert "LEGACY_BUNDLE" not in workflow
+
+
+def test_dry_run_gates_all_writes_behind_execute_promotion() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+
+    assert "if: ${{ !inputs.execute_promotion }}" in workflow
+    assert "if: ${{ inputs.execute_promotion }}" in workflow
+    assert "Validate-only completed without AWS writes" in workflow
+    assert "s3api put-object" in workflow
+    assert "start-pipeline-execution" in workflow
 
 
 def test_postflight_collects_all_eb_evidence_before_failing() -> None:
@@ -461,14 +471,18 @@ def test_postflight_collects_all_eb_evidence_before_failing() -> None:
     assert "events_status=$?" in postflight
     assert "set -e" in postflight
     assert "target_environment_status != 0" in postflight
-    assert "contract_status != 0" in postflight
     assert "tls_status != 0" in postflight
     assert "events_status != 0" in postflight
+    assert "describe-configuration-settings" not in postflight
+    assert "contract_status" not in postflight
+    assert "(.VersionLabel == $candidate)" in postflight
+    assert '(.Status == "Ready")' in postflight
+    assert '(.Health == "Green")' in postflight
+    assert '(.HealthStatus == "Ok")' in postflight
     assert postflight.index("environment_status=$?") < postflight.index(
         "elasticbeanstalk describe-events"
     )
     assert postflight.index("events_status=$?") < postflight.index("exit 1")
-    assert "validate_h3_3_cutover_contract.py --state target" in postflight
     assert "dev.tupensioninteligente.cl" in postflight
     assert "backoffice.dev.tupensioninteligente.cl" in postflight
     assert "--proto '=https'" in postflight

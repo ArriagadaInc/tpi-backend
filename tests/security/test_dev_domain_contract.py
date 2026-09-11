@@ -75,15 +75,17 @@ def test_active_runtime_contract_has_no_genialabs_dependency() -> None:
     assert "backoffice.dev.tupensioninteligente.cl" in _text("front/js/backoffice-access.js")
 
 
-def test_both_preflights_validate_exact_values_without_dumping_environment() -> None:
-    for path in (
-        ".github/workflows/preflight-dev-eb.yml",
-        ".github/workflows/deploy-dev-eb.yml",
-    ):
-        workflow = _text(path)
-        assert "validate_dev_environment_contract.py" in workflow
-        assert "TPI_ROUTE53_HOSTED_ZONE_ID" in workflow
-        assert ".{Name:OptionName,Value:Value}" in workflow
+def test_preflight_validates_exact_values_but_cutover_does_not_read_contract() -> None:
+    preflight = _text(".github/workflows/preflight-dev-eb.yml")
+    assert "validate_dev_environment_contract.py" in preflight
+    assert "TPI_ROUTE53_HOSTED_ZONE_ID" in preflight
+    assert ".{Name:OptionName,Value:Value}" in preflight
+
+    cutover = _text(".github/workflows/deploy-dev-eb.yml")
+    assert "describe-configuration-settings" not in cutover
+    assert "validate_dev_environment_contract.py" not in cutover
+    assert ".{Name:OptionName,Value:Value}" not in cutover
+    assert "TPI_ROUTE53_HOSTED_ZONE_ID: Z00000000000000000000" in cutover
 
 
 def test_candidate_verification_supplies_safe_zone_placeholder() -> None:
