@@ -69,6 +69,7 @@ jobs:
         env:
           APP_IMAGE: 821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-app@${{ env.APP_DIGEST }}
           CADDY_IMAGE: 821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-caddy@${{ env.CADDY_DIGEST }}
+          TPI_ROUTE53_HOSTED_ZONE_ID: Z00000000000000000000
         run: bash scripts/release/verify_frozen_candidate.sh
 
       - name: Build data-only promotion artifact

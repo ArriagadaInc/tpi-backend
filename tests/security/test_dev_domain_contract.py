@@ -86,6 +86,15 @@ def test_both_preflights_validate_exact_values_without_dumping_environment() -> 
         assert ".{Name:OptionName,Value:Value}" in workflow
 
 
+def test_candidate_verification_supplies_safe_zone_placeholder() -> None:
+    for path in (
+        ".github/workflows/ci.yml",
+        ".github/workflows/deploy-dev-eb.yml",
+    ):
+        workflow = _text(path)
+        assert "TPI_ROUTE53_HOSTED_ZONE_ID: Z00000000000000000000" in workflow
+
+
 def test_preflight_retains_required_variable_presence_checks_without_listing_env() -> None:
     workflow = _text(".github/workflows/preflight-dev-eb.yml")
 
