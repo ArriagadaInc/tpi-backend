@@ -73,6 +73,12 @@
       ]
     },
     {
+      "Sid": "ReadOnlyApprovedDevEnvironmentConfiguration",
+      "Effect": "Allow",
+      "Action": "elasticbeanstalk:DescribeConfigurationSettings",
+      "Resource": "arn:aws:elasticbeanstalk:us-east-2:821656895812:environment/tpi-backoffice/tpi-backoffice-dev-green"
+    },
+    {
       "Sid": "UpdateOnlyApprovedDevEnvironment",
       "Effect": "Allow",
       "Action": "elasticbeanstalk:UpdateEnvironment",

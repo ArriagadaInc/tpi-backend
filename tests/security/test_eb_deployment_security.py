@@ -390,6 +390,80 @@ def test_update_environment_keeps_exact_application_version_condition() -> None:
     }
 
 
+def test_pipeline_role_reads_only_approved_environment_configuration() -> None:
+    policy = _load_json("deployment/iam/tpi-codepipeline-dev-eb.json")
+    statement = next(
+        item
+        for item in policy["Statement"]
+        if item["Sid"] == "ReadOnlyApprovedDevEnvironmentConfiguration"
+    )
+
+    assert statement["Effect"] == "Allow"
+    assert statement["Action"] == "elasticbeanstalk:DescribeConfigurationSettings"
+    assert statement["Resource"] == (
+        "arn:aws:elasticbeanstalk:us-east-2:821656895812:environment/"
+        "tpi-backoffice/tpi-backoffice-dev-green"
+    )
+    assert "*" not in statement["Resource"]
+
+
+def test_pipeline_role_uses_specific_eb_actions_without_describe_wildcard() -> None:
+    policy = _load_json("deployment/iam/tpi-codepipeline-dev-eb.json")
+    serialized = json.dumps(policy)
+    eb_actions = [action for action in _actions(policy) if action.startswith("elasticbeanstalk:")]
+
+    assert "elasticbeanstalk:Describe*" not in serialized
+    assert eb_actions
+    assert all("*" not in action for action in eb_actions)
+
+
+def test_pipeline_role_s3_contract_is_not_expanded() -> None:
+    policy = _load_json("deployment/iam/tpi-codepipeline-dev-eb.json")
+    s3_actions = {action for action in _actions(policy) if action.startswith("s3:")}
+
+    assert s3_actions == {
+        "s3:CreateBucket",
+        "s3:Delete*",
+        "s3:Get*",
+        "s3:GetBucket*",
+        "s3:GetBucketAcl",
+        "s3:GetBucketLocation",
+        "s3:GetBucketVersioning",
+        "s3:GetObject",
+        "s3:GetObjectTagging",
+        "s3:GetObjectVersion",
+        "s3:GetObjectVersionTagging",
+        "s3:ListBucket",
+        "s3:Put*",
+        "s3:PutBucketOwnershipControls",
+        "s3:PutBucketPolicy",
+        "s3:PutBucketPublicAccessBlock",
+        "s3:PutObject",
+    }
+
+
+def test_github_read_role_unchanged_by_pipeline_policy_change() -> None:
+    read_policy = _load_json("deployment/iam/tpi-github-actions-dev-eb-read.json")
+
+    assert read_policy["Statement"][0]["Action"] == [
+        "elasticbeanstalk:DescribeApplications",
+        "elasticbeanstalk:DescribeEnvironments",
+        "elasticbeanstalk:DescribeConfigurationSettings",
+        "elasticbeanstalk:DescribeApplicationVersions",
+        "elasticbeanstalk:DescribeEvents",
+    ]
+    assert "s3:" not in json.dumps(read_policy)
+
+
+def test_pipeline_trust_is_unchanged() -> None:
+    trust = _load_json("deployment/iam/tpi-codepipeline-dev-eb-role-trust.json")
+    statement = trust["Statement"][0]
+
+    assert statement["Principal"] == {"Service": "codepipeline.amazonaws.com"}
+    assert statement["Action"] == "sts:AssumeRole"
+    assert "Federated" not in json.dumps(trust)
+
+
 def test_control_plane_inspection_is_read_only_and_scoped() -> None:
     script = CONTROL_PLANE_INSPECTION.read_text(encoding="utf-8")
     normalized = script.lower()
