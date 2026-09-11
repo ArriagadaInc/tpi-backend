@@ -144,6 +144,7 @@ jobs:
       - name: Validate Caddy configuration
         run: >-
           docker run --rm
+          --env TPI_ROUTE53_HOSTED_ZONE_ID=Z00000000000000000000
           --volume "$GITHUB_WORKSPACE/deployment/caddy/Caddyfile:/etc/caddy/Caddyfile:ro"
           tpi-dev-caddy:${{ github.sha }}
           caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
@@ -174,6 +175,7 @@ jobs:
           TPI_PUBLIC_SITE_URL: https://dev.example.test
           TPI_PUBLIC_SITE_ADDRESS: https://dev.example.test
           TPI_BACKOFFICE_SITE_ADDRESS: https://backoffice.dev.example.test
+          TPI_ROUTE53_HOSTED_ZONE_ID: Z00000000000000000000
         run: |
           runtime_sha="${GITHUB_SHA}"
           bundle="dist/tpi-dev-ecr-${runtime_sha:0:7}.zip"

@@ -120,7 +120,7 @@ jobs:
           test "$(printf '%s' "$environment" | jq -r '.Health')" = Green
           test "$(printf '%s' "$environment" | jq -r '.HealthStatus')" = Ok
 
-      - name: List application variable names only
+      - name: Validate exact non-secret DEV environment contract
         env:
           APPLICATION: ${{ steps.environment.outputs.application }}
           ENVIRONMENT: ${{ steps.environment.outputs.environment }}
@@ -131,17 +131,22 @@ jobs:
             --environment-name "$ENVIRONMENT" \
             --query "ConfigurationSettings[0].OptionSettings[?Namespace=='aws:elasticbeanstalk:application:environment'].OptionName" \
             --output json)"
-          echo "Application environment variable names:"
-          printf '%s' "$names" | jq -r '.[]' | sort
-          required='DATABASE_HOST DATABASE_NAME DATABASE_USER DATABASE_PASSWORD API_IDEMPOTENCY_HMAC_SECRET AUTH_USERS_JSON WEB_SESSION_SECRET TPI_PUBLIC_SITE_URL TPI_PUBLIC_SITE_ADDRESS TPI_BACKOFFICE_SITE_ADDRESS'
+          required='DATABASE_HOST DATABASE_NAME DATABASE_USER DATABASE_PASSWORD API_IDEMPOTENCY_HMAC_SECRET AUTH_USERS_JSON WEB_SESSION_SECRET TPI_PUBLIC_SITE_URL TPI_PUBLIC_SITE_ADDRESS TPI_BACKOFFICE_SITE_ADDRESS TPI_ROUTE53_HOSTED_ZONE_ID'
           for name in $required; do
-            if printf '%s' "$names" | jq -e --arg name "$name" 'index($name) != null' >/dev/null; then
-              echo "$name=present"
-            else
-              echo "$name=missing"
+            if ! printf '%s' "$names" | jq -e --arg name "$name" 'index($name) != null' >/dev/null; then
+              echo "Required application environment variable is missing: $name" >&2
+              echo "PREFLIGHT = FAIL"
               exit 1
             fi
           done
+
+          contract="$(aws elasticbeanstalk describe-configuration-settings \
+            --region "$AWS_REGION" \
+            --application-name "$APPLICATION" \
+            --environment-name "$ENVIRONMENT" \
+            --query "ConfigurationSettings[0].OptionSettings[?Namespace=='aws:elasticbeanstalk:application:environment' && (OptionName=='TPI_PUBLIC_SITE_URL' || OptionName=='TPI_PUBLIC_SITE_ADDRESS' || OptionName=='TPI_BACKOFFICE_SITE_ADDRESS' || OptionName=='TPI_ROUTE53_HOSTED_ZONE_ID')].{Name:OptionName,Value:Value}" \
+            --output json)"
+          printf '%s' "$contract" | python scripts/release/validate_dev_environment_contract.py
 
       - name: List recent application versions and rollback candidate
         env:
