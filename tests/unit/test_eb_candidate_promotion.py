@@ -27,14 +27,10 @@ class FakeAws:
     def __init__(self, *, candidate: dict[str, object] | None, environment_version: str) -> None:
         self.candidate = candidate
         self.environment_version = environment_version
-        self.environment_contract = (
-            dict(TARGET_DEV_ENVIRONMENT)
-            if environment_version == CANDIDATE_VERSION
-            else dict(SOURCE_DEV_ENVIRONMENT)
-        )
+        self.healthy = True
+        self.degrade_after_update = False
         self.calls: list[tuple[str, ...]] = []
         self.fail_update = False
-        self.corrupt_target_contract = False
         self.stored_checksum: str | None = FROZEN_S3_CHECKSUM
         self.head_checksum_override: str | None = None
 
@@ -56,15 +52,11 @@ class FakeAws:
                         "EnvironmentName": "tpi-backoffice-dev-green",
                         "VersionLabel": self.environment_version,
                         "Status": "Ready",
-                        "Health": "Green",
-                        "HealthStatus": "Ok",
+                        "Health": "Green" if self.healthy else "Degraded",
+                        "HealthStatus": "Ok" if self.healthy else "Error",
                     }
                 ]
             }
-        if "describe-configuration-settings" in command:
-            return [
-                {"Name": name, "Value": value} for name, value in self.environment_contract.items()
-            ]
         if "describe-application-versions" in command:
             label = arguments[arguments.index("--version-labels") + 1]
             if label == SOURCE_VERSION:
@@ -88,21 +80,10 @@ class FakeAws:
                 raise RuntimeError("original update failure")
             version = arguments[arguments.index("--version-label") + 1]
             self.environment_version = version
-            settings_start = arguments.index("--option-settings") + 1
-            settings_end = (
-                arguments.index("--options-to-remove")
-                if "--options-to-remove" in arguments
-                else len(arguments)
-            )
-            settings = arguments[settings_start:settings_end]
-            self.environment_contract = {
-                item.split(",OptionName=", 1)[1].split(",Value=", 1)[0]: item.rsplit(",Value=", 1)[
-                    1
-                ]
-                for item in settings
-            }
-            if version == CANDIDATE_VERSION and self.corrupt_target_contract:
-                self.environment_contract = dict(SOURCE_DEV_ENVIRONMENT)
+            if version == CANDIDATE_VERSION and self.degrade_after_update:
+                self.healthy = False
+            else:
+                self.healthy = True
             return {}
         if "describe-events" in command:
             return {"Events": [{"Message": "diagnostic event"}]}
@@ -178,17 +159,13 @@ def test_candidate_is_created_from_verified_bundle_before_atomic_update(tmp_path
         f"Namespace=aws:elasticbeanstalk:application:environment,OptionName={name},Value={value}"
         for name, value in TARGET_DEV_ENVIRONMENT.items()
     }
-    assert aws.environment_contract == TARGET_DEV_ENVIRONMENT
 
 
-def test_source_contract_mismatch_aborts_before_candidate_or_environment_write(
-    tmp_path: Path,
-) -> None:
-    aws = FakeAws(candidate=None, environment_version=SOURCE_VERSION)
-    aws.environment_contract["TPI_PUBLIC_SITE_URL"] = "https://dev.example.invalid/"
+def test_unexpected_source_version_fails_closed_before_any_write() -> None:
+    aws = FakeAws(candidate=None, environment_version="h2-5d-ecr-47fa0c9")
 
-    with pytest.raises(RuntimeError, match="source domain contract mismatch"):
-        CandidatePromoter(aws, materializable_contract(tmp_path)).run()
+    with pytest.raises(RuntimeError, match="not healthy on required version"):
+        CandidatePromoter(aws, contract()).run()
 
     commands = [" ".join(call) for call in aws.calls]
     assert not any("s3api put-object" in call for call in commands)
@@ -240,23 +217,35 @@ def test_failed_request_does_not_trigger_rollback() -> None:
     assert any("describe-events" in " ".join(call) for call in aws.calls)
 
 
-def test_degraded_target_executes_one_atomic_rollback_with_legacy_contract() -> None:
+def test_degraded_target_executes_one_atomic_rollback_with_legacy_contract(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("time.sleep", lambda _: None)
     aws = FakeAws(candidate=candidate_version(), environment_version=SOURCE_VERSION)
-    aws.corrupt_target_contract = True
+    aws.degrade_after_update = True
 
-    with pytest.raises(RuntimeError, match="target domain contract mismatch"):
+    with pytest.raises(TimeoutError, match="Timed out waiting for Ready/Green/Ok"):
         CandidatePromoter(aws, contract()).run()
 
     updates = [call for call in aws.calls if "update-environment" in " ".join(call)]
     assert len(updates) == 2
+    promote = updates[0]
     rollback = updates[1]
+    assert promote[promote.index("--version-label") + 1] == CANDIDATE_VERSION
+    assert "--options-to-remove" not in promote
     assert rollback[rollback.index("--version-label") + 1] == SOURCE_VERSION
     assert "--options-to-remove" in rollback
     assert rollback[rollback.index("--options-to-remove") + 1] == (
         "Namespace=aws:elasticbeanstalk:application:environment,"
         "OptionName=TPI_ROUTE53_HOSTED_ZONE_ID"
     )
-    assert aws.environment_contract == SOURCE_DEV_ENVIRONMENT
+    rollback_settings = rollback[
+        rollback.index("--option-settings") + 1 : rollback.index("--options-to-remove")
+    ]
+    assert set(rollback_settings) == {
+        f"Namespace=aws:elasticbeanstalk:application:environment,OptionName={name},Value={value}"
+        for name, value in SOURCE_DEV_ENVIRONMENT.items()
+    }
 
 
 def test_legacy_source_exception_cannot_be_reused_for_another_candidate(

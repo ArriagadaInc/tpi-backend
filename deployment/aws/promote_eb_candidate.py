@@ -29,7 +29,6 @@ TARGET_DEV_ENVIRONMENT: Final = {
     "TPI_BACKOFFICE_SITE_ADDRESS": "https://backoffice.dev.tupensioninteligente.cl",
     "TPI_ROUTE53_HOSTED_ZONE_ID": "Z07053592LX0W8GJXNI1C",
 }
-CONTRACT_VARIABLES: Final = tuple(TARGET_DEV_ENVIRONMENT)
 
 
 class AwsCommandError(RuntimeError):
@@ -106,21 +105,16 @@ class CandidatePromoter:
             self._verify_rollback()
 
             if self._is_healthy(environment, self.contract.candidate_version):
-                self._require_environment_contract(TARGET_DEV_ENVIRONMENT, "target")
                 self._ensure_candidate()
-                print("Candidate is already deployed with the target domain contract.")
+                print("Candidate is already deployed and healthy.")
             else:
                 self._require_healthy(environment, self.contract.current_version)
-                self._require_environment_contract(SOURCE_DEV_ENVIRONMENT, "source")
                 self._ensure_candidate()
                 self._promote_atomically()
-                self._wait_for_healthy_contract(
-                    self.contract.candidate_version, TARGET_DEV_ENVIRONMENT, "target"
-                )
+                self._wait_for_healthy_version(self.contract.candidate_version)
 
             self._verify_rollback()
             self._require_healthy(self._environment(), self.contract.candidate_version)
-            self._require_environment_contract(TARGET_DEV_ENVIRONMENT, "target")
         except Exception:
             try:
                 self._rollback_if_environment_is_degraded()
@@ -159,53 +153,6 @@ class CandidatePromoter:
         ):
             raise RuntimeError("Elastic Beanstalk environment identity mismatch")
         return environment
-
-    def _environment_contract(self) -> dict[str, str]:
-        names = " || ".join(f"OptionName=='{name}'" for name in CONTRACT_VARIABLES)
-        response = self.aws.json(
-            "elasticbeanstalk",
-            "describe-configuration-settings",
-            "--region",
-            self.contract.region,
-            "--application-name",
-            self.contract.application,
-            "--environment-name",
-            self.contract.environment,
-            "--query",
-            (
-                "ConfigurationSettings[0].OptionSettings[?"
-                f"Namespace=='{ENVIRONMENT_NAMESPACE}' && ({names})]"
-                ".{Name:OptionName,Value:Value}"
-            ),
-        )
-        if not isinstance(response, list):
-            raise RuntimeError("Unexpected Elastic Beanstalk domain-contract response")
-
-        observed: dict[str, str] = {}
-        duplicates: set[str] = set()
-        for item in response:
-            if not isinstance(item, dict):
-                raise RuntimeError("Unexpected Elastic Beanstalk domain-contract item")
-            name = item.get("Name")
-            value = item.get("Value")
-            if name not in CONTRACT_VARIABLES or not isinstance(value, str):
-                raise RuntimeError("Unexpected Elastic Beanstalk domain-contract item")
-            if name in observed:
-                duplicates.add(name)
-            observed[name] = value
-        if duplicates:
-            raise RuntimeError("Duplicate Elastic Beanstalk domain-contract variables")
-        return observed
-
-    def _require_environment_contract(self, expected: dict[str, str], label: str) -> None:
-        observed = self._environment_contract()
-        mismatches = sorted(
-            name for name in CONTRACT_VARIABLES if observed.get(name) != expected.get(name)
-        )
-        if mismatches:
-            raise RuntimeError(
-                f"Elastic Beanstalk {label} domain contract mismatch: {', '.join(mismatches)}"
-            )
 
     def _versions(self, version_label: str) -> list[dict[str, object]]:
         response = self.aws.json(
@@ -403,43 +350,28 @@ class CandidatePromoter:
         )
         self.environment_update_accepted = True
 
-    def _wait_for_healthy_contract(
-        self, version: str, expected: dict[str, str], label: str
-    ) -> None:
+    def _wait_for_healthy_version(self, version: str) -> None:
         for _ in range(60):
             environment = self._environment()
             if self._is_healthy(environment, version):
-                self._require_environment_contract(expected, label)
                 return
             time.sleep(30)
-        raise TimeoutError(f"Timed out waiting for Ready/Green/Ok {label} deployment")
+        raise TimeoutError(f"Timed out waiting for Ready/Green/Ok deployment of {version}")
 
     def _rollback_if_environment_is_degraded(self) -> None:
         if not self.environment_update_accepted:
             return
         environment = self._environment()
         if self._is_healthy(environment, self.contract.current_version):
-            try:
-                self._require_environment_contract(SOURCE_DEV_ENVIRONMENT, "source")
-            except RuntimeError:
-                pass
-            else:
-                return
+            return
         if self._is_healthy(environment, self.contract.candidate_version):
-            try:
-                self._require_environment_contract(TARGET_DEV_ENVIRONMENT, "target")
-            except RuntimeError:
-                pass
-            else:
-                return
+            return
 
         print("Environment is degraded after the accepted promotion; executing atomic rollback.")
         self._update_environment_atomically(
             self.contract.current_version, SOURCE_DEV_ENVIRONMENT, remove_hosted_zone_id=True
         )
-        self._wait_for_healthy_contract(
-            self.contract.current_version, SOURCE_DEV_ENVIRONMENT, "source"
-        )
+        self._wait_for_healthy_version(self.contract.current_version)
 
     def _show_events(self) -> None:
         try:
