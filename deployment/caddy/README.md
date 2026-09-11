@@ -8,13 +8,18 @@ The image is built from Caddy 2.11.4 with the `caddy-dns/route53` module enabled
 
 ## Operational model
 
-- DNS-01 is used for `dev.genialabs.cl` and `backoffice.dev.genialabs.cl`.
+- DNS-01 is used for `dev.tupensioninteligente.cl` and
+  `backoffice.dev.tupensioninteligente.cl`.
 - The Caddy container must not use AWS access keys.
 - AWS credentials are provided through the EC2 / Elastic Beanstalk instance role.
 - Route53 permissions are intentionally minimal and limited to the ACME TXT records required for these hostnames.
 
 ## Hostnames
 
-- `dev.genialabs.cl`
-- `backoffice.dev.genialabs.cl`
+- `dev.tupensioninteligente.cl`
+- `backoffice.dev.tupensioninteligente.cl`
+
+The public delegated hosted zone is `dev.tupensioninteligente.cl.`. Its ID is
+supplied at runtime through `TPI_ROUTE53_HOSTED_ZONE_ID`; the Caddy image does
+not contain a hosted zone ID.
 

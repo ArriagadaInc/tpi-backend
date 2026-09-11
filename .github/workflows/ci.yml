@@ -144,6 +144,7 @@ jobs:
       - name: Validate Caddy configuration
         run: >-
           docker run --rm
+          --env TPI_ROUTE53_HOSTED_ZONE_ID=Z00000000000000000000
           --volume "$GITHUB_WORKSPACE/deployment/caddy/Caddyfile:/etc/caddy/Caddyfile:ro"
           tpi-dev-caddy:${{ github.sha }}
           caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
@@ -174,6 +175,7 @@ jobs:
           TPI_PUBLIC_SITE_URL: https://dev.example.test
           TPI_PUBLIC_SITE_ADDRESS: https://dev.example.test
           TPI_BACKOFFICE_SITE_ADDRESS: https://backoffice.dev.example.test
+          TPI_ROUTE53_HOSTED_ZONE_ID: Z00000000000000000000
         run: |
           runtime_sha="${GITHUB_SHA}"
           bundle="dist/tpi-dev-ecr-${runtime_sha:0:7}.zip"
@@ -191,3 +193,69 @@ jobs:
           name: ci-validation-only-eb-bundle-${{ github.sha }}
           path: dist/tpi-dev-ecr-*.zip
           if-no-files-found: error
+
+  release-tooling-validation:
+    name: Release Tooling Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Verify frozen candidate artifact contract
+        env:
+          APP_IMAGE: ci.example.invalid/tpi-dev-app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          CADDY_IMAGE: ci.example.invalid/tpi-dev-caddy@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          TPI_ROUTE53_HOSTED_ZONE_ID: Z00000000000000000000
+        run: |
+          set -euo pipefail
+          runtime_sha="$GITHUB_SHA"
+          bundle_name="tpi-dev-ecr-${runtime_sha:0:7}.zip"
+          manifest_name="tpi-dev-ecr-${runtime_sha:0:7}.manifest.json"
+          mkdir -p artifact dist
+
+          python deployment/build_eb_ecr_bundle.py \
+            --template deployment/aws/docker-compose.ecr.yml \
+            --output "dist/$bundle_name" \
+            --runtime-git-sha "$runtime_sha" \
+            --app-image "$APP_IMAGE" \
+            --caddy-image "$CADDY_IMAGE"
+
+          bundle_sha="$(sha256sum "dist/$bundle_name" | awk '{print $1}')"
+          cp "dist/$bundle_name" "artifact/$bundle_name"
+          jq -n \
+            --arg runtime "$runtime_sha" \
+            --arg app "$APP_IMAGE" \
+            --arg caddy "$CADDY_IMAGE" \
+            --arg bundle_sha "$bundle_sha" \
+            '{runtime_git_sha:$runtime, app_image:$app, caddy_image:$caddy, bundle_sha256:$bundle_sha}' \
+            > "artifact/$manifest_name"
+
+          export ARTIFACT_DIR=artifact
+          export BUNDLE_NAME="$bundle_name"
+          export MANIFEST_NAME="$manifest_name"
+          export BUNDLE_SHA256="$bundle_sha"
+          export SOURCE_SHA="$runtime_sha"
+          bash scripts/release/verify_frozen_candidate.sh
+
+          promotion_output="dist/tpi-dev-candidate-data-${runtime_sha:0:7}.zip"
+          python deployment/aws/build_promotion_data.py \
+            --artifact-dir artifact \
+            --bundle-name "$bundle_name" \
+            --manifest-name "$manifest_name" \
+            --output "$promotion_output"
+          test "$(zipinfo -1 "$promotion_output" | sort)" = \
+            $'artifact/'"$manifest_name"$'\nartifact/'"$bundle_name"
+
+      - name: Run actionlint
+        run: |
+          # actionlint 1.7.7 does not know the documented artifact-ids input.
+          # Keep the release contract and suppress only this compatibility
+          # warning plus pre-existing ShellCheck findings in untouched workflows.
+          docker run --rm \
+            --volume "$GITHUB_WORKSPACE:/repo:ro" \
+            rhysd/actionlint:1.7.7 \
+            -ignore 'input "artifact-ids" is not defined|SC2034|SC2016|SC2129|SC2153' \
+            /repo/.github/workflows/ci.yml \
+            /repo/.github/workflows/deploy-dev-eb.yml \
+            /repo/.github/workflows/preflight-dev-eb.yml \
+            /repo/.github/workflows/publish-dev-ecr-images.yml

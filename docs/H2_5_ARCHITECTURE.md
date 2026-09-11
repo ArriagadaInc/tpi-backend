@@ -10,8 +10,8 @@ deployment has been created by this change.
 ## Routing
 
 ```text
-dev.genialabs.cl                  -> Caddy -> static front/ + FastAPI /api/*
-backoffice.dev.genialabs.cl       -> Caddy -> private Streamlit
+dev.tupensioninteligente.cl                  -> Caddy -> static front/ + FastAPI /api/*
+backoffice.dev.tupensioninteligente.cl       -> Caddy -> private Streamlit
                                              -> SimpleDevAuth
 ```
 
@@ -19,6 +19,10 @@ The names are proposed only. Caddy is the sole public listener; both Streamlit
 containers expose port 8000 or 8501 only to the Compose network. Hostname
 routing keeps the authentication responsibility in the private application,
 not in Caddy.
+
+AWS DEV delegates the public hosted zone `dev.tupensioninteligente.cl.` to
+Route 53. Caddy receives its verified hosted zone ID through
+`TPI_ROUTE53_HOSTED_ZONE_ID`; the image contains no hosted zone ID.
 
 For local H2.5C validation, `docker-compose.local.yml` supplies PostgreSQL and
 the idempotent schema initializer. Caddy uses `http://tpi.localhost` and

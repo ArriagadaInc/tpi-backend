@@ -22,7 +22,42 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
-### 2026-08-25 - Cutover DEV oficial a `dev.tupensioninteligente.cl`
+### 2026-09-10 - Preparacion del cierre TLS/domain contract de H3.3
+
+Contexto:
+
+- La promocion H3.3 anterior termino saludable sobre
+  `h3-3-crm-web-28cf009-r1`, que permanece inmutable.
+- AWS Agent Toolkit confirmo en la cuenta `821656895812` que la hosted zone
+  publica delegada es `dev.tupensioninteligente.cl.` con ID
+  `Z07053592LX0W8GJXNI1C`; no existe una hosted zone apex TPI en la cuenta.
+- El environment conservaba las direcciones historicas `genialabs.cl` y la
+  policy fisica ACME ya apuntaba a la zona TPI, pero autorizaba solo el TXT del
+  hostname publico.
+
+Cambios preparados:
+
+- Caddy obtiene el hosted zone ID desde `TPI_ROUTE53_HOSTED_ZONE_ID`.
+- El Compose AWS exige las cuatro variables no secretas del contrato DEV.
+- La policy Route 53 versionada limita cambios a TXT sobre los challenges
+  publico y backoffice en la zona delegada TPI.
+- El preflight independiente y el de promocion comparan los cuatro valores
+  exactos sin imprimir el resto del environment.
+- Se actualizaron los allowlists runtime del sitio publico y del backoffice y
+  se agregaron pruebas de regresion.
+
+Pendiente:
+
+- CI, candidate inmutable nuevo, aplicacion/verificacion de la policy fisica,
+  cutover controlado, promocion unica, TLS/smoke H3.3 y cierre de PR `#14`.
+- Antes de mutar AWS debe resolverse mecanicamente el orden atomico entre el
+  preflight exacto y el cambio de VersionLabel/configuracion, sin arrancar una
+  revision de Caddy con dominio y hosted zone incompatibles.
+
+### 2026-08-25 - Registro historico de cutover DEV
+
+> Registro historico: los hostnames, version labels y permisos descritos a
+> continuacion no representan el contrato runtime DEV vigente.
 
 Contexto:
 
@@ -56,7 +91,7 @@ Siguiente paso:
 - No retirar todavia `dev.genialabs.cl` hasta que el corte de operacion quede formalmente cerrado.
 - Consolidar los aprendizajes en la documentacion de despliegue reproducible.
 
-### 2026-08-25 - H3.3 CRM Lite Web UX cerrado formalmente
+### 2026-08-25 - Registro historico de cierre H3.3 CRM Lite Web UX
 
 Contexto:
 

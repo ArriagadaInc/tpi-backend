@@ -28,6 +28,7 @@ Guia de todos los documentos del proyecto. Comienza por el que corresponda a tu 
 - [DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md): setup, quality gates, AWS DEV and authentication boundary.
 - [H2_5_SIMPLE_DEV_AUTH_PREFLIGHT.md](H2_5_SIMPLE_DEV_AUTH_PREFLIGHT.md): approved H2.5 topology and DNS prerequisite.
 - [H2_5_CEO_VALIDATION_GUIDE.md](H2_5_CEO_VALIDATION_GUIDE.md): DEV validation flow without credentials.
+- [DEV_EB_DEPLOYMENT_RUNBOOK.md](DEV_EB_DEPLOYMENT_RUNBOOK.md): deployment controlado del candidato DEV.
 
 ## Pruebas
 

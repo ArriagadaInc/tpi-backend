@@ -69,6 +69,7 @@ services:
       - "${CADDY_BIND_ADDRESS:-127.0.0.1}:${CADDY_HTTP_PORT:-8080}:80"
       - "${CADDY_BIND_ADDRESS:-127.0.0.1}:${CADDY_HTTPS_PORT:-443}:443"
     environment:
+      TPI_ROUTE53_HOSTED_ZONE_ID: ${TPI_ROUTE53_HOSTED_ZONE_ID:-local-not-used}
       TPI_PUBLIC_SITE_ADDRESS: ${TPI_PUBLIC_SITE_ADDRESS:-http://tpi.localhost}
       TPI_BACKOFFICE_SITE_ADDRESS: ${TPI_BACKOFFICE_SITE_ADDRESS:-http://backoffice.tpi.localhost}
       TPI_API_UPSTREAM: ${TPI_API_UPSTREAM:-api:8000}

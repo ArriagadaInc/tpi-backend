@@ -947,4 +947,4 @@ def test_board_html_uses_relative_static_asset_urls() -> None:
     assert response.status_code == 200
     assert "/static/css/app.css" in response.text
     assert "/static/js/app.js" in response.text
-    assert "http://backoffice.dev.genialabs.cl/static/" not in response.text
+    assert "http://backoffice.dev.tupensioninteligente.cl/static/" not in response.text

@@ -62,7 +62,7 @@ port; no credentials, tokens, or query parameters are transferred.
 After authentication, the backoffice sidebar displays `Volver al sitio` only
 when `TPI_PUBLIC_SITE_URL` matches the approved environment URL: local uses
 `http://tpi.localhost:8080/` and temporary AWS DEV uses
-`https://dev.genialabs.cl/`.
+`https://dev.tupensioninteligente.cl/`.
 The link does not log out or transfer session data.
 
 Running services are `postgres`, one-shot `db-init`, `api`, `backoffice` and
@@ -160,8 +160,8 @@ The AWS-oriented Compose topology runs three application services:
 
 ```text
 Caddy :80/:443
-  dev.genialabs.cl             -> static front/ and api:8000 (/api/*)
-  backoffice.dev.genialabs.cl  -> backoffice:8501
+  dev.tupensioninteligente.cl             -> static front/ and api:8000 (/api/*)
+  backoffice.dev.tupensioninteligente.cl  -> backoffice:8501
 ```
 
 Only Caddy publishes host ports. The `api` service receives no `AUTH_USERS_JSON`;
@@ -192,6 +192,7 @@ and the temporary DEV domain are not production architecture.
 - `AUTH_USERS_JSON`: private runtime secret only.
 - `API_IDEMPOTENCY_HMAC_SECRET`: dedicated public API runtime secret for non-reversible
   idempotency fingerprints; never version it.
+- `TPI_ROUTE53_HOSTED_ZONE_ID`: delegated public DEV hosted zone used by Caddy DNS-01.
 - `API_MAX_REQUEST_BYTES`, `API_RATE_LIMIT_REQUESTS`,
   `API_RATE_LIMIT_WINDOW_SECONDS`, `API_TRUSTED_PROXY_CIDRS`: public API DEV
   safeguards.
