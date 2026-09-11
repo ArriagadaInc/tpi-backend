@@ -62,6 +62,16 @@ def test_eb_preflight_permissions_are_describe_only() -> None:
     )
 
 
+def test_eb_preflight_read_role_has_no_s3_permissions() -> None:
+    policy = _load_json("deployment/iam/tpi-github-actions-dev-eb-read.json")
+    serialized = json.dumps(policy)
+
+    assert "s3:" not in serialized
+    assert "s3:CreateBucket" not in serialized
+    assert "s3:Put" not in serialized
+    assert "s3:Delete" not in serialized
+
+
 def test_dns_matching_uses_exact_environment_cname() -> None:
     environments = [
         {
