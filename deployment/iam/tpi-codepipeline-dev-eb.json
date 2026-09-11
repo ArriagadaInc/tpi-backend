@@ -16,25 +16,12 @@
       "Effect": "Allow",
       "Action": [
         "s3:GetObject",
-        "s3:GetObjectVersion",
-        "s3:GetObjectTagging",
-        "s3:GetObjectVersionTagging"
-      ],
-      "Resource": [
-        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/promotions/h3-3-crm-web-43101be-r1/candidate-data.zip",
-        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/trusted-tooling/v1/verify_frozen_candidate.sh",
-        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/trusted-tooling/h3-3-43101be/4c8b9728ecc83a25da79532350a9d7d14c405f1bc73660cb8def6a706b15ab34/promote_eb_candidate.py"
-      ]
-    },
-    {
-      "Sid": "MaterializeOnlyVerifiedApprovedBundle",
-      "Effect": "Allow",
-      "Action": [
-        "s3:PutObject",
-        "s3:GetObject",
         "s3:GetObjectVersion"
       ],
-      "Resource": "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/approved-releases/h3-3-crm-web-43101be-r1/7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb.zip"
+      "Resource": [
+        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/approved-releases/h3-3-domain-baseline-28cf009-caddy43101be-r1/e1393c10850956b8921a0bab66d11447beadce89ef6bcf7aaf34f513435017d9.zip",
+        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/trusted-tooling/h3-3-domain-baseline/a550bd02d4325031ef60ad5b7615258ac55acf38a7cc79c0f5224d957beb0c17/promote_domain_baseline.py"
+      ]
     },
     {
       "Sid": "UseDedicatedPipelineArtifactStore",
@@ -68,7 +55,7 @@
       "Resource": [
         "arn:aws:elasticbeanstalk:us-east-2:821656895812:application/tpi-backoffice",
         "arn:aws:elasticbeanstalk:us-east-2:821656895812:applicationversion/tpi-backoffice/h3-3-crm-web-28cf009-r1",
-        "arn:aws:elasticbeanstalk:us-east-2:821656895812:applicationversion/tpi-backoffice/h3-3-crm-web-43101be-r1",
+        "arn:aws:elasticbeanstalk:us-east-2:821656895812:applicationversion/tpi-backoffice/h3-3-domain-baseline-28cf009-caddy43101be-r1",
         "arn:aws:elasticbeanstalk:us-east-2:821656895812:environment/tpi-backoffice/tpi-backoffice-dev-green"
       ]
     },
@@ -81,7 +68,7 @@
         "ArnEquals": {
           "elasticbeanstalk:FromApplicationVersion": [
             "arn:aws:elasticbeanstalk:us-east-2:821656895812:applicationversion/tpi-backoffice/h3-3-crm-web-28cf009-r1",
-            "arn:aws:elasticbeanstalk:us-east-2:821656895812:applicationversion/tpi-backoffice/h3-3-crm-web-43101be-r1"
+            "arn:aws:elasticbeanstalk:us-east-2:821656895812:applicationversion/tpi-backoffice/h3-3-domain-baseline-28cf009-caddy43101be-r1"
           ]
         }
       }

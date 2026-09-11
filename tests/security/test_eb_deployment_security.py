@@ -2,7 +2,6 @@
 
 import hashlib
 import json
-import shlex
 from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
@@ -67,43 +66,41 @@ def test_codepipeline_trust_is_service_only() -> None:
     assert "Federated" not in json.dumps(policy)
 
 
-def test_pipeline_targets_only_approved_dev_environment_and_candidate() -> None:
+def test_pipeline_targets_only_approved_baseline_and_dev_environment() -> None:
     pipeline = _load_json("deployment/aws/tpi-dev-eb-pipeline.json")["pipeline"]
     serialized = json.dumps(pipeline)
 
     assert pipeline["name"] == "tpi-backoffice-dev-promotion"
     assert pipeline["pipelineType"] == "V2"
-    assert "tpi-backoffice-dev-green" in serialized
-    assert "tpi-backoffice" in serialized
-    assert "h3-3-crm-web-43101be-r1" in serialized
-    assert "43101be7835088f93267bee85b0f11c8bc879867" in serialized
-    assert "7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb" in serialized
-    assert "sha256:79737222a5901871857f59143c8dc696879b2e88aa740eb7304225ffa4cd9631" in serialized
-    assert "sha256:30ace9145a21209f41799d345f4d6f641f0b882478fede76d0e19a575656aaaf" in serialized
+    assert "h3-3-domain-baseline-28cf009-caddy43101be-r1" in serialized
+    assert "e1393c10850956b8921a0bab66d11447beadce89ef6bcf7aaf34f513435017d9" in serialized
+    assert "h3-3-crm-web-43101be-r1" not in serialized
     source = pipeline["stages"][0]["actions"][0]["configuration"]
-    assert source["S3ObjectKey"] == ("promotions/h3-3-crm-web-43101be-r1/candidate-data.zip")
+    assert source["S3ObjectKey"] == (
+        "approved-releases/h3-3-domain-baseline-28cf009-caddy43101be-r1/"
+        "e1393c10850956b8921a0bab66d11447beadce89ef6bcf7aaf34f513435017d9.zip"
+    )
     assert source["AllowOverrideForS3ObjectKey"] == "false"
     assert 'PollForSourceChanges": "false' in serialized
 
     commands = pipeline["stages"][1]["actions"][0]["commands"]
     required_tools = commands[0]
-    assert all(
-        tool in required_tools
-        for tool in ("aws", "python3", "bash", "jq", "sha256sum", "zipinfo", "unzip", "docker")
-    )
-    assert "docker compose version" in commands[1]
+    assert all(tool in required_tools for tool in ("aws", "python3", "bash", "sha256sum"))
     assert not any(
         installer in " ".join(commands)
         for installer in ("apt-get", "apk add", "pip install", "yum install")
     )
-    assert any("trusted-tooling/v1/verify_frozen_candidate.sh" in item for item in commands)
-    assert any("trusted-tooling/h3-3-43101be/" in item for item in commands)
-    assert sum("sha256sum --check --strict" in item for item in commands) == 2
-    assert any(command.endswith("bash /tmp/verify_frozen_candidate.sh") for command in commands)
-    assert any(command.endswith("python3 /tmp/promote_eb_candidate.py") for command in commands)
+    assert any(
+        "trusted-tooling/h3-3-domain-baseline/"
+        "a550bd02d4325031ef60ad5b7615258ac55acf38a7cc79c0f5224d957beb0c17/"
+        "promote_domain_baseline.py" in item
+        for item in commands
+    )
+    assert sum("sha256sum --check --strict" in item for item in commands) == 1
+    assert any(command.endswith("python3 /tmp/promote_domain_baseline.py") for command in commands)
 
 
-def test_pipeline_commands_respect_aws_quotas_and_keep_frozen_contract() -> None:
+def test_pipeline_commands_respect_aws_quotas_and_run_only_the_baseline_promoter() -> None:
     pipeline = _load_json("deployment/aws/tpi-dev-eb-pipeline.json")["pipeline"]
     action = pipeline["stages"][1]["actions"][0]
     commands = action["commands"]
@@ -112,54 +109,14 @@ def test_pipeline_commands_respect_aws_quotas_and_keep_frozen_contract() -> None
     assert 1 <= len(commands) <= 50
     assert all(1 <= len(command) <= 1000 for command in commands)
 
-    verifier = next(
-        command for command in commands if command.endswith("bash /tmp/verify_frozen_candidate.sh")
-    )
+    assert "promote_eb_candidate.py" not in " ".join(commands)
+    assert "verify_frozen_candidate.sh" not in " ".join(commands)
     promoter = next(
-        command for command in commands if command.endswith("python3 /tmp/promote_eb_candidate.py")
+        command
+        for command in commands
+        if command.endswith("python3 /tmp/promote_domain_baseline.py")
     )
-
-    verifier_tokens = shlex.split(verifier)
-    promoter_tokens = shlex.split(promoter)
-    verifier_environment = dict(token.split("=", 1) for token in verifier_tokens[:-2])
-    promoter_environment = dict(token.split("=", 1) for token in promoter_tokens[:-2])
-
-    assert verifier_environment == {
-        "ARTIFACT_DIR": "artifact",
-        "BUNDLE_NAME": "tpi-dev-ecr-43101be.zip",
-        "MANIFEST_NAME": "tpi-dev-ecr-43101be.manifest.json",
-        "BUNDLE_SHA256": "7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb",
-        "SOURCE_SHA": "43101be7835088f93267bee85b0f11c8bc879867",
-        "APP_IMAGE": (
-            "821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-app@"
-            "sha256:79737222a5901871857f59143c8dc696879b2e88aa740eb7304225ffa4cd9631"
-        ),
-        "CADDY_IMAGE": (
-            "821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-caddy@"
-            "sha256:30ace9145a21209f41799d345f4d6f641f0b882478fede76d0e19a575656aaaf"
-        ),
-        "TPI_ROUTE53_HOSTED_ZONE_ID": "Z07053592LX0W8GJXNI1C",
-    }
-    assert verifier_tokens[-2:] == ["bash", "/tmp/verify_frozen_candidate.sh"]
-
-    assert promoter_environment == {
-        "AWS_ACCOUNT_ID": "821656895812",
-        "AWS_REGION": "us-east-2",
-        "APPLICATION": "tpi-backoffice",
-        "ENVIRONMENT": "tpi-backoffice-dev-green",
-        "EXPECTED_CURRENT_VERSION": "h3-3-crm-web-28cf009-r1",
-        "VERSION_LABEL": "h3-3-crm-web-43101be-r1",
-        "APPROVED_BUNDLE_BUCKET": "tpi-dev-release-artifacts-821656895812-us-east-2",
-        "APPROVED_BUNDLE_KEY": (
-            "approved-releases/h3-3-crm-web-43101be-r1/"
-            "7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb.zip"
-        ),
-        "ARTIFACT_DIR": "artifact",
-        "BUNDLE_NAME": "tpi-dev-ecr-43101be.zip",
-        "SOURCE_SHA": "43101be7835088f93267bee85b0f11c8bc879867",
-        "BUNDLE_SHA256": "7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb",
-    }
-    assert promoter_tokens[-2:] == ["python3", "/tmp/promote_eb_candidate.py"]
+    assert promoter == "python3 /tmp/promote_domain_baseline.py"
 
 
 def test_pipeline_role_scopes_eb_write_and_documents_bucket_level_boundary() -> None:
@@ -182,7 +139,7 @@ def test_pipeline_role_scopes_eb_write_and_documents_bucket_level_boundary() -> 
         "arn:aws:elasticbeanstalk:us-east-2:821656895812:applicationversion/"
         "tpi-backoffice/h3-3-crm-web-28cf009-r1",
         "arn:aws:elasticbeanstalk:us-east-2:821656895812:applicationversion/"
-        "tpi-backoffice/h3-3-crm-web-43101be-r1",
+        "tpi-backoffice/h3-3-domain-baseline-28cf009-caddy43101be-r1",
     ]
     assert storage["Resource"] == "arn:aws:s3:::elasticbeanstalk-us-east-2-821656895812"
     assert storage["Action"] == [
@@ -384,7 +341,7 @@ def test_update_environment_keeps_exact_application_version_condition() -> None:
                 "arn:aws:elasticbeanstalk:us-east-2:821656895812:"
                 "applicationversion/tpi-backoffice/h3-3-crm-web-28cf009-r1",
                 "arn:aws:elasticbeanstalk:us-east-2:821656895812:"
-                "applicationversion/tpi-backoffice/h3-3-crm-web-43101be-r1",
+                "applicationversion/tpi-backoffice/h3-3-domain-baseline-28cf009-caddy43101be-r1",
             ]
         }
     }
@@ -410,6 +367,12 @@ def test_promoter_does_not_call_describe_configuration_settings() -> None:
     assert "_require_environment_contract" not in promoter
 
 
+def test_baseline_promoter_does_not_call_describe_configuration_settings() -> None:
+    promoter = (ROOT / "deployment/aws/promote_domain_baseline.py").read_text(encoding="utf-8")
+
+    assert "describe-configuration-settings" not in promoter
+
+
 def test_pipeline_role_uses_specific_eb_actions_without_describe_wildcard() -> None:
     policy = _load_json("deployment/iam/tpi-codepipeline-dev-eb.json")
     serialized = json.dumps(policy)
@@ -433,9 +396,7 @@ def test_pipeline_role_s3_contract_is_not_expanded() -> None:
         "s3:GetBucketLocation",
         "s3:GetBucketVersioning",
         "s3:GetObject",
-        "s3:GetObjectTagging",
         "s3:GetObjectVersion",
-        "s3:GetObjectVersionTagging",
         "s3:ListBucket",
         "s3:Put*",
         "s3:PutBucketOwnershipControls",
@@ -587,36 +548,46 @@ def test_github_cannot_write_trusted_tooling_and_source_key_is_fixed() -> None:
     )
     assert source == {
         "S3Bucket": "tpi-dev-release-artifacts-821656895812-us-east-2",
-        "S3ObjectKey": "promotions/h3-3-crm-web-43101be-r1/candidate-data.zip",
+        "S3ObjectKey": (
+            "approved-releases/h3-3-domain-baseline-28cf009-caddy43101be-r1/"
+            "e1393c10850956b8921a0bab66d11447beadce89ef6bcf7aaf34f513435017d9.zip"
+        ),
         "PollForSourceChanges": "false",
         "AllowOverrideForS3ObjectKey": "false",
     }
 
 
-def test_only_pipeline_can_materialize_the_exact_approved_bundle() -> None:
-    release_policy = _load_json("deployment/iam/tpi-github-actions-dev-release.json")
+def test_baseline_object_is_read_only_for_the_pipeline_role() -> None:
     pipeline_policy = _load_json("deployment/iam/tpi-codepipeline-dev-eb.json")
-    approved_resource = (
+    sids = {statement["Sid"] for statement in pipeline_policy["Statement"]}
+    baseline_key = (
         "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/"
-        "approved-releases/h3-3-crm-web-43101be-r1/"
-        "7a7c69d6bc005a82c331895da06fbdc26b1f1fa88ce3a23a4274629476d8cfbb.zip"
+        "approved-releases/h3-3-domain-baseline-28cf009-caddy43101be-r1/"
+        "e1393c10850956b8921a0bab66d11447beadce89ef6bcf7aaf34f513435017d9.zip"
     )
 
-    assert approved_resource not in json.dumps(release_policy)
-    materialize = next(
+    assert "MaterializeOnlyVerifiedApprovedBundle" not in sids
+    read = next(
         statement
         for statement in pipeline_policy["Statement"]
-        if statement["Sid"] == "MaterializeOnlyVerifiedApprovedBundle"
+        if statement["Sid"] == "ReadExactReleaseDataAndTrustedTooling"
     )
-    assert materialize == {
-        "Sid": "MaterializeOnlyVerifiedApprovedBundle",
-        "Effect": "Allow",
-        "Action": ["s3:PutObject", "s3:GetObject", "s3:GetObjectVersion"],
-        "Resource": approved_resource,
-    }
+    assert baseline_key in read["Resource"]
+    assert "s3:PutObject" not in read["Action"]
+    for statement in pipeline_policy["Statement"]:
+        actions = (
+            statement["Action"] if isinstance(statement["Action"], list) else [statement["Action"]]
+        )
+        if "s3:PutObject" in actions:
+            resources = (
+                statement["Resource"]
+                if isinstance(statement["Resource"], list)
+                else [statement["Resource"]]
+            )
+            assert baseline_key not in resources
 
 
-def test_pipeline_role_drops_the_old_candidate_source_and_reads_one_hashed_promoter() -> None:
+def test_pipeline_role_reads_only_the_baseline_and_its_hashed_promoter() -> None:
     policy = _load_json("deployment/iam/tpi-codepipeline-dev-eb.json")
     serialized = json.dumps(policy)
     read = next(
@@ -625,50 +596,47 @@ def test_pipeline_role_drops_the_old_candidate_source_and_reads_one_hashed_promo
         if statement["Sid"] == "ReadExactReleaseDataAndTrustedTooling"
     )
 
-    assert "trusted-tooling/v1/promote_eb_candidate.py" not in serialized
-    assert "elasticbeanstalk-us-east-2-821656895812/tpi-backoffice/dev-releases" not in serialized
+    assert "candidate-data.zip" not in serialized
+    assert "trusted-tooling/v1/verify_frozen_candidate.sh" not in serialized
+    assert "trusted-tooling/h3-3-43101be/" not in serialized
+    assert read["Action"] == ["s3:GetObject", "s3:GetObjectVersion"]
     assert read["Resource"] == [
         "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/"
-        "promotions/h3-3-crm-web-43101be-r1/candidate-data.zip",
+        "approved-releases/h3-3-domain-baseline-28cf009-caddy43101be-r1/"
+        "e1393c10850956b8921a0bab66d11447beadce89ef6bcf7aaf34f513435017d9.zip",
         "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/"
-        "trusted-tooling/v1/verify_frozen_candidate.sh",
-        "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/"
-        "trusted-tooling/h3-3-43101be/"
-        "4c8b9728ecc83a25da79532350a9d7d14c405f1bc73660cb8def6a706b15ab34/"
-        "promote_eb_candidate.py",
+        "trusted-tooling/h3-3-domain-baseline/"
+        "a550bd02d4325031ef60ad5b7615258ac55acf38a7cc79c0f5224d957beb0c17/"
+        "promote_domain_baseline.py",
     ]
 
 
-def test_external_release_object_cannot_become_candidate_source() -> None:
+def test_external_release_object_cannot_become_baseline_source() -> None:
     pipeline = _load_json("deployment/aws/tpi-dev-eb-pipeline.json")["pipeline"]
-    workflow = WORKFLOW.read_text(encoding="utf-8")
     serialized_pipeline = json.dumps(pipeline)
 
-    assert "RELEASE_BUNDLE_KEY" not in workflow
-    assert "/releases/h3-3-crm-web-43101be-r1" not in workflow
-    assert "/releases/h3-3-crm-web-43101be-r1" not in serialized_pipeline
-    assert "approved-releases/h3-3-crm-web-43101be-r1" in serialized_pipeline
+    assert "promotions/h3-3-crm-web-43101be-r1/candidate-data.zip" not in serialized_pipeline
+    assert "approved-releases/h3-3-domain-baseline-28cf009-caddy43101be-r1" in serialized_pipeline
+    source = pipeline["stages"][0]["actions"][0]["configuration"]
+    assert source["S3ObjectKey"] == (
+        "approved-releases/h3-3-domain-baseline-28cf009-caddy43101be-r1/"
+        "e1393c10850956b8921a0bab66d11447beadce89ef6bcf7aaf34f513435017d9.zip"
+    )
 
 
 def test_pipeline_pins_exact_trusted_tooling_hashes() -> None:
     pipeline = _load_json("deployment/aws/tpi-dev-eb-pipeline.json")["pipeline"]
     commands = pipeline["stages"][1]["actions"][0]["commands"]
     expected = {
-        "verify_frozen_candidate.sh": hashlib.sha256(
-            (ROOT / "scripts/release/verify_frozen_candidate.sh")
+        "promote_domain_baseline.py": hashlib.sha256(
+            (ROOT / "deployment/aws/promote_domain_baseline.py")
             .read_text(encoding="utf-8")
             .encode()
         ).hexdigest(),
-        "promote_eb_candidate.py": hashlib.sha256(
-            (ROOT / "deployment/aws/promote_eb_candidate.py").read_text(encoding="utf-8").encode()
-        ).hexdigest(),
     }
     assert expected == {
-        "verify_frozen_candidate.sh": (
-            "a59144ff469e56231addb7c46ccf3fa7d456ff9487c7387089eec9137a045791"
-        ),
-        "promote_eb_candidate.py": (
-            "4c8b9728ecc83a25da79532350a9d7d14c405f1bc73660cb8def6a706b15ab34"
+        "promote_domain_baseline.py": (
+            "a550bd02d4325031ef60ad5b7615258ac55acf38a7cc79c0f5224d957beb0c17"
         ),
     }
 
