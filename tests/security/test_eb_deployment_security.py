@@ -390,21 +390,24 @@ def test_update_environment_keeps_exact_application_version_condition() -> None:
     }
 
 
-def test_pipeline_role_reads_only_approved_environment_configuration() -> None:
+def test_pipeline_role_has_no_environment_configuration_introspection() -> None:
     policy = _load_json("deployment/iam/tpi-codepipeline-dev-eb.json")
-    statement = next(
-        item
-        for item in policy["Statement"]
-        if item["Sid"] == "ReadOnlyApprovedDevEnvironmentConfiguration"
-    )
+    serialized = json.dumps(policy)
+    sids = {statement["Sid"] for statement in policy["Statement"]}
 
-    assert statement["Effect"] == "Allow"
-    assert statement["Action"] == "elasticbeanstalk:DescribeConfigurationSettings"
-    assert statement["Resource"] == (
-        "arn:aws:elasticbeanstalk:us-east-2:821656895812:environment/"
-        "tpi-backoffice/tpi-backoffice-dev-green"
-    )
-    assert "*" not in statement["Resource"]
+    assert "ReadOnlyApprovedDevEnvironmentConfiguration" not in sids
+    assert "elasticbeanstalk:DescribeConfigurationSettings" not in serialized
+    assert "ec2:DescribeSubnets" not in serialized
+    assert "ec2:DescribeVpcs" not in serialized
+    assert "ec2:DescribeSecurityGroups" not in serialized
+
+
+def test_promoter_does_not_call_describe_configuration_settings() -> None:
+    promoter = (ROOT / "deployment/aws/promote_eb_candidate.py").read_text(encoding="utf-8")
+
+    assert "describe-configuration-settings" not in promoter
+    assert "_environment_contract" not in promoter
+    assert "_require_environment_contract" not in promoter
 
 
 def test_pipeline_role_uses_specific_eb_actions_without_describe_wildcard() -> None:
@@ -631,7 +634,7 @@ def test_pipeline_role_drops_the_old_candidate_source_and_reads_one_hashed_promo
         "trusted-tooling/v1/verify_frozen_candidate.sh",
         "arn:aws:s3:::tpi-dev-release-artifacts-821656895812-us-east-2/"
         "trusted-tooling/h3-3-43101be/"
-        "dfbdbadfe16133db937c44cd25add127e5b68be089869416338630e6f685d144/"
+        "4c8b9728ecc83a25da79532350a9d7d14c405f1bc73660cb8def6a706b15ab34/"
         "promote_eb_candidate.py",
     ]
 
@@ -665,7 +668,7 @@ def test_pipeline_pins_exact_trusted_tooling_hashes() -> None:
             "a59144ff469e56231addb7c46ccf3fa7d456ff9487c7387089eec9137a045791"
         ),
         "promote_eb_candidate.py": (
-            "dfbdbadfe16133db937c44cd25add127e5b68be089869416338630e6f685d144"
+            "4c8b9728ecc83a25da79532350a9d7d14c405f1bc73660cb8def6a706b15ab34"
         ),
     }
 
