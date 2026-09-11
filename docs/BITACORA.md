@@ -22,6 +22,21 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-09-11 - Remediacion minima de supply-chain de la imagen app
+
+- El tag oficial inmutable `python:3.12.14-alpine3.24` continua resolviendo al
+  digest `sha256:b64631e04e4920160c50fbe8d8df828f7f35f06f425cb44aa09bca53e708a35a`.
+- El scan ECR del candidate no elegible atribuyo el finding a la fuente
+  `util-linux 2.42.1-r0`. La inspeccion del APK DB de la base confirma que el
+  unico APK instalado con ese origen es `libuuid 2.42.1-r0`; el indice oficial
+  Alpine 3.24 publica `libuuid 2.42.3-r1` del mismo origen.
+- Se conserva la base fijada y se actualiza exclusivamente `libuuid` con una
+  version explicita. No se usa `apk upgrade` global ni se modifican dependencias
+  Python, funcionalidad H3.3 ni recursos AWS.
+- CI compara el inventario APK de la base y la app, exige que el unico delta sea
+  `libuuid 2.42.1-r0 -> 2.42.3-r1`, conserva Python 3.12.14 y valida el
+  arranque/readiness del contenedor contra PostgreSQL efimero.
+
 ### 2026-09-10 - Preparacion del cierre TLS/domain contract de H3.3
 
 Contexto:
