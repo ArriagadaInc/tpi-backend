@@ -179,6 +179,48 @@ def build_domain_baseline_bundle(
     return output, manifest_path
 
 
+def build_domain_locked_bundle(
+    *,
+    template: Path,
+    output: Path,
+    app_image: str,
+    caddy_image: str,
+    runtime_git_sha: str,
+) -> tuple[Path, Path]:
+    """Create a domain-locked DEV bundle: the TPI domain variables are literal."""
+    if not GIT_SHA_PATTERN.fullmatch(runtime_git_sha):
+        raise ValueError("runtime git SHA must be a full 40-character lowercase SHA.")
+
+    compose = render_compose(template, app_image, caddy_image)
+    if "genialabs.cl" in compose:
+        raise ValueError("Domain-locked bundle must not reference genialabs.cl")
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    info = zipfile.ZipInfo(filename=ARCHIVE_ENTRY, date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_STORED
+    info.create_system = 3
+    info.external_attr = 0o100644 << 16
+    with zipfile.ZipFile(output, mode="w", compression=zipfile.ZIP_STORED) as archive:
+        archive.writestr(info, compose.encode("utf-8"))
+
+    validate_bundle(output)
+    manifest = {
+        "artifact_type": "domain-locked",
+        "app_image": app_image,
+        "app_image_digest": app_image.rsplit("@", 1)[1],
+        "bundle_sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+        "caddy_image": caddy_image,
+        "caddy_image_digest": caddy_image.rsplit("@", 1)[1],
+        "generated_at": datetime.now(UTC).isoformat(),
+        "runtime_git_sha": runtime_git_sha,
+    }
+    manifest_path = output.with_suffix(".manifest.json")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return output, manifest_path
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--template", type=Path, required=True)
