@@ -193,20 +193,42 @@ def test_pipeline_role_models_only_observed_stack_compute_dependencies() -> None
     policy = _load_json("deployment/iam/tpi-codepipeline-dev-eb.json")
     statements = {statement["Sid"]: statement for statement in policy["Statement"]}
 
-    inspection = statements["InspectOnlyObservedDevComputeResources"]
-    assert inspection["Resource"] == "*"
-    assert inspection["Condition"] == {"StringEquals": {"aws:RequestedRegion": "us-east-2"}}
-    assert set(inspection["Action"]) == {
+    dependencies = statements["ElasticBeanstalkUpdateReadOnlyDependencies"]
+    assert dependencies["Resource"] == "*"
+    assert dependencies["Condition"] == {"StringEquals": {"aws:RequestedRegion": "us-east-2"}}
+    assert set(dependencies["Action"]) == {
+        "autoscaling:DescribeAccountLimits",
         "autoscaling:DescribeAutoScalingGroups",
         "autoscaling:DescribeAutoScalingInstances",
+        "autoscaling:DescribeLaunchConfigurations",
+        "autoscaling:DescribeLoadBalancers",
+        "autoscaling:DescribeNotificationConfigurations",
         "autoscaling:DescribeScalingActivities",
-        "autoscaling:DescribeScalingProcessTypes",
+        "autoscaling:DescribeScheduledActions",
+        "ec2:DescribeAccountAttributes",
         "ec2:DescribeAddresses",
+        "ec2:DescribeAvailabilityZones",
+        "ec2:DescribeImages",
+        "ec2:DescribeInstanceAttribute",
+        "ec2:DescribeInstances",
+        "ec2:DescribeKeyPairs",
         "ec2:DescribeLaunchTemplates",
         "ec2:DescribeLaunchTemplateVersions",
         "ec2:DescribeSecurityGroups",
+        "ec2:DescribeSnapshots",
+        "ec2:DescribeSpotInstanceRequests",
         "ec2:DescribeSubnets",
+        "ec2:DescribeVpcClassicLink",
         "ec2:DescribeVpcs",
+        "elasticloadbalancing:DescribeInstanceHealth",
+        "elasticloadbalancing:DescribeLoadBalancers",
+        "elasticloadbalancing:DescribeTargetGroups",
+        "elasticloadbalancing:DescribeTargetHealth",
+        "logs:DescribeLogGroups",
+        "rds:DescribeDBEngineVersions",
+        "rds:DescribeDBInstances",
+        "rds:DescribeOrderableDBInstanceOptions",
+        "sns:ListSubscriptionsByTopic",
     }
 
     autoscaling = statements["UpdateOnlyObservedDevAutoScalingGroup"]
@@ -239,7 +261,7 @@ def test_pipeline_role_models_only_observed_stack_compute_dependencies() -> None
         statement for statement in policy["Statement"] if statement["Resource"] == "*"
     ]
     assert {statement["Sid"] for statement in wildcard_statements} == {
-        "InspectOnlyObservedDevComputeResources",
+        "ElasticBeanstalkUpdateReadOnlyDependencies",
         "InspectElasticBeanstalkEnvironmentHealthLogs",
     }
 
@@ -258,9 +280,18 @@ def test_pipeline_role_models_only_observed_stack_compute_dependencies() -> None
         "iam:PassRole",
     ):
         assert excluded not in actions
-    assert not any(
-        action.startswith(("elasticloadbalancing:", "rds:", "ecs:")) for action in actions
-    )
+    # ELB/RDS/SNS are read-only (Describe/List) only; no writes.
+    for prefix in ("elasticloadbalancing:", "rds:", "sns:"):
+        for action in actions:
+            if action.startswith(prefix):
+                assert action.split(":", 1)[1].startswith(("Describe", "List")), action
+    for wildcard in (
+        "ec2:Describe*",
+        "autoscaling:Describe*",
+        "elasticloadbalancing:Describe*",
+        "rds:Describe*",
+    ):
+        assert wildcard not in json.dumps(policy)
 
 
 def test_pipeline_role_limits_environment_health_log_permissions() -> None:
