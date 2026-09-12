@@ -4,6 +4,12 @@
 **Versión:** MVP1  
 **Estado General:** 🟢 OPERATIVO
 
+> **HISTORICO (parcialmente).** La tabla H3.3 de mas abajo refleja una acceptance
+> previa (`h3-3-crm-web-1574d79-r1`). El cierre vigente de H3.3 (con excepciones
+> diferidas) esta en `docs/BITACORA.md` (entrada 2026-09-12) y en
+> `docs/TPI_Contrato_CICD_AWS_v2.md`. Runtime DEV vigente:
+> `h3-3-crm-web-43101be-domainlocked-r1`.
+
 ---
 
 ## Hito H3.3: CRM Lite Web UX
