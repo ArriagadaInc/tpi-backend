@@ -98,7 +98,8 @@
         "autoscaling:DescribeScalingProcessTypes",
         "ec2:DescribeAddresses",
         "ec2:DescribeLaunchTemplates",
-        "ec2:DescribeLaunchTemplateVersions"
+        "ec2:DescribeLaunchTemplateVersions",
+        "ec2:DescribeSubnets"
       ],
       "Resource": "*",
       "Condition": {
