@@ -22,6 +22,126 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-09-12 - Cierre H3.3 (CLOSED WITH DEFERRED ACCEPTANCE ITEMS) y handoff
+
+Entrada de referencia operativa vigente. Las entradas anteriores de H3.3 y los
+hostnames/hashes historicos quedan como HISTORICO; esta entrada manda.
+
+#### Punto exacto del desarrollo
+
+- H3.3 funcional cerrado con excepciones aceptadas por el owner:
+  `CLOSED WITH DEFERRED ACCEPTANCE ITEMS`.
+- PR funcional #14 mergeado por squash. Merge SHA
+  `89a1c58643fc228024243d474c47986ab272257f`.
+- Candidate validado/desplegado: `43101be7835088f93267bee85b0f11c8bc879867`.
+- Main CI de cierre: run `34701799998` -> success.
+- Issue de seguimiento: #50 `H3.3.1 — completar RBAC/PII y asignacion manual en DEV`.
+
+#### Runtime AWS DEV vigente (estado observado, no intencion)
+
+- Account `821656895812`, region `us-east-2`.
+- EB environment `tpi-backoffice-dev-green`, application `tpi-backoffice`.
+- VersionLabel: `h3-3-crm-web-43101be-domainlocked-r1`.
+- Estado: Ready / Green / Ok.
+- Publico: https://dev.tupensioninteligente.cl -> HTTPS/TLS OK.
+- Backoffice: https://backoffice.dev.tupensioninteligente.cl -> HTTPS/TLS OK, login operativo.
+- API `/api/v1/catalogs` -> 200 (conectividad DB confirmada).
+- Sin redirect a genialabs.cl.
+- CNAME EB: `tpi-backoffice-dev-ecr.us-east-2.elasticbeanstalk.com`.
+
+#### Release domain-locked (fast path version-only)
+
+- PR #49 merge SHA `e4f63f1ba525df78ddebc8c724838978ed1f65c4`.
+- Bundle SHA256 `007b14d4b439ea59afd13106b71edafbf902e564085581e7577770261c97282f`.
+- Bucket `elasticbeanstalk-us-east-2-821656895812`, key
+  `tpi-backoffice/dev-releases/h3-3-crm-web-43101be-domainlocked-r1/007b14d4b439ea59afd13106b71edafbf902e564085581e7577770261c97282f.zip`.
+- El compose lleva las 4 variables TPI literales (tupensioninteligente.cl +
+  zona `Z07053592LX0W8GJXNI1C`); app/caddy fijados por digest (43101be).
+- Cutover: `aws elasticbeanstalk update-environment --version-label
+  h3-3-crm-web-43101be-domainlocked-r1` SIN `--option-settings`.
+
+#### Fast path DEV (lo que SÍ funciono y pasa a ser el camino de aplicacion)
+
+1. candidate inmutable (imagenes por digest);
+2. bundle determinista y verificable por SHA256;
+3. Application Version nueva;
+4. `update-environment --version-label <target>` (sin option settings, sin IAM/Route53/red/DB);
+5. esperar Ready / Green / Ok;
+6. smoke funcional inmediato;
+7. rollback = `update-environment --version-label <VersionLabel conocida>`.
+
+Para releases de aplicacion, NO modificar option settings, IAM, Route53, red ni
+DB en el mismo cutover. Ver `TPI_Contrato_CICD_AWS_v2.md`.
+
+#### Camino que NO debe repetirse (leccion registrada)
+
+La promocion con UpdateEnvironment + option settings (cambio de configuracion)
+disparo dependencias caller-side sucesivas y costosas:
+
+- `ec2:DescribeSubnets` -> `ec2:DescribeSecurityGroups` -> `ec2:DescribeVpcs` ->
+  `ec2:DescribeImages`;
+- luego S3/CloudFormation: `Service:AmazonCloudFormation, Message:S3 error: Access Denied`;
+- la accion Commands de CodePipeline mostro expiracion/autorizacion de token al esperar demasiado.
+
+Leccion: NO desarrollar IAM por ciclo `AccessDenied -> agregar permiso -> retry`.
+Los cambios de infraestructura requieren contrato completo, service roles/IaC y
+una ruta separada del deploy de aplicacion.
+
+#### CodePipeline / H3.2
+
+- Promote queda disabled.
+- El pipeline actual no es el camino obligatorio hasta industrializarlo en H3.2.
+- No borrar el trabajo: es evidencia/base, pero requiere rediseño para separar
+  promocion de aplicacion de cambios de infraestructura.
+
+#### Rollback / artefactos a preservar (no borrar/recrear)
+
+- `h3-3-crm-web-28cf009-r1` (runtime legacy pre-cutover; rollback version-only).
+- `h3-3-domain-baseline-28cf009-caddy43101be-r1` (AV de fase-1, UNPROCESSED).
+- `h3-3-crm-web-43101be-domainlocked-r1` (runtime vigente).
+- No reutilizar nombres de Application Version.
+
+#### Base de datos
+
+- Migraciones 005 y 006 ya aplicadas y verificadas en DEV. NO reejecutar.
+- Relacion operacional en `tpi.asignaciones` (`raw_payload` NO es fuente).
+- Auditoria funcional en `tpi.auditoria`.
+
+#### Deuda funcional H3.3.1 (issue #50) — pendiente funcional, no infraestructura
+
+- CEO/CTO aun ve PII ofuscada en DEV.
+- El control de asignacion manual no aparece en la UI observada.
+- Diferido: smoke end-to-end de asignacion y validacion read-only de
+  `tpi.leads` / `tpi.asignaciones` / `tpi.auditoria`.
+- Confirmar una sola asignacion activa por lead y actor auditado.
+- Al retomarlo: diagnosticar primero autorizacion/roles y renderizado de la
+  accion en aplicacion. No tocar AWS/IAM/deploy salvo evidencia nueva.
+
+#### Orden recomendado para el siguiente equipo
+
+1. Leer esta entrada + `TPI_Contrato_CICD_AWS_v2.md`.
+2. Resolver #50 H3.3.1 como cambio funcional aislado.
+3. Desplegar fixes H3.3.1 por fast path version-only.
+4. Smoke autenticado inmediato tras runtime green.
+5. Validar DB con identidad read-only, sin exponer passwords.
+6. Reanudar H3.2 solo despues: automatizar version-only + IaC/service roles.
+7. Antes de PROD cerrar: IaC del control plane, service roles explicitos, smoke
+   automatizado con usuario sintetico, identidad DB read-only de inspeccion,
+   politica de rollback/retencion, observabilidad y evidencia por release.
+
+#### Principios a conservar
+
+- Seguridad server-side (PII/RBAC).
+- Minimo privilegio y separacion de responsabilidades.
+- Releases inmutables y reproducibles.
+- Trazabilidad mecanica commit -> digest -> bundle -> Application Version -> runtime.
+- Rollback explicito y probado.
+- Tests unitarios, integracion, seguridad y smoke funcional.
+- Ningun secreto en Git, logs o bitacora.
+- Ningun cambio de infraestructura improvisado durante un release funcional.
+- Diseñar DEV -> QA -> PROD sin copiar excepciones ad hoc.
+- Documentar siempre estado observado, no solo intencion.
+
 ### 2026-09-11 - Remediacion minima de supply-chain de la imagen app
 
 - El tag oficial inmutable `python:3.12.14-alpine3.24` continua resolviendo al
