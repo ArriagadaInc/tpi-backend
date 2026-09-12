@@ -99,7 +99,9 @@
         "ec2:DescribeAddresses",
         "ec2:DescribeLaunchTemplates",
         "ec2:DescribeLaunchTemplateVersions",
-        "ec2:DescribeSubnets"
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeVpcs"
       ],
       "Resource": "*",
       "Condition": {
