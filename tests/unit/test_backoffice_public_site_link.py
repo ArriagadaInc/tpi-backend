@@ -82,9 +82,8 @@ def test_public_simulator_url_is_derived_from_the_approved_base_url() -> None:
         TPI_PUBLIC_SITE_URL="https://dev.tupensioninteligente.cl/",
     )
 
-    assert (
-        ui.get_public_simulator_url(settings)
-        == "https://dev.tupensioninteligente.cl/simulador.html"
+    assert ui.get_public_simulator_url(settings) == (
+        "https://dev.tupensioninteligente.cl/simulador.html#simulador-interactivo"
     )
 
 

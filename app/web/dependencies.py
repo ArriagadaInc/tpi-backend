@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any, Protocol
 
+from app.auth.models import AuthenticatedUser
 from app.components.ui import get_public_simulator_url
 from app.config import get_settings
 from app.models.crm_states import CRM_STATE_CONTRACT
@@ -19,11 +20,19 @@ class LeadBoardService(Protocol):
 
     def get_crm_estado_lead_options(self) -> list[str]: ...
 
+    def get_crm_estado_lead_options_for_update(self) -> list[str]: ...
+
     def get_catalogo_afp(self) -> list[dict[str, Any]]: ...
+
+    def get_asesores_disponibles_para_asignacion(self) -> list[dict[str, Any]]: ...
+
+    def can_assign_lead(self, user: AuthenticatedUser) -> bool: ...
 
     def get_solicitud_detalle(self, id_lead: Any) -> dict[str, Any] | None: ...
 
-    def get_solicitud_detalle_masked(self, id_lead: Any) -> dict[str, Any] | None: ...
+    def get_solicitud_detalle_masked(
+        self, id_lead: Any, *, user: Any | None = None
+    ) -> dict[str, Any] | None: ...
 
     def delete_test_lead(self, id_lead: Any) -> Any: ...
 
@@ -34,6 +43,8 @@ class LeadBoardService(Protocol):
     def update_lead_status(self, id_lead: Any, estado_lead: str) -> bool: ...
 
     def append_lead_comment(self, id_lead: Any, comment_text: str, author: str) -> bool: ...
+
+    def assign_lead(self, id_lead: Any, id_asesor: Any, *, actor: AuthenticatedUser) -> bool: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -158,8 +169,26 @@ class _MockLeadBoardService:
     def get_crm_estado_lead_options(self) -> list[str]:
         return list(MOCK_ESTADOS)
 
+    def get_crm_estado_lead_options_for_update(self) -> list[str]:
+        return [estado for estado in MOCK_ESTADOS if estado != "asignado"]
+
     def get_catalogo_afp(self) -> list[dict[str, Any]]:
         return list(MOCK_AFP_OPTIONS)
+
+    def get_asesores_disponibles_para_asignacion(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "id_asesor": "44444444-4444-4444-4444-444444444444",
+                "nombre": "Asesor Demo",
+                "rol": "asesor",
+                "estado_disponibilidad": "activo",
+                "especialidad": "General",
+                "carga_activa": 2,
+            }
+        ]
+
+    def can_assign_lead(self, user: AuthenticatedUser) -> bool:
+        return user.role in {"admin", "executive"}
 
     def get_solicitud_detalle(self, id_lead: Any) -> dict[str, Any] | None:
         for row in MOCK_BOARD_ROWS:
@@ -197,6 +226,16 @@ class _MockLeadBoardService:
                 existing = str(row.get("comentarios") or "")
                 fragment = f"[demo] {author}\n{comment_text}"
                 row["comentarios"] = f"{existing}\n\n{fragment}".strip() if existing else fragment
+                return True
+        return False
+
+    def assign_lead(self, id_lead: Any, id_asesor: Any, *, actor: AuthenticatedUser) -> bool:
+        for row in MOCK_BOARD_ROWS:
+            if str(row["id_lead"]) == str(id_lead):
+                row["estado_lead"] = "asignado"
+                row["id_asesor"] = str(id_asesor)
+                row["asesor_nombre"] = "Ejecutivo Demo"
+                row["asignado_por"] = actor.subject
                 return True
         return False
 

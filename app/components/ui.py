@@ -57,7 +57,7 @@ def get_public_simulator_url(settings: Settings) -> str | None:
     public_site_url = get_public_site_url(settings)
     if public_site_url is None:
         return None
-    return public_site_url.rstrip("/") + "/simulador.html"
+    return public_site_url.rstrip("/") + "/simulador.html#simulador-interactivo"
 
 
 def show_header():
@@ -132,11 +132,16 @@ def show_loading_spinner(message: str = "Cargando..."):
 
 def format_currency_clp(value: Any) -> str:
     """Format a numeric value as Chilean pesos without introducing locale dependencies."""
-    try:
-        amount = int(float(value))
-    except (TypeError, ValueError):
+    if value is None:
         return "N/A"
-    return f"$ {amount:,.0f}".replace(",", ".")
+    try:
+        amount = int(value)
+    except (TypeError, ValueError):
+        try:
+            amount = int(float(value))
+        except (TypeError, ValueError):
+            return "N/A"
+    return f"${amount:,}".replace(",", ".")
 
 
 def format_datetime_short(value: Any) -> str:

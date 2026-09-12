@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shutil
 import sys
 import zipfile
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import pytest
 
@@ -25,10 +28,22 @@ bundle_builder: Any = _load_bundle_module()
 APP_IMAGE = "821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-app@sha256:" + "a" * 64
 CADDY_IMAGE = "821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-caddy@sha256:" + "b" * 64
 RUNTIME_SHA = "c" * 40
+ECR_BUNDLE_TMP_ROOT = Path(".pytest-eb-ecr-bundle")
 
 
-def test_build_bundle_is_minimal_posix_and_digest_pinned(tmp_path: Path) -> None:
-    output = tmp_path / "tpi-dev-ecr-ccccccc.zip"
+@pytest.fixture
+def bundle_tmp_path() -> Iterator[Path]:
+    ECR_BUNDLE_TMP_ROOT.mkdir(parents=True, exist_ok=True)
+    workdir = ECR_BUNDLE_TMP_ROOT / uuid4().hex
+    workdir.mkdir(parents=True, exist_ok=False)
+    try:
+        yield workdir
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
+def test_build_bundle_is_minimal_posix_and_digest_pinned(bundle_tmp_path: Path) -> None:
+    output = bundle_tmp_path / "tpi-dev-ecr-ccccccc.zip"
 
     bundle, manifest = bundle_builder.build_bundle(
         template=Path("deployment/aws/docker-compose.ecr.yml"),
@@ -57,8 +72,8 @@ def test_build_bundle_is_minimal_posix_and_digest_pinned(tmp_path: Path) -> None
     assert CADDY_IMAGE in compose
 
 
-def test_bundle_validation_rejects_windows_paths(tmp_path: Path) -> None:
-    bundle = tmp_path / "invalid.zip"
+def test_bundle_validation_rejects_windows_paths(bundle_tmp_path: Path) -> None:
+    bundle = bundle_tmp_path / "invalid.zip"
     with zipfile.ZipFile(bundle, mode="w") as archive:
         archive.writestr("deploy\\docker-compose.yml", "services: {}\n")
 
@@ -66,8 +81,8 @@ def test_bundle_validation_rejects_windows_paths(tmp_path: Path) -> None:
         bundle_builder.validate_bundle(bundle)
 
 
-def test_bundle_validation_rejects_nested_posix_paths(tmp_path: Path) -> None:
-    bundle = tmp_path / "invalid.zip"
+def test_bundle_validation_rejects_nested_posix_paths(bundle_tmp_path: Path) -> None:
+    bundle = bundle_tmp_path / "invalid.zip"
     with zipfile.ZipFile(bundle, mode="w") as archive:
         archive.writestr("nested/docker-compose.yml", "services: {}\n")
 
@@ -78,8 +93,10 @@ def test_bundle_validation_rejects_nested_posix_paths(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "forbidden_entry", [".env", ".ebextensions/01-runtime.config", "Dockerfile"]
 )
-def test_bundle_validation_rejects_non_compose_files(tmp_path: Path, forbidden_entry: str) -> None:
-    bundle = tmp_path / "invalid.zip"
+def test_bundle_validation_rejects_non_compose_files(
+    bundle_tmp_path: Path, forbidden_entry: str
+) -> None:
+    bundle = bundle_tmp_path / "invalid.zip"
     with zipfile.ZipFile(bundle, mode="w") as archive:
         archive.writestr("docker-compose.yml", "services: {}\n")
         archive.writestr(forbidden_entry, "forbidden\n")
@@ -88,41 +105,41 @@ def test_bundle_validation_rejects_non_compose_files(tmp_path: Path, forbidden_e
         bundle_builder.validate_bundle(bundle)
 
 
-def test_bundle_builder_rejects_tag_reference(tmp_path: Path) -> None:
+def test_bundle_builder_rejects_tag_reference(bundle_tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="digest"):
         bundle_builder.build_bundle(
             template=Path("deployment/aws/docker-compose.ecr.yml"),
-            output=tmp_path / "tpi-dev-ecr-ccccccc.zip",
+            output=bundle_tmp_path / "tpi-dev-ecr-ccccccc.zip",
             app_image="example.com/tpi-dev-app:mutable",
             caddy_image=CADDY_IMAGE,
             runtime_git_sha=RUNTIME_SHA,
         )
 
 
-def test_bundle_builder_rejects_invalid_runtime_sha(tmp_path: Path) -> None:
+def test_bundle_builder_rejects_invalid_runtime_sha(bundle_tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="40-character"):
         bundle_builder.build_bundle(
             template=Path("deployment/aws/docker-compose.ecr.yml"),
-            output=tmp_path / "tpi-dev-ecr-ccccccc.zip",
+            output=bundle_tmp_path / "tpi-dev-ecr-ccccccc.zip",
             app_image=APP_IMAGE,
             caddy_image=CADDY_IMAGE,
             runtime_git_sha="short-sha",
         )
 
 
-def test_bundle_builder_rejects_unexpected_output_name(tmp_path: Path) -> None:
+def test_bundle_builder_rejects_unexpected_output_name(bundle_tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="Bundle filename"):
         bundle_builder.build_bundle(
             template=Path("deployment/aws/docker-compose.ecr.yml"),
-            output=tmp_path / "bundle.zip",
+            output=bundle_tmp_path / "bundle.zip",
             app_image=APP_IMAGE,
             caddy_image=CADDY_IMAGE,
             runtime_git_sha=RUNTIME_SHA,
         )
 
 
-def test_render_compose_rejects_missing_placeholders(tmp_path: Path) -> None:
-    template = tmp_path / "docker-compose.ecr.yml"
+def test_render_compose_rejects_missing_placeholders(bundle_tmp_path: Path) -> None:
+    template = bundle_tmp_path / "docker-compose.ecr.yml"
     template.write_text("services:\n  api:\n    image: missing\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match="expected image placeholders"):
@@ -210,8 +227,10 @@ def test_validate_rendered_compose_rejects_missing_public_caddy_ports() -> None:
         bundle_builder._validate_rendered_compose(compose, APP_IMAGE, CADDY_IMAGE)
 
 
-def test_validate_bundle_rejects_compose_without_digest_pinned_tpi_images(tmp_path: Path) -> None:
-    bundle = tmp_path / "invalid.zip"
+def test_validate_bundle_rejects_compose_without_digest_pinned_tpi_images(
+    bundle_tmp_path: Path,
+) -> None:
+    bundle = bundle_tmp_path / "invalid.zip"
     compose = """
 services:
     api:
@@ -229,9 +248,11 @@ services:
 
 
 def test_main_prints_bundle_and_manifest_paths(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    bundle_tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    output = tmp_path / "tpi-dev-ecr-ccccccc.zip"
+    output = bundle_tmp_path / "tpi-dev-ecr-ccccccc.zip"
     monkeypatch.setattr(
         sys,
         "argv",

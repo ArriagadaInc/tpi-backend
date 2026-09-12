@@ -10,6 +10,7 @@ from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+from app.auth.models import AuthenticatedUser
 from app.config import Settings, get_settings
 from app.database import DatabaseAppError
 from app.database.errors import DevLeadCleanupBlockedError
@@ -144,10 +145,21 @@ class SolicitudService:
     def get_solicitud_detalle(self, id_lead: UUID) -> dict[str, Any] | None:
         return self.repository.get_solicitud_by_id(id_lead)
 
-    def get_solicitud_detalle_masked(self, id_lead: UUID) -> dict[str, Any] | None:
+    def can_view_full_pii(self, user: AuthenticatedUser) -> bool:
+        return user.role in {"ceo", "cto"}
+
+    def get_solicitud_detalle_masked(
+        self,
+        id_lead: UUID,
+        *,
+        user: AuthenticatedUser | None = None,
+    ) -> dict[str, Any] | None:
         solicitud = self.repository.get_solicitud_by_id(id_lead)
         if not solicitud:
             return None
+
+        if user is not None and self.can_view_full_pii(user):
+            return solicitud
 
         return mask_row_for_display(
             solicitud,
@@ -296,6 +308,12 @@ class SolicitudService:
         """Return the actual lead states present in the current data model."""
         return self.repository.get_crm_estado_lead_options()
 
+    def get_crm_estado_lead_options_for_update(self) -> list[str]:
+        """Return lead states available for generic edits, excluding assignment-only flows."""
+        return [
+            state for state in self.repository.get_crm_estado_lead_options() if state != "asignado"
+        ]
+
     def update_lead_status(self, id_lead: UUID | str, estado_lead: str) -> bool:
         """Update a lead status after validating role and allowed values."""
         self._ensure_web_write_allowed()
@@ -303,9 +321,34 @@ class SolicitudService:
         normalized_estado = normalize_crm_state_for_write(estado_lead)
         if normalized_estado not in CRM_STATE_CONTRACT:
             raise ValueError("Estado de lead invalido")
+        if normalized_estado == "asignado":
+            raise ValueError(
+                "El estado asignado solo puede establecerse mediante una asignacion valida"
+            )
         if not self.get_solicitud_detalle(lead_id):
             return False
         return self.repository.update_lead_status(lead_id, normalized_estado)
+
+    def assign_lead(
+        self,
+        id_lead: UUID | str,
+        id_asesor: UUID | str,
+        *,
+        actor: AuthenticatedUser,
+    ) -> bool:
+        if not isinstance(actor, AuthenticatedUser):
+            raise TypeError("actor must be an AuthenticatedUser")
+        if not self.can_assign_lead(actor):
+            raise PermissionError("Usuario no autorizado para asignar leads")
+        lead_id = self._normalize_uuid(id_lead, "lead")
+        asesor_id = self._normalize_uuid(id_asesor, "asesor")
+        return self.repository.assign_lead(lead_id, asesor_id, actor=actor)
+
+    def can_assign_lead(self, user: AuthenticatedUser) -> bool:
+        return user.role in {"admin", "executive"}
+
+    def get_asesores_disponibles_para_asignacion(self) -> list[dict[str, Any]]:
+        return self.repository.get_asesores_disponibles_para_asignacion()
 
     def append_lead_comment(self, id_lead: UUID | str, comment_text: str, author: str) -> bool:
         """Append a follow-up note atomically with server-side identity and timestamp."""

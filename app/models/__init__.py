@@ -15,6 +15,11 @@ from app.models.crm_states import (
     normalize_crm_state_for_write,
 )
 from app.models.idempotency import IdempotencyConflictError, IdempotentSolicitudResult
+from app.models.lead_assignment import (
+    ASSIGNMENT_ACTIVE_STATE,
+    LeadAssignmentConflictError,
+    LeadAssignmentValidationError,
+)
 from app.models.solicitud import (
     ConsentimientosData,
     PersonaData,
@@ -33,6 +38,9 @@ __all__ = [
     "SolicitudResponse",
     "TestLeadCleanupResult",
     "LeadCreatedEvent",
+    "ASSIGNMENT_ACTIVE_STATE",
+    "LeadAssignmentConflictError",
+    "LeadAssignmentValidationError",
     "IdempotencyConflictError",
     "IdempotentSolicitudResult",
     "CrmStateOption",

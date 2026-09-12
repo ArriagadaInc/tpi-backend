@@ -80,6 +80,8 @@ def test_check_database_connection_reports_effective_user_and_access(
             {"ready": 1, "database_name": "tpi_test", "effective_user": "tpi_app"},
             {"schema_exists": True},
             {"table_exists": True},
+            {"table_exists": True},
+            {"table_exists": True},
         ]
     )
     conn = FakeConnection(cursor)
@@ -99,6 +101,10 @@ def test_check_database_connection_reports_effective_user_and_access(
     assert result["schema_accessible"] is True
     assert result["leads_table_present"] is True
     assert result["leads_accessible"] is True
+    assert result["asesores_table_present"] is True
+    assert result["asesores_accessible"] is True
+    assert result["asignaciones_table_present"] is True
+    assert result["asignaciones_accessible"] is True
 
 
 def test_check_database_connection_returns_safe_error_details(

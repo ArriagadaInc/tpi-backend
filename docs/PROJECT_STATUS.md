@@ -1,13 +1,24 @@
 # Estado del Proyecto - Tu Pensión Inteligente Back-office
 
-**Última Actualización:** 31 de Julio de 2026  
+**Última Actualización:** 25 de Agosto de 2026
 **Versión:** MVP1  
 **Estado General:** 🟢 OPERATIVO
 
 ---
 
-## Hito H3.1: CRM Lite
+## Hito H3.3: CRM Lite Web UX
 
+| Componente | Estado | Notas |
+|-----------|--------|-------|
+| CRM Lite Web UX | ✅ CLOSED | Validado en AWS DEV con acceptance manual PASS |
+| Git SHA | ✅ VALIDATED | `1574d79920342d3da2bac8296de9020b8162c68f` |
+| App digest | ✅ VALIDATED | `sha256:1f5bca0350e3f3229516643b1f1f5dcf05f6f13e826c6a444aa8640302b73922` |
+| EB Version | ✅ VALIDATED | `h3-3-crm-web-1574d79-r1` |
+| URL | ✅ VALIDATED | `https://backoffice.dev.tupensioninteligente.cl` |
+| Human UX Acceptance | ✅ PASS | Validacion manual satisfactoria en AWS DEV |
+| Documento canonico | ✅ LISTO | `docs/H3_3_CRM_LITE_WEB_UX.md` |
+
+## Hito H3.1: CRM Lite
 | Componente | Estado | Notas |
 |-----------|--------|-------|
 | CRM Lite | ✅ CLOSED | PR #8 integrado, validado y cerrado formalmente |
@@ -223,8 +234,16 @@ pre-commit>=3.0.0          # Git hooks
 - **Discussions:** [GitHub Discussions](https://github.com/ArriagadaInc/tpi-backend/discussions)
 - **Email:** dev@tupensioninteligente.cl
 
+## Nota de modelo de datos
+
+- `Estructura BD.jpg` es una referencia conceptual del dominio, no un DDL literal.
+- La implementacion fisica actual de `tpi.asignaciones` usa `id_lead`, `id_asesor`, `fecha_asignacion`, `asignado_por`, `regla_asignacion`, `estado_asignacion` y `observacion`.
+- `tpi.asesores` es la entidad formal de destino y debe consultarse para poblar el flujo de asignacion.
+- La asignacion y la trazabilidad funcional se apoyan en tablas separadas, no en `leads.raw_payload`.
+- `asignado` solo debe producirse por la operacion de asignacion y no por el editor generico de estado.
+
 ---
 
-**Documento actualizado:** 31 Julio 2026  
-**Próxima actualización:** Después de MVP2 completado  
+**Documento actualizado:** 31 Julio 2026
+**Próxima actualización:** Después de MVP2 completado
 **Responsable:** Equipo TPI Back-office

@@ -4,13 +4,18 @@ from __future__ import annotations
 
 import secrets
 from datetime import date
-from typing import Any
+from typing import Any, cast
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from app.auth.models import AuthenticatedUser, UserRole
 from app.models.crm_states import normalize_crm_state_for_display
+from app.models.lead_assignment import (
+    LeadAssignmentConflictError,
+    LeadAssignmentValidationError,
+)
 from app.web.dependencies import build_service_for_web
 from app.web.presentation import parse_lead_comments
 
@@ -21,28 +26,34 @@ _FLASH_KEY = "_tpi_web_flash"
 _CSRF_KEY = "_tpi_web_csrf_token"
 
 
-def _require_web_user(request: Request) -> dict[str, str] | None:
+def _require_web_user(request: Request) -> AuthenticatedUser | None:
     user = request.session.get("web_user")
-    if not user:
+    if not isinstance(user, dict):
         return None
-    return {
-        "subject": str(user.get("subject", "")),
-        "username": str(user.get("username", "")),
-        "display_name": str(user.get("display_name", "")),
-        "role": str(user.get("role", "")),
-    }
+    subject = str(user.get("subject", "")).strip()
+    username = str(user.get("username", "")).strip()
+    display_name = str(user.get("display_name", "")).strip()
+    role = str(user.get("role", "")).strip()
+    if not subject or not username or not display_name or not role:
+        return None
+    return AuthenticatedUser(
+        subject=subject,
+        username=username,
+        display_name=display_name,
+        role=cast(UserRole, role),
+    )
 
 
-def _can_write(user: dict[str, str] | None) -> bool:
+def _can_write(user: AuthenticatedUser | None) -> bool:
     if not user:
         return False
-    return user.get("role") in _WRITE_ROLES
+    return user.role in _WRITE_ROLES
 
 
-def _can_cleanup(user: dict[str, str] | None) -> bool:
+def _can_cleanup(user: AuthenticatedUser | None) -> bool:
     if not user:
         return False
-    return user.get("role") in _CLEANUP_ROLES
+    return user.role in _CLEANUP_ROLES
 
 
 def _build_query_url(base_path: str, params: dict[str, Any]) -> str:
@@ -250,27 +261,29 @@ def _resolve_detail_context(
     service = _resolve_service(request)
     settings = getattr(request.app.state, "settings", None)
     mask_pii = bool(getattr(settings, "should_mask_web_pii", True))
+    user = _require_web_user(request)
     selected_lead = lead
     if selected_lead is None and not lead_not_found:
         selected_lead = (
-            service.get_solicitud_detalle_masked(lead_id)
+            service.get_solicitud_detalle_masked(lead_id, user=user)
             if mask_pii
             else service.get_solicitud_detalle(lead_id)
         )
     elif selected_lead is None and mask_pii:
-        selected_lead = service.get_solicitud_detalle_masked(lead_id)
+        selected_lead = service.get_solicitud_detalle_masked(lead_id, user=user)
     elif selected_lead is None:
         selected_lead = service.get_solicitud_detalle(lead_id)
 
-    state_options = service.get_crm_estado_lead_options()
+    state_options = service.get_crm_estado_lead_options_for_update()
+    can_assign = bool(user and service.can_assign_lead(user))
     parsed_comments = parse_lead_comments(
         (selected_lead or {}).get("comentarios") if selected_lead else None
     )
-    user = _require_web_user(request)
     context = {
         "request": request,
         "selected_user": user,
         "can_write": _can_write(user),
+        "can_assign": can_assign,
         "can_cleanup": _can_cleanup(user),
         "web_env_label": getattr(request.app.state, "web_env_label", ""),
         "web_cleanup_enabled": bool(getattr(request.app.state, "web_cleanup_enabled", False)),
@@ -282,6 +295,9 @@ def _resolve_detail_context(
             (selected_lead or {}).get("estado_lead") if selected_lead else None
         ),
         "lead_status_options": state_options,
+        "assignment_asesores": (
+            service.get_asesores_disponibles_para_asignacion() if can_assign else []
+        ),
         "comment_view": parsed_comments,
         "csrf_token": _get_csrf_token(request),
         "return_to_url": _sanitize_return_to(request.query_params.get("return_to"))
@@ -331,7 +347,7 @@ def lead_detail(request: Request, lead_id: str):
     settings = getattr(request.app.state, "settings", None)
     mask_pii = bool(getattr(settings, "should_mask_web_pii", True))
     lead = (
-        service.get_solicitud_detalle_masked(lead_id)
+        service.get_solicitud_detalle_masked(lead_id, user=_require_web_user(request))
         if mask_pii
         else service.get_solicitud_detalle(lead_id)
     )
@@ -355,6 +371,107 @@ def lead_detail(request: Request, lead_id: str):
         request,
         "lead_detail.html",
         context,
+    )
+
+
+@router.post("/leads/{lead_id}/assign", response_class=HTMLResponse)
+async def lead_assign(request: Request, lead_id: str):
+    if not _require_web_user(request):
+        return RedirectResponse(url="/login", status_code=307)
+    user = _require_web_user(request)
+    service = _resolve_service(request)
+    if not user or not service.can_assign_lead(user):
+        context, _ = _resolve_detail_context(
+            request,
+            lead_id,
+            lead_not_found=False,
+            error_message="Esta accion no esta disponible para este usuario.",
+        )
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "lead_detail.html",
+            context,
+            status_code=403,
+        )
+
+    form = await request.form()
+    if not _validate_csrf_token(request, str(form.get("csrf_token") or "")):
+        context, _ = _resolve_detail_context(
+            request,
+            lead_id,
+            lead_not_found=False,
+            error_message="La sesion de seguridad ha expirado. Recarga la pagina e intenta nuevamente.",
+        )
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "lead_detail.html",
+            context,
+            status_code=403,
+        )
+
+    id_asesor = str(form.get("id_asesor") or "").strip()
+    if not id_asesor:
+        context, _ = _resolve_detail_context(
+            request,
+            lead_id,
+            lead_not_found=False,
+            error_message="Debes seleccionar un ejecutivo valido.",
+        )
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "lead_detail.html",
+            context,
+            status_code=400,
+        )
+
+    try:
+        assigned = service.assign_lead(lead_id, id_asesor, actor=user)
+    except LeadAssignmentConflictError:
+        context, _ = _resolve_detail_context(
+            request,
+            lead_id,
+            lead_not_found=False,
+            error_message="El lead ya tiene una asignacion activa.",
+        )
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "lead_detail.html",
+            context,
+            status_code=409,
+        )
+    except (LeadAssignmentValidationError, TypeError, ValueError, PermissionError):
+        context, _ = _resolve_detail_context(
+            request,
+            lead_id,
+            lead_not_found=False,
+            error_message="No fue posible asignar el lead.",
+        )
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "lead_detail.html",
+            context,
+            status_code=400,
+        )
+
+    if not assigned:
+        context, _ = _resolve_detail_context(
+            request,
+            lead_id,
+            lead_not_found=True,
+            error_message="No encontramos el lead solicitado.",
+        )
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "lead_detail.html",
+            context,
+            status_code=404,
+        )
+
+    return_to = str(form.get("return_to") or "")
+    _set_flash(request, "Lead asignado correctamente.")
+    return RedirectResponse(
+        url=_build_detail_redirect_url_from_value(lead_id, return_to),
+        status_code=303,
     )
 
 
@@ -500,7 +617,7 @@ async def lead_comment_append(request: Request, lead_id: str):
         updated = service.append_lead_comment(
             lead_id,
             comment_text,
-            user["display_name"] if user else "Usuario",
+            user.display_name if user else "Usuario",
         )
     except ValueError:
         context, _ = _resolve_detail_context(

@@ -56,7 +56,9 @@ def test_dependency_helpers_reuse_real_service_and_resolve_simulator_url(
             TPI_PUBLIC_SITE_URL="https://dev.tupensioninteligente.cl/",
         ),
     )
-    assert resolve_web_simulator_url() == "https://dev.tupensioninteligente.cl/simulador.html"
+    assert resolve_web_simulator_url() == (
+        "https://dev.tupensioninteligente.cl/simulador.html#simulador-interactivo"
+    )
 
 
 def test_mock_web_service_filters_sorts_and_updates_rows() -> None:
