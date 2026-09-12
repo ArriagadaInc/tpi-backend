@@ -204,7 +204,9 @@ def test_pipeline_role_models_only_observed_stack_compute_dependencies() -> None
         "ec2:DescribeAddresses",
         "ec2:DescribeLaunchTemplates",
         "ec2:DescribeLaunchTemplateVersions",
+        "ec2:DescribeSecurityGroups",
         "ec2:DescribeSubnets",
+        "ec2:DescribeVpcs",
     }
 
     autoscaling = statements["UpdateOnlyObservedDevAutoScalingGroup"]
@@ -355,9 +357,8 @@ def test_pipeline_role_has_no_environment_configuration_introspection() -> None:
 
     assert "ReadOnlyApprovedDevEnvironmentConfiguration" not in sids
     assert "elasticbeanstalk:DescribeConfigurationSettings" not in serialized
-    assert "ec2:DescribeVpcs" not in serialized
-    assert "ec2:DescribeSecurityGroups" not in serialized
     assert "ec2:DescribeRouteTables" not in serialized
+    assert "ec2:DescribeNetworkInterfaces" not in serialized
 
 
 def test_promoter_does_not_call_describe_configuration_settings() -> None:
