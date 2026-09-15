@@ -200,6 +200,7 @@ class SolicitudService:
         page_size: int = 20,
         masked: bool = True,
         *,
+        user: AuthenticatedUser | None = None,
         search: str | None = None,
         estado_lead: str | None = None,
         afp_id: UUID | None = None,
@@ -244,7 +245,8 @@ class SolicitudService:
             sort_direction=sort_direction,
         )
 
-        if masked:
+        should_mask = masked and not (user is not None and self.can_view_full_pii(user))
+        if should_mask:
             solicitudes = [
                 mask_row_for_display(
                     solicitud,

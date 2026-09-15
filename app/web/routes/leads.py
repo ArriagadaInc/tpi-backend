@@ -134,7 +134,7 @@ def _pop_flash(request: Request) -> dict[str, str] | None:
 
 def _resolve_board_data(request: Request) -> dict[str, Any]:
     service = _resolve_service(request)
-    settings = getattr(request.app.state, "settings", None)
+    user = _require_web_user(request)
     params = request.query_params
     page = _parse_int(params.get("page"), 1)
     page_size = 10
@@ -147,7 +147,9 @@ def _resolve_board_data(request: Request) -> dict[str, Any]:
     date_from = _parse_date(params.get("date_from"))
     date_to = _parse_date(params.get("date_to"))
 
-    mask_pii = bool(getattr(settings, "should_mask_web_pii", True))
+    # PII masking is unconditionally role-based: only can_view_full_pii
+    # (ceo/cto) bypasses masking. The environment flag does not override roles.
+    effective_mask_pii = not (user is not None and service.can_view_full_pii(user))
 
     board = service.get_crm_bandeja(
         page=page,
@@ -159,7 +161,8 @@ def _resolve_board_data(request: Request) -> dict[str, Any]:
         date_to=date_to,
         sort_by=sort_by,
         sort_direction=sort_direction,
-        masked=mask_pii,
+        masked=True,
+        user=user,
     )
     afp_options = service.get_catalogo_afp()
     estado_options = service.get_crm_estado_lead_options()
@@ -201,7 +204,7 @@ def _resolve_board_data(request: Request) -> dict[str, Any]:
 
     return {
         "board": board,
-        "mask_pii": mask_pii,
+        "mask_pii": effective_mask_pii,
         "afp_options": afp_options,
         "estado_options": estado_options,
         "current_filters": {
@@ -214,8 +217,8 @@ def _resolve_board_data(request: Request) -> dict[str, Any]:
             "sort_direction": sort_direction,
         },
         "page_title": "Leads",
-        "selected_user": _require_web_user(request),
-        "can_write": _can_write(_require_web_user(request)),
+        "selected_user": user,
+        "can_write": _can_write(user),
         "csrf_token": _get_csrf_token(request),
         "web_env_label": getattr(request.app.state, "web_env_label", ""),
         "web_cleanup_enabled": bool(getattr(request.app.state, "web_cleanup_enabled", False)),
@@ -259,20 +262,12 @@ def _resolve_detail_context(
     error_message: str | None = None,
 ) -> tuple[dict[str, Any], int]:
     service = _resolve_service(request)
-    settings = getattr(request.app.state, "settings", None)
-    mask_pii = bool(getattr(settings, "should_mask_web_pii", True))
     user = _require_web_user(request)
+    # PII masking is unconditionally role-based in detail view.
+    # Always use the masked variant which respects can_view_full_pii.
     selected_lead = lead
-    if selected_lead is None and not lead_not_found:
-        selected_lead = (
-            service.get_solicitud_detalle_masked(lead_id, user=user)
-            if mask_pii
-            else service.get_solicitud_detalle(lead_id)
-        )
-    elif selected_lead is None and mask_pii:
+    if selected_lead is None:
         selected_lead = service.get_solicitud_detalle_masked(lead_id, user=user)
-    elif selected_lead is None:
-        selected_lead = service.get_solicitud_detalle(lead_id)
 
     state_options = service.get_crm_estado_lead_options_for_update()
     can_assign = bool(user and service.can_assign_lead(user))
@@ -288,7 +283,7 @@ def _resolve_detail_context(
         "web_env_label": getattr(request.app.state, "web_env_label", ""),
         "web_cleanup_enabled": bool(getattr(request.app.state, "web_cleanup_enabled", False)),
         "simulator_url": getattr(request.app.state, "web_simulator_url", None),
-        "mask_pii": mask_pii,
+        "mask_pii": not (user is not None and service.can_view_full_pii(user)),
         "selected_lead": selected_lead,
         "selected_lead_id": lead_id,
         "selected_lead_state_canonical": normalize_crm_state_for_display(
@@ -344,13 +339,9 @@ def lead_detail(request: Request, lead_id: str):
     if not _require_web_user(request):
         return RedirectResponse(url="/login", status_code=307)
     service = _resolve_service(request)
-    settings = getattr(request.app.state, "settings", None)
-    mask_pii = bool(getattr(settings, "should_mask_web_pii", True))
-    lead = (
-        service.get_solicitud_detalle_masked(lead_id, user=_require_web_user(request))
-        if mask_pii
-        else service.get_solicitud_detalle(lead_id)
-    )
+    user = _require_web_user(request)
+    # PII masking is unconditionally role-based; always use masked variant.
+    lead = service.get_solicitud_detalle_masked(lead_id, user=user)
     if not lead:
         context, _ = _resolve_detail_context(
             request,

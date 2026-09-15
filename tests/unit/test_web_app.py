@@ -93,6 +93,9 @@ class _FakeWebService:
         self.cleanup_calls: list[str] = []
         self._cleanup_enabled = cleanup_enabled
 
+    def can_view_full_pii(self, user) -> bool:
+        return user.role in ("ceo", "cto")
+
     def get_crm_bandeja(self, *args, **kwargs):
         self.last_board_kwargs = dict(kwargs)
         page = int(kwargs.get("page", 1))
@@ -316,9 +319,9 @@ def test_login_and_leads_routes_render() -> None:
     assert "Mostrando" not in detail.text
     assert "Abrir simulación" in detail.text
     assert "Juan Perez" in detail.text
-    assert "12.345.678-5" in detail.text
-    assert "juan@example.com" in detail.text
-    assert "+56 9 1234 5678" in detail.text
+    assert "12.***.***-5" in detail.text
+    assert "ju***@example.com" in detail.text
+    assert "+56 9 **** 5678" in detail.text
 
     missing = client.get("/leads/00000000-0000-0000-0000-000000000000")
     assert missing.status_code == 404
@@ -871,45 +874,6 @@ def test_web_board_empty_states_are_distinct() -> None:
     with_filters = empty_client.get("/leads", params={"search": "sin coincidencias"})
     assert with_filters.status_code == 200
     assert "No encontramos leads con estos filtros" in with_filters.text
-
-
-def test_web_masking_can_be_disabled_for_non_production_local_demo() -> None:
-    client = _build_client(
-        settings=Settings(
-            APP_ENV="local",
-            AUTH_ENABLED=True,
-            AUTH_MODE="simple-dev",
-            AUTH_USERS_JSON='{"users":[{"subject":"local-demo-alvaro","username":"alvaro.local","display_name":"Alvaro Local","role":"tester","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"}]}',
-            WEB_MASK_PII=False,
-        )
-    )
-    _login(client)
-
-    detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
-    assert "12.345.678-5" in detail.text
-    assert mask_rut("12.345.678-5") not in detail.text
-    assert "juan@example.com" in detail.text
-    assert mask_email("juan@example.com") not in detail.text
-    assert "+56 9 1234 5678" in detail.text
-    assert mask_phone("+56 9 1234 5678") not in detail.text
-
-
-def test_web_masking_stays_enabled_in_production_even_if_disabled() -> None:
-    client = _build_client(
-        settings=Settings(
-            APP_ENV="production",
-            AUTH_ENABLED=True,
-            AUTH_MODE="simple-dev",
-            AUTH_USERS_JSON='{"users":[{"subject":"local-demo-alvaro","username":"alvaro.local","display_name":"Alvaro Local","role":"tester","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"}]}',
-            WEB_MASK_PII=False,
-        )
-    )
-    _login(client)
-
-    detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
-    assert mask_rut("12.345.678-5") in detail.text
-    assert mask_email("juan@example.com") in detail.text
-    assert mask_phone("+56 9 1234 5678") in detail.text
 
 
 def test_templates_and_static_assets_exist() -> None:
