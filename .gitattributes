@@ -1,1 +1,4 @@
 # Elastic Beanstalk deploys the production Docker Compose topology from the bundle.
+
+# Harness entrypoints must keep LF to run on Linux/macOS/Git Bash.
+*.sh text eol=lf

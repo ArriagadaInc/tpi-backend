@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Workflow",
+  "type": "object",
+  "required": ["schema_version", "initial_state", "states", "transitions", "evidence_kinds"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "initial_state": {"type": "string"},
+    "auto_close_on_done": {"type": "boolean"},
+    "evidence_kinds": {"type": "object", "additionalProperties": {"type": "string"}},
+    "states": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["role", "description", "next_action"],
+        "properties": {
+          "role": {"enum": ["developer", "reviewer", "deployer", "human", "system"]},
+          "description": {"type": "string"},
+          "next_action": {"type": "string"}
+        }
+      }
+    },
+    "transitions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "event", "from", "to", "actor"],
+        "properties": {
+          "id": {"type": "string"},
+          "event": {"type": "string"},
+          "from": {"type": "string"},
+          "to": {"type": "string"},
+          "actor": {"enum": ["developer", "reviewer", "deployer", "human", "system"]},
+          "records": {"type": "string"},
+          "guards": {"type": "array", "items": {"type": "string"}},
+          "effects": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

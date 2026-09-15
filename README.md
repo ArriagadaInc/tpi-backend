@@ -16,6 +16,11 @@ The public entrypoint is `app/streamlit_app.py`; the private backoffice is
 `app/backoffice_app.py`. Backoffice authentication is DEV-only and disabled by
 default outside its explicitly configured boundary.
 
+## Agent harness
+
+This repository is a repository-native agent harness. Any compatible coding agent starts with
+[AGENTS.md](AGENTS.md) and `./init.sh --runtime <runtime>`.
+
 ## Documentation
 
 - [Development Guide](docs/DEVELOPMENT_GUIDE.md)

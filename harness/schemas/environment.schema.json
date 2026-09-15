@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Environment",
+  "type": "object",
+  "required": ["schema_version", "environment", "cloud", "account_id", "region", "profile", "application", "deployment_target", "artifacts", "urls", "smoke", "operations"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "environment": {"const": "dev"},
+    "cloud": {"const": "aws"},
+    "account_id": {"type": "string", "pattern": "^[0-9]{12}$"},
+    "region": {"type": "string"},
+    "profile": {"type": "string"},
+    "application": {"type": "string"},
+    "deployment_target": {
+      "type": "object",
+      "required": ["type", "environment_name"],
+      "properties": {"environment_name": {"type": "string"}}
+    },
+    "artifacts": {
+      "type": "object",
+      "required": ["ecr_repositories", "bundle_bucket", "bundle_key_prefix", "version_label_pattern"]
+    },
+    "urls": {"type": "object"},
+    "smoke": {"type": "object"},
+    "operations": {"type": "object"}
+  }
+}

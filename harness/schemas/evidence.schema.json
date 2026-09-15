@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Harness evidence",
+  "type": "object",
+  "required": ["schema_version", "kind", "task_id", "created_at"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"enum": ["developer", "review", "merge", "candidate", "candidate_review", "approval", "deployment", "verification", "acceptance", "rollback", "resolution", "failure"]},
+    "task_id": {"type": "string"},
+    "created_at": {"type": "string"},
+    "role": {"enum": ["developer", "reviewer", "deployer", "human"]},
+    "runtime": {"type": "string"},
+    "session_id": {"type": "string"}
+  },
+  "$defs": {
+    "sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "hex64": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "result": {"enum": ["PASS", "FAIL"]},
+    "env_state": {
+      "type": "object",
+      "required": ["version_label", "status", "health", "health_status"],
+      "properties": {"version_label": {"type": "string"}, "status": {"type": "string"}, "health": {"type": "string"}, "health_status": {"type": "string"}}
+    },
+    "agent": {"required": ["role", "runtime", "session_id"]},
+    "human": {
+      "required": ["created_by", "interactive", "actor"],
+      "properties": {
+        "created_by": {"const": "scripts/harness/approve.py"},
+        "interactive": {"const": true},
+        "actor": {"type": "object", "required": ["name", "email"]}
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "severity", "summary", "required_action"],
+        "properties": {"severity": {"enum": ["blocker", "major", "minor", "info"]}}
+      }
+    },
+    "checks": {"type": "array", "items": {"type": "object", "required": ["name", "result"], "properties": {"result": {"$ref": "#/$defs/result"}}}}
+  },
+  "allOf": [
+    {"if": {"properties": {"kind": {"const": "developer"}}}, "then": {"allOf": [{"$ref": "#/$defs/agent"}, {
+      "required": ["head_sha", "branch", "pr_number", "change_class", "tests", "quality_gates", "acceptance_criteria", "files_changed", "assumptions", "migrations_included"],
+      "properties": {
+        "head_sha": {"$ref": "#/$defs/sha"},
+        "pr_number": {"type": "integer", "minimum": 1},
+        "change_class": {"enum": ["A", "B", "C", "D", "E"]},
+        "tests": {"type": "object", "required": ["command", "result"], "properties": {"result": {"$ref": "#/$defs/result"}}},
+        "quality_gates": {"type": "object", "additionalProperties": {"$ref": "#/$defs/result"}},
+        "acceptance_criteria": {"type": "array", "items": {"type": "object", "required": ["id", "status", "evidence"], "properties": {"status": {"enum": ["met", "not_met", "pending_verification", "not_applicable"]}}}},
+        "migrations_included": {"type": "boolean"}
+      }}]}},
+    {"if": {"properties": {"kind": {"const": "review"}}}, "then": {"allOf": [{"$ref": "#/$defs/agent"}, {
+      "required": ["reviewed_sha", "reviewed_tree", "pr_number", "ci", "decision", "findings", "checks", "risks"],
+      "properties": {
+        "reviewed_sha": {"$ref": "#/$defs/sha"},
+        "reviewed_tree": {"$ref": "#/$defs/sha"},
+        "ci": {"type": "object", "required": ["run_id", "conclusion"]},
+        "decision": {"enum": ["APPROVED", "REJECTED"]},
+        "findings": {"$ref": "#/$defs/findings"},
+        "checks": {"$ref": "#/$defs/checks"}
+      }}]}},
+    {"if": {"properties": {"kind": {"const": "merge"}}}, "then": {"allOf": [{"$ref": "#/$defs/agent"}, {
+      "required": ["pr_number", "reviewed_sha", "reviewed_tree", "release_sha", "release_tree", "main_parent_sha", "method", "match_head_commit_used"],
+      "properties": {
+        "reviewed_sha": {"$ref": "#/$defs/sha"}, "reviewed_tree": {"$ref": "#/$defs/sha"},
+        "release_sha": {"$ref": "#/$defs/sha"}, "release_tree": {"$ref": "#/$defs/sha"},
+        "main_parent_sha": {"$ref": "#/$defs/sha"}, "method": {"enum": ["squash", "merge", "rebase"]},
+        "match_head_commit_used": {"const": true}
+      }}]}},
+    {"if": {"properties": {"kind": {"const": "candidate"}}}, "then": {"allOf": [{"$ref": "#/$defs/agent"}, {
+      "required": ["release_sha", "account_id", "region", "environment", "publish_run", "images", "bundle", "s3", "application_version", "environment_observed", "lkg", "smoke_plan", "deployment_plan", "rollback_plan"],
+      "properties": {
+        "release_sha": {"$ref": "#/$defs/sha"},
+        "publish_run": {"type": "object", "required": ["run_id", "conclusion"]},
+        "images": {"type": "object", "required": ["app", "caddy"], "additionalProperties": {"type": "object", "required": ["repository", "digest", "scan"], "properties": {"digest": {"$ref": "#/$defs/digest"}, "scan": {"type": "object", "required": ["critical", "high"]}}}},
+        "bundle": {"type": "object", "required": ["sha256", "artifact_type", "reproducible"], "properties": {"sha256": {"$ref": "#/$defs/hex64"}, "artifact_type": {"const": "domain-locked"}}},
+        "s3": {"type": "object", "required": ["bucket", "key", "checksum_sha256"]},
+        "application_version": {"type": "object", "required": ["label", "status"], "properties": {"status": {"enum": ["UNPROCESSED", "PROCESSED"]}}},
+        "environment_observed": {"$ref": "#/$defs/env_state"},
+        "lkg": {"type": "object", "required": ["version_label", "status", "images", "option_settings_required"], "properties": {"images": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["repository", "digest", "present"]}}}},
+        "smoke_plan": {"type": "array", "minItems": 1},
+        "deployment_plan": {"type": "object", "required": ["commands"]},
+        "rollback_plan": {"type": "object", "required": ["version_label"]}
+      }}]}},
+    {"if": {"properties": {"kind": {"const": "candidate_review"}}}, "then": {"allOf": [{"$ref": "#/$defs/agent"}, {
+      "required": ["release_sha", "reviewed_tree", "release_tree", "decision", "cause", "checks", "findings"],
+      "properties": {
+        "decision": {"enum": ["APPROVED", "REJECTED"]},
+        "cause": {"enum": ["code", "artifact", "infra", null]},
+        "checks": {"$ref": "#/$defs/checks"},
+        "findings": {"$ref": "#/$defs/findings"}
+      }}]}},
+    {"if": {"properties": {"kind": {"const": "approval"}}}, "then": {"allOf": [{"$ref": "#/$defs/human"}, {
+      "required": ["decision", "approved_commit", "app_digest", "caddy_digest", "bundle_sha256", "s3_key", "application_version", "environment", "lkg_version_label", "candidate_evidence", "rollback_authorization"],
+      "properties": {
+        "decision": {"enum": ["approved", "rejected"]},
+        "approved_commit": {"$ref": "#/$defs/sha"},
+        "candidate_evidence": {"type": "object", "required": ["path", "sha256"]},
+        "rollback_authorization": {"type": "object", "required": ["scope", "max_attempts", "lkg_version_label", "conditions"]}
+      }}]}},
+    {"if": {"properties": {"kind": {"const": "deployment"}}}, "then": {"allOf": [{"$ref": "#/$defs/agent"}, {
+      "required": ["approved_commit", "deployed_commit", "application_version", "environment", "account_id", "region", "update_accepted", "result", "final_state", "runtime_identity", "started_at", "finished_at", "warnings", "failure_class"],
+      "properties": {
+        "approved_commit": {"$ref": "#/$defs/sha"}, "deployed_commit": {"$ref": "#/$defs/sha"},
+        "update_accepted": {"type": "boolean"},
+        "result": {"enum": ["success", "failure"]},
+        "final_state": {"$ref": "#/$defs/env_state"},
+        "runtime_identity": {"type": "object", "required": ["version_label_matches", "source_bundle_matches", "s3_checksum_matches", "bundle_digests_match"]},
+        "failure_class": {"enum": ["infrastructure", "functional", "observability", null]}
+      }}]}},
+    {"if": {"properties": {"kind": {"const": "verification"}}}, "then": {"allOf": [{"$ref": "#/$defs/agent"}, {
+      "required": ["approved_commit", "deployed_commit", "result", "smoke", "acceptance_criteria", "pii_log_scan", "failure_class"],
+      "properties": {
+        "result": {"$ref": "#/$defs/result"},
+        "smoke": {"$ref": "#/$defs/checks"},
+        "acceptance_criteria": {"type": "array", "items": {"type": "object", "required": ["id", "status", "method"], "properties": {"status": {"enum": ["met", "not_met", "pending_human"]}, "method": {"enum": ["automated", "human", "both"]}}}},
+        "pii_log_scan": {"type": "object", "required": ["matches"]},
+        "failure_class": {"enum": ["infrastructure", "functional", "observability", null]}
+      }}]}},
+    {"if": {"properties": {"kind": {"const": "acceptance"}}}, "then": {"allOf": [{"$ref": "#/$defs/human"}, {
+      "required": ["decision", "criteria"],
+      "properties": {"decision": {"enum": ["accepted", "rejected"]}, "criteria": {"type": "array", "minItems": 1}}
+    }]}},
+    {"if": {"properties": {"kind": {"const": "rollback"}}}, "then": {"allOf": [{"$ref": "#/$defs/agent"}, {
+      "required": ["phase", "from_version", "to_version", "update_accepted_prior", "failure_class", "lkg_usable", "lkg_images_present", "option_settings_required", "prior_rollback_attempts"],
+      "properties": {
+        "phase": {"enum": ["precheck", "result"]},
+        "failure_class": {"enum": ["infrastructure", "functional", "observability"]},
+        "result": {"enum": ["success", "failure"]}
+      }}]}},
+    {"if": {"properties": {"kind": {"const": "resolution"}}}, "then": {"allOf": [{"$ref": "#/$defs/human"}, {"required": ["from_state", "to_state", "reason"]}]}},
+    {"if": {"properties": {"kind": {"const": "failure"}}}, "then": {"allOf": [{"$ref": "#/$defs/agent"}, {
+      "required": ["action", "resource", "principal", "error", "state", "recommendation", "residues", "access_denied"],
+      "properties": {"access_denied": {"type": "boolean"}, "residues": {"type": "array"}}
+    }]}}
+  ]
+}

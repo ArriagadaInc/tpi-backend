@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "deny": [
+      "mcp__aws__aws___run_script",
+      "mcp__aws__aws___get_presigned_url",
+      "mcp__aws__aws___get_tasks",
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./**/.env.*.local)",
+      "Read(./**/.env)",
+      "Read(./**/*.pem)",
+      "Read(./**/*.key)",
+      "Read(./**/.aws/credentials)",
+      "Read(./**/.aws/config)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit|Read|Glob|Grep|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PY=''; for CAND in python3 python; do P=\"$(command -v \"$CAND\" 2>/dev/null)\"; if [ -n \"$P\" ] && \"$P\" -c '' >/dev/null 2>&1; then PY=\"$P\"; break; fi; done; if [ -z \"$PY\" ]; then echo 'TPI HARNESS GUARD: DENIED - sin interprete Python canonico funcional (fail-closed)' >&2; exit 2; fi; exec \"$PY\" \"$CLAUDE_PROJECT_DIR/scripts/harness/guard.py\""
+          }
+        ]
+      }
+    ]
+  }
+}

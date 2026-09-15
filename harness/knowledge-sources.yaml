@@ -1,0 +1,154 @@
+schema_version: 1
+# Mapa de autoridad del conocimiento. Precedencia normativa:
+# canonical > provisional > lessons_only > reference > historical > deprecated
+authority_levels: [canonical, provisional, lessons_only, reference, historical, deprecated]
+state_rule: >-
+  Ningun documento es estado AWS actual. El estado se verifica con aws-read-preflight
+  (lecturas controladas por scripts/harness/aws_guard.py).
+
+sources:
+  release_contract_v2:
+    path: docs/cicd/TPI_Contrato_CICD_AWS_v2.md
+    authority: canonical
+    required: true
+    consumers: [reviewer, deployer]
+    use_for: [change_classes, golden_path, stop_conditions, smoke, db_rules, secrets_rules, evidence, dod]
+    never_use_for: ["seccion 15 como estado actual"]
+    provenance: {original: TPI_Contrato_CICD_AWS_v2.pdf, sha256: 1d1d027a35eb1e1025ee7fdf82cbe6af55dd1c578746c58815aba363d065a7a6}
+  release_contract_v2_summary:
+    path: docs/TPI_Contrato_CICD_AWS_v2.md
+    authority: reference
+    required: true
+    consumers: [developer, reviewer, deployer]
+    use_for: [orientacion rapida]
+    never_use_for: ["resolver diferencias con el texto completo", "Estado actual y siguiente paso"]
+  aws_lessons:
+    path: docs/AWS_DEPLOYMENT_BEST_PRACTICES.md
+    authority: lessons_only
+    required: true
+    consumers: [reviewer, deployer]
+    use_for: ["Los 10 principios", "Antipatrones", "Nomenclatura"]
+    never_use_for: ["Golden path CodePipeline como camino obligatorio", "Donde estamos hoy", "version labels o candidatos"]
+  aws_lessons_extracts:
+    path: docs/cicd/LECCIONES_DEPLOY_AWS_H3_2_H3_3.md
+    authority: lessons_only
+    required: true
+    consumers: [reviewer, deployer]
+    use_for: [LL-01..LL-20, checklist post-fallo]
+    never_use_for: ["Blue/Green swap"]
+  release_contract_v1_extract:
+    path: docs/cicd/CONTRATO_CICD_AWS_V1_EXTRACTO.md
+    authority: historical
+    required: true
+    consumers: [deployer, reviewer]
+    use_for: [orden de diagnostico, clasificacion de fallos, politica de rollback por situacion, no usar "|| true"]
+    never_use_for: [baseline, preflight del fast path, CodePipeline obligatorio]
+  aws_policy:
+    path: docs/AWS_DEPLOYMENT_POLICY.md
+    authority: provisional
+    required: true
+    consumers: [reviewer, deployer]
+    use_for: ["seccion 4 STOP", "principio 11 safe-to-log", "jerarquia de evidencia"]
+  aws_status_snapshot:
+    path: docs/AWS_DEPLOYMENT_STATUS.md
+    authority: historical
+    required: false
+    consumers: []
+    never_use_for: [estado, backlog, checklist]
+  eb_runbook:
+    path: docs/DEV_EB_DEPLOYMENT_RUNBOOK.md
+    authority: historical
+    required: true
+    consumers: [deployer]
+    use_for: ["Matriz de fallos por fase"]
+    never_use_for: [baseline, rollback, promocion, hashes de tooling]
+  codepipeline_architecture:
+    path: docs/DEV_EB_CODEPIPELINE_ARCHITECTURE.md
+    authority: reference
+    required: true
+    consumers: [reviewer]
+    use_for: [infra_path, tareas H3.2]
+    never_use_for: [fast path, permisos del Deployer]
+  mcp_setup:
+    path: docs/AWS_MCP_SERVER_SETUP.md
+    authority: reference
+    required: true
+    consumers: [reviewer, deployer]
+    use_for: [proxy SigV4, catalogo de tools, flag --read-only]
+  handoff_h33:
+    path: docs/BITACORA.md
+    anchor: "2026-09-12 - Cierre H3.3"
+    authority: canonical
+    state_snapshot: true
+    required: true
+    consumers: [developer, reviewer, deployer]
+    use_for: [AV a preservar, migraciones 005/006 no reejecutar, deuda H3.3.1]
+    never_use_for: ["estado AWS sin reverificar"]
+  database_docs:
+    path: docs/database/README.md
+    authority: canonical
+    required: true
+    consumers: [developer, reviewer]
+  engineering_standards:
+    path: docs/ENGINEERING_STANDARDS.md
+    authority: canonical
+    required: true
+    consumers: [developer, reviewer]
+    known_conflicts: ["cobertura 80 vs gate CI 85: rige 85"]
+  technical_decisions:
+    path: docs/DECISIONES_TECNICAS.md
+    authority: canonical
+    required: true
+    consumers: [developer, reviewer]
+    known_conflicts: ["decision 4 'masking solo en UI' superada por masking server-side"]
+  h33_web_ux:
+    path: docs/H3_3_CRM_LITE_WEB_UX.md
+    authority: historical
+    required: true
+    consumers: [developer]
+    use_for: [contrato de estados CRM, roles]
+    never_use_for: [version label, estado de cierre]
+  development_guide:
+    path: docs/DEVELOPMENT_GUIDE.md
+    authority: reference
+    required: true
+    consumers: [developer]
+    known_conflicts: ["describe el backoffice como Streamlit; el desplegado es app.web.main"]
+  python_design_patterns_skill:
+    path: agents/developer/skills/python-design-patterns/SKILL.md
+    authority: reference
+    required: false
+    consumers: [developer, reviewer]
+    origin: external_skill
+    upstream_repo: wshobson/agents
+    upstream_path: plugins/python-development/skills/python-design-patterns/SKILL.md
+    upstream_commit: 2cc51848c63d37a0fbe9843c43ce39601c6aeba3
+    use_for: ["KISS, SRP, composicion sobre herencia, Regla de Tres al decidir abstracciones o refactorizar"]
+    never_use_for: ["autorizar rediseño de arquitectura TPI sin necesidad demostrada", "estado o decisiones canonicas del proyecto"]
+  deployment_legacy_guide:
+    path: docs/DEPLOYMENT.md
+    authority: deprecated
+    required: false
+    consumers: []
+  aws_rules:
+    path: AGENTS.md
+    anchor: "Reglas AWS"
+    authority: canonical
+    required: true
+    consumers: [developer, reviewer, deployer]
+
+tools:
+  ci_workflow: {path: .github/workflows/ci.yml, authority: canonical, execute: github_only}
+  publish_workflow: {path: .github/workflows/publish-dev-ecr-images.yml, authority: canonical, execute: "gh workflow run (PREPARING_DEPLOYMENT)"}
+  bundle_builder: {path: deployment/build_eb_ecr_bundle.py, authority: canonical, execute: local}
+  domain_locked_template: {path: deployment/aws/docker-compose.domainlocked.yml, authority: canonical, execute: local}
+  candidate_verifier: {path: scripts/release/verify_frozen_candidate.sh, authority: canonical, execute: local}
+  control_plane_inspector: {path: scripts/release/inspect_dev_eb_control_plane_readonly.sh, authority: reference, execute: never_directly}
+  promoters_h33: {path: deployment/aws/promote_eb_candidate.py, authority: historical, execute: never}
+  domain_baseline_promoter: {path: deployment/aws/promote_domain_baseline.py, authority: historical, execute: never}
+  deploy_dev_eb_workflow: {path: .github/workflows/deploy-dev-eb.yml, authority: historical, execute: never}
+  preflight_dev_eb_workflow:
+    path: .github/workflows/preflight-dev-eb.yml
+    authority: historical
+    execute: never
+    never_use_for: [seleccion de rollback por DateUpdated, describe-configuration-settings]

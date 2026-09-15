@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Knowledge sources",
+  "type": "object",
+  "required": ["schema_version", "authority_levels", "state_rule", "sources", "tools"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "authority_levels": {"const": ["canonical", "provisional", "lessons_only", "reference", "historical", "deprecated"]},
+    "sources": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["path", "authority", "required", "consumers"],
+        "properties": {
+          "path": {"type": "string", "not": {"pattern": "^(external:|[A-Za-z]:\\\\|/)"}},
+          "authority": {"enum": ["canonical", "provisional", "lessons_only", "reference", "historical", "deprecated"]},
+          "required": {"type": "boolean"},
+          "consumers": {"type": "array", "items": {"enum": ["developer", "reviewer", "deployer"]}},
+          "state_snapshot": {"type": "boolean"}
+        }
+      }
+    },
+    "tools": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["path", "authority", "execute"],
+        "properties": {"authority": {"enum": ["canonical", "provisional", "lessons_only", "reference", "historical", "deprecated"]}}
+      }
+    }
+  }
+}

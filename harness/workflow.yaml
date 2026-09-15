@@ -1,0 +1,134 @@
+schema_version: 1
+# Maquina de estados del Harness TPI (DEV). Solo transition.py y approve.py cambian state.json.
+initial_state: IDLE
+auto_close_on_done: true
+
+evidence_kinds:
+  developer_evidence: developer
+  review_evidence: review
+  merge_evidence: merge
+  candidate_evidence: candidate
+  candidate_review_evidence: candidate_review
+  approval: approval
+  deployment_evidence: deployment
+  verification_evidence: verification
+  acceptance: acceptance
+  rollback_precheck_evidence: rollback
+  rollback_evidence: rollback
+  resolution: resolution
+  failure_evidence: failure
+
+states:
+  IDLE:
+    role: human
+    description: Sin tarea activa.
+    next_action: "Humano elige tarea: python scripts/harness/approve.py activate --task <ID>"
+  NEW:
+    role: developer
+    description: Tarea activada, desarrollo no iniciado.
+    next_action: "Developer: crear worktree con worktree.py y ejecutar transition.py start_development"
+  DEVELOPING:
+    role: developer
+    description: Implementacion de la tarea en rama harness/<task>.
+    next_action: "Developer: implementar, correr gates, abrir/actualizar PR, registrar evidencia y submit_for_review"
+  READY_FOR_REVIEW:
+    role: reviewer
+    description: PR listo en un SHA exacto con evidencia del Developer.
+    next_action: "Reviewer (sesion distinta): transition.py start_review"
+  REVIEWING:
+    role: reviewer
+    description: Revision independiente del software.
+    next_action: "Reviewer: revisar SHA exacto, CI verde, registrar review y review_approve o review_reject"
+  REVIEW_REJECTED:
+    role: developer
+    description: Hallazgos estructurados pendientes.
+    next_action: "Developer: transition.py resume_development y corregir hallazgos"
+  REVIEW_APPROVED:
+    role: deployer
+    description: Software aprobado; falta merge a main.
+    next_action: "Deployer: transition.py start_merge"
+  MERGING:
+    role: deployer
+    description: Merge squash con --match-head-commit y verificacion de arbol.
+    next_action: "Deployer: gh pr merge --squash --match-head-commit <reviewed_sha>, registrar merge y transition.py merged"
+  PREPARING_DEPLOYMENT:
+    role: deployer
+    description: Build unico, bundle domain-locked, staging S3 content-addressed y AV --no-process. Sin mutar runtime.
+    next_action: "Deployer: preflight, publish ECR, bundle, S3, AV, plan; registrar candidate y candidate_ready"
+  CANDIDATE_REVIEW:
+    role: reviewer
+    description: Revision automatica del release candidate real.
+    next_action: "Reviewer: verificar cadena de identidad, scans, bundle reproducible, LKG; candidate_approve o candidate_reject"
+  WAITING_HUMAN_APPROVAL:
+    role: human
+    description: Human Gate unico del happy path antes de mutar el runtime DEV.
+    next_action: "Humano en su terminal: python scripts/harness/approve.py gate"
+  DEPLOYING:
+    role: deployer
+    description: Cutover version-only al label aprobado.
+    next_action: "Deployer: aws_guard update-environment --version-label <aprobada>, esperar, registrar deployment"
+  VERIFYING:
+    role: deployer
+    description: Postflight, identidad de runtime, smoke y acceptance.
+    next_action: "Deployer: observabilidad + smoke; si hay criterios humanos esperar approve.py accept; verified o verify_failed"
+  DEPLOY_FAILED:
+    role: deployer
+    description: Fallo del cutover. Sin retries.
+    next_action: "Deployer: inventario de residuos; start_rollback si la autorizacion condicionada aplica, si no escalate"
+  VERIFY_FAILED:
+    role: deployer
+    description: Fallo de verificacion.
+    next_action: "Deployer: clasificar fallo; rollback solo si es degradacion de infraestructura, si no escalate"
+  ROLLING_BACK:
+    role: deployer
+    description: Unico rollback version-only al LKG aprobado.
+    next_action: "Deployer: aws_guard update-environment --version-label <LKG>, registrar rollback y rollback_finished"
+  BLOCKED_HUMAN:
+    role: human
+    description: Requiere decision humana.
+    next_action: "Humano en su terminal: python scripts/harness/approve.py resolve --to <ESTADO> --reason <texto>"
+  DONE:
+    role: system
+    description: Todos los criterios aplicables verificados. Cierre administrativo automatico.
+    next_action: "Sistema: transition.py close (automatico)"
+
+transitions:
+  - {id: activate_task, event: activate_task, from: IDLE, to: NEW, actor: human, guards: [task_selected], effects: [bind_task]}
+  - {id: start_development, event: start_development, from: NEW, to: DEVELOPING, actor: developer, guards: [task_active], effects: ["record_session:developer"]}
+  - {id: submit_for_review, event: submit_for_review, from: DEVELOPING, to: READY_FOR_REVIEW, actor: developer, records: developer_evidence, guards: [task_active, developer_evidence_valid]}
+  - {id: start_review, event: start_review, from: READY_FOR_REVIEW, to: REVIEWING, actor: reviewer, guards: [reviewer_session_independent], effects: ["record_session:reviewer"]}
+  - {id: review_reject, event: review_reject, from: REVIEWING, to: REVIEW_REJECTED, actor: reviewer, records: review_evidence, guards: [review_rejected, rework_available], effects: [increment_rework]}
+  - {id: review_reject_exhausted, event: review_reject, from: REVIEWING, to: BLOCKED_HUMAN, actor: reviewer, records: review_evidence, guards: [review_rejected, rework_exhausted], effects: [increment_rework]}
+  - {id: review_approve, event: review_approve, from: REVIEWING, to: REVIEW_APPROVED, actor: reviewer, records: review_evidence, guards: [review_approved]}
+  - {id: resume_development, event: resume_development, from: REVIEW_REJECTED, to: DEVELOPING, actor: developer, effects: ["record_session:developer", "clear_refs:developer_evidence,review_evidence"]}
+  - {id: start_merge, event: start_merge, from: REVIEW_APPROVED, to: MERGING, actor: deployer, effects: ["record_session:deployer"]}
+  - {id: merged_deploy, event: merged, from: MERGING, to: PREPARING_DEPLOYMENT, actor: deployer, records: merge_evidence, guards: [merge_valid, deploy_required_fast_path]}
+  - {id: merged_no_deploy, event: merged, from: MERGING, to: DONE, actor: deployer, records: merge_evidence, guards: [merge_valid, no_deploy_required]}
+  - {id: merged_non_fast_path, event: merged, from: MERGING, to: BLOCKED_HUMAN, actor: deployer, records: merge_evidence, guards: [merge_valid, deploy_required_non_fast_path]}
+  - {id: merge_failed, event: merge_failed, from: MERGING, to: BLOCKED_HUMAN, actor: deployer, records: failure_evidence, guards: [failure_recorded]}
+  - {id: candidate_ready, event: candidate_ready, from: PREPARING_DEPLOYMENT, to: CANDIDATE_REVIEW, actor: deployer, records: candidate_evidence, guards: [candidate_valid]}
+  - {id: preparation_failed, event: preparation_failed, from: PREPARING_DEPLOYMENT, to: BLOCKED_HUMAN, actor: deployer, records: failure_evidence, guards: [failure_recorded]}
+  - {id: candidate_approve, event: candidate_approve, from: CANDIDATE_REVIEW, to: WAITING_HUMAN_APPROVAL, actor: reviewer, records: candidate_review_evidence, guards: [reviewer_session_independent, candidate_review_approved]}
+  - {id: candidate_reject_code, event: candidate_reject, from: CANDIDATE_REVIEW, to: DEVELOPING, actor: reviewer, records: candidate_review_evidence, guards: ["candidate_rejected:code", rework_available], effects: [increment_rework, reset_release]}
+  - {id: candidate_reject_code_exhausted, event: candidate_reject, from: CANDIDATE_REVIEW, to: BLOCKED_HUMAN, actor: reviewer, records: candidate_review_evidence, guards: ["candidate_rejected:code", rework_exhausted]}
+  - {id: candidate_reject_artifact, event: candidate_reject, from: CANDIDATE_REVIEW, to: PREPARING_DEPLOYMENT, actor: reviewer, records: candidate_review_evidence, guards: ["candidate_rejected:artifact", candidate_rework_available], effects: [increment_candidate_rework, "clear_refs:candidate_evidence"]}
+  - {id: candidate_reject_artifact_exhausted, event: candidate_reject, from: CANDIDATE_REVIEW, to: BLOCKED_HUMAN, actor: reviewer, records: candidate_review_evidence, guards: ["candidate_rejected:artifact", candidate_rework_exhausted]}
+  - {id: candidate_reject_infra, event: candidate_reject, from: CANDIDATE_REVIEW, to: BLOCKED_HUMAN, actor: reviewer, records: candidate_review_evidence, guards: ["candidate_rejected:infra"]}
+  - {id: human_approve, event: human_approve, from: WAITING_HUMAN_APPROVAL, to: DEPLOYING, actor: human, records: approval, guards: [approval_valid]}
+  - {id: human_reject, event: human_reject, from: WAITING_HUMAN_APPROVAL, to: DEVELOPING, actor: human, records: approval, guards: [approval_rejected], effects: [reset_release]}
+  - {id: deploy_succeeded, event: deploy_succeeded, from: DEPLOYING, to: VERIFYING, actor: deployer, records: deployment_evidence, guards: [deployment_succeeded]}
+  - {id: deploy_failed, event: deploy_failed, from: DEPLOYING, to: DEPLOY_FAILED, actor: deployer, records: deployment_evidence, guards: [deployment_failed]}
+  - {id: verified, event: verified, from: VERIFYING, to: DONE, actor: deployer, records: verification_evidence, guards: [verification_passed]}
+  - {id: verify_failed, event: verify_failed, from: VERIFYING, to: VERIFY_FAILED, actor: deployer, records: verification_evidence, guards: [verification_failed]}
+  - {id: rollback_after_deploy_failure, event: start_rollback, from: DEPLOY_FAILED, to: ROLLING_BACK, actor: deployer, records: rollback_precheck_evidence, guards: [rollback_permitted], effects: [mark_rollback_attempted]}
+  - {id: rollback_after_verify_failure, event: start_rollback, from: VERIFY_FAILED, to: ROLLING_BACK, actor: deployer, records: rollback_precheck_evidence, guards: [rollback_permitted], effects: [mark_rollback_attempted]}
+  - {id: escalate_deploy_failure, event: escalate, from: DEPLOY_FAILED, to: BLOCKED_HUMAN, actor: deployer, records: failure_evidence, guards: [failure_recorded]}
+  - {id: escalate_verify_failure, event: escalate, from: VERIFY_FAILED, to: BLOCKED_HUMAN, actor: deployer, records: failure_evidence, guards: [failure_recorded]}
+  - {id: rollback_finished, event: rollback_finished, from: ROLLING_BACK, to: BLOCKED_HUMAN, actor: deployer, records: rollback_evidence, guards: [rollback_result_recorded]}
+  - {id: resolve_to_developing, event: human_resolve, from: BLOCKED_HUMAN, to: DEVELOPING, actor: human, records: resolution, guards: ["resolution_target:DEVELOPING"], effects: [reset_release, reset_rework]}
+  - {id: resolve_to_ready_for_review, event: human_resolve, from: BLOCKED_HUMAN, to: READY_FOR_REVIEW, actor: human, records: resolution, guards: ["resolution_target:READY_FOR_REVIEW"]}
+  - {id: resolve_to_preparing, event: human_resolve, from: BLOCKED_HUMAN, to: PREPARING_DEPLOYMENT, actor: human, records: resolution, guards: ["resolution_target:PREPARING_DEPLOYMENT"], effects: ["clear_refs:candidate_evidence,candidate_review_evidence,approval,failure_evidence", reset_candidate_rework]}
+  - {id: resolve_to_candidate_review, event: human_resolve, from: BLOCKED_HUMAN, to: CANDIDATE_REVIEW, actor: human, records: resolution, guards: ["resolution_target:CANDIDATE_REVIEW"]}
+  - {id: resolve_to_verifying, event: human_resolve, from: BLOCKED_HUMAN, to: VERIFYING, actor: human, records: resolution, guards: ["resolution_target:VERIFYING"]}
+  - {id: resolve_cancel, event: human_resolve, from: BLOCKED_HUMAN, to: IDLE, actor: human, records: resolution, guards: ["resolution_target:IDLE"], effects: [cancel_task]}
+  - {id: close, event: close, from: DONE, to: IDLE, actor: system, effects: [close_task]}

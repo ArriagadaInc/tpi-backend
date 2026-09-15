@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Current task",
+  "type": "object",
+  "required": ["schema_version", "task"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "task": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": ["id", "title", "objective", "source", "change_class", "deploy_required", "requires_human_acceptance", "acceptance_criteria", "constraints", "dependencies", "risk", "status"],
+          "properties": {
+            "id": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+            "title": {"type": "string", "minLength": 3},
+            "objective": {"type": "string", "minLength": 10},
+            "source": {
+              "type": "object",
+              "required": ["type", "ref"],
+              "properties": {"type": {"enum": ["issue", "backlog", "story"]}, "ref": {"type": "string"}}
+            },
+            "change_class": {"enum": ["A", "B", "C", "D", "E"]},
+            "deploy_required": {"type": "boolean"},
+            "requires_human_acceptance": {"type": "boolean"},
+            "allow_lockfile_update": {"type": "boolean"},
+            "acceptance_criteria": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["id", "description", "verification"],
+                "properties": {
+                  "id": {"type": "string", "pattern": "^AC-[0-9]+$"},
+                  "description": {"type": "string"},
+                  "verification": {"enum": ["automated", "human", "both"]}
+                }
+              }
+            },
+            "constraints": {"type": "array", "items": {"type": "string"}},
+            "dependencies": {"type": "array", "items": {"type": "string"}},
+            "risk": {
+              "type": "object",
+              "required": ["level"],
+              "properties": {"level": {"enum": ["low", "medium", "high"]}, "notes": {"type": "string"}}
+            },
+            "scope": {"type": "object", "properties": {"paths": {"type": "array", "items": {"type": "string"}}}},
+            "status": {"enum": ["active", "closed", "cancelled"]}
+          }
+        }
+      ]
+    }
+  }
+}

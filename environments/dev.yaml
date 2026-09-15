@@ -1,0 +1,60 @@
+schema_version: 1
+# Definicion no secreta de AWS DEV. Valores verificados read-only el 2026-09-14.
+# Esto NO es estado vivo: el Deployer reverifica con aws-read-preflight antes de actuar.
+environment: dev
+cloud: aws
+account_id: "821656895812"
+region: us-east-2
+profile: tpi-dev            # nombre logico del perfil local; hoy = usuario IAM humano (transitorio)
+application: tpi-backoffice
+deployment_target:
+  type: elastic-beanstalk
+  environment_name: tpi-backoffice-dev-green
+  platform: Docker running on 64bit Amazon Linux 2023
+  cname: tpi-backoffice-dev-ecr.us-east-2.elasticbeanstalk.com   # historico: CNAMEs intercambiados en H2
+  mechanism: version_only_update_environment
+  codepipeline: {name: tpi-backoffice-dev-promotion, status: promote_disabled, harness_use: never}
+artifacts:
+  ecr_repositories:
+    app: tpi-dev-app
+    caddy: tpi-dev-caddy
+  ecr_registry: 821656895812.dkr.ecr.us-east-2.amazonaws.com
+  ecr_tag_mutability: IMMUTABLE
+  ecr_lifecycle: {rule: "retain 20 most recent", risk: ECR-LIFECYCLE-KEEP-20}
+  publish_workflow: publish-dev-ecr-images.yml
+  bundle_bucket: elasticbeanstalk-us-east-2-821656895812
+  bundle_key_prefix: tpi-backoffice/dev-releases
+  bundle_key_pattern: "tpi-backoffice/dev-releases/{version_label}/{bundle_sha256}.zip"
+  version_label_pattern: "^[a-z0-9][a-z0-9.-]{2,90}-[0-9a-f]{7}-domainlocked-r[0-9]+$"
+  bundle_template: deployment/aws/docker-compose.domainlocked.yml
+urls:
+  public: https://dev.tupensioninteligente.cl
+  backoffice: https://backoffice.dev.tupensioninteligente.cl
+dns:
+  hosted_zone_id: Z07053592LX0W8GJXNI1C   # no secreto; cambios DNS fuera del Harness
+last_known_good:
+  policy: version sana observada por aws-read-preflight inmediatamente antes del release
+  selection_by_timestamp: forbidden
+  observed_snapshot: {version_label: h3-3-crm-web-43101be-domainlocked-r1, observed_at: "2026-09-14", note: "solo referencia; no usar sin preflight"}
+  do_not_use_without_human_decision: [h3-3-crm-web-28cf009-r1, h3-3-domain-baseline-28cf009-caddy43101be-r1, h2-5d-ecr-47fa0c9]
+smoke:
+  client: independiente del curl de Windows (python o contenedor)
+  unauthenticated:
+    - {name: public_https, method: GET, url: "https://dev.tupensioninteligente.cl/", expect_status: 200}
+    - {name: backoffice_login, method: GET, url: "https://backoffice.dev.tupensioninteligente.cl/login", expect_status: 200}
+    - {name: api_catalogs, method: GET, url: "https://dev.tupensioninteligente.cl/api/v1/catalogs", expect_status: 200}
+    - {name: static_css, method: GET, url: "https://backoffice.dev.tupensioninteligente.cl/static/css/app.css", expect_status: 200}
+    - {name: leads_requires_auth, method: GET, url: "https://backoffice.dev.tupensioninteligente.cl/leads", expect: "redirect a /login o 401/403"}
+    - {name: no_legacy_domain_redirect, check: "ninguna respuesta redirige a genialabs.cl"}
+  authenticated: human_acceptance_until_AUTOMATED_AUTHENTICATED_SMOKE
+  db_invariants: human_or_future_readonly_identity
+operations:
+  harness_writes:
+    PREPARING_DEPLOYMENT: [s3api put-object (content-addressed, --if-none-match), elasticbeanstalk create-application-version (--no-process)]
+    DEPLOYING: [elasticbeanstalk update-environment --version-label <aprobada>]
+    ROLLING_BACK: [elasticbeanstalk update-environment --version-label <LKG aprobado>]
+  destructive_policy: prohibited_in_harness   # delete/terminate/rebuild/swap/IAM/DNS/secrets -> humano fuera del Harness
+  other_environments_do_not_touch:
+    - {name: tpi-backoffice-dev, observed: "Ready/Green, h2-5d-c06621d", backlog: OPS-EB-EXTRA-ENVIRONMENTS}
+    - {name: tpi-backoffice-dev-ecr, observed: "Ready/Yellow, h2-5d-ecr-dns01-8f77af5", backlog: OPS-EB-EXTRA-ENVIRONMENTS}
+  migrations: db_path_blocked_human

@@ -1,0 +1,97 @@
+schema_version: 1
+# Perfil del proyecto TPI. Aprobado por el owner el 2026-09-14 (ver progress/decisions.md).
+# Contiene identidad y reglas estables; el estado vivo esta en harness/state.json y en AWS.
+project:
+  id: tpi
+  name: Tu Pension Inteligente
+  repository: ArriagadaInc/tpi-backend
+  default_branch: main
+  owner: Alvaro Arriagada
+scope:
+  environments: [dev]
+  production: out_of_scope
+knowledge_sources: harness/knowledge-sources.yaml
+stack:
+  language: python-3.12
+  web: [fastapi, jinja2, uvicorn]
+  public_front: static front/ served by caddy + app/api (FastAPI)
+  backoffice: app.web.main (FastAPI + Jinja2)
+  legacy: [streamlit]
+  data: {engine: postgresql, access: psycopg3 + psycopg_pool, orm: none, schema: tpi}
+  runtime: docker-compose on AWS Elastic Beanstalk (single environment DEV)
+  edge: caddy (TLS ACME DNS-01 Route53)
+  messaging: sns
+quality_gates:
+  source: .github/workflows/ci.yml
+  coverage_min: 85   # gate operativo vigente; ENGINEERING_STANDARDS dice 80 (deuda DOC-COVERAGE-80-85)
+  commands:
+    - ruff check app/ tests/ scripts/ deployment/
+    - black --check app/ tests/ scripts/ deployment/
+    - mypy app/ --ignore-missing-imports
+    - pytest tests/ --cov=app --cov-fail-under=85
+    - bandit -r app/ --severity-level medium --confidence-level medium
+    - pip-audit --requirement requirements/runtime.lock
+    - docker build --tag tpi-backoffice:local .
+    - docker compose config --quiet
+git:
+  task_branch_prefix: harness/
+  pr_target: main
+  merge_method: squash
+  merge_requires:
+    - reviewer APPROVED sobre el SHA exacto del PR
+    - CI verde sobre ese SHA
+    - PR actualizado con main (arbol mergeado == arbol revisado)
+    - "gh pr merge --squash --match-head-commit <reviewed_sha>"
+  auto_merge: not_available   # allow_auto_merge=false y main sin branch protection (verificado 2026-09-14)
+release:
+  identity_chain: [reviewed_tree, release_sha, app_digest, caddy_digest, bundle_sha256, s3_key, application_version, runtime_version_label]
+  invariant: approved_commit == deployed_commit == release_sha (merge commit en main)
+  change_classes:
+    A: {name: aplicacion, path: fast_path}
+    B: {name: config no secreta de runtime, path: fast_path}
+    C: {name: infraestructura, path: infra_path}
+    D: {name: base de datos, path: db_path}
+    E: {name: secretos, path: secret_path}
+  harness_deployable_classes: [A, B]
+  build_once: .github/workflows/publish-dev-ecr-images.yml
+  bundle:
+    builder: "deployment/build_eb_ecr_bundle.py::build_domain_locked_bundle"
+    template: deployment/aws/docker-compose.domainlocked.yml
+    built_by: deployer (local, determinista); reviewer lo reconstruye y compara SHA256
+  application_version: {process: false, reuse_labels: never, delete: never}
+  cutover: update-environment --version-label (sin option settings)
+  last_known_good: version sana observada en el preflight (nunca por timestamp ni desde documentos)
+  rollback: version-only al LKG nombrado en la aprobacion, maximo 1 intento, condicionado
+runtime_identity:
+  method: chain VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests del bundle
+  container_digest: not_available   # backlog H3.2-RUNTIME-RELEASE-IDENTITY
+invariants:
+  - pii_full_only_roles: [ceo, cto]
+  - pii_masking: server_side_no_html_leak
+  - assignments_source: tpi.asignaciones
+  - audit: tpi.auditoria append_only
+  - migrations_never_rerun: ["005", "006"]
+  - migrations_in_aws: db_path_blocked_human
+  - no_option_settings_in_release
+  - no_describe_configuration_settings
+  - no_mcp_run_script
+  - no_presigned_urls
+  - no_auto_retry_writes
+  - rollback_never_by_timestamp
+  - no_secret_reads (AUTH_USERS_JSON, DATABASE_PASSWORD, API_IDEMPOTENCY_HMAC_SECRET, WEB_SESSION_SECRET)
+  - access_denied_stop
+harness:
+  max_rework_rounds: 3
+  human_gates:
+    - WAITING_HUMAN_APPROVAL (mutacion del runtime DEV; incluye rollback condicionado)
+    - VERIFYING human_acceptance (solo si un criterio requiere validacion autenticada)
+    - BLOCKED_HUMAN
+  deploy_capable_runtimes: [claude]
+  portable_runtimes: [claude, codex, deepseek]
+known_risks:
+  - id: ECR-LIFECYCLE-KEEP-20
+    summary: la lifecycle policy de ECR puede expirar imagenes requeridas por el LKG
+    control: aws-read-preflight y tpi-release-readiness verifican todos los digests del LKG
+  - id: AWS-HUMAN-CREDENTIALS
+    summary: tpi-dev es un usuario IAM humano con privilegios amplios; los guards no sustituyen IAM
+    control: aws_guard + hooks Claude + Human Gate; backlog H3.2-LEAST-PRIVILEGE-ROLES
