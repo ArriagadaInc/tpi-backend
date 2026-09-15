@@ -70,6 +70,80 @@ def _strip_safe_redirects(command: str) -> str:
     return _SAFE_REDIRECTS.sub(" ", command)
 
 
+_QUOTED_LITERAL = re.compile(r'"[^"]*"|\'[^\']*\'')
+
+
+def _strip_quoted(command: str) -> str:
+    """Blank out quoted string literals before detecting a real git/gh subcommand.
+
+    Without this, a command that merely *mentions* "git push" or "gh pr merge" inside
+    a string literal -- a grep pattern, an echo message, a `git commit -m "..."` message
+    body -- is misclassified as that subcommand and denied even though no such git/gh
+    operation is actually being run. `git commit -m "..."` still matches correctly
+    because the trigger text ("git commit") sits outside the quotes; only the message
+    payload is blanked.
+    """
+    return _QUOTED_LITERAL.sub(lambda m: " " * len(m.group(0)), command)
+
+
+def _developer_worktree(ctx: dict[str, Any]) -> dict[str, Any] | None:
+    """Return the registered worktree for the active task's Developer, if any."""
+    task_id = ctx["state"].get("task_id") or ""
+    prefix = f"{task_id}-developer-"
+    for worktree in ctx["state"].get("worktrees") or []:
+        if worktree.get("role") != "developer":
+            continue
+        path = str(worktree.get("path", "")).replace("\\", "/").rstrip("/")
+        if path.rsplit("/", 1)[-1].startswith(prefix):
+            return worktree
+    return None
+
+
+def _scoped_to_worktree(
+    root: Path, command: str, cwd: str | None, worktree_path: str
+) -> bool:
+    """True if a git-mutating command is actually operating inside the given worktree.
+
+    Accepts three equivalent forms of evidence: the hook-reported working directory
+    is the worktree (or a subdirectory of it); the command itself changes into the
+    worktree first (`cd`/`Set-Location`); or the git invocation targets the worktree
+    explicitly (`-C <path>` / `--git-dir=<path>/.git`).
+    """
+    wt = str(worktree_path).replace("\\", "/").rstrip("/")
+    normalized = command.replace("\\", "/")
+    patterns = (
+        rf"\b(?:cd|Set-Location)\s+['\"]?{re.escape(wt)}(?:['\"]|[/\\]|\s|;|&|$)",
+        rf"\bgit\s+-C\s+['\"]?{re.escape(wt)}\b",
+        rf"--git-dir[= ]['\"]?{re.escape(wt)}/\.git\b",
+    )
+    if any(re.search(pattern, normalized) for pattern in patterns):
+        return True
+    if cwd:
+        relative = common.to_repo_relative(root, cwd)
+        if relative is not None and (relative == wt or relative.startswith(wt + "/")):
+            return True
+    return False
+
+
+def _maintenance_commit_allowed(root: Path, policies: dict[str, Any]) -> bool:
+    """True if every currently staged file is within harness.maintenance_allowlist.
+
+    Mirrors check_write's existing maintenance carve-out (D3: allowlist declarativa, no
+    bypass global) for the one case check_write cannot see: `git commit` itself. The
+    Developer-worktree scope required elsewhere in check_command does not apply to a
+    human-authorized maintenance session committing harness/agents/tests/scripts.harness
+    files from the main checkout -- but only when every staged path is actually inside
+    the declared allowlist; any staged path outside it still falls through to the normal
+    Developer worktree-scoped rule (fail closed).
+    """
+    output = common.git(root, "diff", "--cached", "--name-only", check=False)
+    staged = [line.strip() for line in output.splitlines() if line.strip()]
+    if not staged:
+        return False
+    allowlist = policies["harness"]["maintenance_allowlist"]
+    return all(common.matches_any(path.replace("\\", "/"), allowlist) for path in staged)
+
+
 def _deny(reason: str) -> tuple[bool, str]:
     return False, reason
 
@@ -186,7 +260,11 @@ def _gh_action(command: str) -> str | None:
 
 
 def check_command(
-    root: Path, ctx: dict[str, Any], command: str, maintenance: bool
+    root: Path,
+    ctx: dict[str, Any],
+    command: str,
+    maintenance: bool,
+    cwd: str | None = None,
 ) -> tuple[bool, str]:
     policies = ctx["policies"]
     role = ctx["role"]
@@ -209,18 +287,42 @@ def check_command(
     if not maintenance and any(token in command for token in PROTECTED_TOKENS):
         if re.search(policies["bash"]["protected_write_verbs"], _strip_safe_redirects(command)):
             return _deny("comando shell que podria modificar archivos protegidos del Harness")
-    if re.search(r"\bgit\s+push\b", command):
+    # From here on, classify git/gh subcommands on the quote-stripped command: a bare
+    # substring search over the raw text would also fire on a grep pattern, an echo
+    # message, or a `git commit -m "..."` message body that merely mentions these
+    # words, producing a false DENIED on a command that never actually runs them.
+    stripped = _strip_quoted(command)
+    if re.search(r"\bgit\s+push\b", stripped):
         task_id = state.get("task_id") or ""
         if role != "developer" or state["state"] != "DEVELOPING":
             return _deny(f"git push no permitido para {role} en {state['state']}")
-        if f"harness/{task_id}" not in command:
-            return _deny(f"el Developer solo publica la rama harness/{task_id}")
-    if re.search(r"\bgit\s+(commit|merge|rebase|reset)\b", command):
-        if role != "developer" or state["state"] != "DEVELOPING":
+        worktree = _developer_worktree(ctx)
+        if not worktree:
+            return _deny("no hay worktree de Developer registrado para la tarea activa")
+        if not _scoped_to_worktree(root, stripped, cwd, worktree["path"]):
             return _deny(
-                f"git commit/merge/rebase/reset no permitido para {role} en {state['state']}"
+                "el Developer solo publica git desde su worktree registrado: "
+                f"{worktree['path']}"
             )
-    action = _gh_action(command)
+        branch = worktree.get("branch") or f"harness/{task_id}"
+        if branch not in stripped:
+            return _deny(f"el Developer solo publica la rama {branch}")
+    if re.search(r"\bgit\s+commit\b", stripped):
+        if not (maintenance and _maintenance_commit_allowed(root, policies)):
+            if role != "developer" or state["state"] != "DEVELOPING":
+                return _deny(f"git commit no permitido para {role} en {state['state']}")
+            worktree = _developer_worktree(ctx)
+            if not worktree:
+                return _deny("no hay worktree de Developer registrado para la tarea activa")
+            if not _scoped_to_worktree(root, stripped, cwd, worktree["path"]):
+                return _deny(
+                    "el Developer solo hace commit desde su worktree registrado: "
+                    f"{worktree['path']}"
+                )
+    if re.search(r"\bgit\s+(merge|rebase|reset)\b", stripped):
+        if role != "developer" or state["state"] != "DEVELOPING":
+            return _deny(f"git merge/rebase/reset no permitido para {role} en {state['state']}")
+    action = _gh_action(stripped)
     if action:
         if role not in common.AGENT_ROLES:
             return _deny(f"gh no permitido en estado {state['state']}")
@@ -280,7 +382,13 @@ def decide(root: Path, event: dict[str, Any], env_vars: Mapping[str, str]) -> tu
     if tool in WRITE_TOOLS:
         return check_write(root, ctx, tool_input, maintenance)
     if tool in SHELL_TOOLS:
-        return check_command(root, ctx, str(tool_input.get("command") or ""), maintenance)
+        return check_command(
+            root,
+            ctx,
+            str(tool_input.get("command") or ""),
+            maintenance,
+            cwd=(event.get("cwd") if isinstance(event.get("cwd"), str) else None),
+        )
     if tool.startswith("mcp__"):
         return check_mcp(ctx, tool)
     return True, ""
