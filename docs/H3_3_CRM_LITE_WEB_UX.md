@@ -4,7 +4,7 @@
 
 H3.3 cerró la transición del backoffice desde Streamlit hacia una capa web moderna basada en FastAPI + Jinja2 + CSS/JS local. El objetivo fue entregar una interfaz operacional para CRM Lite, reutilizando los servicios, repositorios y PostgreSQL RDS existentes, sin cambios de esquema ni de infraestructura base.
 
-El hito fue validado manualmente en AWS DEV y quedó cerrado con `Human UX Acceptance: PASS`.
+El hito quedó registrado como `CLOSED WITH DEFERRED ACCEPTANCE ITEMS` (ver `docs/BITACORA.md` 2026-09-12), quedando la deuda de RBAC/PII y asignación manual delegada al issue #50 (H3.3.1), implementados técnicamente y pendientes de verificación humana en DEV.
 
 ## 2. Objetivo
 
@@ -26,8 +26,8 @@ El hito fue validado manualmente en AWS DEV y quedó cerrado con `Human UX Accep
 - cambio de estado;
 - seguimiento y notas incrementales;
 - acceso al simulador;
-- masking de PII;
-- control por roles;
+- masking de PII server-side por rol (CEO/CTO ven PII completa; roles restringidos reciben masking sin PII en HTML);
+- control por roles y asignación manual;
 - cleanup DEV restringido.
 
 ### Modelo de datos de referencia
@@ -78,7 +78,7 @@ Componentes transversales:
 - sesiones web;
 - CSRF en operaciones mutables;
 - roles `tester`, `admin`, `advisor`, `executive`, `operations`, `readonly`, `ceo`, `cto`;
-- masking de PII mediante `WEB_MASK_PII`;
+- masking de PII server-side por rol (`CEO`/`CTO` sin masking);
 - integración con simulador por configuración central;
 - runtime Uvicorn `app.web.main:app` en puerto `8501`.
 
@@ -94,7 +94,8 @@ Componentes transversales:
 - cambio de estado;
 - seguimiento/notas;
 - acceso al simulador;
-- masking de PII;
+- masking de PII por rol;
+- asignación manual para roles autorizados;
 - restricciones por rol;
 - cleanup DEV restringido y deshabilitado para `operations`.
 
@@ -135,10 +136,11 @@ Valores ambiguos no normalizados automáticamente:
 
 - autenticación server-side;
 - roles explícitos en backend;
+- PII server-side masking (`can_view_full_pii` para CEO/CTO únicamente);
 - `operations` sin cleanup;
 - CSRF obligatorio;
 - cookies `HttpOnly`, `Secure`, `SameSite=lax`;
-- `WEB_MASK_PII=true`;
+- `WEB_MASK_PII` sin efecto sobre el masking (el masking es por rol, incondicional);
 - `DEV_DELETE_ENABLED=false`;
 - secretos fuera de Git;
 - `AUTH_USERS_JSON` inyectado vía Secrets Manager / EB environment secrets.
@@ -147,9 +149,9 @@ Valores ambiguos no normalizados automáticamente:
 
 - Environment: `tpi-backoffice-dev-green`
 - URL: `https://backoffice.dev.tupensioninteligente.cl`
-- VersionLabel: `h3-3-crm-web-1574d79-r1`
-- Git SHA: `1574d79920342d3da2bac8296de9020b8162c68f`
-- App digest: `sha256:1f5bca0350e3f3229516643b1f1f5dcf05f6f13e826c6a444aa8640302b73922`
+- VersionLabel: `h3-3-crm-web-43101be-domainlocked-r1`
+- Git Candidate SHA: `43101be7835088f93267bee85b0f11c8bc879867`
+- Bundle SHA256: `007b14d4b439ea59afd13106b71edafbf902e564085581e7577770261c97282f`
 
 Estado final:
 
@@ -192,13 +194,13 @@ Lección:
 - JS → `200`
 - mixed content → no
 - visual CSS loaded → yes
-- Human UX Acceptance → `PASS`
+- Human UX Acceptance → `pendiente` (requiere smoke autenticado en DEV para H3.3.1 AC-1..AC-4)
 
 ## 11. Validación Manual
 
 - navegación operativa;
-- bandeja funcional;
-- detalle funcional;
+- bandeja funcional con RBAC PII por rol;
+- detalle funcional con control de asignación manual;
 - filtros y paginación activos;
 - simulador accesible por configuración;
 - estilos cargados correctamente;
@@ -206,10 +208,10 @@ Lección:
 
 ## 12. Release y Trazabilidad
 
-- Git SHA: `1574d79920342d3da2bac8296de9020b8162c68f`
-- App tag: `h3-3-1574d79`
-- App digest: `sha256:1f5bca0350e3f3229516643b1f1f5dcf05f6f13e826c6a444aa8640302b73922`
-- EB Version: `h3-3-crm-web-1574d79-r1`
+- VersionLabel: `h3-3-crm-web-43101be-domainlocked-r1`
+- Candidate SHA: `43101be7835088f93267bee85b0f11c8bc879867`
+- PR Squash Merge SHA: `89a1c58643fc228024243d474c47986ab272257f`
+- Bundle SHA256: `007b14d4b439ea59afd13106b71edafbf902e564085581e7577770261c97282f`
 - Environment: `tpi-backoffice-dev-green`
 - URL: `https://backoffice.dev.tupensioninteligente.cl`
 
@@ -222,10 +224,8 @@ CI final:
 
 ## 13. Rollback
 
-- EB Version: `h3-3-crm-web-0ce8023-r1`
-- App digest: `sha256:31380084bd13cb8545087d512297e957c777308ea999ddabff7df6db82408926`
-
-Rollback = volver a esa versión exacta, sin reconstrucción de código antiguo.
+- EB Version: será determinada por el Deployer durante el preflight (LKG observado).
+- Rollback = volver a la versión LKG exacta (version-only), sin reconstrucción de código antiguo.
 
 ## 14. Riesgos y Deuda Pendiente
 
@@ -237,8 +237,7 @@ Rollback = volver a esa versión exacta, sin reconstrucción de código antiguo.
 
 ```text
 H3.3 — CRM Lite Web UX
-STATUS: CLOSED
-AWS DEV: DEPLOYED
-HUMAN UX ACCEPTANCE: PASS
+STATUS: CLOSED WITH DEFERRED ACCEPTANCE ITEMS (H3.3.1 pendiente de verificación)
+AWS DEV: DEPLOYED (h3-3-crm-web-43101be-domainlocked-r1)
 ```
 

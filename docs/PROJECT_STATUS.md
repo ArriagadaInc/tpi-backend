@@ -1,28 +1,24 @@
 # Estado del Proyecto - Tu Pensión Inteligente Back-office
 
-**Última Actualización:** 25 de Agosto de 2026
+**Última Actualización:** 15 de Septiembre de 2026
 **Versión:** MVP1  
 **Estado General:** 🟢 OPERATIVO
 
-> **HISTORICO (parcialmente).** La tabla H3.3 de mas abajo refleja una acceptance
-> previa (`h3-3-crm-web-1574d79-r1`). El cierre vigente de H3.3 (con excepciones
-> diferidas) esta en `docs/BITACORA.md` (entrada 2026-09-12) y en
-> `docs/TPI_Contrato_CICD_AWS_v2.md`. Runtime DEV vigente:
-> `h3-3-crm-web-43101be-domainlocked-r1`.
-
 ---
 
-## Hito H3.3: CRM Lite Web UX
+## Hito H3.3 / H3.3.1: CRM Lite Web UX & Deuda Funcional
 
 | Componente | Estado | Notas |
 |-----------|--------|-------|
-| CRM Lite Web UX | ✅ CLOSED | Validado en AWS DEV con acceptance manual PASS |
-| Git SHA | ✅ VALIDATED | `1574d79920342d3da2bac8296de9020b8162c68f` |
-| App digest | ✅ VALIDATED | `sha256:1f5bca0350e3f3229516643b1f1f5dcf05f6f13e826c6a444aa8640302b73922` |
-| EB Version | ✅ VALIDATED | `h3-3-crm-web-1574d79-r1` |
+| CRM Lite Web UX | ✅ CLOSED WITH DEFERRED ITEMS | H3.3.1 implementó RBAC/PII y asignación manual; verificación humana en DEV pendiente |
+| Candidate SHA | ✅ VALIDATED | `43101be7835088f93267bee85b0f11c8bc879867` |
+| Bundle SHA256 | ✅ VALIDATED | `007b14d4b439ea59afd13106b71edafbf902e564085581e7577770261c97282f` |
+| EB Version | ✅ VALIDATED | `h3-3-crm-web-43101be-domainlocked-r1` |
 | URL | ✅ VALIDATED | `https://backoffice.dev.tupensioninteligente.cl` |
-| Human UX Acceptance | ✅ PASS | Validacion manual satisfactoria en AWS DEV |
-| Documento canonico | ✅ LISTO | `docs/H3_3_CRM_LITE_WEB_UX.md` |
+| RBAC / PII Server-Side | ✅ IMPLEMENTED | CEO/CTO PII completa; roles restringidos PII enmascarada |
+| Asignación Manual | ✅ IMPLEMENTED | Control habilitado para admin/executive con trazabilidad |
+| Verificación humana (AC-4) | ⏳ PENDIENTE | Smoke autenticado en DEV (asignación manual + PII por rol) |
+| Documento canónico | ✅ LISTO | `docs/H3_3_CRM_LITE_WEB_UX.md` |
 
 ## Hito H3.1: CRM Lite
 | Componente | Estado | Notas |
