@@ -7,7 +7,7 @@ from datetime import date, datetime
 from typing import Any, Protocol
 
 from app.auth.models import AuthenticatedUser, is_superuser
-from app.components.ui import get_public_simulator_url
+from app.components.ui import get_public_simulator_url, get_public_site_url
 from app.config import get_settings
 from app.models.crm_states import CRM_STATE_CONTRACT
 from app.services import SolicitudService
@@ -45,6 +45,8 @@ class LeadBoardService(Protocol):
     def append_lead_comment(self, id_lead: Any, comment_text: str, author: str) -> bool: ...
 
     def assign_lead(self, id_lead: Any, id_asesor: Any, *, actor: AuthenticatedUser) -> bool: ...
+
+    def get_lead_assignment_events(self, id_lead: Any) -> list[dict[str, Any]]: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -239,6 +241,9 @@ class _MockLeadBoardService:
                 return True
         return False
 
+    def get_lead_assignment_events(self, id_lead: Any) -> list[dict[str, Any]]:
+        return []
+
 
 def build_service_for_web(real_service: LeadBoardService | None = None) -> LeadBoardService:
     return real_service or SolicitudService()
@@ -248,6 +253,16 @@ def resolve_web_simulator_url() -> str | None:
     """Return the approved simulator URL from centralized configuration."""
     settings = get_settings()
     return get_public_simulator_url(settings)
+
+
+def resolve_web_public_site_url() -> str | None:
+    """Return the approved public site URL from centralized configuration.
+
+    Reuses ``get_public_site_url`` so the fail-closed allowlist (scheme, host, port,
+    absence of query/fragment/credentials) is identical for every surface.
+    """
+    settings = get_settings()
+    return get_public_site_url(settings)
 
 
 def _row_date(row: dict[str, Any]) -> date:

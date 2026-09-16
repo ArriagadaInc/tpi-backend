@@ -181,21 +181,32 @@
         </div>
       </div>
 
-      {% if comment_view.notes %}
+      {% if timeline_items %}
         <div class="timeline-list">
-          {% for note in comment_view.notes %}
+          {% for item in timeline_items %}
             <article class="timeline-item">
               <div class="timeline-meta">
-                <span>{{ note.timestamp }}</span>
+                <span>{{ item.display_time }}</span>
                 <span>·</span>
-                <span class="timeline-author">{{ note.author }}</span>
+                {% if item.kind == 'event' %}
+                  <span class="timeline-badge-auto">Automático</span>
+                  <span class="timeline-author">{{ item.actor }}</span>
+                {% else %}
+                  <span class="timeline-author">{{ item.author }}</span>
+                {% endif %}
               </div>
-              <div class="timeline-text">{{ note.text }}</div>
+              {% if item.kind == 'event' %}
+                <div class="timeline-text">
+                  {{ item.asesor_nombre or 'Ejecutivo sin asignar' }}: {{ item.estado_anterior or '—' }} → {{ item.estado_nuevo or '—' }}
+                </div>
+              {% else %}
+                <div class="timeline-text">{{ item.text }}</div>
+              {% endif %}
             </article>
           {% endfor %}
         </div>
       {% else %}
-        <div class="empty-followup">Aun no existen notas de seguimiento.</div>
+        <div class="empty-followup">Aún no existen notas de seguimiento ni eventos de asignación.</div>
       {% endif %}
 
       {% if can_write %}

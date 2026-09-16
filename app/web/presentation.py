@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
+_CRM_TZ = ZoneInfo("America/Santiago")
 _FOLLOW_UP_HEADER = re.compile(r"^\[(\d{2}/\d{2}/\d{4} \d{2}:\d{2})\]\s+(.+)$")
 
 
@@ -62,3 +65,62 @@ def _parse_follow_up_block(block: str) -> FollowUpNote | None:
 
     body = "\n".join(lines[1:]).strip()
     return FollowUpNote(timestamp=match.group(1), author=match.group(2).strip(), text=body)
+
+
+def build_timeline_items(events: list[dict], notes: list[FollowUpNote]) -> list[dict]:
+    """Merge assignment events and human notes into one chronological timeline.
+
+    Assignment events carry full-precision ``fecha_hora`` (TIMESTAMPTZ); human notes
+    carry minute-precision ``dd/mm/YYYY HH:MM`` strings generated in America/Santiago.
+    Both are normalized to aware datetimes in America/Santiago for a stable descending
+    sort. Events are appended before notes, so an exact timestamp tie keeps events
+    first (deterministic order given the repository's own stable event ordering).
+    """
+    items: list[dict] = []
+
+    for event in events:
+        timestamp = _to_santiago(event.get("fecha_hora"))
+        if timestamp is None:
+            continue
+        items.append(
+            {
+                "kind": "event",
+                "timestamp": timestamp,
+                "display_time": timestamp.strftime("%d/%m/%Y %H:%M"),
+                "actor": event.get("actor_subject"),
+                "asesor_nombre": event.get("asesor_nombre"),
+                "estado_anterior": event.get("estado_anterior"),
+                "estado_nuevo": event.get("estado_nuevo"),
+            }
+        )
+
+    for note in notes:
+        items.append(
+            {
+                "kind": "note",
+                "timestamp": _parse_note_timestamp(note.timestamp),
+                "display_time": note.timestamp,
+                "author": note.author,
+                "text": note.text,
+            }
+        )
+
+    items.sort(key=lambda item: item["timestamp"], reverse=True)
+    return items
+
+
+def _to_santiago(value: object) -> datetime | None:
+    """Normalize a database timestamp to an aware America/Santiago datetime."""
+    if value is None or not isinstance(value, datetime):
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=_CRM_TZ)
+    return value.astimezone(_CRM_TZ)
+
+
+def _parse_note_timestamp(value: str) -> datetime:
+    """Parse a follow-up note timestamp written by the server in America/Santiago."""
+    try:
+        return datetime.strptime(value, "%d/%m/%Y %H:%M").replace(tzinfo=_CRM_TZ)
+    except ValueError:
+        return datetime.min.replace(tzinfo=_CRM_TZ)

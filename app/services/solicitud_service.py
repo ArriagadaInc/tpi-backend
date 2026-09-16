@@ -349,6 +349,15 @@ class SolicitudService:
     def can_assign_lead(self, user: AuthenticatedUser) -> bool:
         return is_superuser(user.role) or user.role in {"admin", "executive"}
 
+    def get_lead_assignment_events(self, id_lead: UUID | str) -> list[dict[str, Any]]:
+        """Return sanitized assignment traceability events for one lead.
+
+        The repository reads only the migration-007 view (joined with tpi.asesores);
+        the application never reads tpi.auditoria directly.
+        """
+        lead_id = self._normalize_uuid(id_lead, "lead")
+        return self.repository.get_lead_assignment_events(lead_id)
+
     def get_asesores_disponibles_para_asignacion(self) -> list[dict[str, Any]]:
         return self.repository.get_asesores_disponibles_para_asignacion()
 
