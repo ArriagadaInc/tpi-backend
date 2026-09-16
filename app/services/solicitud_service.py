@@ -10,7 +10,7 @@ from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from app.auth.models import AuthenticatedUser
+from app.auth.models import AuthenticatedUser, is_superuser
 from app.config import Settings, get_settings
 from app.database import DatabaseAppError
 from app.database.errors import DevLeadCleanupBlockedError
@@ -146,7 +146,7 @@ class SolicitudService:
         return self.repository.get_solicitud_by_id(id_lead)
 
     def can_view_full_pii(self, user: AuthenticatedUser) -> bool:
-        return user.role in {"ceo", "cto"}
+        return is_superuser(user.role)
 
     def get_solicitud_detalle_masked(
         self,
@@ -347,7 +347,7 @@ class SolicitudService:
         return self.repository.assign_lead(lead_id, asesor_id, actor=actor)
 
     def can_assign_lead(self, user: AuthenticatedUser) -> bool:
-        return user.role in {"admin", "executive"}
+        return is_superuser(user.role) or user.role in {"admin", "executive"}
 
     def get_asesores_disponibles_para_asignacion(self) -> list[dict[str, Any]]:
         return self.repository.get_asesores_disponibles_para_asignacion()

@@ -449,3 +449,32 @@ Durante la operacion DEV se detecto una version corrupta del secreto `AUTH_USERS
 - el login DEV depende de configuracion viva y validada;
 - `diego.operaciones` queda soportado como usuario operacional;
 - la autenticacion simple-dev permanece server-side y fail-closed.
+
+## Decision: CEO y CTO como superusuarios funcionales del backoffice
+
+### Contexto
+
+H3.3.1 cerro administrativamente sin validar la jerarquia funcional: las identidades DEV no
+representaban el modelo de negocio (diego.operaciones con rol `operations`, sin alvaro.operaciones
+como CTO).
+
+### Decision
+
+- `ceo` y `cto` se modelan como superusuarios funcionales del backoffice TPI: un superset de los
+  permisos RBAC existentes (PII completa + asignacion + escritura de estado/seguimiento + cleanup).
+- La fuente unica es `SUPERUSER_ROLES` / `is_superuser` en `app/auth/models.py`, aplicada en
+  `can_view_full_pii`, `can_assign_lead`, `_can_write` y `_can_cleanup`.
+- Esta regla aplica exclusivamente al backoffice TPI y NO concede permisos AWS, IAM, Harness ni de
+  deployment.
+- Los permisos de los demas roles no se reducen.
+
+### Resultado
+
+- CEO/CTO ven PII completa, asignan leads, actualizan estado, agregan seguimiento y ejecutan
+  cleanup.
+- Los roles no privilegiados siguen recibiendo PII enmascarada server-side.
+
+### Pendiente para rol autorizado
+
+- Rotar la identidad DEV: `diego.operaciones` pasa a rol `ceo` y se crea `alvaro.operaciones` con
+  rol `cto` (clase E, fuera del Harness; ver docs/H3_3_2_SUPERUSUARIOS_CEO_CTO.md).

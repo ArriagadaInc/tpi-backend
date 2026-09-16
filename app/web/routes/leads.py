@@ -10,7 +10,7 @@ from urllib.parse import parse_qs, urlencode, urlsplit
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from app.auth.models import AuthenticatedUser, UserRole
+from app.auth.models import AuthenticatedUser, UserRole, is_superuser
 from app.models.crm_states import normalize_crm_state_for_display
 from app.models.lead_assignment import (
     LeadAssignmentConflictError,
@@ -47,13 +47,13 @@ def _require_web_user(request: Request) -> AuthenticatedUser | None:
 def _can_write(user: AuthenticatedUser | None) -> bool:
     if not user:
         return False
-    return user.role in _WRITE_ROLES
+    return is_superuser(user.role) or user.role in _WRITE_ROLES
 
 
 def _can_cleanup(user: AuthenticatedUser | None) -> bool:
     if not user:
         return False
-    return user.role in _CLEANUP_ROLES
+    return is_superuser(user.role) or user.role in _CLEANUP_ROLES
 
 
 def _build_query_url(base_path: str, params: dict[str, Any]) -> str:
