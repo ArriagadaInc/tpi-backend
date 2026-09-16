@@ -1,4 +1,4 @@
-﻿"""
+"""
 Capa de acceso a datos para Solicitudes de SimulaciÃ³n.
 
 Responsabilidades:
@@ -751,6 +751,34 @@ class SolicitudRepository:
                 cur.execute(query, (str(id_asesor),))
                 row = cur.fetchone()
                 return dict(row) if row else None
+
+    @staticmethod
+    def get_lead_assignment_events(id_lead: UUID) -> list[dict[str, Any]]:
+        """Return assignment traceability events from the sanitized read model only.
+
+        Reads tpi.v_asignacion_auditoria (migration 007) and joins tpi.asesores for the
+        advisor name. Never reads tpi.auditoria directly from the application.
+        """
+        query = """
+            SELECT
+                v.id_auditoria,
+                v.id_lead,
+                v.fecha_hora,
+                v.actor_subject,
+                v.id_asesor,
+                v.estado_anterior,
+                v.estado_nuevo,
+                ases.nombre AS asesor_nombre
+            FROM tpi.v_asignacion_auditoria v
+            LEFT JOIN tpi.asesores ases ON ases.id_asesor = v.id_asesor
+            WHERE v.id_lead = %s
+            ORDER BY v.fecha_hora DESC, v.id_auditoria DESC
+        """
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (str(id_lead),))
+                rows = cur.fetchall()
+                return [dict(row) for row in rows]
 
     @staticmethod
     def get_crm_estado_lead_options() -> list[str]:

@@ -15,7 +15,7 @@ from app.auth import build_auth_provider
 from app.components.ui import format_currency_clp
 from app.config import get_settings
 from app.models.crm_states import crm_state_label, normalize_crm_state_for_display
-from app.web.dependencies import resolve_web_simulator_url
+from app.web.dependencies import resolve_web_public_site_url, resolve_web_simulator_url
 from app.web.routes.auth import router as auth_router
 from app.web.routes.leads import router as leads_router
 
@@ -52,6 +52,7 @@ def create_web_app() -> FastAPI:
     app.state.web_env_label = "Ambiente DEV"
     app.state.web_cleanup_enabled = settings.is_test_lead_cleanup_enabled
     app.state.web_simulator_url = resolve_web_simulator_url()
+    app.state.web_public_site_url = resolve_web_public_site_url()
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
     app.include_router(auth_router)
     app.include_router(leads_router)

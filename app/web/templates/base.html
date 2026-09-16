@@ -25,6 +25,9 @@
               <span class="env-pill">{{ web_env_label }}</span>
             {% endif %}
           </div>
+          {% if public_site_url %}
+            <a class="link-button" href="{{ public_site_url }}" target="_blank" rel="noopener noreferrer">Volver al sitio</a>
+          {% endif %}
           <a class="link-button" href="/logout">Salir</a>
         {% else %}
           <span class="topbar-muted">Acceso local</span>

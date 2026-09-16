@@ -17,7 +17,7 @@ from app.models.lead_assignment import (
     LeadAssignmentValidationError,
 )
 from app.web.dependencies import build_service_for_web
-from app.web.presentation import parse_lead_comments
+from app.web.presentation import build_timeline_items, parse_lead_comments
 
 router = APIRouter()
 _WRITE_ROLES = {"tester", "advisor", "operations", "admin"}
@@ -223,6 +223,7 @@ def _resolve_board_data(request: Request) -> dict[str, Any]:
         "web_env_label": getattr(request.app.state, "web_env_label", ""),
         "web_cleanup_enabled": bool(getattr(request.app.state, "web_cleanup_enabled", False)),
         "simulator_url": getattr(request.app.state, "web_simulator_url", None),
+        "public_site_url": getattr(request.app.state, "web_public_site_url", None),
         "service_mode": "real" if hasattr(service, "repository") else "mock",
         "pagination_prev_url": _url_for_page(page - 1) if page > 1 else None,
         "pagination_next_url": (
@@ -274,6 +275,10 @@ def _resolve_detail_context(
     parsed_comments = parse_lead_comments(
         (selected_lead or {}).get("comentarios") if selected_lead else None
     )
+    timeline_items: list[dict[str, Any]] = []
+    if selected_lead is not None:
+        events = service.get_lead_assignment_events(lead_id)
+        timeline_items = build_timeline_items(events, parsed_comments.notes)
     context = {
         "request": request,
         "selected_user": user,
@@ -283,6 +288,7 @@ def _resolve_detail_context(
         "web_env_label": getattr(request.app.state, "web_env_label", ""),
         "web_cleanup_enabled": bool(getattr(request.app.state, "web_cleanup_enabled", False)),
         "simulator_url": getattr(request.app.state, "web_simulator_url", None),
+        "public_site_url": getattr(request.app.state, "web_public_site_url", None),
         "mask_pii": not (user is not None and service.can_view_full_pii(user)),
         "selected_lead": selected_lead,
         "selected_lead_id": lead_id,
@@ -294,6 +300,7 @@ def _resolve_detail_context(
             service.get_asesores_disponibles_para_asignacion() if can_assign else []
         ),
         "comment_view": parsed_comments,
+        "timeline_items": timeline_items,
         "csrf_token": _get_csrf_token(request),
         "return_to_url": _sanitize_return_to(request.query_params.get("return_to"))
         or _build_return_to_url(request),

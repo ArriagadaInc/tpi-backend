@@ -24,6 +24,7 @@ scripts versionados, debe tratarse como drift.
 | `scripts/sql/004_create_lead_assignments.sql` | Crear `tpi.asignaciones` e indices basicos | `tpi.leads`, `tpi.asesores` | Versionado y alineado con el contrato fisico observado | Despliegue administrado | Drop controlado de tabla/indices si hiciera falta |
 | `scripts/sql/005_enforce_single_active_assignment.sql` | Garantizar una asignacion activa por lead | `tpi.asignaciones` con datos existentes | Ejecutado y verificado en AWS DEV el 2026-09-03; preflight: 0 duplicados activos | AWS DEV | `DROP INDEX IF EXISTS tpi.asignaciones_one_active_per_lead_uq` |
 | `scripts/sql/006_grant_h3_3_assignment_privileges.sql` | Agregar los privilegios minimos que requiere H3.3 inicial | `tpi_app`, `tpi.asesores`, `tpi.asignaciones`, `tpi.auditoria`, `tpi.leads` | Ejecutado y verificado en AWS DEV el 2026-09-03 | AWS DEV existente | Revoke solo de los privilegios agregados por este script, conforme al preflight |
+| `scripts/sql/007_create_audit_assignment_view.sql` | Crear la trusted view `tpi.v_asignacion_auditoria` (read model sanitizado sobre `tpi.auditoria`) y conceder `SELECT` solo a `tpi_app` | `tpi.auditoria`, `tpi_app` | Versionado; **NO aplicado en AWS RDS DEV al cierre de la etapa de desarrollo** (change_class D requiere Human Gate explicito) | AWS DEV (post-merge, Human Gate) | `scripts/sql/007_drop_audit_assignment_view.sql` |
 | `scripts/sql/dev/002_enable_test_cleanup.sql` | Conceder DELETE solo para limpieza controlada en DEV | `tpi.leads`, `tpi.consentimientos` | Ayuda DEV-only | AWS DEV solamente | `scripts/sql/dev/002_disable_test_cleanup.sql` |
 | `scripts/sql/dev/002_disable_test_cleanup.sql` | Revocar el DELETE DEV-only | Script de habilitacion previo | Ayuda DEV-only | AWS DEV solamente | Revocar DELETE |
 
@@ -68,6 +69,37 @@ Modelo:
 
 Resultado AWS DEV 2026-09-03: aplicado correctamente; indice
 `tpi.asignaciones_one_active_per_lead_uq` verificado.
+
+## Notas sobre `007`
+
+La migracion `007` crea un read model SQL sanitizado (vista, no tabla) sobre
+`tpi.auditoria` para exponer la trazabilidad de la asignacion de leads sin
+conceder acceso directo a la tabla y sin duplicar `estado_anterior`/`estado_nuevo`
+en `tpi.asignaciones`.
+
+Contrato versionado:
+
+- Vista `tpi.v_asignacion_auditoria` con `security_barrier`.
+- Filtro fijo: `accion = 'asignacion_lead'` y `tabla_afectada = 'tpi.asignaciones'`.
+- Columnas permitidas unicamente: `id_auditoria`, `id_lead`, `fecha_hora`,
+  `actor_subject`, `id_asesor`, `estado_anterior`, `estado_nuevo`.
+- `id_asesor` se valida con `CASE` + expresion regular canonica de UUID
+  case-insensitive antes del cast; un valor no-UUID proyecta `NULL` solo en esa
+  fila sin inutilizar la vista.
+- `REVOKE ALL ... FROM PUBLIC` y `GRANT SELECT` unicamente a `tpi_app`.
+- No amplia los privilegios de `tpi_app` sobre `tpi.auditoria`
+  (`SELECT/UPDATE/DELETE` continuan `false`; append-only vigente desde `006`).
+- Orden estable aplicado por la consulta del repositorio
+  (`fecha_hora DESC, id_auditoria DESC`), no por la vista.
+
+Estado de aplicacion:
+
+- **No aplicada en AWS RDS DEV** al cierre de la etapa de desarrollo. La aplicacion
+  en AWS DEV es `change_class D` (db_path) y requiere Human Gate explicito: congelar
+  el migration candidate (SHA exacto de main + forward/rollback con sus SHA-256),
+  preflight DB, aprobacion humana, aplicacion unica y postflight de privilegios.
+- El forward/rollback se probaron en PostgreSQL local/integracion (rollback:
+  `REVOKE SELECT` + `DROP VIEW`).
 
 ## Bootstrap vs migracion incremental
 
