@@ -2,7 +2,7 @@
 Unit tests for H3.3.1 acceptance criteria:
 - AC-1: CEO/CTO view full PII in board and detail.
 - AC-2: Restricted roles receive server-side masked PII without full PII in rendered HTML.
-- AC-3: Manual assignment control appears only for authorized roles (admin, executive).
+- AC-3: Manual assignment control appears only for authorized roles (admin, executive) and superusers (ceo, cto).
 - AC-4: Assignment route behavior (CSRF, role authorization, conflict) is covered here; single-active-assignment, state transition and audit persistence are covered by tests/integration/test_database_runtime.py.
 - AC-5: Documentation H3.3 updated without obsolete versions/acceptance items.
 """
@@ -193,12 +193,12 @@ def test_ac1_ac2_pii_visibility_by_role() -> None:
 def test_ac3_manual_assignment_authorization() -> None:
     service, _ = _build_stub_service()
 
-    # Authorized assignment roles
-    for role in ("admin", "executive"):
+    # Authorized assignment roles (admin, executive) plus superusers (ceo, cto).
+    for role in ("admin", "executive", "ceo", "cto"):
         assert service.can_assign_lead(_user(role)) is True
 
     # Unauthorized assignment roles
-    for role in ("advisor", "operations", "readonly", "ceo", "cto", "tester"):
+    for role in ("advisor", "operations", "readonly", "tester"):
         assert service.can_assign_lead(_user(role)) is False
 
 

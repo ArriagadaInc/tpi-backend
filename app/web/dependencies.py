@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any, Protocol
 
-from app.auth.models import AuthenticatedUser
+from app.auth.models import AuthenticatedUser, is_superuser
 from app.components.ui import get_public_simulator_url
 from app.config import get_settings
 from app.models.crm_states import CRM_STATE_CONTRACT
@@ -188,7 +188,7 @@ class _MockLeadBoardService:
         ]
 
     def can_assign_lead(self, user: AuthenticatedUser) -> bool:
-        return user.role in {"admin", "executive"}
+        return is_superuser(user.role) or user.role in {"admin", "executive"}
 
     def get_solicitud_detalle(self, id_lead: Any) -> dict[str, Any] | None:
         for row in MOCK_BOARD_ROWS:

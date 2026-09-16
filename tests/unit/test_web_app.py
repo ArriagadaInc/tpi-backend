@@ -160,7 +160,7 @@ class _FakeWebService:
 
     @staticmethod
     def can_assign_lead(user: AuthenticatedUser) -> bool:
-        return user.role in {"admin", "executive"}
+        return user.role in {"admin", "executive", "ceo", "cto"}
 
     def get_solicitud_detalle_masked(self, id_lead, *, user=None):
         if str(id_lead) != str(self._full_detail["id_lead"]):
@@ -401,6 +401,53 @@ def test_ceo_and_cto_can_view_full_pii() -> None:
     assert "12.345.678-5" in cto_detail.text
     assert "juan@example.com" in cto_detail.text
     assert "+56 9 1234 5678" in cto_detail.text
+
+
+def test_ceo_and_cto_can_execute_superuser_actions() -> None:
+    for username, role in (("ceo.local", "ceo"), ("cto.local", "cto")):
+        service = _FakeWebService(cleanup_enabled=True)
+        client = _build_client(service, auth_provider=_FakeAuthProvider(authenticated_role=role))
+        client.app.state.web_cleanup_enabled = True
+        _login(client, username=username)
+
+        detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
+        assert detail.status_code == 200
+        # Superusers see assignment, write and cleanup controls.
+        assert 'name="id_asesor"' in detail.text
+        assert "Guardar estado" in detail.text
+        assert "Agregar nueva nota de seguimiento" in detail.text
+        assert "Eliminar lead de prueba" in detail.text
+
+        csrf = _extract_csrf(detail.text)
+
+        assign = client.post(
+            "/leads/11111111-1111-1111-1111-111111111111/assign",
+            data={"csrf_token": csrf, "id_asesor": "22222222-2222-2222-2222-222222222222"},
+            follow_redirects=False,
+        )
+        assert assign.status_code == 303
+        assert service._full_detail["estado_lead"] == "asignado"
+
+        status = client.post(
+            "/leads/11111111-1111-1111-1111-111111111111/status",
+            data={"csrf_token": csrf, "estado_lead": "contactado"},
+            follow_redirects=False,
+        )
+        assert status.status_code == 303
+
+        comment = client.post(
+            "/leads/11111111-1111-1111-1111-111111111111/comments",
+            data={"csrf_token": csrf, "new_comment": "Nota de superusuario"},
+            follow_redirects=False,
+        )
+        assert comment.status_code == 303
+
+        cleanup = client.post(
+            "/leads/11111111-1111-1111-1111-111111111111/cleanup",
+            data={"csrf_token": csrf},
+            follow_redirects=False,
+        )
+        assert cleanup.status_code == 200
 
 
 def test_non_privileged_users_continue_to_see_masked_pii() -> None:

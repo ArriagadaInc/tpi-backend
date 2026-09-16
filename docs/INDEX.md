@@ -30,6 +30,7 @@ Guia de todos los documentos del proyecto. Comienza por el que corresponda a tu 
 - [H2_5_CEO_VALIDATION_GUIDE.md](H2_5_CEO_VALIDATION_GUIDE.md): DEV validation flow without credentials.
 - [DEV_EB_DEPLOYMENT_RUNBOOK.md](DEV_EB_DEPLOYMENT_RUNBOOK.md): deployment controlado del candidato DEV.
 - [TPI_Contrato_CICD_AWS_v2.md](TPI_Contrato_CICD_AWS_v2.md): golden path operativo version-only (referencia vigente desde 2026-09-12).
+- [H3_3_2_SUPERUSUARIOS_CEO_CTO.md](H3_3_2_SUPERUSUARIOS_CEO_CTO.md): modelo de superusuarios CEO/CTO e identidades DEV (H3.3.2).
 
 ## Pruebas
 

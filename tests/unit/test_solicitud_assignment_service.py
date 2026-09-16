@@ -78,6 +78,8 @@ def test_assignment_access_control_is_centralized() -> None:
 
     assert service.can_assign_lead(_actor("executive")) is True
     assert service.can_assign_lead(_actor("admin")) is True
+    assert service.can_assign_lead(_actor("ceo")) is True
+    assert service.can_assign_lead(_actor("cto")) is True
     assert service.can_assign_lead(_actor("readonly")) is False
     assert "asignado" not in service.get_crm_estado_lead_options_for_update()
 
