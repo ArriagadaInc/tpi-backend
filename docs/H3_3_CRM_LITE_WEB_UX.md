@@ -241,3 +241,48 @@ STATUS: CLOSED WITH DEFERRED ACCEPTANCE ITEMS (H3.3.1 pendiente de verificación
 AWS DEV: DEPLOYED (h3-3-crm-web-43101be-domainlocked-r1)
 ```
 
+## 16. H3.3.3 — Historial operativo y Volver al sitio
+
+H3.3.3 corrige dos regresiones del CRM Lite detectadas en el smoke humano de H3.3.2
+(`KI-CRMLITE-VOLVER-AL-SITIO` y `KI-CRMLITE-TRAZABILIDAD-ASIGNACION`).
+
+### Línea de tiempo unificada
+
+La sección "Seguimiento y Notas Internas" muestra una única línea de tiempo
+cronológica (America/Santiago) que fusiona:
+
+- **Evento automático e inmutable de asignación**: fecha/hora, actor (identidad
+  histórica `actor_subject`), asesor, transición `estado_anterior → estado_nuevo` y
+  badge "Automático"; sin controles de edición ni eliminación.
+- **Nota humana**: comportamiento actual, visualmente distinguida.
+
+Estado vacío coherente cuando no hay notas ni eventos. Las notas existentes, el
+masking de PII y el RBAC permanecen intactos.
+
+El read model de trazabilidad vive en la vista `tpi.v_asignacion_auditoria`
+(migracion 007), no en estado paralelo; la aplicacion lee la vista (nunca
+`tpi.auditoria`) y resuelve el nombre del asesor con un `JOIN` seguro a
+`tpi.asesores`. La resolucion de `display_name` desde `actor_subject` quedaria fuera
+de alcance (requiere exponer el directorio de usuarios del secreto de autenticacion,
+que incluye `password_hash`), por lo que se conserva `actor_subject` como identidad
+historica y fallback obligatorio.
+
+### "Volver al sitio"
+
+El enlace "Volver al sitio" reutiliza `get_public_site_url()` y se integra en la Web
+UX FastAPI/Jinja2 real:
+
+- Solo visible para usuario autenticado (nunca en login ni superficies publicas).
+- `href` exacto a `https://dev.tupensioninteligente.cl/` en DEV.
+- Fail-closed ante URL ausente o invalida (la allowlist de `get_public_site_url`
+  valida esquema, host, puerto y rechaza query, fragment y credenciales).
+- No transfiere sesion, cookies, tokens, credenciales, query params ni fragmentos.
+
+### Estado de la migracion 007
+
+La migracion `007` (vista sobre `tpi.auditoria`) **no se ha aplicado en AWS RDS DEV
+al cierre de la etapa de desarrollo**. Es `change_class D` y requiere Human Gate
+explicito (migration candidate con SHA-256 del forward/rollback) antes de tocar AWS
+RDS DEV.
+
+

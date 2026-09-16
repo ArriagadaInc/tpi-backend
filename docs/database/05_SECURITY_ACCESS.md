@@ -56,6 +56,7 @@ Hallazgo confirmado:
 | `tpi.asesores` | `SELECT = true`; `INSERT/UPDATE/DELETE = false` | `SELECT` | `SELECT` | alineado post-006 |
 | `tpi.asignaciones` | `SELECT/INSERT = true`; `UPDATE/DELETE = false` | `SELECT/INSERT` | `SELECT/INSERT` | alineado post-006 |
 | `tpi.auditoria` | `INSERT = true`; `SELECT/UPDATE/DELETE = false` | `INSERT` | `INSERT` | alineado post-006; append-only |
+| `tpi.v_asignacion_auditoria` (vista 007) | no existe aun en AWS DEV (007 pendiente de Human Gate) | `SELECT` a `tpi_app`; `REVOKE ALL` a `PUBLIC` | `SELECT` a `tpi_app`; sin privilegios para `PUBLIC` | pendiente post-007 |
 
 ## Drift de seguridad
 
@@ -105,6 +106,19 @@ En la practica operativa:
 - `tpi.asesores` es read-only para `tpi_app`
 - `tpi.auditoria` es append-only para `tpi_app`
 - `tpi.asignaciones` solo requiere create/read para la asignacion inicial
+
+## Vista de trazabilidad (migracion 007)
+
+La migracion `007` introduce `tpi.v_asignacion_auditoria`, un read model de solo
+lectura que permite a la aplicacion leer la trazabilidad de asignacion **sin**
+conceder `SELECT` directo sobre `tpi.auditoria`.
+
+- `PUBLIC` no recibe ningun privilegio sobre la vista (`REVOKE ALL ... FROM PUBLIC`).
+- Unicamente `tpi_app` recibe `SELECT` sobre la vista.
+- `tpi_app` conserva `SELECT/UPDATE/DELETE = false` sobre `tpi.auditoria`: la vista
+  no amplia esos privilegios directos.
+- La aplicacion lee la vista (nunca `tpi.auditoria`) y resuelve el nombre del asesor
+  con un `JOIN` seguro hacia `tpi.asesores`.
 
 ## Identificador tecnico del actor
 
