@@ -133,6 +133,30 @@ CREATE TABLE IF NOT EXISTS tpi.auditoria (
     detalle JSONB
 );
 
+-- H3.3.3 read model: sanitized assignment-audit view (mirrors migration 007, without
+-- the AWS-DEV preflight/postflight and without the app-role grant, which the real
+-- migration grants to tpi_app and the integration tests exercise via a least-privilege
+-- reader role).
+CREATE OR REPLACE VIEW tpi.v_asignacion_auditoria
+WITH (security_barrier = true) AS
+SELECT
+    a.id_auditoria,
+    a.id_lead,
+    a.fecha_hora,
+    a.detalle->>'actor_subject' AS actor_subject,
+    CASE
+        WHEN a.detalle->>'id_asesor' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+            THEN (a.detalle->>'id_asesor')::uuid
+        ELSE NULL
+    END AS id_asesor,
+    a.detalle->>'estado_anterior' AS estado_anterior,
+    a.detalle->>'estado_nuevo' AS estado_nuevo
+FROM tpi.auditoria a
+WHERE a.accion = 'asignacion_lead'
+  AND a.tabla_afectada = 'tpi.asignaciones';
+
+REVOKE ALL ON tpi.v_asignacion_auditoria FROM PUBLIC;
+
 -- Stores no payload or PII: only a keyed fingerprint and the resulting lead id.
 CREATE TABLE IF NOT EXISTS tpi.api_idempotency (
     idempotency_key UUID PRIMARY KEY,
