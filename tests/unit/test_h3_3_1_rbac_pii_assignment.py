@@ -95,6 +95,9 @@ class _H331RepositoryStub:
     def get_lead_assignment_events(self, id_lead: UUID) -> list[dict[str, Any]]:
         return []
 
+    def get_lead_state_change_events(self, id_lead: UUID) -> list[dict[str, Any]]:
+        return []
+
     def assign_lead(self, id_lead: UUID, id_asesor: UUID, *, actor: AuthenticatedUser) -> bool:
         if self.force_conflict:
             raise LeadAssignmentConflictError("El lead ya tiene una asignacion activa")

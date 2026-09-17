@@ -51,8 +51,10 @@ class _FakeWebService:
         *,
         cleanup_enabled: bool = True,
         events: list[dict[str, object]] | None = None,
+        state_changes: list[dict[str, object]] | None = None,
     ) -> None:
         self.events = events or []
+        self.state_changes = state_changes or []
         self._full_detail = {
             "id_lead": "11111111-1111-1111-1111-111111111111",
             "nombre_completo": "Juan Perez",
@@ -179,7 +181,10 @@ class _FakeWebService:
     def get_lead_assignment_events(self, id_lead):
         return list(self.events)
 
-    def update_lead_status(self, id_lead, estado_lead):
+    def get_lead_state_change_events(self, id_lead):
+        return list(self.state_changes)
+
+    def update_lead_status(self, id_lead, estado_lead, *, actor=None):
         if str(id_lead) != str(self._full_detail["id_lead"]):
             return False
         allowed = {
@@ -1065,10 +1070,35 @@ def test_detail_timeline_escapes_html_in_event_fields() -> None:
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in detail.text
 
 
+def test_detail_timeline_renders_state_change_with_badge_and_no_edit_delete() -> None:
+    service = _FakeWebService(
+        state_changes=[
+            {
+                "fecha_hora": datetime(2026, 9, 5, 12, 0, tzinfo=UTC),
+                "actor_subject": "user-001",
+                "estado_anterior": "contactado",
+                "estado_nuevo": "cerrado",
+            }
+        ]
+    )
+    client = _build_client(service, auth_provider=_FakeAuthProvider(authenticated_role="tester"))
+    _login(client)
+
+    detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert detail.status_code == 200
+    assert "Automático" in detail.text
+    assert "user-001" in detail.text
+    assert "Cambio de estado: contactado → cerrado" in detail.text
+    assert "migracion 008" in detail.text
+    # System events are read-only: no edit/delete controls are rendered.
+    assert "Editar" not in detail.text
+    assert "Eliminar" not in detail.text
+
+
 def test_detail_timeline_empty_state_is_coherent() -> None:
     client = _build_client(_FakeWebService())
     _login(client)
 
     detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
     assert detail.status_code == 200
-    assert "Aún no existen notas de seguimiento ni eventos de asignación." in detail.text
+    assert "Aún no existen notas de seguimiento, asignaciones ni cambios de estado." in detail.text

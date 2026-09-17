@@ -19,11 +19,20 @@
 
 | Bloque | Requirement IDs | AC cubiertos | Estado |
 | --- | --- | --- | --- |
-| Parte A — Historial integral | `REQ-A-01`..`REQ-A-24` (24) | AC-1, AC-2, AC-3, AC-4, AC-9 | cubierto |
-| Parte B — Dashboard Ejecutivo | `REQ-B-01`..`REQ-B-30` (30) | AC-10..AC-18 | cubierto |
-| Seguridad, migración y operación | `REQ-S-01`..`REQ-S-13` (13) | AC-2, AC-4..AC-10, AC-17, AC-18 | cubierto |
-| Casos de prueba mínimos | TC-1..TC-21 (21) | AC-1, AC-3, AC-4, AC-9..AC-18 | cubierto |
-| **Total** | **67 requirement IDs** | **AC-1..AC-18 (18/18)** | **cubierto, cero diferido** |
+| Parte A — Historial integral | `REQ-A-01`..`REQ-A-24` (24) | AC-1, AC-2, AC-3, AC-4, AC-9 | **implementada** (Parte A) |
+| Parte B — Dashboard Ejecutivo | `REQ-B-01`..`REQ-B-30` (30) | AC-10..AC-18 | pendiente de implementación dentro de H3.3.4 |
+| Seguridad, migración y operación | `REQ-S-01`..`REQ-S-13` (13) | AC-2, AC-4..AC-10, AC-17, AC-18 | parcial (Parte A implementada; Parte B y Human Gates pendientes) |
+| Casos de prueba mínimos | TC-1..TC-21 (21) | AC-1, AC-3, AC-4, AC-9..AC-18 | TC-1..TC-7 implementados (Parte A); TC-8..TC-21 pendientes (Parte B) |
+| **Total** | **67 requirement IDs** | **AC-1..AC-18 (18/18)** | **Parte A implementada; Parte B pendiente; cero diferido a otra tarea** |
+
+> **Estado de implementación (Parte A)**: la Parte A está implementada y cubierta por
+> pruebas automatizadas reales (`tests/unit/test_h3_3_4_timeline_presentation.py`,
+> `tests/unit/test_h3_3_4_migration_scripts.py`,
+> `tests/integration/test_lead_state_history.py`,
+> `tests/integration/test_audit_state_view.py`, y regresión en
+> `tests/unit/test_web_app.py` / `tests/unit/test_solicitud_assignment_service.py`).
+> La Parte B (Dashboard Ejecutivo) permanece **pendiente dentro de H3.3.4**; ninguna
+> porción ha sido diferida a una tarea posterior.
 
 ---
 
@@ -65,28 +74,28 @@ requisito de esta matriz.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | REQ-A-01 | Auditar todos los cambios generales de `estado_lead` | Todo cambio de estado (fuera del flujo de asignación) deja trazabilidad | AC-1, AC-4 | `app/services/solicitud_service.py::update_lead_status` + `app/repositories/solicitud_repository.py` (camino transaccional único) | `tests/integration/test_lead_state_history.py` | Sí (AC-9) | `evidence/H3.3.4/developer/developer-01.json`; smoke `acceptance-01.json` |
 | REQ-A-02 | Actor, fecha y hora, estado anterior y nuevo | Identidad histórica y deltas del evento | AC-1, AC-3, AC-4 | INSERT en `tpi.auditoria`: `accion='cambio_estado_lead'`, `tabla_afectada='tpi.leads'`, `fecha_hora=now()`, `detalle={actor_subject, estado_anterior, estado_nuevo}` | `tests/integration/test_lead_state_history.py` | Sí (AC-9) | `developer-01.json`; `verification-01.json` |
-| REQ-A-03 | Hora America/Santiago | Fechas en zona horaria operacional | AC-4 | Formateo de `fecha_hora` a `America/Santiago` en capa de presentación (filtro Jinja/presenter), no en la vista | `tests/unit/test_lead_timeline_timezone.py` | Sí (AC-9) | `developer-01.json`; `acceptance-01.json` |
-| REQ-A-04 | Transacción atómica | `UPDATE estado_lead` + `INSERT auditoria` commit atómico | AC-1 | Mismo `BEGIN/COMMIT` en `solicitud_repository.py`; sin commits intermedios | `test_lead_state_history.py::test_update_and_audit_single_transaction` | — (cubierto por test) | `developer-01.json` |
-| REQ-A-05 | `SELECT ... FOR UPDATE` | Bloquear la fila del lead contra escrituras concurrentes | AC-1 | `SELECT ... FROM tpi.leads WHERE id_lead=%s FOR UPDATE` al inicio de `update_lead_status` | `test_lead_state_history.py::test_select_for_update_locks_row` | — (cubierto por test) | `developer-01.json` |
-| REQ-A-06 | No-op sin evento duplicado | Sin cambio real → sin evento de auditoría | AC-1 | Comparar `estado_anterior == estado_nuevo` → retornar sin escribir | `test_lead_state_history.py::test_noop_does_not_duplicate_event` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-03 | Hora America/Santiago | Fechas en zona horaria operacional | AC-4 | Formateo de `fecha_hora` a `America/Santiago` en capa de presentación (filtro Jinja/presenter), no en la vista | `tests/unit/test_h3_3_4_timeline_presentation.py::test_state_change_timestamp_is_displayed_in_america_santiago` | Sí (AC-9) | `developer-01.json`; `acceptance-01.json` |
+| REQ-A-04 | Transacción atómica | `UPDATE estado_lead` + `INSERT auditoria` commit atómico | AC-1 | Mismo `BEGIN/COMMIT` en `solicitud_repository.py`; sin commits intermedios | `test_lead_state_history.py::test_effective_change_records_actor_timestamp_states_and_single_event` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-05 | `SELECT ... FOR UPDATE` | Bloquear la fila del lead contra escrituras concurrentes | AC-1 | `SELECT ... FROM tpi.leads WHERE id_lead=%s FOR UPDATE` al inicio de `update_lead_status` | `test_lead_state_history.py::test_concurrent_updates_serialize_without_lost_update_or_duplicate_events` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-06 | No-op sin evento duplicado | Sin cambio real → sin evento de auditoría | AC-1 | Comparar `estado_anterior == estado_nuevo` → retornar sin escribir | `test_lead_state_history.py::test_noop_does_not_update_nor_duplicate_audit` | — (cubierto por test) | `developer-01.json` |
 | REQ-A-07 | Rollback ante fallo de auditoría | Si falla el INSERT de auditoría, se revierte el estado | AC-1 | `ROLLBACK` completo si el INSERT falla; excepción propagada; `estado_lead` intacto | `test_lead_state_history.py::test_audit_failure_rolls_back_state` | — (cubierto por test) | `developer-01.json` |
-| REQ-A-08 | Concurrencia real | Sin carreras ni eventos duplicados con dos conexiones | AC-1 | Test de integración con dos conexiones concurrentes sobre el mismo lead | `test_lead_state_history.py::test_concurrent_updates_serialize` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-08 | Concurrencia real | Sin carreras ni eventos duplicados con dos conexiones | AC-1 | Test de integración con dos conexiones concurrentes sobre el mismo lead | `test_lead_state_history.py::test_concurrent_updates_serialize_without_lost_update_or_duplicate_events` | — (cubierto por test) | `developer-01.json` |
 | REQ-A-09 | Acción de auditoría `cambio_estado_lead` | Contrato de la acción de auditoría | AC-2, AC-3 | Valor de `accion` escrito por la app y consumido por la vista 008 | `tests/unit/test_h3_3_4_migration_scripts.py` | — (cubierto por test) | `developer-01.json`; `migration-01.json` |
 | REQ-A-10 | Migración 008 | Forward/rollback versionados del read model de estados | AC-2, AC-5, AC-6, AC-8 | `scripts/sql/008_create_lead_state_history.sql` + `scripts/sql/008_drop_lead_state_history.sql`; bootstrap en `scripts/init_test_database.py` | `test_h3_3_4_migration_scripts.py` (rollback probado en PostgreSQL local/integración) | Aprobación humana del migration candidate (AC-5) + postflight (AC-6) | `developer-01.json`; `migration-01.json` |
-| REQ-A-11 | Vista sanitizada | `tpi.v_historial_estado_lead` sin datos sensibles ni JSON crudo | AC-3 | Vista `security_barrier` con columnas `id_auditoria, id_lead, fecha_hora, actor_subject, estado_anterior, estado_nuevo`; filtro `accion='cambio_estado_lead' AND tabla_afectada='tpi.leads'` | `tests/integration/test_audit_state_view.py::test_view_exposes_only_state_change_columns` | — (cubierto por test) | `developer-01.json` |
-| REQ-A-12 | Índices y EXPLAIN | Índices de apoyo justificados por plan real | AC-3 | Índice sobre `tpi.auditoria(accion, tabla_afectada, id_lead, fecha_hora)` solo si `EXPLAIN` real lo justifica; documentar plan | `test_audit_state_view.py::test_support_index_explain` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-11 | Vista sanitizada | `tpi.v_historial_estado_lead` sin datos sensibles ni JSON crudo | AC-3 | Vista `security_barrier` con columnas `id_auditoria, id_lead, fecha_hora, actor_subject, estado_anterior, estado_nuevo`; filtro `accion='cambio_estado_lead' AND tabla_afectada='tpi.leads'` | `tests/integration/test_audit_state_view.py::test_view_exposes_only_state_change_columns_and_filters_events` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-12 | Índices y EXPLAIN | Índices de apoyo justificados por plan real | AC-3 | Índice `auditoria_state_history_idx (accion, tabla_afectada, id_lead, fecha_hora)` justificado por EXPLAIN real (100k filas); documentado en `docs/database/04_MIGRATIONS.md` | `test_audit_state_view.py::test_support_index_exists_and_is_used_for_state_history_query` | — (cubierto por test) | `developer-01.json` |
 | REQ-A-13 | Mínimo privilegio | Solo `tpi_app` con SELECT sobre la vista; sin ampliar `tpi.auditoria` | AC-3, AC-6 | `REVOKE ALL ... FROM PUBLIC; GRANT SELECT ... TO tpi_app`; `tpi_app` sigue sin SELECT/UPDATE/DELETE sobre `tpi.auditoria` | `test_audit_state_view.py::test_view_privileges_public_and_app_only` | Postflight humano (AC-6) | `developer-01.json`; `migration-01.json.postflight` |
 | REQ-A-14 | PUBLIC sin permisos | PUBLIC sin ningún privilegio sobre la vista | AC-3, AC-6 | `REVOKE ALL ON tpi.v_historial_estado_lead FROM PUBLIC` (preflight/postflight) | `test_view_privileges_public_and_app_only` | Postflight humano (AC-6) | `migration-01.json.postflight` |
-| REQ-A-15 | App sin SELECT directo a `tpi.auditoria` | El read model pasa solo por la vista | AC-3 | Repository lee `tpi.v_historial_estado_lead`; ningún `SELECT ... FROM tpi.auditoria` en `app/` | `test_audit_state_view.py::test_repository_never_selects_auditoria_directly` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-15 | App sin SELECT directo a `tpi.auditoria` | El read model pasa solo por la vista | AC-3 | Repository lee `tpi.v_historial_estado_lead`; ningún `SELECT ... FROM tpi.auditoria` en `app/` | `test_audit_state_view.py::test_application_never_selects_auditoria_directly` | — (cubierto por test) | `developer-01.json` |
 | REQ-A-16 | Timeline que combina notas, asignaciones 007 y cambios 008 | Una única línea de tiempo unificada | AC-4, AC-9 | `app/web/presentation.py::build_timeline_items` fusiona notas humanas + eventos 007 + eventos 008 | `tests/unit/test_h3_3_4_timeline_presentation.py`; regresión `test_h3_3_3_timeline_presentation.py` | Smoke autenticado (AC-9) | `developer-01.json`; `acceptance-01.json` |
-| REQ-A-17 | Orden estable | Orden determinista cronológico | AC-4 | `fecha_hora DESC, id_auditoria DESC` (+ tie-break por fuente si aplica) | `test_h3_3_4_timeline_presentation.py::test_stable_order` | — (cubierto por test) | `developer-01.json` |
-| REQ-A-18 | Badge "Automático" | Distinguir eventos de sistema | AC-4 | Badge "Automatico" para eventos de asignación y cambio de estado | `test_h3_3_4_timeline_presentation.py::test_automatic_badge` | Smoke autenticado (AC-9) | `developer-01.json`; `acceptance-01.json` |
-| REQ-A-19 | Eventos sin edición/eliminación | Timeline de solo lectura | AC-4 | Sin controles de editar/eliminar para eventos de sistema | `test_h3_3_4_timeline_presentation.py::test_no_edit_delete_controls` | Smoke autenticado (AC-9) | `developer-01.json`; `acceptance-01.json` |
+| REQ-A-17 | Orden estable | Orden determinista cronológico | AC-4 | `fecha_hora DESC` + desempate determinístico por rango de fuente (`event` < `state_change` < `note`) y orden del repositorio | `test_h3_3_4_timeline_presentation.py::test_deterministic_tiebreak_event_then_state_change_then_note` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-18 | Badge "Automático" | Distinguir eventos de sistema | AC-4 | Badge "Automatico" para eventos de asignación y cambio de estado | `test_web_app.py::test_detail_timeline_renders_state_change_with_badge_and_no_edit_delete` | Smoke autenticado (AC-9) | `developer-01.json`; `acceptance-01.json` |
+| REQ-A-19 | Eventos sin edición/eliminación | Timeline de solo lectura | AC-4 | Sin controles de editar/eliminar para eventos de sistema | `test_h3_3_4_timeline_presentation.py::test_state_change_items_have_no_edit_or_delete_controls`; `test_web_app.py` | Smoke autenticado (AC-9) | `developer-01.json`; `acceptance-01.json` |
 | REQ-A-20 | No regresión de H3.3.3 | Comportamiento H3.3.3 intacto | AC-4, AC-9 | Regresión completa de tests H3.3.3 (timeline asignación, "Volver al sitio", notas) | `tests/unit/test_h3_3_3_timeline_presentation.py`; `test_backoffice_public_site_link.py`; `test_web_app.py` | Smoke autenticado (AC-9) | `developer-01.json`; `verification-01.json` |
-| REQ-A-21 | No modificar 005/006/007 | Integridad de migraciones previas | AC-2 | La 008 no toca el contenido de 005/006/007; verificación de integridad | `test_h3_3_4_migration_scripts.py::test_008_does_not_modify_005_006_007` | — (cubierto por test) | `developer-01.json` |
-| REQ-A-22 | Ausencia de backfill inventado | Sin eventos retroactivos | AC-4 | No se generan eventos de estado anteriores al cutover 008 | `test_h3_3_4_timeline_presentation.py::test_no_invented_backfill` | — (cubierto por test) | `developer-01.json` |
-| REQ-A-23 | Cobertura completa solo desde el cutover | Alcance temporal honesto | AC-4 | Solo eventos reales posteriores al cutover 008 aparecen como cambios de estado | `test_audit_state_view.py::test_state_changes_only_from_cutover` | — (cubierto por test) | `developer-01.json` |
-| REQ-A-24 | Conservación de asignaciones históricas recuperables | Asignaciones 007 previas siguen visibles | AC-4 | Los eventos de asignación 007 anteriores al cutover siguen proyectándose | `test_h3_3_4_timeline_presentation.py::test_historical_assignments_preserved` | Smoke autenticado (AC-9) | `developer-01.json`; `acceptance-01.json` |
+| REQ-A-21 | No modificar 005/006/007 | Integridad de migraciones previas | AC-2 | La 008 no toca el contenido de 005/006/007; verificación de integridad | `test_h3_3_4_migration_scripts.py::test_008_does_not_modify_or_execute_005_006_007` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-22 | Ausencia de backfill inventado | Sin eventos retroactivos | AC-4 | No se generan eventos de estado anteriores al cutover 008; la cobertura se comunica sin fecha inventada | `test_h3_3_4_timeline_presentation.py::test_cutover_notice_never_invents_a_date_when_unconfigured` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-23 | Cobertura completa solo desde el cutover | Alcance temporal honesto | AC-4 | Aviso reproducible `LEAD_STATE_HISTORY_CUTOVER` (Settings) + `state_history_cutover_notice`; solo eventos reales posteriores al cutover 008 aparecen como cambios de estado | `test_h3_3_4_timeline_presentation.py::test_cutover_notice_uses_configured_date` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-24 | Conservación de asignaciones históricas recuperables | Asignaciones 007 previas siguen visibles | AC-4 | Los eventos de asignación 007 anteriores al cutover siguen proyectándose | `test_h3_3_4_timeline_presentation.py::test_backward_compatible_with_two_argument_callers`; regresión 007 | Smoke autenticado (AC-9) | `developer-01.json`; `acceptance-01.json` |
 
 ---
 
@@ -248,12 +257,19 @@ PY
 
 ## 9. Decisiones y limitaciones de esta sesión
 
-- **Único cambio de producto**: este documento. No se modificó código, SQL, vistas, rutas,
-  templates, tests ni infraestructura.
-- **Sin AWS/RDS, sin approve.py, sin migraciones, sin PR, sin implementación funcional.**
+- **Parte A implementada**: migración 008 (forward/rollback con vista sanitizada
+  `tpi.v_historial_estado_lead`, privilegios mínimos e índice justificado por EXPLAIN),
+  escritura transaccional de `update_lead_status` (patrón `assign_lead`: `FOR UPDATE`,
+  comparación anterior/nuevo, no-op idempotente, UPDATE+INSERT en un solo commit,
+  rollback completo), lectura vía repositorio/servicio por la vista, y timeline que
+  fusiona notas + asignaciones 007 + cambios 008 con desempate determinístico, badge
+  "Automático" y aviso de cobertura reproducible (`LEAD_STATE_HISTORY_CUTOVER`).
+- **Parte B pendiente dentro de H3.3.4**: el Dashboard Ejecutivo no está implementado.
+  Ninguna porción ha sido diferida a una tarea posterior.
+- **Sin AWS/RDS, sin approve.py, sin PR, sin `submit_for_review`, sin aplicar la
+  migración en DEV.**
 - **Evidencia formal del Developer** (`evidence/H3.3.4/developer/developer-01.json` vía
-  `evidence.py write --kind developer`) queda **diferida a la sesión que haga
-  `submit_for_review`**, porque el schema `developer` exige `pr_number ≥ 1` y esta sesión
-  tiene prohibido abrir PR. El resultado del gate queda registrado aquí (control
-  reproducible) y en `progress/sessions/` + `progress/current.md`.
+  `evidence.py write --kind developer`) queda diferida a la sesión que haga
+  `submit_for_review`, porque el schema `developer` exige `pr_number ≥ 1` y esta sesión
+  tiene prohibido abrir PR.
 - **DB-PATH-MECHANISM**: deuda no bloqueante, no se resuelve en esta tarea (REQ-S-10).
