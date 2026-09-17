@@ -210,8 +210,18 @@ class SolicitudService:
         date_to: datetime | date | None = None,
         sort_by: str | None = None,
         sort_direction: str = "desc",
+        asesor_id: UUID | None = None,
+        origen_lead: str | None = None,
+        fuente_actual: str | None = None,
+        sin_asignar: bool = False,
+        estancado: bool = False,
     ) -> dict[str, Any]:
-        """Return a CRM-oriented lead board without changing the schema."""
+        """Return a CRM-oriented lead board without changing the schema.
+
+        ``sin_asignar`` and ``estancado`` mirror the executive dashboard alerts:
+        both use the shared predicates, so the listing linked from an alert
+        returns exactly the population the alert counted.
+        """
         if page < 1:
             raise ValueError("page must be greater than zero")
         if page_size < 1:
@@ -243,6 +253,11 @@ class SolicitudService:
             date_to=normalized_date_to,
             sort_by=sort_by,
             sort_direction=sort_direction,
+            asesor_id=asesor_id,
+            origen_lead=origen_lead,
+            fuente_actual=fuente_actual,
+            sin_asignar=sin_asignar,
+            estancado=estancado,
         )
 
         should_mask = masked and not (user is not None and self.can_view_full_pii(user))

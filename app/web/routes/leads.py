@@ -6,6 +6,7 @@ import secrets
 from datetime import date
 from typing import Any, cast
 from urllib.parse import parse_qs, urlencode, urlsplit
+from uuid import UUID
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -54,6 +55,24 @@ def _can_write(user: AuthenticatedUser | None) -> bool:
     return is_superuser(user.role) or user.role in _WRITE_ROLES
 
 
+def _can_view_executive_dashboard(user: AuthenticatedUser | None) -> bool:
+    """Whether to render the dashboard nav link.
+
+    This only hides a link: /dashboard enforces the real 403 server-side.
+    """
+    return bool(user) and is_superuser(user.role)  # type: ignore[union-attr]
+
+
+def _active_filter_labels(sin_asignar: bool, estancado: bool) -> list[str]:
+    """Visible chips describing the operational filters coming from the dashboard."""
+    labels: list[str] = []
+    if sin_asignar:
+        labels.append("Solo leads sin asignar")
+    if estancado:
+        labels.append("Solo leads estancados")
+    return labels
+
+
 def _can_cleanup(user: AuthenticatedUser | None) -> bool:
     if not user:
         return False
@@ -88,6 +107,30 @@ def _parse_date(value: str | None) -> date | None:
     if not value:
         return None
     return date.fromisoformat(value)
+
+
+def _parse_uuid(value: str | None) -> UUID | None:
+    """Accept only a well-formed UUID; anything else is ignored (fail closed)."""
+    if not value:
+        return None
+    try:
+        return UUID(str(value).strip())
+    except (ValueError, AttributeError):
+        return None
+
+
+def _normalize_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = " ".join(str(value).strip().split())
+    return normalized or None
+
+
+def _parse_flag(value: str | None) -> bool:
+    """Whitelisted truthy values for boolean query params."""
+    if value is None:
+        return False
+    return str(value).strip().casefold() in {"1", "true", "si", "sí", "on", "yes"}
 
 
 def _parse_int(value: str | None, default: int) -> int:
@@ -150,6 +193,11 @@ def _resolve_board_data(request: Request) -> dict[str, Any]:
     sort_direction = params.get("sort_direction") or "desc"
     date_from = _parse_date(params.get("date_from"))
     date_to = _parse_date(params.get("date_to"))
+    asesor_id = _parse_uuid(params.get("asesor"))
+    origen = _normalize_text(params.get("origen"))
+    fuente = _normalize_text(params.get("fuente"))
+    sin_asignar = _parse_flag(params.get("sin_asignar"))
+    estancado = _parse_flag(params.get("estancado"))
 
     # PII masking is unconditionally role-based: only can_view_full_pii
     # (ceo/cto) bypasses masking. The environment flag does not override roles.
@@ -167,6 +215,11 @@ def _resolve_board_data(request: Request) -> dict[str, Any]:
         sort_direction=sort_direction,
         masked=True,
         user=user,
+        asesor_id=asesor_id,
+        origen_lead=origen,
+        fuente_actual=fuente,
+        sin_asignar=sin_asignar,
+        estancado=estancado,
     )
     afp_options = service.get_catalogo_afp()
     estado_options = service.get_crm_estado_lead_options()
@@ -178,6 +231,11 @@ def _resolve_board_data(request: Request) -> dict[str, Any]:
         "date_to": params.get("date_to") or None,
         "sort_by": sort_by,
         "sort_direction": sort_direction,
+        "asesor": str(asesor_id) if asesor_id is not None else None,
+        "origen": origen,
+        "fuente": fuente,
+        "sin_asignar": "1" if sin_asignar else None,
+        "estancado": "1" if estancado else None,
     }
     current_board_url = _build_query_url("/leads", current_query | {"page": page})
 
@@ -219,9 +277,17 @@ def _resolve_board_data(request: Request) -> dict[str, Any]:
             "date_to": params.get("date_to") or "",
             "sort_by": sort_by,
             "sort_direction": sort_direction,
+            "asesor": str(asesor_id) if asesor_id is not None else "",
+            "origen": origen or "",
+            "fuente": fuente or "",
+            "sin_asignar": sin_asignar,
+            "estancado": estancado,
         },
+        "active_filter_labels": _active_filter_labels(sin_asignar, estancado),
         "page_title": "Leads",
         "selected_user": user,
+        "can_view_executive_dashboard": _can_view_executive_dashboard(user),
+        "active_nav": "leads",
         "can_write": _can_write(user),
         "csrf_token": _get_csrf_token(request),
         "web_env_label": getattr(request.app.state, "web_env_label", ""),
@@ -290,6 +356,8 @@ def _resolve_detail_context(
     context = {
         "request": request,
         "selected_user": user,
+        "can_view_executive_dashboard": _can_view_executive_dashboard(user),
+        "active_nav": "leads",
         "can_write": _can_write(user),
         "can_assign": can_assign,
         "can_cleanup": _can_cleanup(user),

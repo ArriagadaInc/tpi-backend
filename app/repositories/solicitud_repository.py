@@ -22,6 +22,7 @@ from app.models.crm_states import (
     crm_state_filter_terms,
     normalize_crm_state_for_write,
 )
+from app.models.executive_dashboard import estancamiento_dias_default
 from app.models.idempotency import IdempotencyConflictError, IdempotentSolicitudResult
 from app.models.lead_assignment import (
     ASSIGNMENT_ACTIVE_STATE,
@@ -33,6 +34,12 @@ from app.models.solicitud import (
     PersonaData,
     SolicitudData,
     SolicitudResponse,
+)
+from app.repositories.lead_activity_sql import (
+    estancado_params,
+    estancado_predicate,
+    sin_asignar_params,
+    sin_asignar_predicate,
 )
 
 
@@ -59,8 +66,20 @@ class SolicitudRepository:
         estado_civil_id: UUID | None = None,
         date_from: datetime | date | None = None,
         date_to: datetime | date | None = None,
+        asesor_id: UUID | None = None,
+        origen_lead: str | None = None,
+        fuente_actual: str | None = None,
+        sin_asignar: bool = False,
+        estancado: bool = False,
+        estancamiento_dias: int | None = None,
     ) -> tuple[str, list[Any]]:
-        """Build the CRM WHERE clause and parameters using whitelisted filters."""
+        """Build the CRM WHERE clause and parameters using whitelisted filters.
+
+        ``sin_asignar`` and ``estancado`` reuse the shared predicates of
+        :mod:`app.repositories.lead_activity_sql`, the same ones the executive
+        dashboard counts with, so an alert and the listing it links to always
+        describe the same population.
+        """
         clauses: list[str] = []
         params: list[Any] = []
 
@@ -109,6 +128,38 @@ class SolicitudRepository:
                 date_to = datetime.combine(date_to, time.max, tzinfo=UTC)
             clauses.append("l.created_at <= %s")
             params.append(date_to)
+
+        if asesor_id:
+            clauses.append(
+                "EXISTS ("
+                "SELECT 1 FROM tpi.asignaciones a "
+                "WHERE a.id_lead = l.id_lead "
+                "AND a.estado_asignacion = %s "
+                "AND a.id_asesor = %s"
+                ")"
+            )
+            params.extend([ASSIGNMENT_ACTIVE_STATE, str(asesor_id)])
+
+        if origen_lead:
+            clauses.append("LOWER(TRIM(l.origen_lead)) = LOWER(%s)")
+            params.append(origen_lead)
+
+        if fuente_actual:
+            clauses.append("LOWER(TRIM(l.fuente_actual)) = LOWER(%s)")
+            params.append(fuente_actual)
+
+        if sin_asignar:
+            clauses.append(sin_asignar_predicate("l"))
+            params.extend(sin_asignar_params())
+
+        if estancado:
+            umbral = (
+                estancamiento_dias
+                if estancamiento_dias is not None
+                else estancamiento_dias_default()
+            )
+            clauses.append(estancado_predicate("l"))
+            params.extend(estancado_params(umbral))
 
         if not clauses:
             return "", params
@@ -577,6 +628,12 @@ class SolicitudRepository:
         date_to: datetime | None = None,
         sort_by: str | None = None,
         sort_direction: str = "desc",
+        asesor_id: UUID | None = None,
+        origen_lead: str | None = None,
+        fuente_actual: str | None = None,
+        sin_asignar: bool = False,
+        estancado: bool = False,
+        estancamiento_dias: int | None = None,
     ) -> tuple[list[dict[str, Any]], int]:
         """Return a CRM-ready lead board using only the current schema."""
         where_clause, where_params = cls._build_crm_query_filters(
@@ -587,6 +644,12 @@ class SolicitudRepository:
             estado_civil_id=estado_civil_id,
             date_from=date_from,
             date_to=date_to,
+            asesor_id=asesor_id,
+            origen_lead=origen_lead,
+            fuente_actual=fuente_actual,
+            sin_asignar=sin_asignar,
+            estancado=estancado,
+            estancamiento_dias=estancamiento_dias,
         )
         order_column, direction = cls._normalize_crm_sort(sort_by, sort_direction)
         query_count = sql.SQL("""

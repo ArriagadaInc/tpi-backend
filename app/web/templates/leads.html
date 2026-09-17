@@ -77,11 +77,26 @@
           <option value="asc" {% if current_filters.sort_direction == 'asc' %}selected{% endif %}>Ascendente</option>
         </select>
       </label>
+      {# Operational filters arriving from the Executive Dashboard alerts. They are
+         preserved across a filter update so the listing keeps matching the alert
+         that linked here; "Limpiar" removes them together with the rest. #}
+      <input type="hidden" name="sin_asignar" value="{% if current_filters.sin_asignar %}1{% endif %}">
+      <input type="hidden" name="estancado" value="{% if current_filters.estancado %}1{% endif %}">
+      <input type="hidden" name="asesor" value="{{ current_filters.asesor }}">
+      <input type="hidden" name="origen" value="{{ current_filters.origen }}">
+      <input type="hidden" name="fuente" value="{{ current_filters.fuente }}">
       <div class="filters-actions">
         <button class="primary" type="submit">Actualizar</button>
         <a class="secondary" href="/leads">Limpiar</a>
       </div>
     </form>
+    {% if active_filter_labels %}
+      <ul class="active-filters" aria-label="Filtros operacionales activos">
+        {% for label in active_filter_labels %}
+          <li class="pill pill-accent">{{ label }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
   </section>
 
   <section class="card board" id="board-fragment">
