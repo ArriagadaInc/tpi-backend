@@ -20,10 +20,10 @@
 | Bloque | Requirement IDs | AC cubiertos | Estado |
 | --- | --- | --- | --- |
 | Parte A — Historial integral | `REQ-A-01`..`REQ-A-24` (24) | AC-1, AC-2, AC-3, AC-4, AC-9 | **implementada** (Parte A) |
-| Parte B — Dashboard Ejecutivo | `REQ-B-01`..`REQ-B-30` (30) | AC-10..AC-18 | **capa de datos implementada**; interfaz productiva pendiente dentro de H3.3.4 |
-| Seguridad, migración y operación | `REQ-S-01`..`REQ-S-13` (13) | AC-2, AC-4..AC-10, AC-17, AC-18 | parcial (Parte A + capa de datos de Parte B implementadas; Human Gates pendientes) |
-| Casos de prueba mínimos | TC-1..TC-21 (21) | AC-1, AC-3, AC-4, AC-9..AC-18 | TC-1..TC-7 y TC-8..TC-20 implementados (capa de datos Parte B); TC-21 (smoke humano) pendiente |
-| **Total** | **67 requirement IDs** | **AC-1..AC-18 (18/18)** | **Parte A + capa de datos de Parte B implementadas; interfaz productiva pendiente; cero diferido a otra tarea** |
+| Parte B — Dashboard Ejecutivo | `REQ-B-01`..`REQ-B-30` (30) | AC-10..AC-18 | **implementada** (capa de datos + interfaz productiva); smoke humano pendiente (REQ-B-30) |
+| Seguridad, migración y operación | `REQ-S-01`..`REQ-S-13` (13) | AC-2, AC-4..AC-10, AC-17, AC-18 | parcial (Parte A + Parte B implementadas; Human Gates pendientes) |
+| Casos de prueba mínimos | TC-1..TC-21 (21) | AC-1, AC-3, AC-4, AC-9..AC-18 | TC-1..TC-20 implementados; TC-21 (smoke humano) pendiente |
+| **Total** | **67 requirement IDs** | **AC-1..AC-18 (18/18)** | **Parte A + Parte B implementadas; pendientes solo los criterios de verificación humana; cero diferido a otra tarea** |
 
 > **Estado de implementación**: la Parte A está implementada y cubierta por pruebas
 > automatizadas reales (`tests/unit/test_h3_3_4_timeline_presentation.py`,
@@ -32,8 +32,10 @@
 > `tests/integration/test_audit_state_view.py`, y regresión en
 > `tests/unit/test_web_app.py` / `tests/unit/test_solicitud_assignment_service.py`).
 > La **capa de datos, métricas y seguridad server-side de la Parte B** está implementada
-> (ver §11). La **interfaz productiva** (template visual definitivo y CSS) continúa
-> **pendiente dentro de H3.3.4**; ninguna porción ha sido diferida a una tarea posterior.
+> (ver §11) y la **interfaz productiva** (template, CSS, navegación, filtros reales del
+> listado y pruebas) también (ver §12). Ninguna porción ha sido diferida a una tarea
+> posterior. Quedan pendientes únicamente los criterios de verificación humana: el smoke
+> en DEV (AC-9, AC-18) y las dos aprobaciones humanas independientes (AC-5, AC-7).
 
 ---
 
@@ -476,4 +478,161 @@ parámetros a la URL de la bandeja. No se agregan rutas ni enlaces inexistentes.
    las existentes.
 3. Entrada de navegación "Dashboard Ejecutivo" en `base.html` (visible solo ceo/cto).
 4. Soporte de filtros `sin_asignar`/`estancado` en el listado `/leads` (ver §11.5).
-5. Smoke humano en AWS DEV (AC-18), incluido el 403 real para roles no autorizados.
+5. Smoke humano en DEV (AC-18), incluido el 403 real para roles no autorizados.
+
+> **Estado de §11.8**: los puntos 1 a 4 quedaron implementados en la sesión de interfaz
+> productiva (ver §12). El punto 5 sigue pendiente por ser verificación humana.
+
+---
+
+## 12. Parte B (interfaz productiva) — implementación real
+
+> Sesión Developer (Parte B, interfaz). Convierte el prototipo aprobado
+> (`docs/prototypes/H3_3_4_dashboard_prototype.html`, alternativa C del diseño) en la
+> interfaz productiva, conectada exclusivamente a las métricas reales. Sin datos
+> sintéticos en la aplicación, sin plataforma BI, sin CDN, sin framework frontend ni
+> librería de gráficos. Sin PR, sin `submit_for_review`, sin acceso a AWS/RDS.
+
+### 12.1 Preflight del contrato (ejecutado antes de construir la UI)
+
+| Verificación | Resultado |
+| --- | --- |
+| `LEAD_STATE_HISTORY_CUTOVER` ausente ⇒ funnel no disponible | Confirmado: `get_funnel` devuelve `cobertura_completa=False` y la UI muestra "No disponible con cobertura suficiente" con la razón explícita |
+| No se calculan tasas sin cobertura completa | `Funnel.disponible` exige cutover + período + `excluidos_pre_cutover == 0` + `denominador > 0` + transiciones observables |
+| `SET enable_seqscan = off` en runtime | Ausente: única aparición en `tests/integration/test_executive_dashboard_repository.py` (prueba de `EXPLAIN`) |
+| Latencia real medida con volumen representativo | Sí, medida end-to-end (ver §12.7), no sólo el umbral del test |
+
+**Divergencia encontrada y resuelta sin reinterpretar métricas**: el resumen por asesor
+exigido (nombre, cartera total, cartera activa, estancados, tiempo a asignación, tiempo a
+primera gestión) no era construible con el contrato existente, que sólo exponía cartera
+total/activa por asesor; los tiempos y el estancamiento existían únicamente como métricas
+globales. Se resolvió **de forma aditiva**, agregando
+`ExecutiveDashboardRepository.get_metricas_operacionales_por_asesor`, que agrupa por asesor
+usando **exactamente las mismas definiciones** (predicado de estancamiento compartido,
+primera asignación sobre `tpi.asignaciones`, primera gestión = primera nota humana o primer
+cambio general de estado post-cutover, excluyendo la asignación). No se redefinió ninguna
+métrica ni se inventó un valor: cuando el evento no existe para ningún lead del asesor, la
+columna se reporta `N/D`, nunca `0`.
+
+### 12.2 Archivos
+
+| Componente | Archivo |
+| --- | --- |
+| Definiciones SQL compartidas (movimiento operativo, estancado, sin asignar) | `app/repositories/lead_activity_sql.py` (nuevo) |
+| Presentación server-side de gráficos (barras, SVG, funnel, alertas, formatos CL) | `app/web/dashboard_presentation.py` (nuevo) |
+| Template productivo | `app/web/templates/executive_dashboard.html` |
+| Macros de sección (barras, tabla accesible, estados) | `app/web/templates/dashboard_macros.html` (nuevo) |
+| Navegación CEO/CTO | `app/web/templates/base.html` |
+| CSS (clases de §8 del diseño) | `app/web/static/css/app.css` |
+| Ruta, filtros, estados de error, enlaces de alerta | `app/web/routes/dashboard.py` |
+| Métricas por asesor y opciones de filtro | `app/repositories/executive_dashboard_repository.py`, `app/services/executive_dashboard_service.py` |
+| Filtros reales del listado | `app/web/routes/leads.py`, `app/services/solicitud_service.py`, `app/repositories/solicitud_repository.py`, `app/web/templates/leads.html` |
+
+### 12.3 Fidelidad al prototipo (alternativa C)
+
+Los doce elementos de la Fase 2 del diseño están implementados en el mismo orden:
+encabezado con indicador "CRM Lite · exclusivo CEO / CTO", filtros superiores, resumen
+ejecutivo (KPIs), alertas operacionales, aviso de cobertura, análisis (evolución, casos
+por estado, antigüedad, categorías MVP), funnel observable, resumen por asesor, y estados
+vacío/parcial/error. Se conservan los tokens existentes (fondo claro, tarjetas blancas,
+bordes y sombras suaves, turquesa `--accent`, jerarquía tipográfica), sin gradientes
+decorativos ni animaciones; `prefers-reduced-motion` anula toda transición.
+
+### 12.4 Ámbitos visibles y filtros
+
+- La explicación de ámbitos es visible en la página: *"Las métricas de cartera representan
+  la situación actual. El período seleccionado se aplica a ingresos, evolución y métricas
+  de actividad."* Cada tarjeta KPI rotula además su propio ámbito.
+- Formulario `GET` a `/dashboard` con período (desde/hasta), granularidad, asesor, AFP,
+  estado, origen y fuente; botones **Aplicar** y **Limpiar**; sin JavaScript obligatorio.
+- Los presets del prototipo ("Últimos 30 días") se traducen a **fechas explícitas**
+  resueltas en el servidor, de modo que toda URL es reproducible y enlazable.
+- Todo parámetro pasa por `DashboardFilters`; un rango inválido responde **400** con la
+  página renderizada, los valores conservados y un mensaje claro, sin ejecutar consultas.
+
+### 12.5 Gráficos server-rendered
+
+HTML/CSS y SVG generados en el servidor; sin canvas, sin CDN, sin interpolación en
+JavaScript. Cada gráfico lleva título, resumen textual, valores visibles, `n` y denominador
+en cada porcentaje, tabla equivalente accesible (`<details>` + `<table>` con `<caption>` y
+`scope`), estado de cero datos y escala segura cuando el máximo es cero. La serie de
+evolución no fabrica puntos: con una sola observación dibuja un marcador sin polilínea, y
+con todos los valores en cero queda plana sobre la línea base. Las etiquetas extremas del
+eje usan `text-anchor` `start`/`end` para no recortarse.
+
+### 12.6 Alertas, enlaces y paridad con el listado
+
+Las dos alertas enlazan a `/leads?sin_asignar=1` y `/leads?estancado=1`, arrastrando los
+mismos filtros de dimensión del dashboard (nunca el rango de fechas, que pertenece al otro
+ámbito). El listado los implementa como filtros server-side reales reutilizando los
+predicados compartidos de `lead_activity_sql`, de modo que la cantidad del listado coincide
+con la de la alerta bajo el mismo contexto (verificado en integración). Se conservan el
+enmascaramiento de PII y el RBAC existentes.
+
+### 12.7 Rendimiento real (PostgreSQL local, volumen representativo)
+
+Medición end-to-end de `build_executive_dashboard` con **2.000 leads y 12 asesores**
+(`tests/integration/test_executive_dashboard_full.py::test_full_dashboard_latency_with_representative_volume`):
+
+| Métrica | Valor observado |
+| --- | --- |
+| Sentencias SQL por render del dashboard | 18 |
+| Sentencias SQL de las opciones de filtro | 4 |
+| Tiempo del dashboard completo | 0,299 s |
+| Tiempo de las opciones de filtro | 0,005 s |
+| Consulta más lenta | `get_metricas_operacionales_por_asesor` (0,068 s) |
+| Siguientes | `get_tiempo_primera_gestion` (0,068 s), `get_estancados_por_antiguedad` (0,048 s) |
+
+Ausencia de N+1 verificada de forma explícita: el número de sentencias es **idéntico** con
+20 leads / 2 asesores y con 400 leads / 12 asesores
+(`test_full_dashboard_query_count_is_bounded_and_free_of_n_plus_1`). No se agregó ningún
+índice nuevo: la latencia observada no lo justifica. `enable_seqscan` no se usa en runtime.
+
+### 12.8 Pruebas
+
+| Archivo | Cobertura |
+| --- | --- |
+| `tests/unit/test_executive_dashboard_presentation.py` (35) | formatos chilenos, anchos de barra seguros, escalera de antigüedad, series con 0/1/n puntos, disponibilidad del funnel y sus cuatro razones, alertas |
+| `tests/unit/test_executive_dashboard_render.py` (38) | navegación CEO/CTO/otros roles, 403 sin estructura ni datos, render normal, KPIs, alertas con enlaces reales, ámbitos visibles, gráficos sin JS/CDN, porcentajes con `n`/base, estados desconocidos escapados, categorías MVP (sin género ni estado civil), funnel disponible/no disponible, tabla de asesores sin PII, cero datos, error parcial, error global seguro, filtros conservados, rango inválido, Aplicar/Limpiar |
+| `tests/unit/test_leads_operational_filters.py` (15) | query params del listado, filtros preservados y limpiables, predicados compartidos, umbral configurable, RBAC y enmascaramiento intactos |
+| `tests/integration/test_executive_dashboard_full.py` (9) | métricas por asesor, primera gestión sin cutover, PII ausente en el contrato, **paridad alerta ↔ listado** (sin asignar, estancado y con filtro combinado), opciones de filtro, conteo de sentencias y latencia real |
+
+Suite completa: **698 passed, 3 failed**. Los 3 fallos son los
+`test_frozen_candidate_verification` preexistentes, que no se modificaron ni se debilitaron;
+en esta sesión el síntoma observado es que `bash` no resuelve la ruta Windows del worktree
+(`/bin/bash: C:desarrollos...: No such file or directory`, exit 127), la misma limitación
+de invocación WSL ya registrada. Cobertura **88,70 %** (≥ 85).
+
+### 12.9 Revisión visual y limitación registrada
+
+Se renderizaron nueve escenarios con datos sintéticos **exclusivamente locales** (arnés de
+scratchpad, nunca en la aplicación) y se auditó el DOM en los cuatro viewports exigidos:
+
+| Viewport | Overflow global | Layout |
+| --- | --- | --- |
+| 1440×900 | 0 px | KPIs 4 columnas, análisis en dos columnas |
+| 1024×768 | 0 px | KPIs 2 columnas, análisis en dos columnas |
+| 768×1024 | 0 px | KPIs 2 columnas, análisis apilado |
+| 375×812 | 0 px | Todo apilado; scroll horizontal contenido sólo en `.table-wrap` y `.timeseries-wrap` |
+
+Sin texto por debajo de 11,5 px y sin objetivos táctiles de menos de 24 px de alto.
+**Limitación**: la captura de pantalla del panel de navegador resultó intermitente con
+viewports altos, por lo que la comparación pixel a pixel contra el prototipo no pudo
+completarse para todas las secciones; la verificación se hizo con capturas parciales
+(1440×900 y 375×812) más auditoría programática del DOM. Queda el checklist humano de §12.10.
+
+### 12.10 Checklist humano pendiente
+
+1. Abrir `/dashboard` como CEO y como CTO en DEV: la página carga y el enlace de navegación
+   aparece.
+2. Abrir `/dashboard` con un rol no autorizado y sin sesión: 403 real, sin datos.
+3. Comparar visualmente contra `docs/prototypes/H3_3_4_dashboard_prototype.html` en
+   1440×900, 1024×768, 768×1024 y 375×812.
+4. Recorrer la página sólo con teclado: foco visible en filtros, rangos rápidos, enlaces de
+   alerta y disclosures "Ver como tabla".
+5. Aplicar filtros combinados y confirmar que la URL resultante reproduce la vista.
+6. Probar un rango inválido (desde > hasta) y confirmar el mensaje.
+7. Pulsar "Ver detalle" en cada alerta y confirmar que la cantidad del listado coincide con
+   la de la alerta.
+8. Confirmar que no aparece ningún RUT, nombre, teléfono ni correo de lead en la página ni
+   en el código fuente servido.

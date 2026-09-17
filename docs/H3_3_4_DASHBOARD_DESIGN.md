@@ -483,6 +483,24 @@ siguiente sesión de desarrollo):
 
 ---
 
+## 13 bis. Aclaraciones factuales tras la implementación
+
+Registradas en la sesión de interfaz productiva. No cambian el diseño aprobado
+(alternativa C) ni ninguna definición; sólo precisan cómo quedó implementado.
+
+| Punto del diseño | Aclaración factual |
+| --- | --- |
+| §8 `.funnel-list` / `.funnel-row` | No fueron necesarias: el funnel reutiliza `.bar-list`/`.bar-row`, que es el mismo lenguaje visual que §6 ya describe para las barras horizontales. No se creó una segunda familia de clases equivalente. |
+| §8 `.coverage-banner` | Implementada como alias semántico de `.notice-soft`, tal como se especificó, sin cambiar su apariencia. |
+| §5 punto 6 y §9 "equivalente accesible" | La tabla equivalente de cada gráfico se expone con un `<details>` nativo ("Ver como tabla") en lugar de una tabla oculta con `.sr-only`, para que la alternancia no dependa de JavaScript y la tabla sea alcanzable también visualmente. |
+| §5 punto 5 "click en una barra aplica el filtro" | Implementado sólo para **casos por estado**, donde el valor del filtro es reproducible. Las barras de AFP/origen/fuente no enlazan: el filtro de AFP usa el id del catálogo (ausente en el agregado) y los buckets `Sin origen`/`Sin fuente` son etiquetas sintetizadas sin valor filtrable. Se prefirió no enlazar antes que crear un enlace decorativo. |
+| §5 punto 10 "encabezados ordenables" | No implementado en esta iteración: la tabla de asesores se sirve en el orden reproducible del repositorio (cartera total descendente, luego nombre). El orden por columna queda como mejora posible, no como alcance diferido de un requisito: ningún AC exige ordenamiento interactivo. |
+| §5 punto 2 "período" | El selector de período del prototipo se implementó como dos campos de fecha explícitos más enlaces de rango rápido que el servidor resuelve a fechas concretas, de modo que toda URL es reproducible. |
+| §7 nota sobre el CDN de htmx | Sigue vigente y fuera de alcance: `base.html` continúa cargando htmx desde `unpkg.com`. La Parte B no agregó ninguna dependencia externa; los gráficos son SVG generados en el servidor. |
+| §12 revisión visual | En la sesión de implementación sí hubo navegador. Se auditaron los cuatro viewports (0 px de overflow global en todos) y se capturaron 1440×900 y 375×812; la captura del panel resultó intermitente con viewports altos, por lo que la comparación pixel a pixel queda en el checklist humano (`docs/H3_3_4_REQUIREMENTS_MATRIX.md` §12.10). |
+
+---
+
 ## 14. Confirmaciones
 
 - Cero código productivo modificado o creado en esta sesión.

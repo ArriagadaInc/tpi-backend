@@ -41,7 +41,9 @@ class _FakeAuthProvider:
 
 class _CountingDashboardService(ExecutiveDashboardService):
     def __init__(self) -> None:
+        super().__init__(repository=object(), settings=Settings(APP_ENV="testing"))  # type: ignore[arg-type]
         self.calls = 0
+        self.option_calls = 0
 
     def build_executive_dashboard(self, filters: DashboardFilters) -> ExecutiveDashboard:
         self.calls += 1
@@ -51,6 +53,10 @@ class _CountingDashboardService(ExecutiveDashboardService):
             period_activity=PeriodActivity(),
             alerts=[],
         )
+
+    def get_filter_options(self) -> dict[str, list[object]]:
+        self.option_calls += 1
+        return {"estados": [], "asesores": [], "afps": [], "origenes": [], "fuentes": []}
 
 
 def _build_client(service: ExecutiveDashboardService) -> TestClient:

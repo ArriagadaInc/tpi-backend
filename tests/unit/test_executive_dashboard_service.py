@@ -49,6 +49,38 @@ class _FakeRepository:
             },
         ]
 
+    def get_metricas_operacionales_por_asesor(self, filters, threshold_days, cutover):
+        return [
+            {
+                "id_asesor": None,
+                "estancados": 1,
+                "n_asignacion": 0,
+                "tiempo_asignacion_dias": None,
+                "n_primera_gestion": 0,
+                "tiempo_primera_gestion_dias": None,
+            },
+            {
+                "id_asesor": "44444444-4444-4444-4444-444444444441",
+                "estancados": 1,
+                "n_asignacion": 7,
+                "tiempo_asignacion_dias": 0.1751,
+                "n_primera_gestion": 3,
+                "tiempo_primera_gestion_dias": 1.2,
+            },
+        ]
+
+    def get_asesor_options(self):
+        return [{"id_asesor": "44444444-4444-4444-4444-444444444441", "nombre": "Asesor A"}]
+
+    def get_afp_options(self):
+        return [{"id": "55555555-5555-5555-5555-555555555551", "nombre": "Habitat"}]
+
+    def get_origen_options(self):
+        return ["formulario_web"]
+
+    def get_fuente_options(self):
+        return ["backoffice"]
+
     def get_casos_por_estado_y_asesor(self, filters):
         return [
             {
