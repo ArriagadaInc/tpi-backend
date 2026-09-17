@@ -5,6 +5,10 @@ from __future__ import annotations
 from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
+import pytest
+from pydantic import ValidationError
+
+from app.config import Settings
 from app.web.presentation import (
     FollowUpNote,
     build_timeline_items,
@@ -123,3 +127,30 @@ def test_cutover_notice_never_invents_a_date_when_unconfigured() -> None:
     assert "20/09/2026" not in notice
     assert "migracion 008" in notice
     assert "asignaciones anteriores se conservan" in notice
+
+
+def test_cutover_settings_default_has_no_fake_date() -> None:
+    settings = Settings(_env_file=None)
+    assert settings.lead_state_history_cutover is None
+
+
+def test_cutover_settings_parses_valid_iso_date() -> None:
+    settings = Settings(_env_file=None, LEAD_STATE_HISTORY_CUTOVER="2026-09-20")
+    assert settings.lead_state_history_cutover == date(2026, 9, 20)
+
+
+def test_cutover_settings_rejects_invalid_or_timezone_values() -> None:
+    # The field is a plain date (timezone-agnostic): malformed dates and any
+    # datetime/timezone-bearing value fail explicitly instead of producing a
+    # misleading coverage date.
+    for bad in (
+        "not-a-date",
+        "20/09/2026",
+        "2026-13-40",
+        "2026-9-20",
+        "2026-09-20T10:00:00Z",
+        "2026-09-20 10:00",
+        "",
+    ):
+        with pytest.raises(ValidationError):
+            Settings(_env_file=None, LEAD_STATE_HISTORY_CUTOVER=bad)

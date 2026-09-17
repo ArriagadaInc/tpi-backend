@@ -124,6 +124,13 @@ Contrato versionado:
   Seq Scan ~35.6 ms -> Bitmap Index Scan ~25.4 ms).
 - Orden estable aplicado por la consulta del repositorio
   (`fecha_hora DESC, id_auditoria DESC`), no por la vista.
+- Aviso de cobertura honesto en la ficha: la variable de entorno
+  `LEAD_STATE_HISTORY_CUTOVER` (fecha ISO `YYYY-MM-DD`, sin zona horaria; un valor
+  invalido o con hora/zona falla la configuracion de forma explicita) controla desde
+  que fecha se comunica la cobertura completa de cambios generales. Si no esta
+  configurada, la UI no inventa ninguna fecha. Se establece en el deployment como una
+  variable de entorno comun de la aplicacion (igual que `TPI_PUBLIC_SITE_URL`), nunca
+  via `--option-settings`; no se fija aqui ninguna fecha de AWS DEV.
 
 Estado de aplicacion:
 
