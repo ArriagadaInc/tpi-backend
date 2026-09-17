@@ -205,10 +205,22 @@ class DistribucionBucket:
 
 @dataclass(frozen=True, slots=True)
 class AsesorRow:
+    """Per-advisor operational summary.
+
+    Only the visible name is exposed (CEO/CTO surface); never RUT, e-mail or
+    phone. ``tiempo_*_dias`` is ``None`` when the underlying event does not exist
+    for any lead of that advisor, and is then rendered as ``N/D`` — never zero.
+    """
+
     id_asesor: str | None
     nombre: str | None
     cartera_total: int
     cartera_activa: int
+    estancados: int = 0
+    n_asignacion: int = 0
+    tiempo_asignacion_dias: float | None = None
+    n_primera_gestion: int = 0
+    tiempo_primera_gestion_dias: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -243,6 +255,12 @@ class TiempoMetric:
     media_dias: float | None
 
 
+FUNNEL_SIN_CUTOVER = "sin_cutover"
+FUNNEL_SIN_PERIODO = "sin_periodo"
+FUNNEL_COBERTURA_PARCIAL = "cobertura_parcial"
+FUNNEL_SIN_TRANSICIONES = "sin_transiciones"
+
+
 @dataclass(frozen=True, slots=True)
 class Funnel:
     scope: str
@@ -251,6 +269,35 @@ class Funnel:
     excluidos_pre_cutover: int
     denominador: int
     steps: list[FunnelStep]
+    periodo_activo: bool = False
+
+    @property
+    def disponible(self) -> bool:
+        """True only when every observed lead of the period has complete history.
+
+        A partially covered period would produce rates whose denominator silently
+        excludes pre-cutover leads, so the funnel is withheld instead.
+        """
+        return (
+            self.cutover is not None
+            and self.periodo_activo
+            and self.excluidos_pre_cutover == 0
+            and self.denominador > 0
+            and bool(self.steps)
+        )
+
+    @property
+    def motivo_no_disponible(self) -> str | None:
+        """Stable reason key explaining why the funnel is withheld."""
+        if self.disponible:
+            return None
+        if self.cutover is None:
+            return FUNNEL_SIN_CUTOVER
+        if not self.periodo_activo:
+            return FUNNEL_SIN_PERIODO
+        if self.excluidos_pre_cutover > 0:
+            return FUNNEL_COBERTURA_PARCIAL
+        return FUNNEL_SIN_TRANSICIONES
 
 
 @dataclass(frozen=True, slots=True)
@@ -308,12 +355,39 @@ class AlertTarget:
     filters: dict[str, bool]
 
 
+# Stable section keys used to report a partial failure without showing a zero
+# where a query actually failed.
+SECTION_RESUMEN = "resumen"
+SECTION_ESTADO = "casos_por_estado"
+SECTION_ANTIGUEDAD = "antiguedad"
+SECTION_CATEGORIAS = "categorias"
+SECTION_ASESORES = "asesores"
+SECTION_EVOLUCION = "evolucion"
+SECTION_FUNNEL = "funnel"
+SECTION_TIEMPOS = "tiempos"
+
+DASHBOARD_SECTIONS: tuple[str, ...] = (
+    SECTION_RESUMEN,
+    SECTION_ESTADO,
+    SECTION_ANTIGUEDAD,
+    SECTION_CATEGORIAS,
+    SECTION_ASESORES,
+    SECTION_EVOLUCION,
+    SECTION_FUNNEL,
+    SECTION_TIEMPOS,
+)
+
+
 @dataclass(frozen=True, slots=True)
 class ExecutiveDashboard:
     filters: DashboardFilters
     current_snapshot: CurrentSnapshot
     period_activity: PeriodActivity
     alerts: list[AlertTarget]
+    failed_sections: tuple[str, ...] = ()
+
+    def section_failed(self, section: str) -> bool:
+        return section in self.failed_sections
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

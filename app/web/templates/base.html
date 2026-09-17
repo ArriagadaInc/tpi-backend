@@ -16,6 +16,16 @@
           <div class="brand-title">Tu Pensión Inteligente</div>
           <div class="brand-badge">CRM Lite</div>
         </div>
+        {% if selected_user %}
+          {# Hiding the link is a convenience, never the access control: /dashboard
+             returns a real server-side 403 for any role other than ceo/cto. #}
+          <nav class="topbar-nav" aria-label="Navegación principal">
+            <a href="/leads" {% if active_nav == 'leads' %}aria-current="page"{% endif %}>Leads</a>
+            {% if can_view_executive_dashboard %}
+              <a href="/dashboard" {% if active_nav == 'dashboard' %}aria-current="page"{% endif %}>Dashboard Ejecutivo</a>
+            {% endif %}
+          </nav>
+        {% endif %}
       </div>
       <div class="topbar-user">
         {% if selected_user %}

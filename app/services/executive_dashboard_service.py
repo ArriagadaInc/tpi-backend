@@ -9,13 +9,23 @@ dashboard query runs for unauthorized access.
 
 from __future__ import annotations
 
+import logging
+from collections.abc import Callable
 from datetime import date
-from typing import Any
+from typing import Any, TypeVar, cast
 
 from app.auth.models import AuthenticatedUser, is_superuser
 from app.config import Settings, get_settings
-from app.models.crm_states import crm_state_label
+from app.models.crm_states import crm_state_label, iter_crm_state_options
 from app.models.executive_dashboard import (
+    SECTION_ANTIGUEDAD,
+    SECTION_ASESORES,
+    SECTION_CATEGORIAS,
+    SECTION_ESTADO,
+    SECTION_EVOLUCION,
+    SECTION_FUNNEL,
+    SECTION_RESUMEN,
+    SECTION_TIEMPOS,
     AlertTarget,
     AntiguedadBucket,
     AsesorRow,
@@ -36,6 +46,10 @@ from app.models.executive_dashboard import (
 from app.repositories.executive_dashboard_repository import ExecutiveDashboardRepository
 
 _SIN_ASESOR_LABEL = "Sin asesor"
+
+_logger = logging.getLogger(__name__)
+
+_T = TypeVar("_T")
 
 
 class ExecutiveDashboardService:
@@ -61,9 +75,15 @@ class ExecutiveDashboardService:
         return self.settings.lead_state_history_cutover
 
     def build_executive_dashboard(self, filters: DashboardFilters) -> ExecutiveDashboard:
-        """Assemble both scopes from bounded aggregate queries (no per-lead fan-out)."""
-        snapshot = self._build_snapshot(filters)
-        period = self._build_period(filters)
+        """Assemble both scopes from bounded aggregate queries (no per-lead fan-out).
+
+        Each section is isolated: if one aggregate query fails, that section is
+        reported as failed and the rest of the dashboard still renders. A failed
+        section is never presented as a zero.
+        """
+        failed: list[str] = []
+        snapshot = self._build_snapshot(filters, failed)
+        period = self._build_period(filters, failed)
         alerts = [
             AlertTarget(
                 key="sin_asignar", count=snapshot.sin_asignar, filters={"sin_asignar": True}
@@ -75,105 +95,246 @@ class ExecutiveDashboardService:
             current_snapshot=snapshot,
             period_activity=period,
             alerts=alerts,
+            failed_sections=tuple(failed),
         )
 
-    def _build_snapshot(self, filters: DashboardFilters) -> CurrentSnapshot:
-        kpis = self.repository.get_kpi_snapshot(filters)
-        total = kpis["total_leads"]
-        cartera_activa = kpis["cartera_activa"]
-        estancados = self.repository.get_estancados(filters, self.estancamiento_dias)
+    def _section(
+        self,
+        section: str,
+        failed: list[str],
+        producer: Callable[[], _T],
+        fallback: _T,
+    ) -> _T:
+        """Run one section, recording a failure instead of propagating it.
 
-        casos = self.repository.get_casos_por_estado(filters)
-        casos_por_estado = [
-            EstadoBucket(
-                estado=str(row["estado"]),
-                label=crm_state_label(row["estado"]),
-                n=int(row["n"]),
-                denominador=total,
-                percentage=percentage(int(row["n"]), total),
+        Only the section name and the exception class are logged: never the query,
+        its parameters, or any row content.
+        """
+        try:
+            return producer()
+        except Exception as exc:  # noqa: BLE001 - section isolation is the point
+            if section not in failed:
+                failed.append(section)
+            _logger.warning(
+                "executive_dashboard section failed section=%s error_type=%s",
+                section,
+                type(exc).__name__,
             )
-            for row in casos
-        ]
+            return fallback
 
-        antiguedad = [
-            AntiguedadBucket(
-                bucket=str(row["bucket"]),
-                n=int(row["n"]),
-                denominador=cartera_activa,
-                percentage=percentage(int(row["n"]), cartera_activa),
-            )
-            for row in self.repository.get_antiguedad(filters)
-        ]
+    def _build_snapshot(self, filters: DashboardFilters, failed: list[str]) -> CurrentSnapshot:
+        kpis = self._section(
+            SECTION_RESUMEN,
+            failed,
+            lambda: self.repository.get_kpi_snapshot(filters),
+            {"total_leads": 0, "cartera_activa": 0, "sin_asignar": 0},
+        )
+        total = int(kpis["total_leads"])
+        cartera_activa = int(kpis["cartera_activa"])
+        estancados = self._section(
+            SECTION_RESUMEN,
+            failed,
+            lambda: self.repository.get_estancados(filters, self.estancamiento_dias),
+            0,
+        )
 
-        estancados_por_antiguedad = [
-            AntiguedadBucket(
-                bucket=str(row["bucket"]),
-                n=int(row["n"]),
-                denominador=estancados,
-                percentage=percentage(int(row["n"]), estancados),
-            )
-            for row in self.repository.get_estancados_por_antiguedad(
-                filters, self.estancamiento_dias
-            )
-        ]
+        casos_por_estado = self._section(
+            SECTION_ESTADO,
+            failed,
+            lambda: [
+                EstadoBucket(
+                    estado=str(row["estado"]),
+                    label=crm_state_label(row["estado"]),
+                    n=int(row["n"]),
+                    denominador=total,
+                    percentage=percentage(int(row["n"]), total),
+                )
+                for row in self.repository.get_casos_por_estado(filters)
+            ],
+            cast(list[EstadoBucket], []),
+        )
 
-        cartera_por_asesor = [
-            AsesorRow(
-                id_asesor=str(row["id_asesor"]) if row.get("id_asesor") is not None else None,
-                nombre=self._asesor_nombre(row.get("nombre")),
-                cartera_total=int(row["cartera_total"]),
-                cartera_activa=int(row["cartera_activa"]),
-            )
-            for row in self.repository.get_cartera_por_asesor(filters)
-        ]
+        antiguedad = self._section(
+            SECTION_ANTIGUEDAD,
+            failed,
+            lambda: [
+                AntiguedadBucket(
+                    bucket=str(row["bucket"]),
+                    n=int(row["n"]),
+                    denominador=cartera_activa,
+                    percentage=percentage(int(row["n"]), cartera_activa),
+                )
+                for row in self.repository.get_antiguedad(filters)
+            ],
+            cast(list[AntiguedadBucket], []),
+        )
 
-        casos_por_estado_y_asesor = [
-            EstadoAsesorCell(
-                id_asesor=str(row["id_asesor"]) if row.get("id_asesor") is not None else None,
-                nombre=self._asesor_nombre(row.get("nombre")),
-                estado=str(row["estado"]),
-                estado_label=crm_state_label(row["estado"]),
-                n=int(row["n"]),
-            )
-            for row in self.repository.get_casos_por_estado_y_asesor(filters)
-        ]
+        estancados_por_antiguedad = self._section(
+            SECTION_ANTIGUEDAD,
+            failed,
+            lambda: [
+                AntiguedadBucket(
+                    bucket=str(row["bucket"]),
+                    n=int(row["n"]),
+                    denominador=estancados,
+                    percentage=percentage(int(row["n"]), estancados),
+                )
+                for row in self.repository.get_estancados_por_antiguedad(
+                    filters, self.estancamiento_dias
+                )
+            ],
+            cast(list[AntiguedadBucket], []),
+        )
+
+        cartera_por_asesor = self._section(
+            SECTION_ASESORES,
+            failed,
+            lambda: self._build_asesores(filters),
+            cast(list[AsesorRow], []),
+        )
+
+        casos_por_estado_y_asesor = self._section(
+            SECTION_ASESORES,
+            failed,
+            lambda: [
+                EstadoAsesorCell(
+                    id_asesor=str(row["id_asesor"]) if row.get("id_asesor") is not None else None,
+                    nombre=self._asesor_nombre(row.get("nombre")),
+                    estado=str(row["estado"]),
+                    estado_label=crm_state_label(row["estado"]),
+                    n=int(row["n"]),
+                )
+                for row in self.repository.get_casos_por_estado_y_asesor(filters)
+            ],
+            cast(list[EstadoAsesorCell], []),
+        )
+
+        categorias = self._section(
+            SECTION_CATEGORIAS,
+            failed,
+            lambda: (
+                self._distribucion(self.repository.get_distribucion_afp(filters), total),
+                self._distribucion(self.repository.get_distribucion_origen(filters), total),
+                self._distribucion(self.repository.get_distribucion_fuente(filters), total),
+            ),
+            cast(
+                tuple[
+                    list[DistribucionBucket],
+                    list[DistribucionBucket],
+                    list[DistribucionBucket],
+                ],
+                ([], [], []),
+            ),
+        )
 
         return CurrentSnapshot(
             total_leads=total,
             cartera_activa=cartera_activa,
-            sin_asignar=kpis["sin_asignar"],
+            sin_asignar=int(kpis["sin_asignar"]),
             estancados=estancados,
             casos_por_estado=casos_por_estado,
             antiguedad=antiguedad,
             estancados_por_antiguedad=estancados_por_antiguedad,
             cartera_por_asesor=cartera_por_asesor,
             casos_por_estado_y_asesor=casos_por_estado_y_asesor,
-            distribucion_afp=self._distribucion(
-                self.repository.get_distribucion_afp(filters), total
-            ),
-            distribucion_origen=self._distribucion(
-                self.repository.get_distribucion_origen(filters), total
-            ),
-            distribucion_fuente=self._distribucion(
-                self.repository.get_distribucion_fuente(filters), total
-            ),
+            distribucion_afp=categorias[0],
+            distribucion_origen=categorias[1],
+            distribucion_fuente=categorias[2],
         )
 
-    def _build_period(self, filters: DashboardFilters) -> PeriodActivity:
-        leads_ingresados = self.repository.get_leads_ingresados(filters)
-        evolucion = [
-            EvolucionPoint(bucket=self._bucket_label(row["bucket"]), n=int(row["n"]))
-            for row in self.repository.get_evolucion(filters)
-        ]
-        funnel = self._build_funnel(filters)
-        tiempo_asignacion = self.repository.get_tiempo_asignacion(filters)
-        tiempo_gestion = self.repository.get_tiempo_primera_gestion(filters, self.cutover)
+    def _build_asesores(self, filters: DashboardFilters) -> list[AsesorRow]:
+        """Merge portfolio counts with per-advisor stuck count and response times."""
+        metricas = {
+            (str(row["id_asesor"]) if row.get("id_asesor") is not None else None): row
+            for row in self.repository.get_metricas_operacionales_por_asesor(
+                filters, self.estancamiento_dias, self.cutover
+            )
+        }
+        rows: list[AsesorRow] = []
+        for row in self.repository.get_cartera_por_asesor(filters):
+            id_asesor = str(row["id_asesor"]) if row.get("id_asesor") is not None else None
+            extra = metricas.get(id_asesor, {})
+            rows.append(
+                AsesorRow(
+                    id_asesor=id_asesor,
+                    nombre=self._asesor_nombre(row.get("nombre")),
+                    cartera_total=int(row["cartera_total"]),
+                    cartera_activa=int(row["cartera_activa"]),
+                    estancados=int(extra.get("estancados") or 0),
+                    n_asignacion=int(extra.get("n_asignacion") or 0),
+                    tiempo_asignacion_dias=self._media(extra.get("tiempo_asignacion_dias")),
+                    n_primera_gestion=int(extra.get("n_primera_gestion") or 0),
+                    tiempo_primera_gestion_dias=self._media(
+                        extra.get("tiempo_primera_gestion_dias")
+                    ),
+                )
+            )
+        return rows
+
+    def get_filter_options(self) -> dict[str, Any]:
+        """Filter options for the MVP categories only (estado, asesor, AFP, origen, fuente)."""
+        return {
+            "estados": [
+                {"value": option.value, "label": option.label}
+                for option in iter_crm_state_options()
+            ],
+            "asesores": [
+                {"value": str(row["id_asesor"]), "label": str(row.get("nombre") or "")}
+                for row in self.repository.get_asesor_options()
+            ],
+            "afps": [
+                {"value": str(row["id"]), "label": str(row.get("nombre") or "")}
+                for row in self.repository.get_afp_options()
+            ],
+            "origenes": list(self.repository.get_origen_options()),
+            "fuentes": list(self.repository.get_fuente_options()),
+        }
+
+    def _build_period(self, filters: DashboardFilters, failed: list[str]) -> PeriodActivity:
+        leads_ingresados = self._section(
+            SECTION_EVOLUCION,
+            failed,
+            lambda: self.repository.get_leads_ingresados(filters),
+            0,
+        )
+        evolucion = self._section(
+            SECTION_EVOLUCION,
+            failed,
+            lambda: [
+                EvolucionPoint(bucket=self._bucket_label(row["bucket"]), n=int(row["n"]))
+                for row in self.repository.get_evolucion(filters)
+            ],
+            cast(list[EvolucionPoint], []),
+        )
+        funnel = self._section(
+            SECTION_FUNNEL,
+            failed,
+            lambda: self._build_funnel(filters),
+            Funnel(
+                scope="period_activity",
+                cutover=None,
+                cobertura_completa=False,
+                excluidos_pre_cutover=0,
+                denominador=0,
+                steps=[],
+                periodo_activo=filters.period_active,
+            ),
+        )
+        tiempos = self._section(
+            SECTION_TIEMPOS,
+            failed,
+            lambda: (
+                self._tiempo(self.repository.get_tiempo_asignacion(filters)),
+                self._tiempo(self.repository.get_tiempo_primera_gestion(filters, self.cutover)),
+            ),
+            (TiempoMetric(n=0, media_dias=None), TiempoMetric(n=0, media_dias=None)),
+        )
         return PeriodActivity(
             leads_ingresados=leads_ingresados,
             evolucion=evolucion,
             funnel=funnel,
-            tiempo_asignacion=self._tiempo(tiempo_asignacion),
-            tiempo_primera_gestion=self._tiempo(tiempo_gestion),
+            tiempo_asignacion=tiempos[0],
+            tiempo_primera_gestion=tiempos[1],
         )
 
     def _build_funnel(self, filters: DashboardFilters) -> Funnel:
@@ -198,6 +359,7 @@ class ExecutiveDashboardService:
             excluidos_pre_cutover=int(raw.get("excluidos_pre_cutover") or 0),
             denominador=int(raw.get("denominador") or 0),
             steps=steps,
+            periodo_activo=filters.period_active,
         )
 
     @staticmethod
@@ -213,11 +375,15 @@ class ExecutiveDashboardService:
         ]
 
     @staticmethod
+    def _media(value: Any) -> float | None:
+        """Round a mean to two decimals, preserving ``None`` (never a fake zero)."""
+        return round(float(value), 2) if value is not None else None
+
+    @staticmethod
     def _tiempo(raw: dict[str, Any]) -> TiempoMetric:
-        media = raw.get("media_dias")
         return TiempoMetric(
             n=int(raw.get("n") or 0),
-            media_dias=round(float(media), 2) if media is not None else None,
+            media_dias=ExecutiveDashboardService._media(raw.get("media_dias")),
         )
 
     @staticmethod

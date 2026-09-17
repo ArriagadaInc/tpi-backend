@@ -32,20 +32,20 @@ from app.models.executive_dashboard import (
     granularity_sql_field,
 )
 from app.models.lead_assignment import ASSIGNMENT_ACTIVE_STATE
+from app.repositories.lead_activity_sql import (
+    NOTE_TS_EXPR,
+    NOTE_TS_PATTERN,
+    estancado_params,
+    estancado_predicate,
+    sin_asignar_predicate,
+)
 
 _CRM_TZ = ZoneInfo("America/Santiago")
 
-# Fixed, well-formed note-header timestamp generated server-side as
-# "[dd/mm/YYYY HH:MM] <author>". Passed as a parameter; never built from input.
-_NOTE_TS_PATTERN = r"\[(\d{2}/\d{2}/\d{4} \d{2}:\d{2})\]"
-
-# Session-timezone-independent conversion of the note wall-clock (written in
-# America/Santiago) into a TIMESTAMPTZ. ``regexp_replace`` reorders dd/mm/YYYY
-# into ISO, casts to naive timestamp, then interprets it in America/Santiago.
-_NOTE_TS_EXPR = (
-    "(regexp_replace(m[1], '^(\\d{2})/(\\d{2})/(\\d{4}) (\\d{2}):(\\d{2})$', "
-    "'\\3-\\2-\\1 \\4:\\5:00'))::timestamp AT TIME ZONE 'America/Santiago'"
-)
+# Kept as module aliases so the shared definitions in ``lead_activity_sql`` remain
+# the single source of truth for "movimiento operativo" and "estancado".
+_NOTE_TS_PATTERN = NOTE_TS_PATTERN
+_NOTE_TS_EXPR = NOTE_TS_EXPR
 
 _CARTERA_INACTIVA_SQL = ", ".join(["%s"] * len(CARTERA_INACTIVA_ESTADOS))
 
@@ -175,16 +175,13 @@ class ExecutiveDashboardRepository:
                     WHERE LOWER(TRIM(l.estado_lead)) NOT IN ({cartera_inactiva})
                 ) AS cartera_activa,
                 COUNT(DISTINCT l.id_lead) FILTER (
-                    WHERE NOT EXISTS (
-                        SELECT 1 FROM tpi.asignaciones a
-                        WHERE a.id_lead = l.id_lead
-                          AND a.estado_asignacion = %s
-                    )
+                    WHERE {sin_asignar}
                 ) AS sin_asignar
             FROM tpi.leads l
             {where}
             """).format(
             cartera_inactiva=sql.SQL(_CARTERA_INACTIVA_SQL),
+            sin_asignar=sql.SQL(sin_asignar_predicate("l")),
             where=sql.SQL(where),
         )
         params = [*list(CARTERA_INACTIVA_ESTADOS), ASSIGNMENT_ACTIVE_STATE, *dimension_params]
@@ -205,36 +202,16 @@ class ExecutiveDashboardRepository:
         dimension_clauses, dimension_params = ExecutiveDashboardRepository._dimension_clauses(
             filters
         )
-        where = ExecutiveDashboardRepository._where(dimension_clauses)
         query = sql.SQL("""
-            WITH movimiento AS (
-                SELECT
-                    l.id_lead,
-                    GREATEST(
-                        l.fecha_ingreso,
-                        COALESCE((
-                            SELECT MAX(a.fecha_asignacion)
-                            FROM tpi.asignaciones a
-                            WHERE a.id_lead = l.id_lead
-                        ), l.fecha_ingreso),
-                        COALESCE((
-                            SELECT MAX(v.fecha_hora)
-                            FROM tpi.v_historial_estado_lead v
-                            WHERE v.id_lead = l.id_lead
-                        ), l.fecha_ingreso),
-                        COALESCE((
-                            SELECT MAX({note_ts_expr})
-                            FROM regexp_matches(l.comentarios, %s, 'g') AS m
-                        ), l.fecha_ingreso)
-                    ) AS ultimo_movimiento
-                FROM tpi.leads l
-                {where}
+            SELECT COUNT(DISTINCT l.id_lead) AS estancados
+            FROM tpi.leads l
+            {where_estancado}
+            """).format(
+            where_estancado=sql.SQL(
+                ExecutiveDashboardRepository._where([estancado_predicate("l"), *dimension_clauses])
             )
-            SELECT COUNT(*) AS estancados
-            FROM movimiento
-            WHERE ultimo_movimiento <= now() - make_interval(days => %s)
-            """).format(note_ts_expr=sql.SQL(_NOTE_TS_EXPR), where=sql.SQL(where))
-        params = [_NOTE_TS_PATTERN, *dimension_params, threshold_days]
+        )
+        params = [*estancado_params(threshold_days), *dimension_params]
         row = ExecutiveDashboardRepository._fetch_one(query, params) or {}
         return int(row.get("estancados") or 0)
 
@@ -275,50 +252,25 @@ class ExecutiveDashboardRepository:
         dimension_clauses, dimension_params = ExecutiveDashboardRepository._dimension_clauses(
             filters
         )
-        where = ExecutiveDashboardRepository._where(dimension_clauses)
         dias_expr = ExecutiveDashboardRepository._dias_desde_ingreso()
         bucket_expr = ExecutiveDashboardRepository._antiguedad_case()
         query = sql.SQL("""
-            WITH movimiento AS (
-                SELECT
-                    l.id_lead,
-                    ({dias_expr}) AS dias,
-                    GREATEST(
-                        l.fecha_ingreso,
-                        COALESCE((
-                            SELECT MAX(a.fecha_asignacion)
-                            FROM tpi.asignaciones a
-                            WHERE a.id_lead = l.id_lead
-                        ), l.fecha_ingreso),
-                        COALESCE((
-                            SELECT MAX(v.fecha_hora)
-                            FROM tpi.v_historial_estado_lead v
-                            WHERE v.id_lead = l.id_lead
-                        ), l.fecha_ingreso),
-                        COALESCE((
-                            SELECT MAX({note_ts_expr})
-                            FROM regexp_matches(l.comentarios, %s, 'g') AS m
-                        ), l.fecha_ingreso)
-                    ) AS ultimo_movimiento
+            SELECT {bucket_expr} AS bucket, COUNT(DISTINCT id_lead) AS n
+            FROM (
+                SELECT l.id_lead, ({dias_expr}) AS dias
                 FROM tpi.leads l
-                {where}
-            ),
-            estancados AS (
-                SELECT id_lead, dias
-                FROM movimiento
-                WHERE ultimo_movimiento <= now() - make_interval(days => %s)
-            )
-            SELECT {bucket_expr} AS bucket, COUNT(*) AS n
-            FROM estancados
+                {where_estancado}
+            ) t
             GROUP BY bucket
             ORDER BY MIN(dias)
             """).format(
-            note_ts_expr=sql.SQL(_NOTE_TS_EXPR),
-            where=sql.SQL(where),
+            where_estancado=sql.SQL(
+                ExecutiveDashboardRepository._where([estancado_predicate("l"), *dimension_clauses])
+            ),
             dias_expr=sql.SQL(dias_expr),
             bucket_expr=sql.SQL(bucket_expr),
         )
-        params = [_NOTE_TS_PATTERN, *dimension_params, threshold_days]
+        params = [*estancado_params(threshold_days), *dimension_params]
         return ExecutiveDashboardRepository._fetch_all(query, params)
 
     @staticmethod
@@ -367,6 +319,133 @@ class ExecutiveDashboardRepository:
         )
         params = [ASSIGNMENT_ACTIVE_STATE, *list(CARTERA_INACTIVA_ESTADOS), *dimension_params]
         return ExecutiveDashboardRepository._fetch_all(query, params)
+
+    @staticmethod
+    def get_metricas_operacionales_por_asesor(
+        filters: DashboardFilters,
+        threshold_days: int,
+        cutover: date | None,
+    ) -> list[dict[str, Any]]:
+        """Stuck count and response times per advisor, with the shared definitions.
+
+        Every metric reuses the same definition as its global counterpart: the
+        stale predicate comes from :mod:`app.repositories.lead_activity_sql`, time
+        to assignment is measured against the first ``tpi.asignaciones`` row, and
+        first management is the earliest of the first human note and the first
+        general state change (never the assignment), restricted to post-cutover
+        leads because pre-cutover leads have no complete state history.
+
+        All joins are one-row-per-lead, so the averages cannot fan out; counts use
+        ``COUNT(DISTINCT id_lead)`` regardless.
+        """
+        dimension_clauses, dimension_params = ExecutiveDashboardRepository._dimension_clauses(
+            filters
+        )
+        where = ExecutiveDashboardRepository._where(dimension_clauses)
+        cte = ExecutiveDashboardRepository._active_assignment_cte()
+
+        gestion_params: list[Any] = []
+        if cutover is None:
+            # No cutover configured: first management has no observable window, so
+            # the metric is reported as unavailable instead of being invented.
+            gestion_join = (
+                "LEFT JOIN LATERAL (SELECT NULL::timestamptz AS primera_gestion) pg ON TRUE"
+            )
+        else:
+            gestion_join = f"""
+                LEFT JOIN LATERAL (
+                    SELECT LEAST(
+                        (SELECT MIN({_NOTE_TS_EXPR})
+                         FROM regexp_matches(l.comentarios, %s, 'g') AS m),
+                        (SELECT MIN(v.fecha_hora)
+                         FROM tpi.v_historial_estado_lead v
+                         WHERE v.id_lead = l.id_lead)
+                    ) AS primera_gestion
+                    WHERE l.fecha_ingreso >= %s
+                ) pg ON TRUE
+            """
+            gestion_params = [
+                _NOTE_TS_PATTERN,
+                datetime.combine(cutover, time.min, tzinfo=_CRM_TZ),
+            ]
+
+        query = sql.SQL("""
+            WITH {cte}
+            SELECT
+                aa.id_asesor,
+                COUNT(DISTINCT l.id_lead) FILTER (WHERE {estancado}) AS estancados,
+                COUNT(fa.first_ts) AS n_asignacion,
+                AVG(EXTRACT(EPOCH FROM (fa.first_ts - l.fecha_ingreso)) / 86400.0)
+                    AS tiempo_asignacion_dias,
+                COUNT(pg.primera_gestion) AS n_primera_gestion,
+                AVG(EXTRACT(EPOCH FROM (pg.primera_gestion - l.fecha_ingreso)) / 86400.0)
+                    AS tiempo_primera_gestion_dias
+            FROM tpi.leads l
+            LEFT JOIN active_assignment aa ON aa.id_lead = l.id_lead
+            LEFT JOIN LATERAL (
+                SELECT MIN(a.fecha_asignacion) AS first_ts
+                FROM tpi.asignaciones a
+                WHERE a.id_lead = l.id_lead
+            ) fa ON TRUE
+            {gestion_join}
+            {where}
+            GROUP BY aa.id_asesor
+            """).format(
+            cte=sql.SQL(cte),
+            estancado=sql.SQL(estancado_predicate("l")),
+            gestion_join=sql.SQL(gestion_join),
+            where=sql.SQL(where),
+        )
+        params = [
+            ASSIGNMENT_ACTIVE_STATE,
+            *estancado_params(threshold_days),
+            *gestion_params,
+            *dimension_params,
+        ]
+        return ExecutiveDashboardRepository._fetch_all(query, params)
+
+    @staticmethod
+    def get_asesor_options() -> list[dict[str, Any]]:
+        """Advisor filter options: technical id and visible name only (no PII)."""
+        query = sql.SQL("""
+            SELECT ases.id_asesor, ases.nombre
+            FROM tpi.asesores ases
+            ORDER BY ases.nombre ASC, ases.id_asesor ASC
+            """)
+        return ExecutiveDashboardRepository._fetch_all(query, [])
+
+    @staticmethod
+    def get_afp_options() -> list[dict[str, Any]]:
+        """AFP filter options from the catalog (MVP category)."""
+        query = sql.SQL("""
+            SELECT ca.id, ca.nombre
+            FROM tpi.catalogo_afp ca
+            WHERE ca.activo = TRUE
+            ORDER BY ca.orden_visual ASC, ca.nombre ASC
+            """)
+        return ExecutiveDashboardRepository._fetch_all(query, [])
+
+    @staticmethod
+    def get_origen_options() -> list[str]:
+        """Distinct non-empty lead origins actually present in the data."""
+        query = sql.SQL("""
+            SELECT DISTINCT TRIM(l.origen_lead) AS valor
+            FROM tpi.leads l
+            WHERE NULLIF(TRIM(l.origen_lead), '') IS NOT NULL
+            ORDER BY valor ASC
+            """)
+        return [str(row["valor"]) for row in ExecutiveDashboardRepository._fetch_all(query, [])]
+
+    @staticmethod
+    def get_fuente_options() -> list[str]:
+        """Distinct non-empty current sources actually present in the data."""
+        query = sql.SQL("""
+            SELECT DISTINCT TRIM(l.fuente_actual) AS valor
+            FROM tpi.leads l
+            WHERE NULLIF(TRIM(l.fuente_actual), '') IS NOT NULL
+            ORDER BY valor ASC
+            """)
+        return [str(row["valor"]) for row in ExecutiveDashboardRepository._fetch_all(query, [])]
 
     @staticmethod
     def get_casos_por_estado_y_asesor(filters: DashboardFilters) -> list[dict[str, Any]]:

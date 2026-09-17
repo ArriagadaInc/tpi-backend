@@ -15,6 +15,7 @@ from app.auth import build_auth_provider
 from app.components.ui import format_currency_clp
 from app.config import get_settings
 from app.models.crm_states import crm_state_label, normalize_crm_state_for_display
+from app.web.dashboard_presentation import format_dias, format_int, format_percentage
 from app.web.dependencies import resolve_web_public_site_url, resolve_web_simulator_url
 from app.web.routes.auth import router as auth_router
 from app.web.routes.dashboard import router as dashboard_router
@@ -51,6 +52,9 @@ def create_web_app() -> FastAPI:
     app.state.templates.env.filters["crm_state_label"] = crm_state_label
     app.state.templates.env.filters["crm_state_canonical"] = normalize_crm_state_for_display
     app.state.templates.env.filters["format_currency_clp"] = format_currency_clp
+    app.state.templates.env.filters["format_int"] = format_int
+    app.state.templates.env.filters["format_percentage"] = format_percentage
+    app.state.templates.env.filters["format_dias"] = format_dias
     app.state.web_env_label = "Ambiente DEV"
     app.state.web_cleanup_enabled = settings.is_test_lead_cleanup_enabled
     app.state.web_simulator_url = resolve_web_simulator_url()

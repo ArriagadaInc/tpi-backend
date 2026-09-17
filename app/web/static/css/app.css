@@ -1115,3 +1115,595 @@ select:focus {
     justify-content: start;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Dashboard Ejecutivo (H3.3.4, Parte B)
+   Extends the existing token set; no existing variable or component is
+   redefined. Class names follow docs/H3_3_4_DASHBOARD_DESIGN.md section 8.
+   --------------------------------------------------------------------------- */
+
+.topbar-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.topbar-nav a {
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.topbar-nav a:hover {
+  color: var(--text);
+}
+
+.topbar-nav a[aria-current="page"] {
+  color: var(--text);
+  background: var(--surface-muted);
+}
+
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scope-note {
+  margin: 0 0 18px;
+  max-width: 900px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.section-level {
+  margin: 30px 0 14px;
+}
+
+.section-level h2 {
+  margin: 0 0 2px;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+}
+
+.section-level p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.panel {
+  padding: 20px;
+}
+
+.panel h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.panel .panel-sub {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+/* Grid and flex children default to min-width:auto, which would let a wide
+   table or chart push the whole page sideways. Allowing them to shrink keeps
+   the horizontal scroll inside .table-wrap / .timeseries-wrap, never on <body>. */
+.grid-2 > *,
+.panel,
+.timeseries-wrap,
+.table-wrap {
+  min-width: 0;
+}
+
+.grid-gap-top {
+  margin-top: 18px;
+}
+
+/* The dashboard has eight equally important filters, so they share one fluid
+   track instead of the leads board's search-first layout. */
+.filters-grid--dashboard {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.filters-grid--dashboard .filters-actions {
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  justify-content: start;
+}
+
+.quick-ranges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 0.82rem;
+}
+
+.quick-ranges-label {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.quick-range {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-weight: 700;
+  color: var(--text);
+  background: #fff;
+}
+
+.quick-range.is-active {
+  background: var(--accent-soft);
+  border-color: rgba(13, 148, 136, 0.35);
+  color: #0f4c47;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+
+.kpi-grid--pair {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid rgba(217, 226, 234, 0.9);
+  border-radius: 18px;
+  padding: 18px 20px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.kpi-card dt {
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.kpi-card dd {
+  margin: 0;
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.kpi-card .kpi-secondary {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.kpi-card .kpi-period {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.alert-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.alert-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 280px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+
+.alert-chip .chip-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.alert-chip .chip-text {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.alert-chip .chip-link {
+  margin-left: auto;
+  padding: 8px 4px;
+  font-weight: 800;
+  color: #0f4c47;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+.alert-chip--warning {
+  background: rgba(217, 119, 6, 0.08);
+  border-color: rgba(217, 119, 6, 0.28);
+}
+
+.alert-chip--danger {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.24);
+}
+
+.notice-warning {
+  background: rgba(217, 119, 6, 0.1);
+  border: 1px solid rgba(217, 119, 6, 0.3);
+  color: #7c2d12;
+}
+
+.coverage-banner {
+  color: #0f4c47;
+}
+
+.funnel-unavailable {
+  margin: 0;
+}
+
+.chart-summary {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.bar-list {
+  display: grid;
+  gap: 10px;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 170px) 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.bar-row .bar-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+a.bar-label {
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 3px;
+}
+
+a.bar-label:hover {
+  text-decoration-color: var(--accent);
+}
+
+.bar-track {
+  display: block;
+  position: relative;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.bar-fill {
+  display: block;
+  height: 100%;
+  width: var(--bar-fill, 0%);
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.bar-value {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--slate);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.categoria-title {
+  margin: 18px 0 8px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.categoria-title:first-of-type {
+  margin-top: 0;
+}
+
+.categoria-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.age-ladder {
+  display: grid;
+  gap: 10px;
+}
+
+.age-step {
+  display: grid;
+  grid-template-columns: minmax(96px, 130px) 1fr auto;
+  gap: 14px;
+  align-items: center;
+  background: var(--surface-muted);
+  border-left: 6px solid var(--accent);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.age-step .age-range {
+  font-size: 0.86rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.age-step .age-fill-track {
+  display: block;
+  height: 12px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.age-step .age-fill {
+  display: block;
+  height: 100%;
+  width: var(--bar-fill, 0%);
+  background: var(--slate);
+  border-radius: 999px;
+}
+
+.age-step .age-value {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--slate);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.age-step .age-flag {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--slate);
+}
+
+.age-step--l1 {
+  border-left-color: #0d9488;
+}
+
+.age-step--l2 {
+  border-left-color: #0e7490;
+}
+
+.age-step--l3 {
+  border-left-color: #d97706;
+}
+
+.age-step--l4 {
+  border-left-color: #c2410c;
+}
+
+.age-step--l5 {
+  border-left-color: #dc2626;
+}
+
+.age-step--l5 .age-flag {
+  color: #b91c1c;
+}
+
+.timeseries-wrap {
+  overflow-x: auto;
+}
+
+.timeseries-svg {
+  display: block;
+  width: 100%;
+  /* Below this the axis labels stop being legible; the wrapper scrolls instead
+     of shrinking the chart further. */
+  min-width: 420px;
+  height: auto;
+}
+
+.timeseries-axis-line {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.timeseries-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.timeseries-dot {
+  fill: var(--accent);
+}
+
+.timeseries-axis {
+  font-size: 0.7rem;
+  fill: var(--slate);
+}
+
+.chart-table {
+  margin-top: 12px;
+}
+
+.chart-table > summary {
+  cursor: pointer;
+  padding: 6px 2px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f4c47;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 0.84rem;
+}
+
+.data-table caption {
+  margin-bottom: 6px;
+  text-align: left;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+
+.data-table td.num,
+.board-table td.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.asesor-table {
+  min-width: 760px;
+}
+
+.asesor-table th[scope="row"] {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.table-foot-note {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.empty-state h4 {
+  margin: 0;
+  color: var(--text);
+}
+
+.topbar-nav a:focus-visible,
+.quick-range:focus-visible,
+.alert-chip .chip-link:focus-visible,
+.chart-table > summary:focus-visible,
+.link-button:focus-visible,
+.primary:focus-visible,
+.secondary:focus-visible,
+input:focus-visible,
+select:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1100px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Two analysis panels stay side by side down to a small notebook; below that the
+   time series would be narrower than its own minimum readable width. */
+@media (max-width: 900px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 800px) {
+  .topbar {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+
+  .brand-wrap {
+    flex-wrap: wrap;
+  }
+
+  .topbar-nav {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .bar-row {
+    grid-template-columns: 1fr auto;
+  }
+
+  .bar-row .bar-track {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+
+  .age-step {
+    grid-template-columns: 1fr;
+  }
+
+  .age-step .age-value {
+    text-align: left;
+  }
+
+  .alert-chip {
+    flex-wrap: wrap;
+  }
+
+  .alert-chip .chip-link {
+    margin-left: 0;
+  }
+}
+
+/* Below this width two KPI columns stop being readable, so they stack. */
+@media (max-width: 640px) {
+  .kpi-grid,
+  .kpi-grid--pair {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
