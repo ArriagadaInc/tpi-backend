@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="card" aria-labelledby="executive-dashboard-title">
+    <h1 id="executive-dashboard-title">Dashboard Ejecutivo</h1>
+    <p class="notice-soft">
+      Implementacion visual pendiente. Esta ruta ya aplica el control de acceso
+      server-side (solo CEO/CTO) y expone el contrato de datos agregado en el
+      contexto del template. El diseno definitivo se implementa en la siguiente
+      sesion visual (ver <code>docs/H3_3_4_DASHBOARD_DESIGN.md</code>).
+    </p>
+    <p>Ambitos del contrato: <code>{{ dashboard.current_snapshot.scope }}</code> y
+      <code>{{ dashboard.period_activity.scope }}</code>.</p>
+  </section>
+{% endblock %}

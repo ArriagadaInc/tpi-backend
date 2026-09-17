@@ -17,6 +17,7 @@ from app.config import get_settings
 from app.models.crm_states import crm_state_label, normalize_crm_state_for_display
 from app.web.dependencies import resolve_web_public_site_url, resolve_web_simulator_url
 from app.web.routes.auth import router as auth_router
+from app.web.routes.dashboard import router as dashboard_router
 from app.web.routes.leads import router as leads_router
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -41,6 +42,7 @@ def create_web_app() -> FastAPI:
     )
     app.state.settings = settings
     app.state.web_service = None
+    app.state.executive_dashboard_service = None
     try:
         app.state.auth_provider = build_auth_provider(settings)
     except Exception:
@@ -56,6 +58,7 @@ def create_web_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
     app.include_router(auth_router)
     app.include_router(leads_router)
+    app.include_router(dashboard_router)
 
     @app.get("/")
     def root() -> RedirectResponse:
