@@ -273,3 +273,69 @@ PY
   `submit_for_review`, porque el schema `developer` exige `pr_number ≥ 1` y esta sesión
   tiene prohibido abrir PR.
 - **DB-PATH-MECHANISM**: deuda no bloqueante, no se resuelve en esta tarea (REQ-S-10).
+
+---
+
+## 10. Diseño de Parte B (sesión de diseño y prototipado)
+
+> Sesión posterior, exclusiva de diseño (skill `anthropic-skills:frontend-design`),
+> sin código productivo. No cambia el estado "pendiente de implementación" de la
+> Parte B registrado en §0 y §9; solo documenta el diseño aprobado como insumo
+> para la implementación futura.
+
+- **Diseño**: `docs/H3_3_4_DASHBOARD_DESIGN.md` (propuestas A/B/C, arquitectura
+  visual de 12 elementos, decisión técnica de gráficos, tokens/accesibilidad/
+  responsive, revisión visual).
+- **Prototipo**: `docs/prototypes/H3_3_4_dashboard_prototype.html` (HTML
+  autocontenido, datos sintéticos, sin red, sin CDN, sin autenticación, con
+  controles de demostración para los estados normal/cero datos/error
+  parcial/cobertura histórica limitada). No está conectado a ninguna ruta de
+  la aplicación.
+- **Alternativa recomendada**: C — híbrida (resumen ejecutivo arriba, análisis
+  progresivo al centro, detalle operacional abajo), justificada en
+  `docs/H3_3_4_DASHBOARD_DESIGN.md` §4.
+- **Decisión técnica de gráficos**: HTML/CSS + SVG server-rendered (sin
+  librería JS, sin CDN); ver `docs/H3_3_4_DASHBOARD_DESIGN.md` §7.
+
+### Mapeo secciones de diseño ↔ REQ-B ↔ AC
+
+| Sección del diseño (Fase 2) | REQ-B relacionados | AC |
+| --- | --- | --- |
+| 1. Encabezado y navegación | REQ-B-01, REQ-B-02, REQ-B-03, REQ-B-04 | AC-10 |
+| 2. Barra de filtros | REQ-B-10 | AC-11, AC-18 |
+| 3. Primera fila de KPIs | REQ-B-05, REQ-B-06, REQ-B-07, REQ-B-08, REQ-B-20 | AC-11 |
+| 4. Alertas operacionales | REQ-B-08, REQ-B-15 | AC-11, AC-13 |
+| 5. Distribución por estado | REQ-B-07, REQ-B-11, REQ-B-22 | AC-11, AC-16 |
+| 6. Evolución temporal | REQ-B-09, REQ-B-21 | AC-11 |
+| 7. Antigüedad | REQ-B-15, REQ-B-16 | AC-13 |
+| 8. Distribución por categorías | REQ-B-11, REQ-B-22 | AC-16 |
+| 9. Funnel | REQ-B-19 | AC-15 |
+| 10. Resumen por asesor | REQ-B-12, REQ-B-13, REQ-B-14, REQ-B-17, REQ-B-18, REQ-B-28 | AC-12, AC-14 |
+| 11. Aviso de cobertura | REQ-B-19 | AC-15 |
+| 12. Estados vacíos y de error | REQ-B-23 | AC-17 |
+| Sistema visual, tokens, accesibilidad, responsive (§8-§10 del diseño) | REQ-B-24, REQ-B-25, REQ-B-26, REQ-B-27 | AC-17 |
+
+### Decisiones visuales registradas
+
+- Reutilización íntegra de los tokens de `app/web/static/css/app.css`
+  (colores, radios, sombra, tipografía) y de los componentes existentes
+  (`.card`, `.filters-grid`, `.table-wrap`/`.board-table`, `.empty-state`,
+  `.notice-soft`/`.alert-error`); ninguno se reemplaza.
+- Clases nuevas especificadas (no creadas en `app.css` en esta sesión):
+  `.kpi-grid`/`.kpi-card`, `.alert-chip`, `.bar-list`/`.bar-row`/`.bar-track`/
+  `.bar-fill`, `.age-ladder`/`.age-step` (elemento distintivo: antigüedad como
+  "escalera" con intensidad de borde creciente, siempre acompañada de texto),
+  `.timeseries*`, `.funnel-list`/`.funnel-row`, `.coverage-banner`.
+- Género y estado civil no aparecen en ninguna sección del diseño ni del
+  prototipo, ni como dimensión activa ni como trabajo futuro.
+- Nombre del asesor visible en el diseño; RUT, teléfono y correo del asesor
+  nunca aparecen en ninguna sección.
+
+### Componentes futuros de implementación (fuera de alcance de esta sesión)
+
+Ver `docs/H3_3_4_DASHBOARD_DESIGN.md` §13 para el detalle completo:
+router `app/web/routes/dashboard.py` con control de acceso server-side,
+capa de agregación en `SolicitudService`/`SolicitudRepository`, plantilla
+`executive_dashboard.html` + parciales, extensión de `app.css` con las
+clases especificadas en §8 del diseño, suite de pruebas por REQ-B y smoke
+humano en AWS DEV (AC-18).
