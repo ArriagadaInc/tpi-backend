@@ -17,7 +17,11 @@ from app.models.lead_assignment import (
     LeadAssignmentValidationError,
 )
 from app.web.dependencies import build_service_for_web
-from app.web.presentation import build_timeline_items, parse_lead_comments
+from app.web.presentation import (
+    build_timeline_items,
+    parse_lead_comments,
+    state_history_cutover_notice,
+)
 
 router = APIRouter()
 _WRITE_ROLES = {"tester", "advisor", "operations", "admin"}
@@ -278,7 +282,11 @@ def _resolve_detail_context(
     timeline_items: list[dict[str, Any]] = []
     if selected_lead is not None:
         events = service.get_lead_assignment_events(lead_id)
-        timeline_items = build_timeline_items(events, parsed_comments.notes)
+        state_changes = service.get_lead_state_change_events(lead_id)
+        timeline_items = build_timeline_items(events, parsed_comments.notes, state_changes)
+
+    app_settings = getattr(request.app.state, "settings", None)
+    cutover = getattr(app_settings, "lead_state_history_cutover", None)
     context = {
         "request": request,
         "selected_user": user,
@@ -301,6 +309,7 @@ def _resolve_detail_context(
         ),
         "comment_view": parsed_comments,
         "timeline_items": timeline_items,
+        "state_history_cutover_notice": state_history_cutover_notice(cutover),
         "csrf_token": _get_csrf_token(request),
         "return_to_url": _sanitize_return_to(request.query_params.get("return_to"))
         or _build_return_to_url(request),
@@ -478,7 +487,7 @@ async def lead_status_update(request: Request, lead_id: str):
     if not _require_web_user(request):
         return RedirectResponse(url="/login", status_code=307)
     user = _require_web_user(request)
-    if not _can_write(user):
+    if not user or not _can_write(user):
         context, _ = _resolve_detail_context(
             request,
             lead_id,
@@ -524,7 +533,7 @@ async def lead_status_update(request: Request, lead_id: str):
 
     service = _resolve_service(request)
     try:
-        updated = service.update_lead_status(lead_id, estado_lead)
+        updated = service.update_lead_status(lead_id, estado_lead, actor=user)
     except ValueError:
         context, _ = _resolve_detail_context(
             request,

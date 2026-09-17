@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 _CRM_TZ = ZoneInfo("America/Santiago")
@@ -67,14 +67,23 @@ def _parse_follow_up_block(block: str) -> FollowUpNote | None:
     return FollowUpNote(timestamp=match.group(1), author=match.group(2).strip(), text=body)
 
 
-def build_timeline_items(events: list[dict], notes: list[FollowUpNote]) -> list[dict]:
-    """Merge assignment events and human notes into one chronological timeline.
+def build_timeline_items(
+    events: list[dict],
+    notes: list[FollowUpNote],
+    state_changes: list[dict] | None = None,
+) -> list[dict]:
+    """Merge assignment events, state-change events and human notes into one timeline.
 
-    Assignment events carry full-precision ``fecha_hora`` (TIMESTAMPTZ); human notes
-    carry minute-precision ``dd/mm/YYYY HH:MM`` strings generated in America/Santiago.
-    Both are normalized to aware datetimes in America/Santiago for a stable descending
-    sort. Events are appended before notes, so an exact timestamp tie keeps events
-    first (deterministic order given the repository's own stable event ordering).
+    Assignment events (migration 007) and state-change events (migration 008) carry
+    full-precision ``fecha_hora`` (TIMESTAMPTZ); human notes carry minute-precision
+    ``dd/mm/YYYY HH:MM`` strings generated in America/Santiago. All are normalized to
+    aware datetimes in America/Santiago for a stable descending sort.
+
+    The sort is deterministic: primary key is the timestamp (descending) and, on an
+    exact tie, a fixed source rank keeps assignment events before state-change events
+    before notes (``event`` < ``state_change`` < ``note``). Python's stable sort then
+    preserves the repository's own deterministic ordering (``fecha_hora DESC,
+    id_auditoria DESC``) for ties within a single source.
     """
     items: list[dict] = []
 
@@ -94,6 +103,21 @@ def build_timeline_items(events: list[dict], notes: list[FollowUpNote]) -> list[
             }
         )
 
+    for change in state_changes or []:
+        timestamp = _to_santiago(change.get("fecha_hora"))
+        if timestamp is None:
+            continue
+        items.append(
+            {
+                "kind": "state_change",
+                "timestamp": timestamp,
+                "display_time": timestamp.strftime("%d/%m/%Y %H:%M"),
+                "actor": change.get("actor_subject"),
+                "estado_anterior": change.get("estado_anterior"),
+                "estado_nuevo": change.get("estado_nuevo"),
+            }
+        )
+
     for note in notes:
         items.append(
             {
@@ -105,8 +129,16 @@ def build_timeline_items(events: list[dict], notes: list[FollowUpNote]) -> list[
             }
         )
 
-    items.sort(key=lambda item: item["timestamp"], reverse=True)
+    items.sort(key=_timeline_sort_key, reverse=True)
     return items
+
+
+_SOURCE_RANK: dict[str, int] = {"event": 0, "state_change": 1, "note": 2}
+
+
+def _timeline_sort_key(item: dict) -> tuple[datetime, int]:
+    """Stable, deterministic sort key: timestamp desc, then fixed source rank asc."""
+    return (item["timestamp"], -_SOURCE_RANK[item["kind"]])
 
 
 def _to_santiago(value: object) -> datetime | None:
@@ -124,3 +156,23 @@ def _parse_note_timestamp(value: str) -> datetime:
         return datetime.strptime(value, "%d/%m/%Y %H:%M").replace(tzinfo=_CRM_TZ)
     except ValueError:
         return datetime.min.replace(tzinfo=_CRM_TZ)
+
+
+def state_history_cutover_notice(cutover: date | None) -> str:
+    """Build the honest coverage notice for general state-change history.
+
+    The cutover date is never invented during development: it comes from a
+    reproducible configuration source (``LEAD_STATE_HISTORY_CUTOVER``). When it is
+    not configured, the notice states the coverage boundary without a fake date.
+    """
+    if cutover is None:
+        return (
+            "El historial de cambios generales de estado se muestra desde la "
+            "puesta en produccion de la migracion 008. Las asignaciones "
+            "anteriores se conservan."
+        )
+    return (
+        f"El historial de cambios generales de estado se muestra desde el "
+        f"{cutover.strftime('%d/%m/%Y')} (corte de la migracion 008). Las "
+        "asignaciones anteriores se conservan."
+    )
