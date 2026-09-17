@@ -316,9 +316,21 @@ class SolicitudService:
             state for state in self.repository.get_crm_estado_lead_options() if state != "asignado"
         ]
 
-    def update_lead_status(self, id_lead: UUID | str, estado_lead: str) -> bool:
-        """Update a lead status after validating role and allowed values."""
+    def update_lead_status(
+        self,
+        id_lead: UUID | str,
+        estado_lead: str,
+        *,
+        actor: AuthenticatedUser,
+    ) -> bool:
+        """Update a lead status after validating role and allowed values.
+
+        The actor is the authenticated subject (never a client-supplied value); it is
+        propagated to the repository so the audit event records the real identity.
+        """
         self._ensure_web_write_allowed()
+        if not isinstance(actor, AuthenticatedUser):
+            raise TypeError("actor must be an AuthenticatedUser")
         lead_id = self._normalize_uuid(id_lead, "lead")
         normalized_estado = normalize_crm_state_for_write(estado_lead)
         if normalized_estado not in CRM_STATE_CONTRACT:
@@ -327,9 +339,7 @@ class SolicitudService:
             raise ValueError(
                 "El estado asignado solo puede establecerse mediante una asignacion valida"
             )
-        if not self.get_solicitud_detalle(lead_id):
-            return False
-        return self.repository.update_lead_status(lead_id, normalized_estado)
+        return self.repository.update_lead_status(lead_id, normalized_estado, actor=actor)
 
     def assign_lead(
         self,
@@ -357,6 +367,15 @@ class SolicitudService:
         """
         lead_id = self._normalize_uuid(id_lead, "lead")
         return self.repository.get_lead_assignment_events(lead_id)
+
+    def get_lead_state_change_events(self, id_lead: UUID | str) -> list[dict[str, Any]]:
+        """Return sanitized general state-change traceability events for one lead.
+
+        The repository reads only the migration-008 view; the application never reads
+        tpi.auditoria directly.
+        """
+        lead_id = self._normalize_uuid(id_lead, "lead")
+        return self.repository.get_lead_state_change_events(lead_id)
 
     def get_asesores_disponibles_para_asignacion(self) -> list[dict[str, Any]]:
         return self.repository.get_asesores_disponibles_para_asignacion()
