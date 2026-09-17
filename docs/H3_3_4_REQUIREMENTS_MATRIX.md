@@ -20,19 +20,20 @@
 | Bloque | Requirement IDs | AC cubiertos | Estado |
 | --- | --- | --- | --- |
 | Parte A — Historial integral | `REQ-A-01`..`REQ-A-24` (24) | AC-1, AC-2, AC-3, AC-4, AC-9 | **implementada** (Parte A) |
-| Parte B — Dashboard Ejecutivo | `REQ-B-01`..`REQ-B-30` (30) | AC-10..AC-18 | pendiente de implementación dentro de H3.3.4 |
-| Seguridad, migración y operación | `REQ-S-01`..`REQ-S-13` (13) | AC-2, AC-4..AC-10, AC-17, AC-18 | parcial (Parte A implementada; Parte B y Human Gates pendientes) |
-| Casos de prueba mínimos | TC-1..TC-21 (21) | AC-1, AC-3, AC-4, AC-9..AC-18 | TC-1..TC-7 implementados (Parte A); TC-8..TC-21 pendientes (Parte B) |
-| **Total** | **67 requirement IDs** | **AC-1..AC-18 (18/18)** | **Parte A implementada; Parte B pendiente; cero diferido a otra tarea** |
+| Parte B — Dashboard Ejecutivo | `REQ-B-01`..`REQ-B-30` (30) | AC-10..AC-18 | **capa de datos implementada**; interfaz productiva pendiente dentro de H3.3.4 |
+| Seguridad, migración y operación | `REQ-S-01`..`REQ-S-13` (13) | AC-2, AC-4..AC-10, AC-17, AC-18 | parcial (Parte A + capa de datos de Parte B implementadas; Human Gates pendientes) |
+| Casos de prueba mínimos | TC-1..TC-21 (21) | AC-1, AC-3, AC-4, AC-9..AC-18 | TC-1..TC-7 y TC-8..TC-20 implementados (capa de datos Parte B); TC-21 (smoke humano) pendiente |
+| **Total** | **67 requirement IDs** | **AC-1..AC-18 (18/18)** | **Parte A + capa de datos de Parte B implementadas; interfaz productiva pendiente; cero diferido a otra tarea** |
 
-> **Estado de implementación (Parte A)**: la Parte A está implementada y cubierta por
-> pruebas automatizadas reales (`tests/unit/test_h3_3_4_timeline_presentation.py`,
+> **Estado de implementación**: la Parte A está implementada y cubierta por pruebas
+> automatizadas reales (`tests/unit/test_h3_3_4_timeline_presentation.py`,
 > `tests/unit/test_h3_3_4_migration_scripts.py`,
 > `tests/integration/test_lead_state_history.py`,
 > `tests/integration/test_audit_state_view.py`, y regresión en
 > `tests/unit/test_web_app.py` / `tests/unit/test_solicitud_assignment_service.py`).
-> La Parte B (Dashboard Ejecutivo) permanece **pendiente dentro de H3.3.4**; ninguna
-> porción ha sido diferida a una tarea posterior.
+> La **capa de datos, métricas y seguridad server-side de la Parte B** está implementada
+> (ver §11). La **interfaz productiva** (template visual definitivo y CSS) continúa
+> **pendiente dentro de H3.3.4**; ninguna porción ha sido diferida a una tarea posterior.
 
 ---
 
@@ -339,3 +340,140 @@ capa de agregación en `SolicitudService`/`SolicitudRepository`, plantilla
 `executive_dashboard.html` + parciales, extensión de `app.css` con las
 clases especificadas en §8 del diseño, suite de pruebas por REQ-B y smoke
 humano en AWS DEV (AC-18).
+
+---
+
+## 11. Parte B (capa de datos) — implementación real
+
+> Sesión Developer (Parte B). Se implementa **exclusivamente** la capa de datos,
+> métricas y seguridad server-side. La interfaz productiva (template visual
+> definitivo y CSS) continúa pendiente dentro de H3.3.4. Sin PR, sin
+> `submit_for_review`, sin AWS/RDS, sin aplicar migración en DEV.
+
+### 11.1 Contrato temporal `current_snapshot` vs `period_activity`
+
+El contrato de respuesta (`app/models/executive_dashboard.py::ExecutiveDashboard`)
+identifica explícitamente el `scope` de cada métrica:
+
+- **`current_snapshot`** (estado vigente al momento de la consulta): total histórico
+  de leads, cartera activa, sin asignar, estancados, casos por estado, antigüedad,
+  estancados por antigüedad, cartera por asesor, casos por estado y asesor, y
+  distribución actual por AFP/origen/fuente. Los filtros de dimensión aplican; el
+  rango temporal **no** restringe estas métricas (no se convierten en cohorte de
+  ingresos).
+- **`period_activity`** (usa `fecha_ingreso` dentro del rango): leads ingresados,
+  evolución diaria/semanal/mensual, funnel observable, y métricas temporales
+  (`tiempo_asignacion` y `tiempo_primera_gestion`, duraciones sobre la población
+  definida por los filtros de dimensión; no cohortes por rango de fechas).
+
+No se presenta ningún snapshot histórico "al cierre de una fecha pasada": no existe
+historia completa para reconstruirlo y el contrato no lo fabrica.
+
+### 11.2 Archivos
+
+| Componente | Archivo |
+| --- | --- |
+| Contratos tipados + filtros validados | `app/models/executive_dashboard.py` |
+| Repositorio agregado | `app/repositories/executive_dashboard_repository.py` |
+| Servicio (orquestación + scope) | `app/services/executive_dashboard_service.py` |
+| Autorización server-side + ruta mínima | `app/web/routes/dashboard.py` |
+| Registro del router | `app/web/main.py` |
+| Placeholder mínimo (no visual definitivo) | `app/web/templates/executive_dashboard.html` |
+
+### 11.3 Consultas y métricas
+
+Repositorio `ExecutiveDashboardRepository` (todos los conteos usan
+`COUNT(DISTINCT id_lead)` cuando existe fan-out; todas las consultas
+parametrizadas con `%s`; los fragmentos interpolados son constantes
+whitelisted envueltas en `psycopg.sql.SQL`):
+
+- `get_kpi_snapshot` — total, cartera activa (`estado_lead NOT IN (cerrado, perdido,
+  no_califica, duplicado)`), sin asignar (sin asignación activa).
+- `get_estancados` / `get_estancados_por_antiguedad` — último movimiento =
+  `GREATEST(fecha_ingreso, MAX(asignación), MAX(cambio de estado), MAX(nota humana))`;
+  estancado si `ultimo_movimiento <= now() - make_interval(days => umbral)` (default 5).
+  `updated_at` nunca se usa; piso reproducible `fecha_ingreso` si no hay movimiento.
+- `get_casos_por_estado` — `GROUP BY estado_lead` (estados desconocidos conservados).
+- `get_antiguedad` — buckets 0-2/3-7/8-15/16-30/+30 días corridos (calendario) sobre
+  la cartera activa, en `America/Santiago`.
+- `get_cartera_por_asesor` / `get_casos_por_estado_y_asesor` — asignación activa
+  (`DISTINCT ON`); leads sin asesor en bucket propio; solo `id_asesor` + `nombre`.
+- `get_distribucion_afp/origen/fuente` — categorías MVP; valores desconocidos
+  etiquetados de forma segura (`Sin AFP`/`Sin origen`/`Sin fuente`).
+- `get_leads_ingresados` / `get_evolucion` — `fecha_ingreso` inclusivo en el rango;
+  granularidad whitelist `diaria`/`semanal`/`mensual` (`date_trunc` en Santiago).
+- `get_funnel` — solo transiciones observables de `v_historial_estado_lead` (008) para
+  leads post-cutover; pre-cutover excluidos de tasas; cada paso lleva `n`/`base`/`rate`.
+- `get_tiempo_asignacion` — media de días `fecha_ingreso → primera asignación`
+  (operacional `tpi.asignaciones`).
+- `get_tiempo_primera_gestion` — media de días `fecha_ingreso → primera nota humana o
+  primer cambio general de estado` (excluye asignación); post-cutover; `NULL/N-D` si no
+  existe.
+
+La aplicación **nunca** consulta `tpi.auditoria` directamente: el historial de estados
+se lee de `tpi.v_historial_estado_lead` (008) y el movimiento de asignación de la tabla
+operacional `tpi.asignaciones` (mismo patrón de mínimo privilegio que la Parte A).
+
+### 11.4 RBAC, PII y filtros
+
+- **RBAC**: `require_executive_access` (ruta) y `ExecutiveDashboardService.can_access`
+  solo admiten `ceo`/`cto` (`is_superuser`). Cualquier otro rol autenticado y el
+  anónimo reciben **403 real** antes de ejecutar cualquier consulta (la consulta no se
+  ejecuta tras el rechazo; cubierto por test con servicio espía).
+- **PII de leads**: cero PII en el contrato (métricas agregadas únicamente).
+- **PII de asesor**: solo `id_asesor` (identificador técnico) + `nombre` visible +
+  métricas agregadas; nunca RUT/correo/teléfono del asesor.
+- **Filtros** (`DashboardFilters.from_raw`): whitelist de granularidad, fechas ISO
+  inclusivas con rechazo de rango inválido (`desde > hasta` → `ValueError`), UUID
+  validados para asesor/AFP, texto normalizado para origen/fuente, valores desconocidos
+  sin romper la consulta.
+
+### 11.5 Enlaces "ver detalle" (contrato, no URLs decorativas)
+
+El contrato `AlertTarget` expone `sin_asignar` y `estancados` con `filters`:
+`{"sin_asignar": true}` y `{"estancado": true}`. El listado actual (`/leads`,
+`app/web/routes/leads.py`) **no** soporta aún estos parámetros. Extensión exacta
+necesaria para la sesión visual: (1) en `leads.py::_resolve_board_data` leer
+`sin_asignar`/`estancado` de `query_params`; (2) en `SolicitudRepository`
+`_build_crm_query_filters` aceptar `sin_asignar` (`NOT EXISTS` asignación activa) y
+`estancado` (mismo cálculo de último movimiento que el dashboard); (3) propagar ambos
+parámetros a la URL de la bandeja. No se agregan rutas ni enlaces inexistentes.
+
+### 11.6 EXPLAIN y rendimiento
+
+- `tests/integration/test_executive_dashboard_repository.py::test_explain_state_history_uses_support_index`
+  ejecuta `EXPLAIN (FORMAT JSON)` sobre la agregación de `v_historial_estado_lead` y
+  verifica que el índice de apoyo `auditoria_state_history_idx` (008) es aplicable
+  (`SET LOCAL enable_seqscan = off` para forzar el camino de índice; con una tabla
+  pequeña el planificador prefiere correctamente el seq scan).
+- `test_performance_representative_volume` siembra 1.500 leads y verifica que
+  `get_kpi_snapshot` + `get_estancados` completan < 5 s con conteos correctos.
+- **No se agregó ningún índice nuevo**: el índice 008 ya cubre la agregación de estado;
+  no hay evidencia que justifique uno adicional.
+
+### 11.7 Pruebas
+
+- Unitarias: `tests/unit/test_executive_dashboard_filters.py` (filtros),
+  `tests/unit/test_executive_dashboard_service.py` (contrato/PII/porcentajes/MVP),
+  `tests/unit/test_executive_dashboard_access.py` (RBAC 403/200, sin consulta tras
+  rechazo).
+- Integración: `tests/integration/test_executive_dashboard_repository.py` (cero datos,
+  un lead, sin asesor, asignaciones históricas/inactivas, estados desconocidos, filtros
+  individuales/combinados, límites de fechas, America/Santiago, granularidad, fan-out,
+  cartera activa, estancamiento, antigüedad, tiempo asignación/primera gestión, funnel
+  pre/post-cutover, EXPLAIN y volumen).
+- Suite completa: **601 passed, 3 failed** (los 3 `test_frozen_candidate_verification`
+  pre-existentes con WSL `E_ACCESSDENIED`, causa ya demostrada; no modificados ni
+  marcados skip/xfail). Cobertura **87%** (≥85).
+
+### 11.8 Pendientes exactos para la interfaz (sesión visual)
+
+1. Template productivo `executive_dashboard.html` + parciales por sección según
+   `docs/H3_3_4_DASHBOARD_DESIGN.md` §5 (alternativa C) y clases de §8.
+2. Extensión de `app/web/static/css/app.css` con las clases nuevas especificadas en
+   `docs/H3_3_4_DASHBOARD_DESIGN.md` §8 (`.kpi-grid`, `.bar-list`, `.age-ladder`,
+   `.timeseries*`, `.funnel-list`, `.coverage-banner`, `.alert-chip`), sin modificar
+   las existentes.
+3. Entrada de navegación "Dashboard Ejecutivo" en `base.html` (visible solo ceo/cto).
+4. Soporte de filtros `sin_asignar`/`estancado` en el listado `/leads` (ver §11.5).
+5. Smoke humano en AWS DEV (AC-18), incluido el 403 real para roles no autorizados.
