@@ -588,6 +588,26 @@ Ausencia de N+1 verificada de forma explícita: el número de sentencias es **id
 (`test_full_dashboard_query_count_is_bounded_and_free_of_n_plus_1`). No se agregó ningún
 índice nuevo: la latencia observada no lo justifica. `enable_seqscan` no se usa en runtime.
 
+### 12.7.1 Consistencia transaccional del render (snapshot read-only)
+
+El dashboard se construye con ~18 consultas agregadas independientes. Para que un único
+render no mezcle instantáneas distintas ante escrituras concurrentes (por ejemplo, que el
+KPI total y la alerta de estancados discrepen entre sí), `build_executive_dashboard`
+envuelve la construcción completa en `dashboard_read_snapshot`:
+
+- **`REPEATABLE READ`**: toda consulta del render observa la base de datos tal como estaba
+  en la primera sentencia de la transacción.
+- **`READ ONLY`**: no se toma ningún bloqueo de escritura ni se puede emitir escritura.
+- **savepoint por consulta**: cada agregado corre dentro de un `SAVEPOINT`, de modo que el
+  fallo de una consulta no aborta la transacción compartida y se conserva el aislamiento
+  por sección del servicio (la sección fallida se marca y el resto sigue renderizando).
+
+Demostrado por `test_full_dashboard_reads_under_a_single_consistent_snapshot` (todo el
+render usa exactamente una conexión del pool) y `test_dashboard_snapshot_does_not_see_concurrent_writes`
+(una escritura confirmada a mitad del render no altera los conteos de la instantánea). La
+instantánea se libera con `ROLLBACK` al salir y los defaults de sesión de la conexión se
+restauran antes de devolverla al pool.
+
 ### 12.8 Pruebas
 
 | Archivo | Cobertura |
@@ -595,7 +615,8 @@ Ausencia de N+1 verificada de forma explícita: el número de sentencias es **id
 | `tests/unit/test_executive_dashboard_presentation.py` (35) | formatos chilenos, anchos de barra seguros, escalera de antigüedad, series con 0/1/n puntos, disponibilidad del funnel y sus cuatro razones, alertas |
 | `tests/unit/test_executive_dashboard_render.py` (38) | navegación CEO/CTO/otros roles, 403 sin estructura ni datos, render normal, KPIs, alertas con enlaces reales, ámbitos visibles, gráficos sin JS/CDN, porcentajes con `n`/base, estados desconocidos escapados, categorías MVP (sin género ni estado civil), funnel disponible/no disponible, tabla de asesores sin PII, cero datos, error parcial, error global seguro, filtros conservados, rango inválido, Aplicar/Limpiar |
 | `tests/unit/test_leads_operational_filters.py` (15) | query params del listado, filtros preservados y limpiables, predicados compartidos, umbral configurable, RBAC y enmascaramiento intactos |
-| `tests/integration/test_executive_dashboard_full.py` (9) | métricas por asesor, primera gestión sin cutover, PII ausente en el contrato, **paridad alerta ↔ listado** (sin asignar, estancado y con filtro combinado), opciones de filtro, conteo de sentencias y latencia real |
+| `tests/integration/test_executive_dashboard_full.py` (11) | métricas por asesor, primera gestión sin cutover, PII ausente en el contrato, **paridad alerta ↔ listado** (sin asignar, estancado y con filtro combinado), opciones de filtro, conteo de sentencias y latencia real, y **consistencia transaccional del render** (una sola conexión/snapshot, aislamiento ante escritura concurrente) |
+| `tests/integration/test_executive_dashboard_repository.py` (22) | cero datos, un lead, sin asesor, asignaciones inactivas, estados desconocidos, cartera activa, filtros, límites de fecha, zona horaria, granularidad, estancamiento, antigüedad, tiempos, **parser de notas** (zona horaria Santiago, cruce de medianoche, texto libre con apariencia de fecha ignorado, múltiples notas), **matriz del funnel/cutover** (sin cutover, período previo/cruzado/posterior, denominador cero, estados desconocidos, transición repetida, retorno de estado) y EXPLAIN |
 
 Suite completa: **698 passed, 3 failed**. Los 3 fallos son los
 `test_frozen_candidate_verification` preexistentes, que no se modificaron ni se debilitaron;
