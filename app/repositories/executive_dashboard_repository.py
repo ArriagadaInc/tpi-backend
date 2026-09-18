@@ -17,11 +17,14 @@ safe-query pattern already used by ``SolicitudRepository.get_crm_solicitudes``.
 
 from __future__ import annotations
 
+import contextvars
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import date, datetime, time
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from psycopg import sql
+from psycopg import IsolationLevel, sql
 from psycopg.rows import dict_row
 
 from app.database.connection import get_db_connection
@@ -48,6 +51,57 @@ _NOTE_TS_PATTERN = NOTE_TS_PATTERN
 _NOTE_TS_EXPR = NOTE_TS_EXPR
 
 _CARTERA_INACTIVA_SQL = ", ".join(["%s"] * len(CARTERA_INACTIVA_ESTADOS))
+
+# Connection shared by every aggregate query of a single dashboard render. When
+# set (inside :func:`dashboard_read_snapshot`), ``_fetch_all``/``_fetch_one`` run
+# on this connection instead of opening a new one, so all metrics observe the
+# same database snapshot.
+_snapshot_conn: contextvars.ContextVar[Any | None] = contextvars.ContextVar(
+    "executive_dashboard_snapshot_conn", default=None
+)
+
+
+@contextmanager
+def dashboard_read_snapshot(operation: str = "executive_dashboard_snapshot") -> Iterator[Any]:
+    """Run every dashboard aggregate under one REPEATABLE READ READ ONLY snapshot.
+
+    The executive dashboard is built from many independent aggregate queries. If
+    each query opened its own transaction, a render could mix counts captured at
+    different instants under concurrent writes (for example an alert count and the
+    KPI total disagreeing). This context manager pins one read-only snapshot for
+    the whole build:
+
+    - ``REPEATABLE READ``: every statement sees the database as of the first
+      statement of the transaction.
+    - ``READ ONLY``: no write lock is taken and no write can be issued, so the
+      dashboard never blocks or mutates writers.
+    - each aggregate still runs inside a savepoint (see ``_fetch_all``), so an
+      individual query failure does not abort the whole transaction and the
+      section-isolation contract of the service is preserved.
+
+    The snapshot is released by rolling back on exit and the pooled connection's
+    session defaults are restored before it returns to the pool.
+    """
+    with get_db_connection(operation=operation) as conn:
+        previous_isolation = conn.isolation_level
+        previous_read_only = conn.read_only
+        conn.isolation_level = IsolationLevel.REPEATABLE_READ
+        conn.read_only = True
+        token = _snapshot_conn.set(conn)
+        try:
+            with conn.transaction():
+                yield conn
+        finally:
+            _snapshot_conn.reset(token)
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            try:
+                conn.isolation_level = previous_isolation
+                conn.read_only = previous_read_only
+            except Exception:
+                pass
 
 
 class ExecutiveDashboardRepository:
@@ -147,6 +201,13 @@ class ExecutiveDashboardRepository:
 
     @staticmethod
     def _fetch_all(query: sql.SQL | sql.Composed, params: list[Any]) -> list[dict[str, Any]]:
+        conn = _snapshot_conn.get()
+        if conn is not None:
+            with conn.cursor(row_factory=dict_row) as cur:
+                rows = ExecutiveDashboardRepository._execute_in_savepoint(
+                    cur, query, params, fetch_one=False
+                )
+                return [dict(row) for row in rows]
         with get_db_connection(operation="executive_dashboard") as conn:
             with conn.cursor(row_factory=dict_row) as cur:
                 cur.execute(query, params)
@@ -155,11 +216,43 @@ class ExecutiveDashboardRepository:
 
     @staticmethod
     def _fetch_one(query: sql.SQL | sql.Composed, params: list[Any]) -> dict[str, Any] | None:
+        conn = _snapshot_conn.get()
+        if conn is not None:
+            with conn.cursor(row_factory=dict_row) as cur:
+                row = ExecutiveDashboardRepository._execute_in_savepoint(
+                    cur, query, params, fetch_one=True
+                )
+                return dict(row) if row else None
         with get_db_connection(operation="executive_dashboard") as conn:
             with conn.cursor(row_factory=dict_row) as cur:
                 cur.execute(query, params)
                 row = cur.fetchone()
                 return dict(row) if row else None
+
+    @staticmethod
+    def _execute_in_savepoint(
+        cur: Any, query: sql.SQL | sql.Composed, params: list[Any], *, fetch_one: bool
+    ) -> Any:
+        """Run one aggregate inside a savepoint of the shared snapshot transaction.
+
+        A failing aggregate would otherwise abort the whole read-only transaction
+        (``InFailedSqlTransaction``) and break the service's per-section isolation.
+        The savepoint contains the failure: on error the savepoint is rolled back
+        and the exception re-raised so the service marks that section as failed
+        while the rest of the dashboard keeps reading the same snapshot.
+        """
+        cur.execute("SAVEPOINT exec_dashboard_query")
+        try:
+            cur.execute(query, params)
+            if fetch_one:
+                row = cur.fetchone()
+            else:
+                rows = cur.fetchall()
+        except Exception:
+            cur.execute("ROLLBACK TO SAVEPOINT exec_dashboard_query")
+            raise
+        cur.execute("RELEASE SAVEPOINT exec_dashboard_query")
+        return row if fetch_one else rows
 
     @staticmethod
     def get_kpi_snapshot(filters: DashboardFilters) -> dict[str, int]:

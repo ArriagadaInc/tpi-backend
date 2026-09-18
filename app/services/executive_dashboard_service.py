@@ -43,7 +43,10 @@ from app.models.executive_dashboard import (
     estancamiento_dias_default,
     percentage,
 )
-from app.repositories.executive_dashboard_repository import ExecutiveDashboardRepository
+from app.repositories.executive_dashboard_repository import (
+    ExecutiveDashboardRepository,
+    dashboard_read_snapshot,
+)
 
 _SIN_ASESOR_LABEL = "Sin asesor"
 
@@ -77,26 +80,39 @@ class ExecutiveDashboardService:
     def build_executive_dashboard(self, filters: DashboardFilters) -> ExecutiveDashboard:
         """Assemble both scopes from bounded aggregate queries (no per-lead fan-out).
 
+        The whole render runs inside a single ``REPEATABLE READ READ ONLY``
+        snapshot (``dashboard_read_snapshot``), so the KPIs, alerts, charts, funnel
+        and advisor table all observe the same database state and cannot mix two
+        instants under concurrent writes.
+
         Each section is isolated: if one aggregate query fails, that section is
-        reported as failed and the rest of the dashboard still renders. A failed
-        section is never presented as a zero.
+        reported as failed and the rest of the dashboard still renders (each query
+        runs in its own savepoint, so a failure never aborts the shared snapshot).
+        A failed section is never presented as a zero.
         """
-        failed: list[str] = []
-        snapshot = self._build_snapshot(filters, failed)
-        period = self._build_period(filters, failed)
-        alerts = [
-            AlertTarget(
-                key="sin_asignar", count=snapshot.sin_asignar, filters={"sin_asignar": True}
-            ),
-            AlertTarget(key="estancados", count=snapshot.estancados, filters={"estancado": True}),
-        ]
-        return ExecutiveDashboard(
-            filters=filters,
-            current_snapshot=snapshot,
-            period_activity=period,
-            alerts=alerts,
-            failed_sections=tuple(failed),
-        )
+        with dashboard_read_snapshot():
+            failed: list[str] = []
+            snapshot = self._build_snapshot(filters, failed)
+            period = self._build_period(filters, failed)
+            alerts = [
+                AlertTarget(
+                    key="sin_asignar",
+                    count=snapshot.sin_asignar,
+                    filters={"sin_asignar": True},
+                ),
+                AlertTarget(
+                    key="estancados",
+                    count=snapshot.estancados,
+                    filters={"estancado": True},
+                ),
+            ]
+            return ExecutiveDashboard(
+                filters=filters,
+                current_snapshot=snapshot,
+                period_activity=period,
+                alerts=alerts,
+                failed_sections=tuple(failed),
+            )
 
     def _section(
         self,
