@@ -493,3 +493,75 @@ def test_full_dashboard_latency_with_representative_volume() -> None:
             with conn.cursor() as cur:
                 _cleanup(cur, lead_ids, asesor_ids)
                 conn.commit()
+
+
+def test_full_dashboard_reads_under_a_single_consistent_snapshot(monkeypatch) -> None:
+    """Every metric of one render must come from a single pooled connection.
+
+    If each aggregate opened its own transaction, concurrent writes could make
+    one KPI disagree with the alert it sits next to. This test proves the whole
+    build runs on exactly one acquired connection.
+    """
+    marker = _marker()
+    lead_ids, asesor_ids = _seed_volume(marker, leads=60, advisors=4)
+    cutover = (_now() - timedelta(days=90)).date()
+    desde = (_now() - timedelta(days=60)).date().isoformat()
+    try:
+        import app.database.connection as dbc
+
+        acquisitions: list[int] = []
+        original = dbc.get_connection
+
+        def counting_get_connection(*args: Any, **kwargs: Any):
+            acquisitions.append(1)
+            return original(*args, **kwargs)
+
+        monkeypatch.setattr(dbc, "get_connection", counting_get_connection)
+        dashboard = _service(marker, cutover).build_executive_dashboard(
+            _filters(marker, fecha_desde=desde)
+        )
+        assert dashboard.failed_sections == ()
+        assert dashboard.current_snapshot.total_leads == 60
+        assert (
+            len(acquisitions) == 1
+        ), f"expected one connection for the whole render, got {len(acquisitions)}"
+    finally:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                _cleanup(cur, lead_ids, asesor_ids)
+                conn.commit()
+
+
+def test_dashboard_snapshot_does_not_see_concurrent_writes() -> None:
+    """A REPEATABLE READ snapshot must not observe a write committed mid-render."""
+    marker = _marker()
+    lead_ids, asesor_ids = _seed_volume(marker, leads=30, advisors=2)
+    desde = (_now() - timedelta(days=60)).date().isoformat()
+    try:
+        from app.repositories.executive_dashboard_repository import dashboard_read_snapshot
+
+        filters = _filters(marker, fecha_desde=desde)
+        with dashboard_read_snapshot():
+            before = _REPO.get_kpi_snapshot(filters)["total_leads"]
+            # A concurrent writer commits a new lead while the snapshot is open.
+            with get_db_connection() as other:
+                with other.cursor() as cur:
+                    asesor_ids.append(_make_asesor(cur, f"Asesor Snapshot {uuid4().hex[:6]}"))
+                    lead_ids.append(
+                        _make_lead(
+                            cur,
+                            marker=marker,
+                            rut=f"sn{uuid4().hex[:9]}",
+                            fecha_ingreso=_now(),
+                        )
+                    )
+                    other.commit()
+            after = _REPO.get_kpi_snapshot(filters)["total_leads"]
+            assert after == before, "snapshot must not observe a write committed mid-render"
+        # Once the snapshot is released, the committed lead becomes visible.
+        assert _REPO.get_kpi_snapshot(filters)["total_leads"] == before + 1
+    finally:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                _cleanup(cur, lead_ids, asesor_ids)
+                conn.commit()

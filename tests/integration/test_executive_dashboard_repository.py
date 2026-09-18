@@ -418,6 +418,127 @@ def test_estancamiento_counts_only_no_recent_movement() -> None:
                 conn.commit()
 
 
+def test_note_timestamp_is_interpreted_in_santiago_timezone() -> None:
+    marker = _marker()
+    lead_ids: list[str] = []
+    ingreso = datetime(2026, 9, 1, 12, 0, tzinfo=_TZ)
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            lead_ids.append(
+                _make_lead(
+                    cur,
+                    marker=marker,
+                    rut="17171717-1",
+                    fecha_ingreso=ingreso,
+                    comentarios="Solicitud original\n\n[01/09/2026 20:00] Autor\nnota",
+                )
+            )
+            conn.commit()
+    try:
+        tiempo = _REPO.get_tiempo_primera_gestion(_filters(marker), cutover=date(2020, 1, 1))
+        assert tiempo["n"] == 1
+        # 20:00 Santiago minus 12:00 Santiago = 8 h = 0.333 d. If the note wall
+        # clock were interpreted as UTC the delta would be ~4 h, so this pins the
+        # America/Santiago interpretation of the note header.
+        assert abs(float(tiempo["media_dias"]) - (8 / 24)) < 0.01
+    finally:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                _cleanup(cur, lead_ids)
+                conn.commit()
+
+
+def test_note_timestamp_crosses_midnight_correctly() -> None:
+    marker = _marker()
+    lead_ids: list[str] = []
+    ingreso = datetime(2026, 9, 1, 23, 50, tzinfo=_TZ)
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            lead_ids.append(
+                _make_lead(
+                    cur,
+                    marker=marker,
+                    rut="17171717-2",
+                    fecha_ingreso=ingreso,
+                    comentarios="Solicitud original\n\n[02/09/2026 00:10] Autor\nnota",
+                )
+            )
+            conn.commit()
+    try:
+        tiempo = _REPO.get_tiempo_primera_gestion(_filters(marker), cutover=date(2020, 1, 1))
+        assert tiempo["n"] == 1
+        # 00:10 of the next day minus 23:50 = 20 minutes = 1/72 days: the note
+        # date/time components must combine across the midnight boundary.
+        assert abs(float(tiempo["media_dias"]) - (1 / 72)) < 0.005
+    finally:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                _cleanup(cur, lead_ids)
+                conn.commit()
+
+
+def test_note_parser_ignores_bare_dates_in_free_text() -> None:
+    marker = _marker()
+    lead_ids: list[str] = []
+    old = _now() - timedelta(days=10)
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            # A bare date in free text (no canonical "[dd/mm/YYYY HH:MM]" header)
+            # must never be read as an operational note.
+            lead_ids.append(
+                _make_lead(
+                    cur,
+                    marker=marker,
+                    rut="17171717-3",
+                    fecha_ingreso=old,
+                    comentarios="Cliente llamo el 05/09/2026 10:30 para consultar",
+                )
+            )
+            conn.commit()
+    try:
+        assert _REPO.get_estancados(_filters(marker)) == 1
+        tiempo = _REPO.get_tiempo_primera_gestion(_filters(marker), cutover=date(2020, 1, 1))
+        assert tiempo["n"] == 0
+        assert tiempo["media_dias"] is None
+    finally:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                _cleanup(cur, lead_ids)
+                conn.commit()
+
+
+def test_note_parser_uses_earliest_of_multiple_notes() -> None:
+    marker = _marker()
+    lead_ids: list[str] = []
+    ingreso = datetime(2026, 9, 1, 12, 0, tzinfo=_TZ)
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            lead_ids.append(
+                _make_lead(
+                    cur,
+                    marker=marker,
+                    rut="17171717-4",
+                    fecha_ingreso=ingreso,
+                    comentarios=(
+                        "Solicitud original\n\n"
+                        "[03/09/2026 09:00] Autor\nnota mas reciente\n\n"
+                        "[02/09/2026 09:00] Autor\nnota mas antigua"
+                    ),
+                )
+            )
+            conn.commit()
+    try:
+        tiempo = _REPO.get_tiempo_primera_gestion(_filters(marker), cutover=date(2020, 1, 1))
+        assert tiempo["n"] == 1
+        # First note is 02/09 09:00 = 21 h after 01/09 12:00 = 0.875 d.
+        assert abs(float(tiempo["media_dias"]) - (21 / 24)) < 0.01
+    finally:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                _cleanup(cur, lead_ids)
+                conn.commit()
+
+
 def test_antiguedad_buckets() -> None:
     marker = _marker()
     lead_ids: list[str] = []
@@ -540,6 +661,142 @@ def test_funnel_missing_cutover_yields_no_rates() -> None:
     assert funnel["cobertura_completa"] is False
     assert funnel["steps"] == []
     assert funnel["denominador"] == 0
+
+
+def test_funnel_period_fully_before_cutover_yields_no_rates() -> None:
+    marker = _marker()
+    lead_ids: list[str] = []
+    cutover = date(2026, 9, 10)
+    ingreso = datetime(2026, 9, 1, 12, 0, tzinfo=_TZ)
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            lead_ids.append(_make_lead(cur, marker=marker, rut="18181818-1", fecha_ingreso=ingreso))
+            _state_change(cur, lead_ids[-1], "nuevo", "contactado", ingreso + timedelta(days=1))
+            conn.commit()
+    try:
+        funnel = _REPO.get_funnel(
+            _filters(marker, fecha_desde="2026-09-01", fecha_hasta="2026-09-05"), cutover=cutover
+        )
+        # The whole period precedes the cutover: no lead has complete history.
+        assert funnel["excluidos_pre_cutover"] == 1
+        assert funnel["denominador"] == 0
+        assert funnel["steps"] == []
+    finally:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                _cleanup(cur, lead_ids)
+                conn.commit()
+
+
+def test_funnel_period_fully_after_cutover_computes_rates() -> None:
+    marker = _marker()
+    lead_ids: list[str] = []
+    cutover = date(2026, 9, 10)
+    ingreso = datetime(2026, 9, 11, 12, 0, tzinfo=_TZ)
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            lead_ids.append(_make_lead(cur, marker=marker, rut="18181818-2", fecha_ingreso=ingreso))
+            _state_change(cur, lead_ids[-1], "nuevo", "contactado", ingreso + timedelta(days=1))
+            conn.commit()
+    try:
+        funnel = _REPO.get_funnel(
+            _filters(marker, fecha_desde="2026-09-11", fecha_hasta="2026-09-30"), cutover=cutover
+        )
+        assert funnel["excluidos_pre_cutover"] == 0
+        assert funnel["denominador"] == 1
+        assert funnel["steps"] == [{"origen": "nuevo", "destino": "contactado", "n": 1}]
+        assert funnel["bases"] == {"nuevo": 1}
+    finally:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                _cleanup(cur, lead_ids)
+                conn.commit()
+
+
+def test_funnel_zero_denominator_yields_no_transitions() -> None:
+    marker = _marker()
+    cutover = date(2026, 9, 10)
+    funnel = _REPO.get_funnel(
+        _filters(marker, fecha_desde="2026-09-11", fecha_hasta="2026-09-30"), cutover=cutover
+    )
+    # No lead of this marker in the period: zero denominator, no invented rates.
+    assert funnel["denominador"] == 0
+    assert funnel["excluidos_pre_cutover"] == 0
+    assert funnel["steps"] == []
+
+
+def test_funnel_preserves_unknown_states() -> None:
+    marker = _marker()
+    lead_ids: list[str] = []
+    cutover = date(2026, 9, 10)
+    ingreso = datetime(2026, 9, 11, 12, 0, tzinfo=_TZ)
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            lead_ids.append(_make_lead(cur, marker=marker, rut="18181818-3", fecha_ingreso=ingreso))
+            _state_change(
+                cur, lead_ids[-1], "nuevo", "estado_x_desconocido", ingreso + timedelta(days=1)
+            )
+            conn.commit()
+    try:
+        funnel = _REPO.get_funnel(
+            _filters(marker, fecha_desde="2026-09-11", fecha_hasta="2026-09-30"), cutover=cutover
+        )
+        assert funnel["steps"] == [{"origen": "nuevo", "destino": "estado_x_desconocido", "n": 1}]
+    finally:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                _cleanup(cur, lead_ids)
+                conn.commit()
+
+
+def test_funnel_repeated_transition_is_counted_once() -> None:
+    marker = _marker()
+    lead_ids: list[str] = []
+    cutover = date(2026, 9, 10)
+    ingreso = datetime(2026, 9, 11, 12, 0, tzinfo=_TZ)
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            lead_ids.append(_make_lead(cur, marker=marker, rut="18181818-4", fecha_ingreso=ingreso))
+            _state_change(cur, lead_ids[-1], "nuevo", "contactado", ingreso + timedelta(days=1))
+            _state_change(cur, lead_ids[-1], "nuevo", "contactado", ingreso + timedelta(days=2))
+            conn.commit()
+    try:
+        funnel = _REPO.get_funnel(
+            _filters(marker, fecha_desde="2026-09-11", fecha_hasta="2026-09-30"), cutover=cutover
+        )
+        # COUNT(DISTINCT id_lead) collapses the duplicated transition to one.
+        assert funnel["steps"] == [{"origen": "nuevo", "destino": "contactado", "n": 1}]
+        assert funnel["bases"] == {"nuevo": 1}
+    finally:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                _cleanup(cur, lead_ids)
+                conn.commit()
+
+
+def test_funnel_return_to_previous_state_keeps_both_transitions() -> None:
+    marker = _marker()
+    lead_ids: list[str] = []
+    cutover = date(2026, 9, 10)
+    ingreso = datetime(2026, 9, 11, 12, 0, tzinfo=_TZ)
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            lead_ids.append(_make_lead(cur, marker=marker, rut="18181818-5", fecha_ingreso=ingreso))
+            _state_change(cur, lead_ids[-1], "nuevo", "contactado", ingreso + timedelta(days=1))
+            _state_change(cur, lead_ids[-1], "contactado", "nuevo", ingreso + timedelta(days=2))
+            conn.commit()
+    try:
+        funnel = _REPO.get_funnel(
+            _filters(marker, fecha_desde="2026-09-11", fecha_hasta="2026-09-30"), cutover=cutover
+        )
+        steps = {f"{s['origen']}->{s['destino']}": s["n"] for s in funnel["steps"]}
+        assert steps == {"nuevo->contactado": 1, "contactado->nuevo": 1}
+        assert funnel["bases"] == {"nuevo": 1, "contactado": 1}
+    finally:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                _cleanup(cur, lead_ids)
+                conn.commit()
 
 
 def test_repository_never_reads_auditoria_directly() -> None:
