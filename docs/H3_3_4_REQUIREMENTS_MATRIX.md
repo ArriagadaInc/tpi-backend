@@ -78,27 +78,27 @@ requisito de esta matriz.
 | REQ-A-01 | Auditar todos los cambios generales de `estado_lead` | Todo cambio de estado (fuera del flujo de asignación) deja trazabilidad | AC-1, AC-4 | `app/services/solicitud_service.py::update_lead_status` + `app/repositories/solicitud_repository.py` (camino transaccional único) | `tests/integration/test_lead_state_history.py` | Sí (AC-9) | `evidence/H3.3.4/developer/developer-01.json`; smoke `acceptance-01.json` |
 | REQ-A-02 | Actor, fecha y hora, estado anterior y nuevo | Identidad histórica y deltas del evento | AC-1, AC-3, AC-4 | INSERT en `tpi.auditoria`: `accion='cambio_estado_lead'`, `tabla_afectada='tpi.leads'`, `fecha_hora=now()`, `detalle={actor_subject, estado_anterior, estado_nuevo}` | `tests/integration/test_lead_state_history.py` | Sí (AC-9) | `developer-01.json`; `verification-01.json` |
 | REQ-A-03 | Hora America/Santiago | Fechas en zona horaria operacional | AC-4 | Formateo de `fecha_hora` a `America/Santiago` en capa de presentación (filtro Jinja/presenter), no en la vista | `tests/unit/test_h3_3_4_timeline_presentation.py::test_state_change_timestamp_is_displayed_in_america_santiago` | Sí (AC-9) | `developer-01.json`; `acceptance-01.json` |
-| REQ-A-04 | Transacción atómica | `UPDATE estado_lead` + `INSERT auditoria` commit atómico | AC-1 | Mismo `BEGIN/COMMIT` en `solicitud_repository.py`; sin commits intermedios | `test_lead_state_history.py::test_effective_change_records_actor_timestamp_states_and_single_event` | — (cubierto por test) | `developer-01.json` |
-| REQ-A-05 | `SELECT ... FOR UPDATE` | Bloquear la fila del lead contra escrituras concurrentes | AC-1 | `SELECT ... FROM tpi.leads WHERE id_lead=%s FOR UPDATE` al inicio de `update_lead_status` | `test_lead_state_history.py::test_concurrent_updates_serialize_without_lost_update_or_duplicate_events` | — (cubierto por test) | `developer-01.json` |
-| REQ-A-06 | No-op sin evento duplicado | Sin cambio real → sin evento de auditoría | AC-1 | Comparar `estado_anterior == estado_nuevo` → retornar sin escribir | `test_lead_state_history.py::test_noop_does_not_update_nor_duplicate_audit` | — (cubierto por test) | `developer-01.json` |
-| REQ-A-07 | Rollback ante fallo de auditoría | Si falla el INSERT de auditoría, se revierte el estado | AC-1 | `ROLLBACK` completo si el INSERT falla; excepción propagada; `estado_lead` intacto | `test_lead_state_history.py::test_audit_failure_rolls_back_state` | — (cubierto por test) | `developer-01.json` |
-| REQ-A-08 | Concurrencia real | Sin carreras ni eventos duplicados con dos conexiones | AC-1 | Test de integración con dos conexiones concurrentes sobre el mismo lead | `test_lead_state_history.py::test_concurrent_updates_serialize_without_lost_update_or_duplicate_events` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-04 | Transacción atómica | `UPDATE estado_lead` + `INSERT auditoria` commit atómico | AC-1 | Mismo `BEGIN/COMMIT` en `solicitud_repository.py`; sin commits intermedios | `tests/integration/test_lead_state_history.py::test_effective_change_records_actor_timestamp_states_and_single_event` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-05 | `SELECT ... FOR UPDATE` | Bloquear la fila del lead contra escrituras concurrentes | AC-1 | `SELECT ... FROM tpi.leads WHERE id_lead=%s FOR UPDATE` al inicio de `update_lead_status` | `tests/integration/test_lead_state_history.py::test_concurrent_updates_serialize_without_lost_update_or_duplicate_events` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-06 | No-op sin evento duplicado | Sin cambio real → sin evento de auditoría | AC-1 | Comparar `estado_anterior == estado_nuevo` → retornar sin escribir | `tests/integration/test_lead_state_history.py::test_noop_does_not_update_nor_duplicate_audit` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-07 | Rollback ante fallo de auditoría | Si falla el INSERT de auditoría, se revierte el estado | AC-1 | `ROLLBACK` completo si el INSERT falla; excepción propagada; `estado_lead` intacto | `tests/integration/test_lead_state_history.py::test_audit_failure_rolls_back_state` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-08 | Concurrencia real | Sin carreras ni eventos duplicados con dos conexiones | AC-1 | Test de integración con dos conexiones concurrentes sobre el mismo lead | `tests/integration/test_lead_state_history.py::test_concurrent_updates_serialize_without_lost_update_or_duplicate_events` | — (cubierto por test) | `developer-01.json` |
 | REQ-A-09 | Acción de auditoría `cambio_estado_lead` | Contrato de la acción de auditoría | AC-2, AC-3 | Valor de `accion` escrito por la app y consumido por la vista 008 | `tests/unit/test_h3_3_4_migration_scripts.py` | — (cubierto por test) | `developer-01.json`; `migration-01.json` |
-| REQ-A-10 | Migración 008 | Forward/rollback versionados del read model de estados | AC-2, AC-5, AC-6, AC-8 | `scripts/sql/008_create_lead_state_history.sql` + `scripts/sql/008_drop_lead_state_history.sql`; bootstrap en `scripts/init_test_database.py` | `test_h3_3_4_migration_scripts.py` (rollback probado en PostgreSQL local/integración) | Aprobación humana del migration candidate (AC-5) + postflight (AC-6) | `developer-01.json`; `migration-01.json` |
+| REQ-A-10 | Migración 008 | Forward/rollback versionados del read model de estados | AC-2, AC-5, AC-6, AC-8 | `scripts/sql/008_create_lead_state_history.sql` + `scripts/sql/008_drop_lead_state_history.sql`; bootstrap en `scripts/init_test_database.py` | `tests/unit/test_h3_3_4_migration_scripts.py` (rollback probado en PostgreSQL local/integración) | Aprobación humana del migration candidate (AC-5) + postflight (AC-6) | `developer-01.json`; `migration-01.json` |
 | REQ-A-11 | Vista sanitizada | `tpi.v_historial_estado_lead` sin datos sensibles ni JSON crudo | AC-3 | Vista `security_barrier` con columnas `id_auditoria, id_lead, fecha_hora, actor_subject, estado_anterior, estado_nuevo`; filtro `accion='cambio_estado_lead' AND tabla_afectada='tpi.leads'` | `tests/integration/test_audit_state_view.py::test_view_exposes_only_state_change_columns_and_filters_events` | — (cubierto por test) | `developer-01.json` |
-| REQ-A-12 | Índices y EXPLAIN | Índices de apoyo justificados por plan real | AC-3 | Índice `auditoria_state_history_idx (accion, tabla_afectada, id_lead, fecha_hora)` justificado por EXPLAIN real (100k filas); documentado en `docs/database/04_MIGRATIONS.md` | `test_audit_state_view.py::test_support_index_exists_and_is_used_for_state_history_query` | — (cubierto por test) | `developer-01.json` |
-| REQ-A-13 | Mínimo privilegio | Solo `tpi_app` con SELECT sobre la vista; sin ampliar `tpi.auditoria` | AC-3, AC-6 | `REVOKE ALL ... FROM PUBLIC; GRANT SELECT ... TO tpi_app`; `tpi_app` sigue sin SELECT/UPDATE/DELETE sobre `tpi.auditoria` | `test_audit_state_view.py::test_view_privileges_public_and_app_only` | Postflight humano (AC-6) | `developer-01.json`; `migration-01.json.postflight` |
-| REQ-A-14 | PUBLIC sin permisos | PUBLIC sin ningún privilegio sobre la vista | AC-3, AC-6 | `REVOKE ALL ON tpi.v_historial_estado_lead FROM PUBLIC` (preflight/postflight) | `test_view_privileges_public_and_app_only` | Postflight humano (AC-6) | `migration-01.json.postflight` |
-| REQ-A-15 | App sin SELECT directo a `tpi.auditoria` | El read model pasa solo por la vista | AC-3 | Repository lee `tpi.v_historial_estado_lead`; ningún `SELECT ... FROM tpi.auditoria` en `app/` | `test_audit_state_view.py::test_application_never_selects_auditoria_directly` | — (cubierto por test) | `developer-01.json` |
-| REQ-A-16 | Timeline que combina notas, asignaciones 007 y cambios 008 | Una única línea de tiempo unificada | AC-4, AC-9 | `app/web/presentation.py::build_timeline_items` fusiona notas humanas + eventos 007 + eventos 008 | `tests/unit/test_h3_3_4_timeline_presentation.py`; regresión `test_h3_3_3_timeline_presentation.py` | Smoke autenticado (AC-9) | `developer-01.json`; `acceptance-01.json` |
-| REQ-A-17 | Orden estable | Orden determinista cronológico | AC-4 | `fecha_hora DESC` + desempate determinístico por rango de fuente (`event` < `state_change` < `note`) y orden del repositorio | `test_h3_3_4_timeline_presentation.py::test_deterministic_tiebreak_event_then_state_change_then_note` | — (cubierto por test) | `developer-01.json` |
-| REQ-A-18 | Badge "Automático" | Distinguir eventos de sistema | AC-4 | Badge "Automatico" para eventos de asignación y cambio de estado | `test_web_app.py::test_detail_timeline_renders_state_change_with_badge_and_no_edit_delete` | Smoke autenticado (AC-9) | `developer-01.json`; `acceptance-01.json` |
-| REQ-A-19 | Eventos sin edición/eliminación | Timeline de solo lectura | AC-4 | Sin controles de editar/eliminar para eventos de sistema | `test_h3_3_4_timeline_presentation.py::test_state_change_items_have_no_edit_or_delete_controls`; `test_web_app.py` | Smoke autenticado (AC-9) | `developer-01.json`; `acceptance-01.json` |
-| REQ-A-20 | No regresión de H3.3.3 | Comportamiento H3.3.3 intacto | AC-4, AC-9 | Regresión completa de tests H3.3.3 (timeline asignación, "Volver al sitio", notas) | `tests/unit/test_h3_3_3_timeline_presentation.py`; `test_backoffice_public_site_link.py`; `test_web_app.py` | Smoke autenticado (AC-9) | `developer-01.json`; `verification-01.json` |
-| REQ-A-21 | No modificar 005/006/007 | Integridad de migraciones previas | AC-2 | La 008 no toca el contenido de 005/006/007; verificación de integridad | `test_h3_3_4_migration_scripts.py::test_008_does_not_modify_or_execute_005_006_007` | — (cubierto por test) | `developer-01.json` |
-| REQ-A-22 | Ausencia de backfill inventado | Sin eventos retroactivos | AC-4 | No se generan eventos de estado anteriores al cutover 008; la cobertura se comunica sin fecha inventada | `test_h3_3_4_timeline_presentation.py::test_cutover_notice_never_invents_a_date_when_unconfigured` | — (cubierto por test) | `developer-01.json` |
-| REQ-A-23 | Cobertura completa solo desde el cutover | Alcance temporal honesto | AC-4 | Aviso reproducible `LEAD_STATE_HISTORY_CUTOVER` (Settings) + `state_history_cutover_notice`; solo eventos reales posteriores al cutover 008 aparecen como cambios de estado | `test_h3_3_4_timeline_presentation.py::test_cutover_notice_uses_configured_date` | — (cubierto por test) | `developer-01.json` |
-| REQ-A-24 | Conservación de asignaciones históricas recuperables | Asignaciones 007 previas siguen visibles | AC-4 | Los eventos de asignación 007 anteriores al cutover siguen proyectándose | `test_h3_3_4_timeline_presentation.py::test_backward_compatible_with_two_argument_callers`; regresión 007 | Smoke autenticado (AC-9) | `developer-01.json`; `acceptance-01.json` |
+| REQ-A-12 | Índices y EXPLAIN | Índices de apoyo justificados por plan real | AC-3 | Índice `auditoria_state_history_idx (accion, tabla_afectada, id_lead, fecha_hora)` justificado por EXPLAIN (aplicabilidad forzada con `enable_seqscan=off`; el `EXPLAIN ANALYZE` real sin forzar a volumen representativo queda como follow-up F2, ver §11.6); documentado en `docs/database/04_MIGRATIONS.md` | `tests/integration/test_audit_state_view.py::test_support_index_exists_and_is_used_for_state_history_query` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-13 | Mínimo privilegio | Solo `tpi_app` con SELECT sobre la vista; sin ampliar `tpi.auditoria` | AC-3, AC-6 | `REVOKE ALL ... FROM PUBLIC; GRANT SELECT ... TO tpi_app`; `tpi_app` sigue sin SELECT/UPDATE/DELETE sobre `tpi.auditoria` | `tests/integration/test_audit_state_view.py::test_view_privileges_public_and_app_only` | Postflight humano (AC-6) | `developer-01.json`; `migration-01.json.postflight` |
+| REQ-A-14 | PUBLIC sin permisos | PUBLIC sin ningún privilegio sobre la vista | AC-3, AC-6 | `REVOKE ALL ON tpi.v_historial_estado_lead FROM PUBLIC` (preflight/postflight) | `tests/integration/test_audit_state_view.py::test_view_privileges_public_and_app_only` | Postflight humano (AC-6) | `migration-01.json.postflight` |
+| REQ-A-15 | App sin SELECT directo a `tpi.auditoria` | El read model pasa solo por la vista | AC-3 | Repository lee `tpi.v_historial_estado_lead`; ningún `SELECT ... FROM tpi.auditoria` en `app/` | `tests/integration/test_audit_state_view.py::test_application_never_selects_auditoria_directly` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-16 | Timeline que combina notas, asignaciones 007 y cambios 008 | Una única línea de tiempo unificada | AC-4, AC-9 | `app/web/presentation.py::build_timeline_items` fusiona notas humanas + eventos 007 + eventos 008 | `tests/unit/test_h3_3_4_timeline_presentation.py`; regresión `tests/unit/test_h3_3_3_timeline_presentation.py` | Smoke autenticado (AC-9) | `developer-01.json`; `acceptance-01.json` |
+| REQ-A-17 | Orden estable | Orden determinista cronológico | AC-4 | `fecha_hora DESC` + desempate determinístico por rango de fuente (`event` < `state_change` < `note`) y orden del repositorio | `tests/unit/test_h3_3_4_timeline_presentation.py::test_deterministic_tiebreak_event_then_state_change_then_note` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-18 | Badge "Automático" | Distinguir eventos de sistema | AC-4 | Badge "Automatico" para eventos de asignación y cambio de estado | `tests/unit/test_web_app.py::test_detail_timeline_renders_state_change_with_badge_and_no_edit_delete` | Smoke autenticado (AC-9) | `developer-01.json`; `acceptance-01.json` |
+| REQ-A-19 | Eventos sin edición/eliminación | Timeline de solo lectura | AC-4 | Sin controles de editar/eliminar para eventos de sistema | `tests/unit/test_h3_3_4_timeline_presentation.py::test_state_change_items_have_no_edit_or_delete_controls`; `tests/unit/test_web_app.py` | Smoke autenticado (AC-9) | `developer-01.json`; `acceptance-01.json` |
+| REQ-A-20 | No regresión de H3.3.3 | Comportamiento H3.3.3 intacto | AC-4, AC-9 | Regresión completa de tests H3.3.3 (timeline asignación, "Volver al sitio", notas) | `tests/unit/test_h3_3_3_timeline_presentation.py`; `tests/unit/test_backoffice_public_site_link.py`; `tests/unit/test_web_app.py` | Smoke autenticado (AC-9) | `developer-01.json`; `verification-01.json` |
+| REQ-A-21 | No modificar 005/006/007 | Integridad de migraciones previas | AC-2 | La 008 no toca el contenido de 005/006/007; verificación de integridad | `tests/unit/test_h3_3_4_migration_scripts.py::test_008_does_not_modify_or_execute_005_006_007` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-22 | Ausencia de backfill inventado | Sin eventos retroactivos | AC-4 | No se generan eventos de estado anteriores al cutover 008; la cobertura se comunica sin fecha inventada | `tests/unit/test_h3_3_4_timeline_presentation.py::test_cutover_notice_never_invents_a_date_when_unconfigured` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-23 | Cobertura completa solo desde el cutover | Alcance temporal honesto | AC-4 | Aviso reproducible `LEAD_STATE_HISTORY_CUTOVER` (Settings) + `state_history_cutover_notice`; solo eventos reales posteriores al cutover 008 aparecen como cambios de estado | `tests/unit/test_h3_3_4_timeline_presentation.py::test_cutover_notice_uses_configured_date` | — (cubierto por test) | `developer-01.json` |
+| REQ-A-24 | Conservación de asignaciones históricas recuperables | Asignaciones 007 previas siguen visibles | AC-4 | Los eventos de asignación 007 anteriores al cutover siguen proyectándose | `tests/unit/test_h3_3_4_timeline_presentation.py::test_backward_compatible_with_two_argument_callers`; regresión 007 | Smoke autenticado (AC-9) | `developer-01.json`; `acceptance-01.json` |
 
 ---
 
@@ -106,35 +106,35 @@ requisito de esta matriz.
 
 | REQ | Solicitud original | Objetivo | AC | Implementación prevista | Prueba automatizada | Smoke humano | Evidencia esperada |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| REQ-B-01 | Navegación "Dashboard Ejecutivo" | Entrada de menú dedicada | AC-10 | Enlace en `app/web/templates/base.html` (solo visible a ceo/cto) + `app/web/routes/dashboard.py` | `tests/unit/test_executive_dashboard.py` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-02 | Acceso server-side exclusivo CEO/CTO | RBAC en servidor, no solo UI | AC-10 | Dependencia server-side (`require_executive_access` → `is_superuser(role)`) en el router del dashboard | `test_executive_dashboard.py::test_ceo_cto_access` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-03 | 403 real para cualquier otro rol y usuario no autenticado | Denegación real, sin datos | AC-10, AC-18 | `HTTPException(403)` para roles no ceo/cto y para no autenticado (sin render parcial, sin JSON) | `test_executive_dashboard.py::test_other_roles_403`, `::test_anonymous_403` | Smoke autenticado 403 (AC-18) | `developer-01.json`; `acceptance-01.json` |
-| REQ-B-04 | Ausencia de filtraciones en HTML, API, JavaScript y source | Nada de datos del dashboard se sirve a roles no autorizados | AC-10 | El HTML/JS/source servido no embebe consultas ni datos del dashboard; el JSON solo se sirve en el endpoint autorizado | `test_executive_dashboard.py::test_no_leak_in_html_api_js_source` | — (cubierto por test) | `developer-01.json` |
-| REQ-B-05 | Total de leads | KPI cardinal | AC-11 | `COUNT(DISTINCT id_lead)` sobre `tpi.leads` | `test_executive_dashboard_kpis.py` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-06 | Leads ingresados durante el período (fecha_ingreso) | KPI con fuente temporal correcta | AC-11 | Usa `fecha_ingreso` (no `created_at`), con la diferencia documentada | `test_executive_dashboard_kpis.py::test_leads_ingresados_period` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-07 | Casos por estado | Desglose por estado | AC-11 | Agregación `COUNT(DISTINCT id_lead) GROUP BY estado_lead` | `test_executive_dashboard_kpis.py::test_casos_por_estado` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-08 | Asignados y sin asignar | Conteo con/sin asignación activa | AC-11 | LEFT JOIN `tpi.asignaciones` (activa) con `COUNT(DISTINCT id_lead)` | `test_executive_dashboard_kpis.py::test_asignados_sin_asignar` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-09 | Evolución diaria, semanal y mensual | Serie temporal | AC-11 | Bucketing por día/semana/mes sobre `fecha_ingreso` (y transiciones) | `test_executive_dashboard_series.py` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-10 | Filtros individuales y combinados | Filtros componibles | AC-11, AC-18 | Filtros por período + estado + asesor + AFP + origen + fuente, combinables | `test_executive_dashboard_filters.py` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-11 | Distribución por estado | Breakdown por categoría MVP "estado" | AC-16 | `GROUP BY estado_lead` (solo categorías MVP) | `test_executive_dashboard_filters.py::test_distribucion_estado` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-12 | Resumen por asesor | Agregación por asesor | AC-12 | `GROUP BY asesor` (JOIN `tpi.asesores` para nombre) | `test_executive_dashboard_asesor.py` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-13 | Cartera total y activa por asesor | Distinción cartera total vs activa | AC-12 | Cartera activa = `estado_lead NOT IN (cerrado, perdido, no_califica, duplicado)` | `test_executive_dashboard_asesor.py::test_cartera_activa` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-14 | Casos por estado y asesor | Matriz estado × asesor | AC-12 | `GROUP BY asesor, estado_lead` con `COUNT(DISTINCT id_lead)` | `test_executive_dashboard_asesor.py::test_casos_estado_asesor` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-15 | Casos estancados | Detección de estancamiento operacional | AC-13 | Estancado = 5 días corridos sin movimiento operativo (nota/asignación/cambio de estado, nunca solo `updated_at`); umbral configurable default=5 | `test_executive_dashboard_estancados.py` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-16 | Antigüedad | Buckets de días corridos | AC-13 | Buckets 0-2, 3-7, 8-15, 16-30, +30 días corridos (no hábiles) | `test_executive_dashboard_estancados.py::test_antiguedad_buckets` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-17 | Tiempo hasta asignación | Métrica de asignación | AC-14 | Diferencia `fecha_ingreso → primera asignación` | `test_executive_dashboard_tiempos.py::test_tiempo_asignacion` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-18 | Tiempo hasta primera gestión | Primera gestión operacional | AC-14 | Primera gestión = primera nota humana o primer cambio general de estado (excluye asignación automática); NULL/N/D si no existe | `test_executive_dashboard_tiempos.py::test_tiempo_primera_gestion` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-19 | Funnel y tasas observables | Tasas honestas | AC-15 | Solo transiciones observables; pre-cutover sin historia completa no generan tasas; `COUNT(DISTINCT id_lead)` | `test_executive_dashboard_funnel.py` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-20 | Tarjetas KPI | UI de tarjetas | AC-11 | `app/web/templates/executive_dashboard.html` + presenter | `test_executive_dashboard.py` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-21 | Serie temporal | Gráfico de evolución | AC-11 | Render de serie temporal (presenter/template) | `test_executive_dashboard_series.py` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-22 | Categorías MVP | Restricción de dimensiones | AC-16 | Solo estado, asesor, AFP, origen del lead, fuente actual | `test_executive_dashboard_filters.py::test_solo_categorias_mvp` | — (cubierto por test) | `developer-01.json` |
-| REQ-B-23 | Estados vacíos y de error | UX coherente sin datos/error | AC-17 | Estados vacíos y de error en template | `test_executive_dashboard.py::test_empty_and_error_states` | Sí (AC-18) | `developer-01.json` |
-| REQ-B-24 | Interfaz responsive | Usabilidad multi-dispositivo | AC-17 | CSS responsive (`app/web/static/css/`) | `test_executive_dashboard.py::test_responsive_layout` (smoke visual) | Sí (AC-18) | `developer-01.json`; `acceptance-01.json` |
-| REQ-B-25 | Coherencia con la Web UX actual | Consistencia visual/estructural | AC-17 | Mismos patrones Jinja/CSS del backoffice actual | `test_executive_dashboard.py` + revisión | Sí (AC-18) | `developer-01.json` |
-| REQ-B-26 | Ausencia de BI externo | Sin dependencia de BI | AC-17 | Sin integración de plataforma BI externa | `test_executive_dashboard.py::test_no_external_bi` | — (cubierto por test) | `developer-01.json` |
-| REQ-B-27 | Cero PII de leads | Sin PII de leads | AC-17 | Sin RUT, nombres, teléfono, correo ni otra PII; métricas agregadas | `test_executive_dashboard_pii.py::test_no_lead_pii` | — (cubierto por test) | `developer-01.json` |
-| REQ-B-28 | Nombre del asesor visible solo para CEO/CTO | PII de asesor acotada | AC-12 | Nombre del asesor visible solo en el endpoint ceo/cto; nunca RUT/teléfono/correo | `test_executive_dashboard_pii.py::test_asesor_name_only_ceo_cto` | — (cubierto por test) | `developer-01.json` |
-| REQ-B-29 | Pruebas de rendimiento | Validación de volumen | AC-18 | Test con volumen representativo + `EXPLAIN` documentado | `test_executive_dashboard_perf.py` (volumen + EXPLAIN) | — (cubierto por test) | `developer-01.json` |
+| REQ-B-01 | Navegación "Dashboard Ejecutivo" | Entrada de menú dedicada | AC-10 | Enlace en `app/web/templates/base.html` (solo visible a ceo/cto) + `app/web/routes/dashboard.py` | `tests/unit/test_executive_dashboard_render.py::test_nav_link_is_visible_for_ceo`, `::test_nav_link_is_visible_for_cto`, `::test_nav_link_is_hidden_for_other_roles` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-02 | Acceso server-side exclusivo CEO/CTO | RBAC en servidor, no solo UI | AC-10 | Dependencia server-side (`require_executive_access` → `is_superuser(role)`) en el router del dashboard | `tests/unit/test_executive_dashboard_access.py::test_ceo_can_access_dashboard`, `::test_cto_can_access_dashboard`; `tests/unit/test_executive_dashboard_service.py::test_can_access_only_ceo_and_cto`; `tests/unit/test_executive_dashboard_render.py::test_hiding_the_link_is_not_the_access_control` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-03 | 403 real para cualquier otro rol y usuario no autenticado | Denegación real, sin datos | AC-10, AC-18 | `HTTPException(403)` para roles no ceo/cto y para no autenticado (sin render parcial, sin JSON) | `tests/unit/test_executive_dashboard_access.py::test_other_authenticated_role_receives_403`, `::test_anonymous_receives_403`; `tests/unit/test_executive_dashboard_render.py::test_rejected_response_carries_no_dashboard_structure_or_data`, `::test_anonymous_receives_403_without_dashboard_markup` | Smoke autenticado 403 (AC-18) | `developer-01.json`; `acceptance-01.json` |
+| REQ-B-04 | Ausencia de filtraciones en HTML, API, JavaScript y source | Nada de datos del dashboard se sirve a roles no autorizados | AC-10 | El HTML/JS/source servido no embebe consultas ni datos del dashboard; el JSON solo se sirve en el endpoint autorizado | `tests/unit/test_executive_dashboard_access.py::test_no_dashboard_query_runs_on_rejection`, `::test_dashboard_route_does_not_leak_pii_in_rendered_placeholder`; `tests/unit/test_executive_dashboard_render.py::test_rejected_response_carries_no_dashboard_structure_or_data` | — (cubierto por test) | `developer-01.json` |
+| REQ-B-05 | Total de leads | KPI cardinal | AC-11 | `COUNT(DISTINCT id_lead)` sobre `tpi.leads` | `tests/integration/test_executive_dashboard_repository.py::test_single_lead_metrics`, `::test_zero_data_returns_empty_metrics` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-06 | Leads ingresados durante el período (fecha_ingreso) | KPI con fuente temporal correcta | AC-11 | Usa `fecha_ingreso` (no `created_at`), con la diferencia documentada | `tests/integration/test_executive_dashboard_repository.py::test_inclusive_date_boundaries`, `::test_evolucion_granularity_and_santiago_timezone` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-07 | Casos por estado | Desglose por estado | AC-11 | Agregación `COUNT(DISTINCT id_lead) GROUP BY estado_lead` | `tests/integration/test_executive_dashboard_repository.py::test_unknown_states_are_preserved`; `tests/unit/test_executive_dashboard_service.py::test_unknown_states_are_preserved_with_safe_label` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-08 | Asignados y sin asignar | Conteo con/sin asignación activa | AC-11 | LEFT JOIN `tpi.asignaciones` (activa) con `COUNT(DISTINCT id_lead)` | `tests/integration/test_executive_dashboard_repository.py::test_leads_sin_asesor_have_own_bucket`, `::test_inactive_assignments_do_not_count_and_fanout_is_safe` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-09 | Evolución diaria, semanal y mensual | Serie temporal | AC-11 | Bucketing por día/semana/mes sobre `fecha_ingreso` (y transiciones) | `tests/integration/test_executive_dashboard_repository.py::test_evolucion_granularity_and_santiago_timezone`; `tests/unit/test_executive_dashboard_presentation.py::test_bucket_labels_follow_the_selected_granularity` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-10 | Filtros individuales y combinados | Filtros componibles | AC-11, AC-18 | Filtros por período + estado + asesor + AFP + origen + fuente, combinables | `tests/unit/test_executive_dashboard_filters.py`; `tests/integration/test_executive_dashboard_repository.py::test_individual_and_combined_filters` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-11 | Distribución por estado | Breakdown por categoría MVP "estado" | AC-16 | `GROUP BY estado_lead` (solo categorías MVP) | `tests/integration/test_executive_dashboard_repository.py::test_unknown_states_are_preserved`; `tests/unit/test_executive_dashboard_presentation.py::test_unknown_state_keeps_its_raw_value_as_label` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-12 | Resumen por asesor | Agregación por asesor | AC-12 | `GROUP BY asesor` (JOIN `tpi.asesores` para nombre) | `tests/integration/test_executive_dashboard_full.py::test_per_advisor_metrics_use_the_shared_definitions` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-13 | Cartera total y activa por asesor | Distinción cartera total vs activa | AC-12 | Cartera activa = `estado_lead NOT IN (cerrado, perdido, no_califica, duplicado)` | `tests/integration/test_executive_dashboard_repository.py::test_cartera_activa_excludes_closed_states`; `tests/integration/test_executive_dashboard_full.py::test_per_advisor_metrics_use_the_shared_definitions` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-14 | Casos por estado y asesor | Matriz estado × asesor | AC-12 | `GROUP BY asesor, estado_lead` con `COUNT(DISTINCT id_lead)` | `tests/integration/test_executive_dashboard_full.py::test_per_advisor_metrics_use_the_shared_definitions`; `tests/unit/test_executive_dashboard_render.py::test_state_by_advisor_matrix_is_available_without_extra_columns` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-15 | Casos estancados | Detección de estancamiento operacional | AC-13 | Estancado = 5 días corridos sin movimiento operativo (nota/asignación/cambio de estado, nunca solo `updated_at`); umbral configurable default=5 | `tests/integration/test_executive_dashboard_repository.py::test_estancamiento_counts_only_no_recent_movement` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-16 | Antigüedad | Buckets de días corridos | AC-13 | Buckets 0-2, 3-7, 8-15, 16-30, +30 días corridos (no hábiles) | `tests/integration/test_executive_dashboard_repository.py::test_antiguedad_buckets`; `tests/unit/test_executive_dashboard_presentation.py::test_age_ladder_returns_the_five_approved_buckets_in_order` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-17 | Tiempo hasta asignación | Métrica de asignación | AC-14 | Diferencia `fecha_ingreso → primera asignación` | `tests/integration/test_executive_dashboard_repository.py::test_tiempo_asignacion_media` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-18 | Tiempo hasta primera gestión | Primera gestión operacional | AC-14 | Primera gestión = primera nota humana o primer cambio general de estado (excluye asignación automática); NULL/N/D si no existe | `tests/integration/test_executive_dashboard_repository.py::test_tiempo_primera_gestion_excludes_assignment`; `tests/integration/test_executive_dashboard_full.py::test_first_management_is_unavailable_without_a_cutover` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-19 | Funnel y tasas observables | Tasas honestas | AC-15 | Solo transiciones observables; pre-cutover sin historia completa no generan tasas; `COUNT(DISTINCT id_lead)` | `tests/integration/test_executive_dashboard_repository.py::test_funnel_excludes_pre_cutover_leads`, `::test_funnel_missing_cutover_yields_no_rates`, `::test_funnel_period_fully_after_cutover_computes_rates`, `::test_funnel_zero_denominator_yields_no_transitions`, `::test_funnel_preserves_unknown_states`, `::test_funnel_repeated_transition_is_counted_once`, `::test_funnel_return_to_previous_state_keeps_both_transitions`; `tests/unit/test_executive_dashboard_presentation.py::test_funnel_is_available_with_complete_coverage`, `::test_funnel_is_withheld_without_cutover`, `::test_funnel_is_withheld_without_a_period`, `::test_funnel_is_withheld_when_coverage_is_partial`, `::test_funnel_is_withheld_without_observable_transitions` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-20 | Tarjetas KPI | UI de tarjetas | AC-11 | `app/web/templates/executive_dashboard.html` + presenter | `tests/unit/test_executive_dashboard_render.py::test_kpi_cards_render_every_headline_metric`; `tests/unit/test_executive_dashboard_service.py::test_snapshot_kpis_are_mapped` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-21 | Serie temporal | Gráfico de evolución | AC-11 | Render de serie temporal (presenter/template) | `tests/unit/test_executive_dashboard_presentation.py::test_timeseries_is_none_without_observations`, `::test_timeseries_with_a_single_observation_has_no_polyline`, `::test_timeseries_with_all_zero_values_stays_on_the_baseline`, `::test_timeseries_never_fabricates_points`; `tests/unit/test_executive_dashboard_render.py::test_timeseries_with_a_single_point_renders_a_marker_and_no_polyline` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-22 | Categorías MVP | Restricción de dimensiones | AC-16 | Solo estado, asesor, AFP, origen del lead, fuente actual | `tests/unit/test_executive_dashboard_service.py::test_contract_uses_only_mvp_categories`; `tests/unit/test_executive_dashboard_render.py::test_mvp_categories_only_no_gender_or_marital_status`; `tests/integration/test_executive_dashboard_full.py::test_filter_options_expose_only_mvp_categories_without_pii` | — (cubierto por test) | `developer-01.json` |
+| REQ-B-23 | Estados vacíos y de error | UX coherente sin datos/error | AC-17 | Estados vacíos y de error en template | `tests/unit/test_executive_dashboard_render.py::test_dashboard_without_data_shows_coherent_empty_states`, `::test_partial_failure_reports_the_section_and_keeps_the_rest`, `::test_failed_section_never_renders_as_zero`, `::test_global_error_returns_a_safe_page_without_internal_details` | Sí (AC-18) | `developer-01.json` |
+| REQ-B-24 | Interfaz responsive | Usabilidad multi-dispositivo | AC-17 | CSS responsive (`app/web/static/css/`) | `tests/unit/test_executive_dashboard_render.py::test_charts_are_server_rendered_without_javascript_or_cdn`, `::test_every_chart_has_a_title_a_summary_and_an_accessible_table`, `::test_page_has_no_required_javascript_for_filtering` (contrato de UX server-rendered); responsive validado por auditoría visual (§12.9) + smoke humano | Sí (AC-18) | `developer-01.json`; `acceptance-01.json` |
+| REQ-B-25 | Coherencia con la Web UX actual | Consistencia visual/estructural | AC-17 | Mismos patrones Jinja/CSS del backoffice actual | `tests/unit/test_executive_dashboard_render.py::test_normal_render_shows_both_scopes_explicitly`, `::test_filters_are_a_get_form_with_labelled_controls` (patrones Jinja/CSS del backoffice); revisión visual humana | Sí (AC-18) | `developer-01.json` |
+| REQ-B-26 | Ausencia de BI externo | Sin dependencia de BI | AC-17 | Sin integración de plataforma BI externa | `tests/unit/test_executive_dashboard_render.py::test_charts_are_server_rendered_without_javascript_or_cdn`, `::test_no_aggregate_data_is_embedded_in_scripts_or_comments` | — (cubierto por test) | `developer-01.json` |
+| REQ-B-27 | Cero PII de leads | Sin PII de leads | AC-17 | Sin RUT, nombres, teléfono, correo ni otra PII; métricas agregadas | `tests/unit/test_executive_dashboard_render.py::test_served_html_contains_no_pii_value_of_any_kind`; `tests/unit/test_executive_dashboard_service.py::test_contract_contains_no_lead_or_advisor_pii`; `tests/integration/test_executive_dashboard_full.py::test_advisor_rows_expose_no_pii_beyond_the_visible_name` | — (cubierto por test) | `developer-01.json` |
+| REQ-B-28 | Nombre del asesor visible solo para CEO/CTO | PII de asesor acotada | AC-12 | Nombre del asesor visible solo en el endpoint ceo/cto; nunca RUT/teléfono/correo | `tests/unit/test_executive_dashboard_render.py::test_advisor_table_shows_only_the_allowed_columns`; `tests/integration/test_executive_dashboard_full.py::test_advisor_rows_expose_no_pii_beyond_the_visible_name` | — (cubierto por test) | `developer-01.json` |
+| REQ-B-29 | Pruebas de rendimiento | Validación de volumen | AC-18 | Test con volumen representativo + `EXPLAIN` documentado | `tests/integration/test_executive_dashboard_full.py::test_full_dashboard_latency_with_representative_volume`, `::test_full_dashboard_query_count_is_bounded_and_free_of_n_plus_1`; `tests/integration/test_executive_dashboard_repository.py::test_performance_representative_volume`, `::test_explain_state_history_uses_support_index`; benchmark reproducible `scripts/benchmark_executive_dashboard.py` | — (cubierto por test) | `developer-01.json` |
 | REQ-B-30 | Smoke completo en AWS DEV | Verificación real Parte B | AC-18 | Smoke humano en DEV: acceso ceo/cto, 403 roles no autorizados, KPIs y filtros | — (smoke humano) | Smoke humano completo (AC-18) | `acceptance-01.json`; `verification-01.json` |
 
 ---
@@ -144,14 +144,14 @@ requisito de esta matriz.
 | REQ | Solicitud original | Objetivo | AC | Implementación prevista | Prueba automatizada | Smoke humano | Evidencia esperada |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | REQ-S-01 | change_class D | Clasificación correcta del cambio | AC-5, AC-7 | `tasks/current.yaml.change_class=D`; la migración 008 fuera del fast path | — (verificación de guards: `deploy_required_non_fast_path`) | Human Gate (BLOCKED_HUMAN) | `merge-01.json` (merged_non_fast_path) |
-| REQ-S-02 | 008 debe reconfirmarse libre antes de desarrollarla | Número de migración correcto | AC-2 | Verificar `008` libre en todo el historial git antes de escribir el forward/rollback | `test_h3_3_4_migration_scripts.py` (verificación de numeración) | — (cubierto por verificación) | `developer-01.json` |
+| REQ-S-02 | 008 debe reconfirmarse libre antes de desarrollarla | Número de migración correcto | AC-2 | Verificar `008` libre en todo el historial git antes de escribir el forward/rollback | `tests/unit/test_h3_3_4_migration_scripts.py` (verificación de numeración) | — (cubierto por verificación) | `developer-01.json` |
 | REQ-S-03 | Migration candidate y application candidate separados | Dos artefactos distintos | AC-5, AC-7 | Congelar migration candidate (SHA main + forward/rollback con SHA-256) y, aparte, application candidate | — (verificación humana del artefacto; SHA-256 por script de preflight) | Dos aprobaciones humanas | `migration-01.json`; `candidate-01.json` |
 | REQ-S-04 | Dos aprobaciones humanas independientes y no intercambiables | Ninguna aprobación sustituye a la otra | AC-5, AC-7 | Aprobación migration candidate ≠ aprobación application candidate (WAITING_HUMAN_APPROVAL) | — (verificación humana; no sustituible por test) | Dos Human Gates | `resolution-01.json` (migration) + `approval-01.json` (application) |
 | REQ-S-05 | Postflight DB antes de application candidate | Orden de etapas | AC-6, AC-7 | Postflight de privilegios (AC-6) PASS antes de resolver a PREPARING_DEPLOYMENT | — (verificación humana del postflight) | Postflight humano (AC-6) | `migration-01.json.postflight` |
 | REQ-S-06 | Ningún fast path | Migración nunca por fast path | AC-5 | `merged_non_fast_path → BLOCKED_HUMAN` obligatorio (clase D) | — (verificación de guards) | Human Gate | `merge-01.json` |
-| REQ-S-07 | Sin option-settings | Sin mutación de settings | AC-7 | Plan de deploy sin `--option-settings` | `test_eb_deployment_security.py` (regresión, sin option-settings) | — (cubierto por guard) | `candidate-01.json` (deployment_plan) |
-| REQ-S-08 | Rollback probado en integración | Rollback 008 validado antes de DEV | AC-8 | `008_drop_lead_state_history.sql` (REVOKE + DROP VIEW) probado en PostgreSQL de integración | `test_h3_3_4_migration_scripts.py::test_008_rollback` | — (cubierto por test) | `developer-01.json` |
-| REQ-S-09 | Fallos sin eliminación automática de evidencia u objetos | Sin borrado automático | AC-8 | Ningún fallo post-deploy elimina automáticamente evidencia ni objetos | `test_h3_3_4_migration_scripts.py` (contrato de no-borrado) | — (cubierto por test) | `developer-01.json` |
+| REQ-S-07 | Sin option-settings | Sin mutación de settings | AC-7 | Plan de deploy sin `--option-settings` | `tests/security/test_eb_deployment_security.py` (regresión, sin option-settings) | — (cubierto por guard) | `candidate-01.json` (deployment_plan) |
+| REQ-S-08 | Rollback probado en integración | Rollback 008 validado antes de DEV | AC-8 | `008_drop_lead_state_history.sql` (REVOKE + DROP VIEW) probado en PostgreSQL de integración | `tests/unit/test_h3_3_4_migration_scripts.py::test_rollback_revokes_select_and_drops_view_and_index` | — (cubierto por test) | `developer-01.json` |
+| REQ-S-09 | Fallos sin eliminación automática de evidencia u objetos | Sin borrado automático | AC-8 | Ningún fallo post-deploy elimina automáticamente evidencia ni objetos | `tests/unit/test_h3_3_4_migration_scripts.py::test_forward_and_rollback_are_separate_transactional_scripts`, `::test_rollback_revokes_select_and_drops_view_and_index` (borrado controlado, nunca automático) | — (cubierto por test) | `developer-01.json` |
 | REQ-S-10 | DB-PATH-MECHANISM como deuda no bloqueante | No resolver deuda en esta tarea | AC-5, AC-7 | No se resuelve DB-PATH-MECHANISM; se sigue el Human Gate manual como en H3.3.3 | — (no aplica: deuda explícita fuera de alcance) | Human Gate | `migration-01.json` (nota) |
 | REQ-S-11 | AUTH_USERS_JSON y password_hash nunca leídos ni registrados | Invariante de secretos | AC-10, AC-17 | Ningún test/consulta/log lee `AUTH_USERS_JSON` ni `password_hash` | `tests/security/` + grep estático de no-secretos | — (invariante de seguridad) | `developer-01.json`; `pii_log_scan` (0 coincidencias) |
 | REQ-S-12 | Paridad completa de H3.3/H3.3.3 | Reutilizar patrón probado | AC-4..AC-10, AC-17, AC-18 | Mismo patrón que 007 (vista mínimo privilegio, dos aprobaciones, postflight, rollback) | Regresión H3.3.3 completa | Smoke humano | `developer-01.json`; `verification-01.json` |
@@ -188,26 +188,26 @@ requisito de esta matriz.
 
 | # | Caso de prueba | REQ | AC | Prueba prevista | Evidencia |
 | --- | --- | --- | --- | --- | --- |
-| TC-1 | Cambio de estado registra actor/fecha/anterior/nuevo | REQ-A-01, REQ-A-02 | AC-1 | `tests/integration/test_lead_state_history.py` | `developer-01.json` |
-| TC-2 | No-op sin duplicación | REQ-A-06 | AC-1 | `test_lead_state_history.py::test_noop_does_not_duplicate_event` | `developer-01.json` |
-| TC-3 | Concurrencia con dos conexiones | REQ-A-08 | AC-1 | `test_lead_state_history.py::test_concurrent_updates_serialize` | `developer-01.json` |
-| TC-4 | Fallo de auditoría revierte el estado | REQ-A-07 | AC-1 | `test_lead_state_history.py::test_audit_failure_rolls_back_state` | `developer-01.json` |
-| TC-5 | Timeline combina las tres fuentes | REQ-A-16 | AC-4 | `tests/unit/test_h3_3_4_timeline_presentation.py` | `developer-01.json` |
-| TC-6 | Orden estable y America/Santiago | REQ-A-03, REQ-A-17 | AC-4 | `test_lead_timeline_timezone.py`; `::test_stable_order` | `developer-01.json` |
-| TC-7 | Eventos automáticos no editables | REQ-A-18, REQ-A-19 | AC-4 | `::test_automatic_badge`, `::test_no_edit_delete_controls` | `developer-01.json` |
-| TC-8 | CEO y CTO acceden | REQ-B-02 | AC-10 | `test_executive_dashboard.py::test_ceo_cto_access` | `developer-01.json` |
-| TC-9 | Otros roles y anónimos reciben 403 sin datos | REQ-B-03 | AC-10 | `::test_other_roles_403`, `::test_anonymous_403` | `developer-01.json` |
-| TC-10 | KPIs con cero datos | REQ-B-05, REQ-B-20 | AC-11, AC-18 | `test_executive_dashboard_kpis.py::test_zero_data` | `developer-01.json` |
-| TC-11 | Filtros individuales y combinados | REQ-B-10 | AC-11 | `test_executive_dashboard_filters.py` | `developer-01.json` |
-| TC-12 | Límites de fecha | REQ-B-06 | AC-11 | `test_executive_dashboard_kpis.py::test_period_boundaries` | `developer-01.json` |
-| TC-13 | Evolución diaria/semanal/mensual | REQ-B-09 | AC-11 | `test_executive_dashboard_series.py` | `developer-01.json` |
-| TC-14 | Leads sin asesor | REQ-B-08 | AC-11, AC-18 | `test_executive_dashboard_kpis.py::test_leads_sin_asesor` | `developer-01.json` |
-| TC-15 | Estados desconocidos o históricos | REQ-B-07 | AC-11, AC-18 | `test_executive_dashboard_kpis.py::test_estados_desconocidos` | `developer-01.json` |
-| TC-16 | Fan-out de joins sin conteos duplicados | REQ-B-07, REQ-B-14 | AC-11, AC-12, AC-18 | `test_executive_dashboard_kpis.py::test_no_duplicate_counts` | `developer-01.json` |
-| TC-17 | Resumen por asesor | REQ-B-12 | AC-12 | `test_executive_dashboard_asesor.py` | `developer-01.json` |
-| TC-18 | PII no expuesta | REQ-B-27 | AC-17 | `test_executive_dashboard_pii.py::test_no_lead_pii` | `developer-01.json` |
-| TC-19 | Rendimiento con volumen representativo y EXPLAIN | REQ-A-12, REQ-B-29 | AC-3, AC-18 | `test_executive_dashboard_perf.py` + `EXPLAIN` documentado | `developer-01.json` |
-| TC-20 | Regresión H3.3/H3.3.3 | REQ-A-20 | AC-4, AC-9 | Regresión `test_h3_3_3_timeline_presentation.py`, `test_web_app.py` | `developer-01.json`; `verification-01.json` |
+| TC-1 | Cambio de estado registra actor/fecha/anterior/nuevo | REQ-A-01, REQ-A-02 | AC-1 | `tests/integration/test_lead_state_history.py::test_effective_change_records_actor_timestamp_states_and_single_event` | `developer-01.json` |
+| TC-2 | No-op sin duplicación | REQ-A-06 | AC-1 | `tests/integration/test_lead_state_history.py::test_noop_does_not_update_nor_duplicate_audit` | `developer-01.json` |
+| TC-3 | Concurrencia con dos conexiones | REQ-A-08 | AC-1 | `tests/integration/test_lead_state_history.py::test_concurrent_updates_serialize_without_lost_update_or_duplicate_events` | `developer-01.json` |
+| TC-4 | Fallo de auditoría revierte el estado | REQ-A-07 | AC-1 | `tests/integration/test_lead_state_history.py::test_audit_failure_rolls_back_state` | `developer-01.json` |
+| TC-5 | Timeline combina las tres fuentes | REQ-A-16 | AC-4 | `tests/unit/test_h3_3_4_timeline_presentation.py::test_merges_three_sources_chronologically` | `developer-01.json` |
+| TC-6 | Orden estable y America/Santiago | REQ-A-03, REQ-A-17 | AC-4 | `tests/unit/test_h3_3_4_timeline_presentation.py::test_state_change_timestamp_is_displayed_in_america_santiago`, `::test_deterministic_tiebreak_event_then_state_change_then_note` | `developer-01.json` |
+| TC-7 | Eventos automáticos no editables | REQ-A-18, REQ-A-19 | AC-4 | `tests/unit/test_web_app.py::test_detail_timeline_renders_state_change_with_badge_and_no_edit_delete`; `tests/unit/test_h3_3_4_timeline_presentation.py::test_state_change_items_have_no_edit_or_delete_controls` | `developer-01.json` |
+| TC-8 | CEO y CTO acceden | REQ-B-02 | AC-10 | `tests/unit/test_executive_dashboard_access.py::test_ceo_can_access_dashboard`, `::test_cto_can_access_dashboard` | `developer-01.json` |
+| TC-9 | Otros roles y anónimos reciben 403 sin datos | REQ-B-03 | AC-10 | `tests/unit/test_executive_dashboard_access.py::test_other_authenticated_role_receives_403`, `::test_anonymous_receives_403` | `developer-01.json` |
+| TC-10 | KPIs con cero datos | REQ-B-05, REQ-B-20 | AC-11, AC-18 | `tests/integration/test_executive_dashboard_repository.py::test_zero_data_returns_empty_metrics`; `tests/unit/test_executive_dashboard_render.py::test_dashboard_without_data_shows_coherent_empty_states` | `developer-01.json` |
+| TC-11 | Filtros individuales y combinados | REQ-B-10 | AC-11 | `tests/unit/test_executive_dashboard_filters.py`; `tests/integration/test_executive_dashboard_repository.py::test_individual_and_combined_filters` | `developer-01.json` |
+| TC-12 | Límites de fecha | REQ-B-06 | AC-11 | `tests/integration/test_executive_dashboard_repository.py::test_inclusive_date_boundaries` | `developer-01.json` |
+| TC-13 | Evolución diaria/semanal/mensual | REQ-B-09 | AC-11 | `tests/integration/test_executive_dashboard_repository.py::test_evolucion_granularity_and_santiago_timezone`; `tests/unit/test_executive_dashboard_presentation.py::test_bucket_labels_follow_the_selected_granularity` | `developer-01.json` |
+| TC-14 | Leads sin asesor | REQ-B-08 | AC-11, AC-18 | `tests/integration/test_executive_dashboard_repository.py::test_leads_sin_asesor_have_own_bucket` | `developer-01.json` |
+| TC-15 | Estados desconocidos o históricos | REQ-B-07 | AC-11, AC-18 | `tests/integration/test_executive_dashboard_repository.py::test_unknown_states_are_preserved` | `developer-01.json` |
+| TC-16 | Fan-out de joins sin conteos duplicados | REQ-B-07, REQ-B-14 | AC-11, AC-12, AC-18 | `tests/integration/test_executive_dashboard_repository.py::test_inactive_assignments_do_not_count_and_fanout_is_safe` | `developer-01.json` |
+| TC-17 | Resumen por asesor | REQ-B-12 | AC-12 | `tests/integration/test_executive_dashboard_full.py::test_per_advisor_metrics_use_the_shared_definitions` | `developer-01.json` |
+| TC-18 | PII no expuesta | REQ-B-27 | AC-17 | `tests/unit/test_executive_dashboard_render.py::test_served_html_contains_no_pii_value_of_any_kind`; `tests/unit/test_executive_dashboard_service.py::test_contract_contains_no_lead_or_advisor_pii` | `developer-01.json` |
+| TC-19 | Rendimiento con volumen representativo y EXPLAIN | REQ-A-12, REQ-B-29 | AC-3, AC-18 | `tests/integration/test_executive_dashboard_full.py::test_full_dashboard_latency_with_representative_volume`, `::test_full_dashboard_query_count_is_bounded_and_free_of_n_plus_1`; `tests/integration/test_executive_dashboard_repository.py::test_performance_representative_volume`, `::test_explain_state_history_uses_support_index` | `developer-01.json` |
+| TC-20 | Regresión H3.3/H3.3.3 | REQ-A-20 | AC-4, AC-9 | `tests/unit/test_h3_3_3_timeline_presentation.py`; `tests/unit/test_web_app.py` | `developer-01.json`; `verification-01.json` |
 | TC-21 | Smoke humano completo en AWS DEV | REQ-B-30 | AC-9, AC-18 | Smoke humano Parte A + Parte B (incluye 403) | `acceptance-01.json`; `verification-01.json` |
 
 ---
@@ -255,6 +255,13 @@ PY
 - **ninguna prueba exige leer secretos**: PASS
 
 **GATE: PASS** — la matriz cubre el alcance completo de H3.3.4 sin diferimientos, sin tareas posteriores y sin métricas ambiguas.
+
+> Desde la ronda 1 de revisión, este gate está **automatizado y ampliado** en
+> `tests/unit/test_h3_3_4_requirements_matrix_gate.py`, que además verifica que toda ruta
+> de prueba citada existe, que todo `::test_<nombre>` resuelve a una función real, que no
+> aparece ninguna referencia a una tarea posterior, que AC-1..AC-18 siguen cubiertos, que
+> los requirement IDs son únicos y completos, y que ninguna fila de requisito queda sin AC
+> ni apuntando a un archivo inexistente.
 
 ---
 
@@ -445,11 +452,23 @@ parámetros a la URL de la bandeja. No se agregan rutas ni enlaces inexistentes.
 
 - `tests/integration/test_executive_dashboard_repository.py::test_explain_state_history_uses_support_index`
   ejecuta `EXPLAIN (FORMAT JSON)` sobre la agregación de `v_historial_estado_lead` y
-  verifica que el índice de apoyo `auditoria_state_history_idx` (008) es aplicable
-  (`SET LOCAL enable_seqscan = off` para forzar el camino de índice; con una tabla
-  pequeña el planificador prefiere correctamente el seq scan).
+  verifica que el índice de apoyo `auditoria_state_history_idx` (008) es **aplicable**:
+  lo hace con `SET LOCAL enable_seqscan = off` para forzar el camino de índice, porque
+  con la tabla de integración (pequeña) el planificador de PostgreSQL elige naturalmente
+  el seq scan. **Esta prueba demuestra la aplicabilidad del índice, no el plan normal de
+  PostgreSQL a volumen real.**
 - `test_performance_representative_volume` siembra 1.500 leads y verifica que
   `get_kpi_snapshot` + `get_estancados` completan < 5 s con conteos correctos.
+- Las cifras "~40x latencia / ~90x buffers a 100k filas" citadas en el comentario de
+  `scripts/sql/008_create_lead_state_history.sql` y en `docs/database/04_MIGRATIONS.md`
+  provienen de la comparación con el camino de índice **forzado** (`enable_seqscan=off`),
+  no del plan elegido normalmente por PostgreSQL a ese volumen. El `EXPLAIN (ANALYZE,
+  BUFFERS)` real sin forzar a volumen representativo queda como follow-up (F2 de
+  `evidence/H3.3.4/reviewer/review-01.json`) a adjuntar antes del cierre de la tarea.
+  `scripts/benchmark_executive_dashboard.py` ya ejecuta `EXPLAIN (ANALYZE, BUFFERS)` real
+  sin forzar sobre los dos riesgos de escalado (parser regexp de notas y agregación de
+  `v_historial_estado_lead`), pero no reproduce la comparación Seq-Scan-vs-Index-Scan a
+  100k filas.
 - **No se agregó ningún índice nuevo**: el índice 008 ya cubre la agregación de estado;
   no hay evidencia que justifique uno adicional.
 
@@ -588,6 +607,15 @@ Ausencia de N+1 verificada de forma explícita: el número de sentencias es **id
 (`test_full_dashboard_query_count_is_bounded_and_free_of_n_plus_1`). No se agregó ningún
 índice nuevo: la latencia observada no lo justifica. `enable_seqscan` no se usa en runtime.
 
+A **20.000 leads / 12 asesores** (benchmark reproducible
+`scripts/benchmark_executive_dashboard.py`) la latencia total del render es **5,28–6,80 s**
+con 18 sentencias constantes (sin N+1); las tres consultas más lentas (~1,3 s cada una)
+tienen como costo dominante el **parsing regexp de las notas** en `leads.comentarios`
+(`EXPLAIN`: Function Scan on `regexp_matches`). Clasificación del Reviewer (F6 de
+`review-01.json`): riesgo (A) documentado, **no bloqueante para DEV** (acceso exclusivo
+CEO/CTO, baja frecuencia). Follow-up concreto registrado y **no resuelto**: posible
+normalización de las notas o read model futuro. El rendimiento no se declara resuelto.
+
 ### 12.7.1 Consistencia transaccional del render (snapshot read-only)
 
 El dashboard se construye con ~18 consultas agregadas independientes. Para que un único
@@ -607,6 +635,12 @@ render usa exactamente una conexión del pool) y `test_dashboard_snapshot_does_n
 (una escritura confirmada a mitad del render no altera los conteos de la instantánea). La
 instantánea se libera con `ROLLBACK` al salir y los defaults de sesión de la conexión se
 restauran antes de devolverla al pool.
+
+Riesgo operativo (F5 de `review-01.json`): `dashboard_read_snapshot` mantiene una única
+conexión del pool durante todo el render (~5–7 s a volumen representativo), con una
+transacción `REPEATABLE READ READ ONLY` que puede retener `xmin` y presionar el pool y el
+autovacuum si el volumen o la frecuencia de uso crecen. Riesgo bajo hoy (acceso exclusivo
+CEO/CTO, baja concurrencia esperada); seguimiento operacional, sin acción para esta tarea.
 
 ### 12.8 Pruebas
 
@@ -657,3 +691,45 @@ completarse para todas las secciones; la verificación se hizo con capturas parc
    la de la alerta.
 8. Confirmar que no aparece ningún RUT, nombre, teléfono ni correo de lead en la página ni
    en el código fuente servido.
+9. Confirmar en DEV que `LEAD_STATE_HISTORY_CUTOVER` está configurada con la fecha exacta de
+   aplicación de la migración 008 (ISO `YYYY-MM-DD`, sin zona horaria). Su ausencia falla de
+   forma segura (funnel/primera gestión no disponibles), pero su exactitud no se verifica
+   automáticamente (F4 de `review-01.json`). Las pruebas reales del default sin fecha
+   inventada, valor ISO válido y valores inválidos existen en
+   `tests/unit/test_h3_3_4_timeline_presentation.py` (validación del setting); la fecha real
+   de cutover sigue siendo dato de despliegue pendiente, nunca inventado.
+
+---
+
+## 13. Remediación ronda 1 de revisión (review-01.json)
+
+> Corrección de `evidence/H3.3.4/reviewer/review-01.json` (decision=REJECTED, cause=docs).
+> Sin cambios funcionales; sin tocar migraciones 005/006/007/008, AWS/RDS, `requirements/**`,
+> GitPython, RBAC ni definiciones métricas.
+
+- **F1 (major, docs)** — **corregido**: la columna "Prueba automatizada" de §4
+  (REQ-B-01..REQ-B-30) y las referencias de §3/§5/§7 citaban archivos planificados o
+  inexistentes (`test_executive_dashboard.py`, `test_executive_dashboard_kpis.py`, etc.).
+  Ahora citan los archivos y funciones reales (`test_executive_dashboard_{access,filters,
+  presentation,render,service}.py` unit; `test_executive_dashboard_{full,repository}.py`
+  integration), verificados contra el repositorio. El gate programático
+  `tests/unit/test_h3_3_4_requirements_matrix_gate.py` impide la regresión.
+- **F2 (minor, EXPLAIN forzado)** — **documentado como follow-up**: la aplicabilidad del
+  índice 008 se demuestra con `enable_seqscan=off` (test real); las cifras "~40x/~90x a
+  100k filas" son de la comparación forzada, no del plan normal. El `EXPLAIN (ANALYZE,
+  BUFFERS)` real sin forzar a volumen representativo queda pendiente de adjuntar antes del
+  cierre de la tarea (§11.6). No se agregan índices especulativos.
+- **F3 (minor, tests 'unit' que requieren Postgres)** — **aceptado como follow-up**: los
+  tests de `test_executive_dashboard_service.py` invocan `dashboard_read_snapshot()`
+  directamente (no delegado al repositorio inyectable), por lo que requieren PostgreSQL.
+  Sin cambio de código en esta ronda; follow-up sugerido por el Reviewer: que el repositorio
+  (real o falso) posea la adquisición del snapshot para que la etiqueta "unit" sea fiel.
+- **F4 (info, LEAD_STATE_HISTORY_CUTOVER)** — **agregado al checklist humano** (§12.10):
+  verificar en DEV el valor exacto configurado. Se distingue la validación del setting
+  (automatizada, `test_h3_3_4_timeline_presentation.py`) de la configuración efectiva en AWS
+  DEV (dato de despliegue pendiente, sin fecha inventada).
+- **F5 (info, transacción REPEATABLE READ prolongada)** — **riesgo documentado**, sin
+  acción: relación con latencia, pool y vacuum registrada en §12.7.1.
+- **F6 (info, rendimiento)** — **preservado**: 5,28–6,80 s a 20.000 leads/12 asesores,
+  parsing regexp de comentarios como causa principal, clasificación (A) no bloqueante para
+  DEV; follow-up de normalización/read model registrado y no resuelto (§12.7).

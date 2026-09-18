@@ -119,9 +119,15 @@ Contrato versionado:
 - No amplia los privilegios de `tpi_app` sobre `tpi.auditoria`
   (`SELECT/UPDATE/DELETE` continuan `false`; append-only vigente desde `006`).
 - Indice de apoyo `auditoria_state_history_idx (accion, tabla_afectada, id_lead,
-  fecha_hora)` justificado por EXPLAIN real a 100k filas (timeline de un lead:
-  Seq Scan ~17.9 ms -> Index Scan ~0.4 ms; agregacion por fecha/accion:
-  Seq Scan ~35.6 ms -> Bitmap Index Scan ~25.4 ms).
+  fecha_hora)` justificado por EXPLAIN. La **aplicabilidad** del indice se demuestra en
+  `tests/integration/test_executive_dashboard_repository.py::test_explain_state_history_uses_support_index`
+  forzando `SET LOCAL enable_seqscan = off` (con la tabla de integracion pequena el
+  planificador prefiere el seq scan). Las cifras de la comparacion a 100k filas (timeline de
+  un lead: Seq Scan ~17.9 ms -> Index Scan ~0.4 ms; agregacion por fecha/accion:
+  Seq Scan ~35.6 ms -> Bitmap Index Scan ~25.4 ms) provienen de esa comparacion **forzada**,
+  no del plan normal de PostgreSQL; el `EXPLAIN (ANALYZE, BUFFERS)` real sin forzar a volumen
+  representativo queda como follow-up (F2 de `evidence/H3.3.4/reviewer/review-01.json`) a
+  adjuntar antes del cierre de la tarea.
 - Orden estable aplicado por la consulta del repositorio
   (`fecha_hora DESC, id_auditoria DESC`), no por la vista.
 - Aviso de cobertura honesto en la ficha: la variable de entorno
