@@ -170,7 +170,8 @@ def test_cartera_por_asesor_fanout_safe_and_dimensional_filter() -> None:
 
 
 def test_casos_por_estado_y_asesor_exact_matrix_counts() -> None:
-    """REQ-B-14: exact estado x asesor cells, unassigned bucket and zero fan-out."""
+    """REQ-B-14: exact estado x asesor cells (incl. unknown states), unassigned
+    bucket, one row per (asesor, estado) and zero fan-out."""
     marker = _marker()
     lead_ids: list[str] = []
     asesor_ids: list[str] = []
@@ -213,6 +214,26 @@ def test_casos_por_estado_y_asesor_exact_matrix_counts() -> None:
             )
             _assign(cur, lead_ids[-1], a1, now - timedelta(days=3), estado="inactiva")
             _assign(cur, lead_ids[-1], a1, now - timedelta(days=1), estado="activa")
+            # Unknown states (not in the catalog), one assigned and one unassigned.
+            lead_ids.append(
+                _make_lead(
+                    cur,
+                    marker=marker,
+                    rut=_rut("m"),
+                    estado="estado_desconocido_xyz",
+                    fecha_ingreso=now,
+                )
+            )
+            _assign(cur, lead_ids[-1], a1, now)
+            lead_ids.append(
+                _make_lead(
+                    cur,
+                    marker=marker,
+                    rut=_rut("m"),
+                    estado="estado_desconocido_xyz",
+                    fecha_ingreso=now,
+                )
+            )
             conn.commit()
     try:
         rows = _REPO.get_casos_por_estado_y_asesor(_filters(marker))
@@ -223,10 +244,13 @@ def test_casos_por_estado_y_asesor_exact_matrix_counts() -> None:
         assert cells[(a1, "nuevo")] == 2
         assert cells[(a1, "contactado")] == 1
         assert cells[(a1, "cerrado")] == 1
+        assert cells[(a1, "estado_desconocido_xyz")] == 1  # unknown state preserved
         assert cells[(a2, "nuevo")] == 1
         assert cells[(a2, "perdido")] == 1
         assert cells[(None, "nuevo")] == 1
-        assert sum(cells.values()) == 7  # zero fan-out: one cell per (asesor, estado)
+        assert cells[(None, "estado_desconocido_xyz")] == 1  # unassigned unknown state
+        assert len(rows) == len(cells)  # one row per (asesor, estado): no duplicate rows
+        assert sum(cells.values()) == len(lead_ids)  # each lead counted exactly once
 
         filtered = _REPO.get_casos_por_estado_y_asesor(_filters(marker, estado="nuevo"))
         fcells = {
@@ -234,6 +258,15 @@ def test_casos_por_estado_y_asesor_exact_matrix_counts() -> None:
             for r in filtered
         }
         assert fcells == {(a1, "nuevo"): 2, (a2, "nuevo"): 1, (None, "nuevo"): 1}
+
+        unknown_only = _REPO.get_casos_por_estado_y_asesor(
+            _filters(marker, estado="estado_desconocido_xyz")
+        )
+        ucells = {
+            (str(r["id_asesor"]) if r["id_asesor"] else None, r["estado"]): int(r["n"])
+            for r in unknown_only
+        }
+        assert ucells == {(a1, "estado_desconocido_xyz"): 1, (None, "estado_desconocido_xyz"): 1}
     finally:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
