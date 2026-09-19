@@ -165,13 +165,13 @@ requisito de esta matriz.
 | --- | --- | --- |
 | AC-1 | REQ-A-01, REQ-A-02, REQ-A-04, REQ-A-05, REQ-A-06, REQ-A-07, REQ-A-08 | automated |
 | AC-2 | REQ-A-09, REQ-A-10, REQ-A-21, REQ-S-02 | automated |
-| AC-3 | REQ-A-02, REQ-A-09, REQ-A-10, REQ-A-11, REQ-A-12, REQ-A-13, REQ-A-14, REQ-A-15 | automated |
+| AC-3 | REQ-A-02, REQ-A-09, REQ-A-11, REQ-A-12, REQ-A-13, REQ-A-14, REQ-A-15 | automated |
 | AC-4 | REQ-A-01, REQ-A-02, REQ-A-03, REQ-A-16, REQ-A-17, REQ-A-18, REQ-A-19, REQ-A-20, REQ-A-22, REQ-A-23, REQ-A-24, REQ-S-12 | both |
 | AC-5 | REQ-A-10, REQ-S-01, REQ-S-03, REQ-S-04, REQ-S-06, REQ-S-10, REQ-S-12 | human |
 | AC-6 | REQ-A-10, REQ-A-13, REQ-A-14, REQ-S-05, REQ-S-12 | human |
 | AC-7 | REQ-S-01, REQ-S-03, REQ-S-04, REQ-S-05, REQ-S-07, REQ-S-10, REQ-S-12 | human |
 | AC-8 | REQ-A-10, REQ-S-08, REQ-S-09, REQ-S-12 | automated |
-| AC-9 | REQ-A-01, REQ-A-02, REQ-A-03, REQ-A-16, REQ-A-18, REQ-A-19, REQ-A-20, REQ-A-24, REQ-S-12 | human |
+| AC-9 | REQ-A-16, REQ-A-20, REQ-S-12 | human |
 | AC-10 | REQ-B-01, REQ-B-02, REQ-B-03, REQ-B-04, REQ-S-11, REQ-S-12 | both |
 | AC-11 | REQ-B-05, REQ-B-06, REQ-B-07, REQ-B-08, REQ-B-09, REQ-B-10, REQ-B-20, REQ-B-21 | automated |
 | AC-12 | REQ-B-12, REQ-B-13, REQ-B-14, REQ-B-28 | automated |
@@ -180,7 +180,7 @@ requisito de esta matriz.
 | AC-15 | REQ-B-19 | automated |
 | AC-16 | REQ-B-11, REQ-B-22 | automated |
 | AC-17 | REQ-B-23, REQ-B-24, REQ-B-25, REQ-B-26, REQ-B-27, REQ-S-11, REQ-S-12 | automated |
-| AC-18 | REQ-B-03, REQ-B-10, REQ-B-29, REQ-B-30, REQ-S-13 | both |
+| AC-18 | REQ-B-03, REQ-B-10, REQ-B-29, REQ-B-30, REQ-S-12, REQ-S-13 | both |
 
 ---
 
@@ -201,10 +201,10 @@ requisito de esta matriz.
 | TC-11 | Filtros individuales y combinados | REQ-B-10 | AC-11 | `tests/unit/test_executive_dashboard_filters.py`; `tests/integration/test_executive_dashboard_repository.py::test_individual_and_combined_filters` | `developer-01.json` |
 | TC-12 | Límites de fecha | REQ-B-06 | AC-11 | `tests/integration/test_executive_dashboard_repository.py::test_inclusive_date_boundaries` | `developer-01.json` |
 | TC-13 | Evolución diaria/semanal/mensual | REQ-B-09 | AC-11 | `tests/integration/test_executive_dashboard_repository.py::test_evolucion_granularity_and_santiago_timezone`; `tests/unit/test_executive_dashboard_presentation.py::test_bucket_labels_follow_the_selected_granularity` | `developer-01.json` |
-| TC-14 | Leads sin asesor | REQ-B-08 | AC-11, AC-18 | `tests/integration/test_executive_dashboard_repository.py::test_leads_sin_asesor_have_own_bucket` | `developer-01.json` |
-| TC-15 | Estados desconocidos o históricos | REQ-B-07 | AC-11, AC-18 | `tests/integration/test_executive_dashboard_repository.py::test_unknown_states_are_preserved` | `developer-01.json` |
-| TC-16 | Fan-out de joins sin conteos duplicados | REQ-B-07, REQ-B-14 | AC-11, AC-12, AC-18 | `tests/integration/test_executive_dashboard_repository.py::test_inactive_assignments_do_not_count_and_fanout_is_safe` | `developer-01.json` |
-| TC-17 | Resumen por asesor | REQ-B-12 | AC-12 | `tests/integration/test_executive_dashboard_full.py::test_per_advisor_metrics_use_the_shared_definitions` | `developer-01.json` |
+| TC-14 | Leads sin asesor | REQ-B-08 | AC-11, AC-18 | `tests/integration/test_executive_dashboard_repository.py::test_leads_sin_asesor_have_own_bucket`; `tests/integration/test_executive_dashboard_per_advisor.py::test_cartera_por_asesor_exact_total_active_and_sin_asesor` (bucket "Sin asesor" exacto); `tests/integration/test_executive_dashboard_per_advisor.py::test_casos_por_estado_y_asesor_exact_matrix_counts` (celda (None, estado) exacta) | `developer-01.json` |
+| TC-15 | Estados desconocidos o históricos | REQ-B-07 | AC-11, AC-18 | `tests/integration/test_executive_dashboard_repository.py::test_unknown_states_are_preserved`; `tests/integration/test_executive_dashboard_per_advisor.py::test_casos_por_estado_y_asesor_exact_matrix_counts` (estado desconocido preservado con conteo exacto por asesor) | `developer-01.json` |
+| TC-16 | Fan-out de joins sin conteos duplicados | REQ-B-07, REQ-B-14 | AC-11, AC-12, AC-18 | `tests/integration/test_executive_dashboard_repository.py::test_inactive_assignments_do_not_count_and_fanout_is_safe`; `tests/integration/test_executive_dashboard_per_advisor.py::test_cartera_por_asesor_fanout_safe_and_dimensional_filter` (inactiva+activa contada una vez); `tests/integration/test_executive_dashboard_per_advisor.py::test_casos_por_estado_y_asesor_exact_matrix_counts` (sin fan-out, una celda por asesor×estado) | `developer-01.json` |
+| TC-17 | Resumen por asesor | REQ-B-12 | AC-12 | `tests/integration/test_executive_dashboard_per_advisor.py::test_metricas_operacionales_por_asesor_stuck_assignment_and_first_management`; `tests/integration/test_executive_dashboard_per_advisor.py::test_cartera_por_asesor_exact_total_active_and_sin_asesor`; `tests/integration/test_executive_dashboard_full.py::test_per_advisor_metrics_use_the_shared_definitions` | `developer-01.json` |
 | TC-18 | PII no expuesta | REQ-B-27 | AC-17 | `tests/unit/test_executive_dashboard_render.py::test_served_html_contains_no_pii_value_of_any_kind`; `tests/unit/test_executive_dashboard_service.py::test_contract_contains_no_lead_or_advisor_pii` | `developer-01.json` |
 | TC-19 | Rendimiento con volumen representativo y EXPLAIN | REQ-A-12, REQ-B-29 | AC-3, AC-18 | `tests/integration/test_executive_dashboard_full.py::test_full_dashboard_latency_with_representative_volume`, `tests/integration/test_executive_dashboard_full.py::test_full_dashboard_query_count_is_bounded_and_free_of_n_plus_1`; `tests/integration/test_executive_dashboard_repository.py::test_performance_representative_volume`, `tests/integration/test_executive_dashboard_repository.py::test_explain_state_history_uses_support_index` | `developer-01.json` |
 | TC-20 | Regresión H3.3/H3.3.3 | REQ-A-20 | AC-4, AC-9 | `tests/unit/test_h3_3_3_timeline_presentation.py`; `tests/unit/test_web_app.py` | `developer-01.json`; `verification-01.json` |
@@ -775,3 +775,46 @@ completarse para todas las secciones; la verificación se hizo con capturas parc
   forzar antes de DONE; F4: CLOSED para esta etapa con cutover DEV pendiente; F5: riesgo
   aceptado REPEATABLE READ; F6: riesgo A no bloqueante, 5,28–6,80 s, 18 consultas y regexp
   preservados). **F3** documentado arriba con los 11 tests que requieren PostgreSQL.
+
+---
+
+## 15. Remediación ronda 3 de revisión (review-03.json)
+
+> Corrección de `evidence/H3.3.4/reviewer/review-03.json` (decision=REJECTED, cause=code).
+> Sin cambios funcionales; sin tocar `app/**`, migraciones 005/006/007/008, AWS/RDS,
+> `requirements/**`, GitPython, RBAC ni definiciones métricas.
+
+- **F1 (major, gate burlable)** — **corregido**: el gate
+  `tests/unit/test_h3_3_4_requirements_matrix_gate.py` fue reescrito para **inventariar todos
+  los tokens con apariencia de referencia de prueba** dentro de la columna "Prueba
+  automatizada"/"Prueba prevista" (localizada por cabecera, no por índice fijo) y exigir que
+  cada uno coincida de extremo a extremo con la gramática canónica
+  `tests/(unit|integration)/test_<archivo>.py[::test_<nombre>]`. Una celda con una referencia
+  válida y otra inválida ahora **falla** (el token inválido no queda oculto). Cada referencia
+  canónica se valida contra el filesystem y contra el AST (`ast.parse`) del archivo real: sólo
+  se acepta una función `def`/`async def` de nivel módulo cuyo nombre exacto comienza con
+  `test_` (pytest colectable); se rechazan helpers, coincidencias parciales y nombres presentes
+  sólo en comentarios/strings. Se rechazan las formas `integration/...`, `unit/...`,
+  `./tests/...`, `/tests/...`, `tests/<otro>/...`, `test_*.py` sin prefijo y `::nombre`
+  desnudo; las referencias deben ir dentro de code spans. Se agregaron 22 pruebas adversariales
+  sobre copias mutadas de la matriz (incluido el patrón exacto de la ronda 3: quitar `tests/`
+  de una referencia), cada una validando el mensaje/categoría de error, no sólo que falle.
+  Se cruzó §6 con la columna AC de cada fila **en ambos sentidos**, y se corrigieron 3
+  discrepancias históricas para que §6 refleje fielmente la columna AC de cada fila:
+  AC-3 (se retiró REQ-A-10, que no declara AC-3 en su fila), AC-9 (se retiraron 6 REQ de
+  Parte A cuyo smoke es AC-9 pero que no lo declaran en su columna AC) y AC-18 (se agregó
+  REQ-S-12, que sí lo declara).
+- **F9 (minor, estado×asesor)** — **corregido**:
+  `tests/integration/test_executive_dashboard_per_advisor.py::test_casos_por_estado_y_asesor_exact_matrix_counts`
+  ahora incluye un estado desconocido (no registrado en el catálogo) con conteo exacto por
+  asesor y en el bucket "Sin asesor", afirmación `len(rows) == len(cells)` (una celda por
+  asesor×estado, sin filas duplicadas), suma total exacta, cada lead contado exactamente una
+  vez, fan-out inactiva+activa y filtro de estado. TC-16 y TC-17 citan las funciones reales
+  nuevas con ruta completa y función exacta.
+- **F10 (info)** — **aclarado**: `tests/security/` **sí existe** (9 archivos, p. ej.
+  `tests/security/test_eb_deployment_security.py`, ejecutados en CI). No se incorpora a la
+  gramática canónica de esta matriz porque las referencias de esta tarea se normalizan a
+  `tests/unit/`/`tests/integration/`; ninguna cobertura exigida se elimina por ello, y
+  REQ-S-07/AC-7 sigue siendo Human Gate. No se afirma que el directorio no exista.
+- **F7/F8** — permanecen CLOSED; **F2–F6** mantienen su disposición (follow-up/riesgo
+  documentado). Cero cambios funcionales.
