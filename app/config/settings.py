@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from datetime import date
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
@@ -155,6 +156,9 @@ class Settings(BaseSettings):
     web_session_max_age_seconds: int = Field(default=28800, alias="WEB_SESSION_MAX_AGE_SECONDS")
     web_mask_pii: bool = Field(default=True, alias="WEB_MASK_PII")
     public_site_url: str | None = Field(default=None, alias="TPI_PUBLIC_SITE_URL")
+    lead_state_history_cutover: date | None = Field(
+        default=None, alias="LEAD_STATE_HISTORY_CUTOVER"
+    )
     api_idempotency_hmac_secret: SecretStr | None = Field(
         default=None, alias="API_IDEMPOTENCY_HMAC_SECRET"
     )

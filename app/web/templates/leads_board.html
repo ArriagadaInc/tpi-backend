@@ -39,7 +39,7 @@
   </div>
 {% else %}
   <div class="empty-state">
-    {% if current_filters.search or current_filters.afp_id or current_filters.estado_lead or current_filters.date_from or current_filters.date_to %}
+    {% if current_filters.search or current_filters.afp_id or current_filters.estado_lead or current_filters.date_from or current_filters.date_to or current_filters.sin_asignar or current_filters.estancado or current_filters.asesor or current_filters.origen or current_filters.fuente %}
       <h3>No encontramos leads con estos filtros</h3>
       <p>Ajusta la búsqueda, AFP, estado o rango de fechas.</p>
     {% else %}

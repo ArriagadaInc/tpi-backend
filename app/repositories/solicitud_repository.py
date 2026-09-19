@@ -22,6 +22,7 @@ from app.models.crm_states import (
     crm_state_filter_terms,
     normalize_crm_state_for_write,
 )
+from app.models.executive_dashboard import estancamiento_dias_default
 from app.models.idempotency import IdempotencyConflictError, IdempotentSolicitudResult
 from app.models.lead_assignment import (
     ASSIGNMENT_ACTIVE_STATE,
@@ -33,6 +34,12 @@ from app.models.solicitud import (
     PersonaData,
     SolicitudData,
     SolicitudResponse,
+)
+from app.repositories.lead_activity_sql import (
+    estancado_params,
+    estancado_predicate,
+    sin_asignar_params,
+    sin_asignar_predicate,
 )
 
 
@@ -59,8 +66,20 @@ class SolicitudRepository:
         estado_civil_id: UUID | None = None,
         date_from: datetime | date | None = None,
         date_to: datetime | date | None = None,
+        asesor_id: UUID | None = None,
+        origen_lead: str | None = None,
+        fuente_actual: str | None = None,
+        sin_asignar: bool = False,
+        estancado: bool = False,
+        estancamiento_dias: int | None = None,
     ) -> tuple[str, list[Any]]:
-        """Build the CRM WHERE clause and parameters using whitelisted filters."""
+        """Build the CRM WHERE clause and parameters using whitelisted filters.
+
+        ``sin_asignar`` and ``estancado`` reuse the shared predicates of
+        :mod:`app.repositories.lead_activity_sql`, the same ones the executive
+        dashboard counts with, so an alert and the listing it links to always
+        describe the same population.
+        """
         clauses: list[str] = []
         params: list[Any] = []
 
@@ -109,6 +128,38 @@ class SolicitudRepository:
                 date_to = datetime.combine(date_to, time.max, tzinfo=UTC)
             clauses.append("l.created_at <= %s")
             params.append(date_to)
+
+        if asesor_id:
+            clauses.append(
+                "EXISTS ("
+                "SELECT 1 FROM tpi.asignaciones a "
+                "WHERE a.id_lead = l.id_lead "
+                "AND a.estado_asignacion = %s "
+                "AND a.id_asesor = %s"
+                ")"
+            )
+            params.extend([ASSIGNMENT_ACTIVE_STATE, str(asesor_id)])
+
+        if origen_lead:
+            clauses.append("LOWER(TRIM(l.origen_lead)) = LOWER(%s)")
+            params.append(origen_lead)
+
+        if fuente_actual:
+            clauses.append("LOWER(TRIM(l.fuente_actual)) = LOWER(%s)")
+            params.append(fuente_actual)
+
+        if sin_asignar:
+            clauses.append(sin_asignar_predicate("l"))
+            params.extend(sin_asignar_params())
+
+        if estancado:
+            umbral = (
+                estancamiento_dias
+                if estancamiento_dias is not None
+                else estancamiento_dias_default()
+            )
+            clauses.append(estancado_predicate("l"))
+            params.extend(estancado_params(umbral))
 
         if not clauses:
             return "", params
@@ -577,6 +628,12 @@ class SolicitudRepository:
         date_to: datetime | None = None,
         sort_by: str | None = None,
         sort_direction: str = "desc",
+        asesor_id: UUID | None = None,
+        origen_lead: str | None = None,
+        fuente_actual: str | None = None,
+        sin_asignar: bool = False,
+        estancado: bool = False,
+        estancamiento_dias: int | None = None,
     ) -> tuple[list[dict[str, Any]], int]:
         """Return a CRM-ready lead board using only the current schema."""
         where_clause, where_params = cls._build_crm_query_filters(
@@ -587,6 +644,12 @@ class SolicitudRepository:
             estado_civil_id=estado_civil_id,
             date_from=date_from,
             date_to=date_to,
+            asesor_id=asesor_id,
+            origen_lead=origen_lead,
+            fuente_actual=fuente_actual,
+            sin_asignar=sin_asignar,
+            estancado=estancado,
+            estancamiento_dias=estancamiento_dias,
         )
         order_column, direction = cls._normalize_crm_sort(sort_by, sort_direction)
         query_count = sql.SQL("""
@@ -781,24 +844,125 @@ class SolicitudRepository:
                 return [dict(row) for row in rows]
 
     @staticmethod
+    def get_lead_state_change_events(id_lead: UUID) -> list[dict[str, Any]]:
+        """Return general state-change traceability events from the sanitized read model.
+
+        Reads tpi.v_historial_estado_lead (migration 008). Never reads tpi.auditoria
+        directly from the application; the read model stays behind the least-privilege
+        view, mirroring the assignment-events pattern of migration 007.
+        """
+        query = """
+            SELECT
+                v.id_auditoria,
+                v.id_lead,
+                v.fecha_hora,
+                v.actor_subject,
+                v.estado_anterior,
+                v.estado_nuevo
+            FROM tpi.v_historial_estado_lead v
+            WHERE v.id_lead = %s
+            ORDER BY v.fecha_hora DESC, v.id_auditoria DESC
+        """
+        with get_db_connection(operation="get_lead_state_change_events") as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (str(id_lead),))
+                rows = cur.fetchall()
+                return [dict(row) for row in rows]
+
+    @staticmethod
     def get_crm_estado_lead_options() -> list[str]:
         """Return the canonical lead states accepted by the CRM."""
         return list(CRM_STATE_CONTRACT)
 
     @staticmethod
-    def update_lead_status(id_lead: UUID, estado_lead: str) -> bool:
-        """Update the lead status using a single parametrized transaction."""
+    def update_lead_status(
+        id_lead: UUID,
+        estado_lead: str,
+        *,
+        actor: AuthenticatedUser,
+    ) -> bool:
+        """Update a lead status transactionally, auditing only effective changes.
+
+        Follows the proven ``assign_lead`` pattern: one transaction, ``SELECT ...
+        FOR UPDATE`` to serialize concurrent writers, compare previous/new state,
+        skip the write and the audit when there is no effective change (idempotent
+        no-op), and otherwise persist ``UPDATE tpi.leads`` + ``INSERT tpi.auditoria``
+        (accion ``cambio_estado_lead``) in a single commit. Any failure rolls both
+        statements back. The ``asignado`` state is rejected defensively here as well
+        as in the service: it is only reachable through ``assign_lead``.
+        """
         normalized_estado = normalize_crm_state_for_write(estado_lead)
-        query = """
+        if normalized_estado == "asignado":
+            raise ValueError(
+                "El estado asignado solo puede establecerse mediante una asignacion valida"
+            )
+        assigned_by = actor.subject.strip()
+        if not assigned_by:
+            raise ValueError("El actor autenticado no posee un identificador estable")
+        if len(assigned_by) > 150:
+            raise ValueError("El identificador tecnico del actor excede la longitud permitida")
+
+        import json
+
+        query_lock = """
+            SELECT estado_lead, id_persona
+            FROM tpi.leads
+            WHERE id_lead = %s
+            FOR UPDATE
+        """
+        query_update = """
             UPDATE tpi.leads
-            SET estado_lead = %s
+            SET estado_lead = %s,
+                updated_at = NOW()
             WHERE id_lead = %s
         """
+        query_trace = """
+            INSERT INTO tpi.auditoria
+                (id_usuario, id_persona, id_lead, accion, tabla_afectada, detalle)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
         with get_db_connection(operation="update_lead_status") as conn:
-            with conn.cursor() as cur:
-                cur.execute(query, (normalized_estado, str(id_lead)))
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(query_lock, (str(id_lead),))
+                    current_row = cur.fetchone()
+                    if current_row is None:
+                        return False
+                    estado_anterior = str(current_row["estado_lead"])
+                    id_persona = current_row.get("id_persona")
+
+                    if estado_anterior == normalized_estado:
+                        # Idempotent no-op: no UPDATE, no audit. The open transaction
+                        # (which only holds the row lock) is rolled back on exit.
+                        return True
+
+                    cur.execute(query_update, (normalized_estado, str(id_lead)))
+                    if cur.rowcount != 1:
+                        raise RuntimeError("No se pudo actualizar el estado del lead")
+                    cur.execute(
+                        query_trace,
+                        (
+                            None,
+                            str(id_persona) if id_persona is not None else None,
+                            str(id_lead),
+                            "cambio_estado_lead",
+                            "tpi.leads",
+                            json.dumps(
+                                {
+                                    "actor_subject": assigned_by,
+                                    "estado_anterior": estado_anterior,
+                                    "estado_nuevo": normalized_estado,
+                                }
+                            ),
+                        ),
+                    )
+                    if cur.rowcount != 1:
+                        raise RuntimeError("No se pudo registrar la auditoria de cambio de estado")
                 conn.commit()
-                return cur.rowcount == 1
+                return True
+            except Exception:
+                conn.rollback()
+                raise
 
     @staticmethod
     def assign_lead(

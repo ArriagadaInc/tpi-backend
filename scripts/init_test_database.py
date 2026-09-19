@@ -5,6 +5,12 @@ import psycopg
 from app.config.settings import settings
 
 SCHEMA_SQL = """
+-- Keep index builds deterministic and avoid parallel maintenance workers in ephemeral
+-- test databases (some sandboxes cannot start parallel workers). This only affects
+-- maintenance operations such as CREATE INDEX, never query parallelism.
+SET max_parallel_maintenance_workers = 0;
+SET max_parallel_workers = 0;
+
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE SCHEMA IF NOT EXISTS tpi;
 
@@ -156,6 +162,29 @@ WHERE a.accion = 'asignacion_lead'
   AND a.tabla_afectada = 'tpi.asignaciones';
 
 REVOKE ALL ON tpi.v_asignacion_auditoria FROM PUBLIC;
+
+-- H3.3.4 read model: sanitized state-change-history view (mirrors migration 008, without
+-- the AWS-DEV preflight/postflight and without the app-role grant, which the real
+-- migration grants to tpi_app and the integration tests exercise via a least-privilege
+-- reader role). The support index is also mirrored so the integration tests can verify
+-- the EXPLAIN-justified access path.
+CREATE INDEX IF NOT EXISTS auditoria_state_history_idx
+    ON tpi.auditoria (accion, tabla_afectada, id_lead, fecha_hora);
+
+CREATE OR REPLACE VIEW tpi.v_historial_estado_lead
+WITH (security_barrier = true) AS
+SELECT
+    a.id_auditoria,
+    a.id_lead,
+    a.fecha_hora,
+    a.detalle->>'actor_subject' AS actor_subject,
+    a.detalle->>'estado_anterior' AS estado_anterior,
+    a.detalle->>'estado_nuevo' AS estado_nuevo
+FROM tpi.auditoria a
+WHERE a.accion = 'cambio_estado_lead'
+  AND a.tabla_afectada = 'tpi.leads';
+
+REVOKE ALL ON tpi.v_historial_estado_lead FROM PUBLIC;
 
 -- Stores no payload or PII: only a keyed fingerprint and the resulting lead id.
 CREATE TABLE IF NOT EXISTS tpi.api_idempotency (

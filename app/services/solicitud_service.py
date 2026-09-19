@@ -210,8 +210,18 @@ class SolicitudService:
         date_to: datetime | date | None = None,
         sort_by: str | None = None,
         sort_direction: str = "desc",
+        asesor_id: UUID | None = None,
+        origen_lead: str | None = None,
+        fuente_actual: str | None = None,
+        sin_asignar: bool = False,
+        estancado: bool = False,
     ) -> dict[str, Any]:
-        """Return a CRM-oriented lead board without changing the schema."""
+        """Return a CRM-oriented lead board without changing the schema.
+
+        ``sin_asignar`` and ``estancado`` mirror the executive dashboard alerts:
+        both use the shared predicates, so the listing linked from an alert
+        returns exactly the population the alert counted.
+        """
         if page < 1:
             raise ValueError("page must be greater than zero")
         if page_size < 1:
@@ -243,6 +253,11 @@ class SolicitudService:
             date_to=normalized_date_to,
             sort_by=sort_by,
             sort_direction=sort_direction,
+            asesor_id=asesor_id,
+            origen_lead=origen_lead,
+            fuente_actual=fuente_actual,
+            sin_asignar=sin_asignar,
+            estancado=estancado,
         )
 
         should_mask = masked and not (user is not None and self.can_view_full_pii(user))
@@ -316,9 +331,21 @@ class SolicitudService:
             state for state in self.repository.get_crm_estado_lead_options() if state != "asignado"
         ]
 
-    def update_lead_status(self, id_lead: UUID | str, estado_lead: str) -> bool:
-        """Update a lead status after validating role and allowed values."""
+    def update_lead_status(
+        self,
+        id_lead: UUID | str,
+        estado_lead: str,
+        *,
+        actor: AuthenticatedUser,
+    ) -> bool:
+        """Update a lead status after validating role and allowed values.
+
+        The actor is the authenticated subject (never a client-supplied value); it is
+        propagated to the repository so the audit event records the real identity.
+        """
         self._ensure_web_write_allowed()
+        if not isinstance(actor, AuthenticatedUser):
+            raise TypeError("actor must be an AuthenticatedUser")
         lead_id = self._normalize_uuid(id_lead, "lead")
         normalized_estado = normalize_crm_state_for_write(estado_lead)
         if normalized_estado not in CRM_STATE_CONTRACT:
@@ -327,9 +354,7 @@ class SolicitudService:
             raise ValueError(
                 "El estado asignado solo puede establecerse mediante una asignacion valida"
             )
-        if not self.get_solicitud_detalle(lead_id):
-            return False
-        return self.repository.update_lead_status(lead_id, normalized_estado)
+        return self.repository.update_lead_status(lead_id, normalized_estado, actor=actor)
 
     def assign_lead(
         self,
@@ -357,6 +382,15 @@ class SolicitudService:
         """
         lead_id = self._normalize_uuid(id_lead, "lead")
         return self.repository.get_lead_assignment_events(lead_id)
+
+    def get_lead_state_change_events(self, id_lead: UUID | str) -> list[dict[str, Any]]:
+        """Return sanitized general state-change traceability events for one lead.
+
+        The repository reads only the migration-008 view; the application never reads
+        tpi.auditoria directly.
+        """
+        lead_id = self._normalize_uuid(id_lead, "lead")
+        return self.repository.get_lead_state_change_events(lead_id)
 
     def get_asesores_disponibles_para_asignacion(self) -> list[dict[str, Any]]:
         return self.repository.get_asesores_disponibles_para_asignacion()
