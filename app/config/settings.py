@@ -227,6 +227,16 @@ class Settings(BaseSettings):
             raise ValueError("DATABASE_SCHEMA cannot be empty")
         return schema
 
+    @field_validator("lead_state_history_cutover", mode="before")
+    @classmethod
+    def validate_lead_state_history_cutover(cls, value: Any) -> Any:
+        # The compose forwards the deploy-time EB environment property as
+        # ${LEAD_STATE_HISTORY_CUTOVER:-}; when it is absent it arrives as an
+        # empty string, which must stay safely unset (None) rather than fail.
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
     @field_validator("database_sslmode", mode="before")
     @classmethod
     def validate_sslmode(cls, value: str | None) -> str | None:

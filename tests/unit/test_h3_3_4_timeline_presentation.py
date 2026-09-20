@@ -150,7 +150,13 @@ def test_cutover_settings_rejects_invalid_or_timezone_values() -> None:
         "2026-9-20",
         "2026-09-20T10:00:00Z",
         "2026-09-20 10:00",
-        "",
     ):
         with pytest.raises(ValidationError):
             Settings(_env_file=None, LEAD_STATE_HISTORY_CUTOVER=bad)
+
+
+def test_cutover_settings_empty_value_is_none() -> None:
+    # The compose forwards an absent EB option setting as an empty string;
+    # that must resolve to None (safe) rather than fail the process.
+    settings = Settings(_env_file=None, LEAD_STATE_HISTORY_CUTOVER="")
+    assert settings.lead_state_history_cutover is None

@@ -17,7 +17,7 @@ CADDY_IMAGE = (
     "sha256:30ace9145a21209f41799d345f4d6f641f0b882478fede76d0e19a575656aaaf"
 )
 RUNTIME_SHA = "43101be7835088f93267bee85b0f11c8bc879867"
-EXPECTED_BUNDLE_SHA256 = "007b14d4b439ea59afd13106b71edafbf902e564085581e7577770261c97282f"
+EXPECTED_BUNDLE_SHA256 = "18f1425f4e37cca3913ef27c689ea61c1bf92a75c0e34707e4ae578b179e1a7e"
 
 DOMAIN_LOCK = {
     "TPI_PUBLIC_SITE_URL": "https://dev.tupensioninteligente.cl/",
@@ -72,6 +72,22 @@ def test_domain_locked_bundle_has_literal_tpi_values_and_exact_images(tmp_path: 
 
     with zipfile.ZipFile(bundle) as archive:
         assert archive.namelist() == ["docker-compose.yml"]
+
+
+def test_domain_locked_bundle_forwards_lead_state_history_cutover_to_backoffice(
+    tmp_path: Path,
+) -> None:
+    _, _, compose = _build(tmp_path)
+
+    backoffice = compose.split("  backoffice:", 1)[1].split("  caddy:", 1)[0]
+    api = compose.split("  api:", 1)[1].split("  backoffice:", 1)[0]
+
+    # The deploy-time EB environment property must reach the backoffice
+    # container (the only service that runs the executive dashboard) using the
+    # same `${VAR:-}` forwarding pattern as the other runtime variables. The
+    # public API must not receive it.
+    assert "LEAD_STATE_HISTORY_CUTOVER: ${LEAD_STATE_HISTORY_CUTOVER:-}" in backoffice
+    assert "LEAD_STATE_HISTORY_CUTOVER" not in api
 
 
 def test_domain_locked_bundle_manifest_and_reproducibility(tmp_path: Path) -> None:
