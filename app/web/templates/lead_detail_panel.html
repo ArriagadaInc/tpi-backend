@@ -181,6 +181,8 @@
         </div>
       </div>
 
+      <div class="timeline-coverage-note">{{ state_history_cutover_notice }}</div>
+
       {% if timeline_items %}
         <div class="timeline-list">
           {% for item in timeline_items %}
@@ -188,7 +190,7 @@
               <div class="timeline-meta">
                 <span>{{ item.display_time }}</span>
                 <span>·</span>
-                {% if item.kind == 'event' %}
+                {% if item.kind == 'event' or item.kind == 'state_change' %}
                   <span class="timeline-badge-auto">Automático</span>
                   <span class="timeline-author">{{ item.actor }}</span>
                 {% else %}
@@ -199,6 +201,10 @@
                 <div class="timeline-text">
                   {{ item.asesor_nombre or 'Ejecutivo sin asignar' }}: {{ item.estado_anterior or '—' }} → {{ item.estado_nuevo or '—' }}
                 </div>
+              {% elif item.kind == 'state_change' %}
+                <div class="timeline-text">
+                  Cambio de estado: {{ item.estado_anterior or '—' }} → {{ item.estado_nuevo or '—' }}
+                </div>
               {% else %}
                 <div class="timeline-text">{{ item.text }}</div>
               {% endif %}
@@ -206,7 +212,7 @@
           {% endfor %}
         </div>
       {% else %}
-        <div class="empty-followup">Aún no existen notas de seguimiento ni eventos de asignación.</div>
+        <div class="empty-followup">Aún no existen notas de seguimiento, asignaciones ni cambios de estado.</div>
       {% endif %}
 
       {% if can_write %}
