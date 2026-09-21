@@ -59,6 +59,9 @@ async def login_submit(request: Request):
             "username": result.user.username,
             "display_name": result.user.display_name,
             "role": result.user.role,
+            "advisor_id": (
+                str(result.user.advisor_id) if result.user.advisor_id is not None else None
+            ),
         }
         return RedirectResponse(url="/leads", status_code=303)
 

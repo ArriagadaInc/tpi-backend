@@ -46,7 +46,22 @@ def _require_web_user(request: Request) -> AuthenticatedUser | None:
         username=username,
         display_name=display_name,
         role=cast(UserRole, role),
+        advisor_id=_parse_session_advisor_id(user.get("advisor_id")),
     )
+
+
+def _parse_session_advisor_id(value: Any) -> UUID | None:
+    """Parse the session ``advisor_id``; a malformed value fails closed to ``None``.
+
+    The session value is derived server-side at login from the authenticated user,
+    never from client input, but it is still validated on read.
+    """
+    if value is None:
+        return None
+    try:
+        return UUID(str(value).strip())
+    except (ValueError, AttributeError):
+        return None
 
 
 def _can_write(user: AuthenticatedUser | None) -> bool:
@@ -643,7 +658,7 @@ async def lead_comment_append(request: Request, lead_id: str):
     if not _require_web_user(request):
         return RedirectResponse(url="/login", status_code=307)
     user = _require_web_user(request)
-    if not _can_write(user):
+    if not user or not _can_write(user):
         context, _ = _resolve_detail_context(
             request,
             lead_id,
@@ -692,7 +707,7 @@ async def lead_comment_append(request: Request, lead_id: str):
         updated = service.append_lead_comment(
             lead_id,
             comment_text,
-            user.display_name if user else "Usuario",
+            actor=user,
         )
     except ValueError:
         context, _ = _resolve_detail_context(

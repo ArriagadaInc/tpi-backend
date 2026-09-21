@@ -67,6 +67,7 @@ class SolicitudRepository:
         date_from: datetime | date | None = None,
         date_to: datetime | date | None = None,
         asesor_id: UUID | None = None,
+        portfolio_asesor_id: UUID | None = None,
         origen_lead: str | None = None,
         fuente_actual: str | None = None,
         sin_asignar: bool = False,
@@ -139,6 +140,21 @@ class SolicitudRepository:
                 ")"
             )
             params.extend([ASSIGNMENT_ACTIVE_STATE, str(asesor_id)])
+
+        if portfolio_asesor_id:
+            # Mandatory server-side portfolio scope: the authenticated advisor only
+            # ever sees leads whose currently-active assignment belongs to them.
+            # This predicate is always AND-ed with the user-supplied filters and is
+            # never overridable from the request.
+            clauses.append(
+                "EXISTS ("
+                "SELECT 1 FROM tpi.asignaciones a "
+                "WHERE a.id_lead = l.id_lead "
+                "AND a.estado_asignacion = %s "
+                "AND a.id_asesor = %s"
+                ")"
+            )
+            params.extend([ASSIGNMENT_ACTIVE_STATE, str(portfolio_asesor_id)])
 
         if origen_lead:
             clauses.append("LOWER(TRIM(l.origen_lead)) = LOWER(%s)")
@@ -629,6 +645,7 @@ class SolicitudRepository:
         sort_by: str | None = None,
         sort_direction: str = "desc",
         asesor_id: UUID | None = None,
+        portfolio_asesor_id: UUID | None = None,
         origen_lead: str | None = None,
         fuente_actual: str | None = None,
         sin_asignar: bool = False,
@@ -645,6 +662,7 @@ class SolicitudRepository:
             date_from=date_from,
             date_to=date_to,
             asesor_id=asesor_id,
+            portfolio_asesor_id=portfolio_asesor_id,
             origen_lead=origen_lead,
             fuente_actual=fuente_actual,
             sin_asignar=sin_asignar,
@@ -816,6 +834,58 @@ class SolicitudRepository:
                 return dict(row) if row else None
 
     @staticmethod
+    def get_active_advisor_by_id(id_asesor: UUID) -> dict[str, Any] | None:
+        """Return one active advisor row, or ``None`` when absent/inactive/not an advisor.
+
+        This is the server-side resolution step ``advisor_id -> registro valido/activo``
+        of the portfolio chain. ``rol='asesor'`` and ``estado_disponibilidad='activo'``
+        are enforced in SQL, never by presentation names.
+        """
+        query = """
+            SELECT
+                id_asesor,
+                nombre,
+                rol,
+                estado_disponibilidad,
+                especialidad,
+                carga_activa
+            FROM tpi.asesores
+            WHERE id_asesor = %s
+              AND rol = 'asesor'
+              AND estado_disponibilidad = 'activo'
+            LIMIT 1
+        """
+        with get_db_connection(operation="get_active_advisor_by_id") as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (str(id_asesor),))
+                row = cur.fetchone()
+                return dict(row) if row else None
+
+    @staticmethod
+    def lead_active_assignment_belongs_to(id_lead: UUID, id_asesor: UUID) -> bool:
+        """Return whether the lead's currently-active assignment belongs to ``id_asesor``.
+
+        Used for the advisor detail/mutation ownership check. A lead with no active
+        assignment, or whose active assignment belongs to another advisor, returns
+        ``False`` (the caller must surface a 404 without revealing existence).
+        """
+        query = """
+            SELECT 1
+            FROM tpi.asignaciones
+            WHERE id_lead = %s
+              AND estado_asignacion = %s
+              AND id_asesor = %s
+            LIMIT 1
+        """
+        with get_db_connection(operation="lead_active_assignment_belongs_to") as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    query,
+                    (str(id_lead), ASSIGNMENT_ACTIVE_STATE, str(id_asesor)),
+                )
+                return cur.fetchone() is not None
+
+    @staticmethod
     def get_lead_assignment_events(id_lead: UUID) -> list[dict[str, Any]]:
         """Return assignment traceability events from the sanitized read model only.
 
@@ -880,6 +950,7 @@ class SolicitudRepository:
         estado_lead: str,
         *,
         actor: AuthenticatedUser,
+        advisor_scope: UUID | None = None,
     ) -> bool:
         """Update a lead status transactionally, auditing only effective changes.
 
@@ -910,6 +981,14 @@ class SolicitudRepository:
             WHERE id_lead = %s
             FOR UPDATE
         """
+        query_ownership = """
+            SELECT 1
+            FROM tpi.asignaciones
+            WHERE id_lead = %s
+              AND estado_asignacion = %s
+              AND id_asesor = %s
+            LIMIT 1
+        """
         query_update = """
             UPDATE tpi.leads
             SET estado_lead = %s,
@@ -928,6 +1007,18 @@ class SolicitudRepository:
                     current_row = cur.fetchone()
                     if current_row is None:
                         return False
+
+                    # Advisor ownership is checked inside the same transaction that
+                    # holds the lead row lock, so a concurrent assignment cannot slip
+                    # between the check and the write. Non-owned -> no write, no audit.
+                    if advisor_scope is not None:
+                        cur.execute(
+                            query_ownership,
+                            (str(id_lead), ASSIGNMENT_ACTIVE_STATE, str(advisor_scope)),
+                        )
+                        if cur.fetchone() is None:
+                            return False
+
                     estado_anterior = str(current_row["estado_lead"])
                     id_persona = current_row.get("id_persona")
 
@@ -1095,21 +1186,42 @@ class SolicitudRepository:
                 raise
 
     @staticmethod
-    def append_lead_comment(id_lead: UUID, new_fragment: str) -> bool:
-        """Append a new follow-up note atomically to the existing comments."""
-        query = """
+    def append_lead_comment(
+        id_lead: UUID,
+        new_fragment: str,
+        *,
+        advisor_scope: UUID | None = None,
+    ) -> bool:
+        """Append a new follow-up note atomically to the existing comments.
+
+        When ``advisor_scope`` is set, the ownership predicate is part of the UPDATE
+        itself, so a non-owned lead yields ``rowcount == 0`` and no write happens.
+        """
+        ownership_sql = ""
+        params: list[Any] = [new_fragment, new_fragment]
+        if advisor_scope is not None:
+            ownership_sql = (
+                " AND EXISTS (SELECT 1 FROM tpi.asignaciones a "
+                "WHERE a.id_lead = tpi.leads.id_lead "
+                "AND a.estado_asignacion = %s "
+                "AND a.id_asesor = %s)"
+            )
+            params.extend([ASSIGNMENT_ACTIVE_STATE, str(advisor_scope)])
+        params.append(str(id_lead))
+
+        query = f"""
             UPDATE tpi.leads
             SET comentarios =
                 CASE
                     WHEN COALESCE(NULLIF(TRIM(comentarios), ''), '') = '' THEN %s
                     ELSE comentarios || E'\n\n' || %s
                 END
-            WHERE id_lead = %s
+            WHERE id_lead = %s{ownership_sql}
             RETURNING id_lead
         """
         with get_db_connection(operation="append_lead_comment") as conn:
             with conn.cursor() as cur:
-                cur.execute(query, (new_fragment, new_fragment, str(id_lead)))
+                cur.execute(query, params)
                 row = cur.fetchone()
                 conn.commit()
                 return row is not None

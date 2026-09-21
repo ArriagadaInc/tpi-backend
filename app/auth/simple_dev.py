@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from typing import Any, cast
+from uuid import UUID
 
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
@@ -12,6 +14,8 @@ from argon2.exceptions import InvalidHashError, VerificationError
 from app.auth.models import AuthenticatedUser, AuthenticationResult, UserRole
 from app.auth.provider import AuthProvider
 from app.config import Settings
+
+logger = logging.getLogger("tpi.auth")
 
 _ALLOWED_ROLES = {
     "tester",
@@ -113,15 +117,53 @@ def _parse_user(entry: Any) -> _ConfiguredUser:
     if role not in _ALLOWED_ROLES:
         raise AuthConfigurationError("Unknown auth role")
 
+    advisor_id = _parse_advisor_id(entry, role)
+
     return _ConfiguredUser(
         user=AuthenticatedUser(
             subject=subject,
             username=username,
             display_name=display_name,
             role=cast(UserRole, role),
+            advisor_id=advisor_id,
         ),
         password_hash=password_hash,
     )
+
+
+def _parse_advisor_id(entry: dict[str, Any], role: str) -> UUID | None:
+    """Parse ``advisor_id`` only for ``advisor`` identities; fail closed otherwise.
+
+    The raw value is never logged. A malformed or absent ``advisor_id`` for an
+    ``advisor`` yields ``None`` so the identity authenticates but resolves to an
+    empty portfolio at the service layer (D1/D4 fail-closed). Non-advisor roles
+    ignore the field entirely for backward compatibility.
+    """
+    if role != "advisor":
+        return None
+
+    raw = entry.get("advisor_id")
+    if raw is None:
+        return None
+
+    if isinstance(raw, str):
+        candidate = raw.strip()
+        if not candidate:
+            return None
+        try:
+            return UUID(candidate)
+        except ValueError:
+            logger.warning(
+                "event=advisor_id_invalid role=advisor result=fail_closed "
+                "reason=malformed_advisor_id"
+            )
+            return None
+
+    logger.warning(
+        "event=advisor_id_invalid role=advisor result=fail_closed "
+        "reason=unexpected_advisor_id_type"
+    )
+    return None
 
 
 def _required_string(entry: dict[str, Any], key: str) -> str:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal
+from uuid import UUID
 
 UserRole = Literal[
     "tester",
@@ -30,12 +31,19 @@ def is_superuser(role: UserRole) -> bool:
 
 @dataclass(frozen=True, slots=True)
 class AuthenticatedUser:
-    """Minimal application identity, deliberately excluding credentials and tokens."""
+    """Minimal application identity, deliberately excluding credentials and tokens.
+
+    ``advisor_id`` binds an ``advisor`` identity to ``tpi.asesores.id_asesor``. It is
+    functional for ``advisor`` only and optional/ignored for every other role. The
+    value is resolved server-side against ``tpi.asesores``; it is never derived from
+    ``username`` or ``display_name``.
+    """
 
     subject: str
     username: str
     display_name: str
     role: UserRole
+    advisor_id: UUID | None = None
 
 
 @dataclass(frozen=True, slots=True)
