@@ -1198,7 +1198,10 @@ class SolicitudRepository:
         itself, so a non-owned lead yields ``rowcount == 0`` and no write happens.
         """
         ownership_sql = ""
-        params: list[Any] = [new_fragment, new_fragment]
+        # Placeholder order in the statement below is: fragment (x2), id_lead, then
+        # (when advisor_scope is set) estado_asignacion and id_asesor. The params list
+        # must match that exact order so "activa" is never bound to a UUID column.
+        params: list[Any] = [new_fragment, new_fragment, str(id_lead)]
         if advisor_scope is not None:
             ownership_sql = (
                 " AND EXISTS (SELECT 1 FROM tpi.asignaciones a "
@@ -1207,7 +1210,6 @@ class SolicitudRepository:
                 "AND a.id_asesor = %s)"
             )
             params.extend([ASSIGNMENT_ACTIVE_STATE, str(advisor_scope)])
-        params.append(str(id_lead))
 
         query = f"""
             UPDATE tpi.leads

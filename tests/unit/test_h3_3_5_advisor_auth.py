@@ -8,6 +8,7 @@ without breaking login or logging the raw value.
 from __future__ import annotations
 
 import json
+import logging
 from uuid import UUID
 
 import pytest
@@ -101,3 +102,22 @@ def test_duplicate_usernames_still_rejected() -> None:
     secret = json.dumps({"users": [entry, dict(entry)]})
     with pytest.raises(AuthConfigurationError, match="Duplicate auth username"):
         SimpleDevAuth(_settings(secret), hasher=_hasher())
+
+
+def test_malformed_advisor_id_warning_identifies_subject_not_secret(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    raw_value = "not-a-uuid-raw-secret-value"
+    caplog.set_level(logging.WARNING, logger="tpi.auth")
+
+    SimpleDevAuth(_settings(_secret("advisor", advisor_id=raw_value)), hasher=_hasher())
+
+    records = [r for r in caplog.records if r.name == "tpi.auth" and r.levelno == logging.WARNING]
+    assert records
+    combined = " ".join(r.getMessage() for r in records)
+    # The warning identifies the entry by its stable subject...
+    assert "subject-advisor" in combined
+    # ...but never logs the raw advisor_id value, the hash or the secret payload.
+    assert raw_value not in combined
+    assert "password" not in combined.lower()
+    assert "argon2" not in combined.lower()

@@ -61,15 +61,20 @@ def test_seed_validates_database_schema_and_user() -> None:
     text = _text()
     assert "current_database()" in text
     assert "to_regclass('tpi.asesores')" in text
+    # User validation is privilege-based (no hardcoded role name).
+    assert "has_schema_privilege" in text
     assert "has_table_privilege" in text
-    assert "tpi_app" in text  # rejects the SELECT-only application role
 
 
 def test_seed_implements_create_adopt_or_abort_idempotence() -> None:
     text = _text()
-    assert "lower(nombre)" in text
-    # insert path
+    assert "lower(btrim(nombre))" in text
+    # insert path with explicit NOT NULL columns (no reliance on defaults).
     assert "INSERT INTO tpi.asesores" in text
+    assert "'asesor'" in text
+    assert "'activo'" in text
+    # NULL-safe compatibility comparison (F7).
+    assert "IS DISTINCT FROM" in text
     # adopt path (no-op for exactly one compatible row)
     assert "adopt" in text.lower()
     # ambiguous/incompatible -> abort

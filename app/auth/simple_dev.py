@@ -117,7 +117,7 @@ def _parse_user(entry: Any) -> _ConfiguredUser:
     if role not in _ALLOWED_ROLES:
         raise AuthConfigurationError("Unknown auth role")
 
-    advisor_id = _parse_advisor_id(entry, role)
+    advisor_id = _parse_advisor_id(entry, role, subject)
 
     return _ConfiguredUser(
         user=AuthenticatedUser(
@@ -131,13 +131,15 @@ def _parse_user(entry: Any) -> _ConfiguredUser:
     )
 
 
-def _parse_advisor_id(entry: dict[str, Any], role: str) -> UUID | None:
+def _parse_advisor_id(entry: dict[str, Any], role: str, subject: str) -> UUID | None:
     """Parse ``advisor_id`` only for ``advisor`` identities; fail closed otherwise.
 
-    The raw value is never logged. A malformed or absent ``advisor_id`` for an
-    ``advisor`` yields ``None`` so the identity authenticates but resolves to an
-    empty portfolio at the service layer (D1/D4 fail-closed). Non-advisor roles
-    ignore the field entirely for backward compatibility.
+    The raw ``advisor_id`` value and any secret are never logged. A malformed or
+    absent ``advisor_id`` for an ``advisor`` yields ``None`` so the identity
+    authenticates but resolves to an empty portfolio at the service layer (D1/D4
+    fail-closed). Non-advisor roles ignore the field entirely for backward
+    compatibility. The warning identifies the entry by its stable ``subject``
+    (technical identifier, not the secret payload).
     """
     if role != "advisor":
         return None
@@ -155,13 +157,15 @@ def _parse_advisor_id(entry: dict[str, Any], role: str) -> UUID | None:
         except ValueError:
             logger.warning(
                 "event=advisor_id_invalid role=advisor result=fail_closed "
-                "reason=malformed_advisor_id"
+                "reason=malformed_advisor_id subject=%s",
+                subject,
             )
             return None
 
     logger.warning(
         "event=advisor_id_invalid role=advisor result=fail_closed "
-        "reason=unexpected_advisor_id_type"
+        "reason=unexpected_advisor_id_type subject=%s",
+        subject,
     )
     return None
 
