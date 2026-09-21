@@ -39,7 +39,12 @@ class _AssignmentRepositoryStub:
         return None
 
     def update_lead_status(
-        self, id_lead: UUID, estado_lead: str, *, actor: AuthenticatedUser
+        self,
+        id_lead: UUID,
+        estado_lead: str,
+        *,
+        actor: AuthenticatedUser,
+        advisor_scope: UUID | None = None,
     ) -> bool:
         self.status_calls.append((id_lead, estado_lead))
         return True

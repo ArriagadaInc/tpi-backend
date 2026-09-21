@@ -165,8 +165,10 @@ def test_ac1_ac2_pii_visibility_by_role() -> None:
         assert detail["email"] == "juan.perez@example.com"
         assert detail["telefono"] == "+56912345678"
 
-    # AC-2: Restricted roles receive server-side masked PII
-    for restricted_role in ("advisor", "operations", "admin", "executive", "readonly", "tester"):
+    # AC-2: Restricted roles receive server-side masked PII. ``advisor`` is excluded
+    # here because H3.3.5 redefines it: an advisor without a valid advisor_id fails
+    # closed to an empty portfolio (covered by tests/unit/test_h3_3_5_advisor_service.py).
+    for restricted_role in ("operations", "admin", "executive", "readonly", "tester"):
         user = _user(restricted_role)
         assert service.can_view_full_pii(user) is False
 
@@ -255,8 +257,8 @@ def _get_csrf_token(client: TestClient, lead_id: str) -> str:
 def test_ac1_ac2_ac3_web_html_rendering() -> None:
     service, repo = _build_stub_service()
 
-    # 1. Restricted role web rendering (advisor)
-    client_adv = _client_for_role("advisor", service)
+    # 1. Restricted role web rendering (operations; advisor scoping is H3.3.5)
+    client_adv = _client_for_role("operations", service)
     resp_board_res = client_adv.get("/leads")
     assert resp_board_res.status_code == 200
     html_board_res = resp_board_res.text
@@ -306,7 +308,7 @@ def test_ac2_pii_masked_even_with_web_mask_pii_false() -> None:
     """
     service, repo = _build_stub_service()
 
-    for restricted_role in ("advisor", "operations", "readonly", "tester"):
+    for restricted_role in ("operations", "readonly", "tester"):
         client = _client_for_role(restricted_role, service, web_mask_pii=False)
 
         # Board must NOT expose full PII

@@ -210,9 +210,10 @@ class _FakeWebService:
         self.status_updates.append((str(id_lead), estado_lead))
         return True
 
-    def append_lead_comment(self, id_lead, comment_text, author):
+    def append_lead_comment(self, id_lead, comment_text, *, actor=None):
         if str(id_lead) != str(self._full_detail["id_lead"]):
             return False
+        author = getattr(actor, "display_name", "Usuario") if actor else "Usuario"
         fragment = f"[23/08/2026 10:15] {author}\n{comment_text}"
         previous = str(self._full_detail.get("comentarios") or "")
         self._full_detail["comentarios"] = f"{previous}\n\n{fragment}" if previous else fragment

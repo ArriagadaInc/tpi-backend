@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, date, datetime, time, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -148,6 +148,47 @@ class SolicitudService:
     def can_view_full_pii(self, user: AuthenticatedUser) -> bool:
         return is_superuser(user.role)
 
+    def resolve_advisor_identity(self, user: AuthenticatedUser | None) -> UUID | None:
+        """Resolve an advisor identity to its active ``id_asesor``, or ``None``.
+
+        This is the server-side resolution chain ``usuario -> advisor_id -> registro
+        valido/activo``. It returns the active ``id_asesor`` only when the identity
+        resolves to an active advisor; otherwise ``None`` (fail-closed). Non-advisor
+        roles also return ``None`` — callers distinguish them with ``user.role``.
+
+        The raw ``advisor_id`` and any secret value are never logged.
+        """
+        if user is None or user.role != "advisor":
+            return None
+        advisor_id = user.advisor_id
+        if advisor_id is None:
+            logger.warning(
+                "event=advisor_scope_unavailable role=advisor result=fail_closed "
+                "reason=missing_advisor_id"
+            )
+            return None
+        if self.repository.get_active_advisor_by_id(advisor_id) is None:
+            logger.warning(
+                "event=advisor_scope_unavailable role=advisor result=fail_closed "
+                "reason=advisor_not_active_or_missing"
+            )
+            return None
+        return advisor_id
+
+    def _advisor_mutation_scope(self, actor: AuthenticatedUser) -> UUID | None | bool:
+        """Return the advisor portfolio scope for a mutation, or ``False`` to deny.
+
+        ``None`` means "no portfolio restriction" (non-advisor). ``False`` means the
+        actor is an advisor whose identity does not resolve to an active advisor, so
+        every mutation must be rejected without writing.
+        """
+        if actor.role != "advisor":
+            return None
+        scope = self.resolve_advisor_identity(actor)
+        if scope is None:
+            return False
+        return scope
+
     def get_solicitud_detalle_masked(
         self,
         id_lead: UUID,
@@ -159,6 +200,17 @@ class SolicitudService:
             return None
 
         if user is not None and self.can_view_full_pii(user):
+            return solicitud
+
+        if user is not None and user.role == "advisor":
+            # PII authorization is contextual per lead and active assignment, never a
+            # global advisor permission. Own lead -> full PII; other/no assignment -> 404.
+            advisor_id = self.resolve_advisor_identity(user)
+            if advisor_id is None:
+                return None
+            lead_id = self._normalize_uuid(id_lead, "lead")
+            if not self.repository.lead_active_assignment_belongs_to(lead_id, advisor_id):
+                return None
             return solicitud
 
         return mask_row_for_display(
@@ -240,6 +292,24 @@ class SolicitudService:
         if estado_lead is not None:
             normalized_estado = self._normalize_crm_state_for_filter(estado_lead)
 
+        # Portfolio scope: an advisor is always constrained server-side to the leads
+        # whose currently-active assignment belongs to their resolved id_asesor. A
+        # non-resolving advisor identity fails closed to an empty board. Non-advisor
+        # roles (including ceo/cto) keep the global view and the optional asesor filter.
+        portfolio_asesor_id: UUID | None = None
+        effective_asesor_id = asesor_id
+        if user is not None and user.role == "advisor":
+            portfolio_asesor_id = self.resolve_advisor_identity(user)
+            if portfolio_asesor_id is None:
+                return {
+                    "solicitudes": [],
+                    "total": 0,
+                    "page": page,
+                    "page_size": page_size,
+                    "total_pages": 0,
+                }
+            effective_asesor_id = None
+
         offset = (page - 1) * page_size
         solicitudes, total = self.repository.get_crm_solicitudes(
             limit=page_size,
@@ -253,7 +323,8 @@ class SolicitudService:
             date_to=normalized_date_to,
             sort_by=sort_by,
             sort_direction=sort_direction,
-            asesor_id=asesor_id,
+            asesor_id=effective_asesor_id,
+            portfolio_asesor_id=portfolio_asesor_id,
             origen_lead=origen_lead,
             fuente_actual=fuente_actual,
             sin_asignar=sin_asignar,
@@ -261,6 +332,10 @@ class SolicitudService:
         )
 
         should_mask = masked and not (user is not None and self.can_view_full_pii(user))
+        # The advisor's portfolio is by definition their own leads, so those rows are
+        # returned unmasked (contextual PII by lead, not a global advisor flag).
+        if portfolio_asesor_id is not None:
+            should_mask = False
         if should_mask:
             solicitudes = [
                 mask_row_for_display(
@@ -354,7 +429,16 @@ class SolicitudService:
             raise ValueError(
                 "El estado asignado solo puede establecerse mediante una asignacion valida"
             )
-        return self.repository.update_lead_status(lead_id, normalized_estado, actor=actor)
+
+        advisor_scope = self._advisor_mutation_scope(actor)
+        if advisor_scope is False:
+            return False
+        return self.repository.update_lead_status(
+            lead_id,
+            normalized_estado,
+            actor=actor,
+            advisor_scope=cast(UUID | None, advisor_scope),
+        )
 
     def assign_lead(
         self,
@@ -395,19 +479,39 @@ class SolicitudService:
     def get_asesores_disponibles_para_asignacion(self) -> list[dict[str, Any]]:
         return self.repository.get_asesores_disponibles_para_asignacion()
 
-    def append_lead_comment(self, id_lead: UUID | str, comment_text: str, author: str) -> bool:
-        """Append a follow-up note atomically with server-side identity and timestamp."""
+    def append_lead_comment(
+        self,
+        id_lead: UUID | str,
+        comment_text: str,
+        *,
+        actor: AuthenticatedUser,
+    ) -> bool:
+        """Append a follow-up note atomically with server-side identity and timestamp.
+
+        The actor is the authenticated subject (never a client-supplied value). For an
+        advisor, the note is only written when the lead's active assignment belongs to
+        the advisor's resolved id_asesor; otherwise the write is rejected without
+        revealing existence.
+        """
         self._ensure_web_write_allowed()
+        if not isinstance(actor, AuthenticatedUser):
+            raise TypeError("actor must be an AuthenticatedUser")
         lead_id = self._normalize_uuid(id_lead, "lead")
         normalized_comment = self._normalize_follow_up_comment(comment_text)
         if not normalized_comment:
             raise ValueError("El comentario no puede estar vacio")
         if len(normalized_comment) > 1000:
             raise ValueError("El comentario excede la longitud permitida")
-        if not self.get_solicitud_detalle(lead_id):
+
+        advisor_scope = self._advisor_mutation_scope(actor)
+        if advisor_scope is False:
             return False
-        fragment = self._format_follow_up_fragment(normalized_comment, author)
-        return self.repository.append_lead_comment(lead_id, fragment)
+        fragment = self._format_follow_up_fragment(normalized_comment, actor.display_name)
+        return self.repository.append_lead_comment(
+            lead_id,
+            fragment,
+            advisor_scope=cast(UUID | None, advisor_scope),
+        )
 
     def is_test_lead_cleanup_enabled(self) -> bool:
         """Return the effective cleanup capability, never enabled outside AWS DEV."""

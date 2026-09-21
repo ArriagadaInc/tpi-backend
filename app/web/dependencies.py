@@ -44,7 +44,9 @@ class LeadBoardService(Protocol):
         self, id_lead: Any, estado_lead: str, *, actor: AuthenticatedUser
     ) -> bool: ...
 
-    def append_lead_comment(self, id_lead: Any, comment_text: str, author: str) -> bool: ...
+    def append_lead_comment(
+        self, id_lead: Any, comment_text: str, *, actor: AuthenticatedUser
+    ) -> bool: ...
 
     def assign_lead(self, id_lead: Any, id_asesor: Any, *, actor: AuthenticatedUser) -> bool: ...
 
@@ -228,11 +230,13 @@ class _MockLeadBoardService:
                 return True
         return False
 
-    def append_lead_comment(self, id_lead: Any, comment_text: str, author: str) -> bool:
+    def append_lead_comment(
+        self, id_lead: Any, comment_text: str, *, actor: AuthenticatedUser
+    ) -> bool:
         for row in MOCK_BOARD_ROWS:
             if str(row["id_lead"]) == str(id_lead):
                 existing = str(row.get("comentarios") or "")
-                fragment = f"[demo] {author}\n{comment_text}"
+                fragment = f"[demo] {actor.display_name}\n{comment_text}"
                 row["comentarios"] = f"{existing}\n\n{fragment}".strip() if existing else fragment
                 return True
         return False

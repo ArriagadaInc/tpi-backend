@@ -7,6 +7,7 @@ from datetime import UTC, date, datetime
 import pytest
 
 import app.web.dependencies as web_dependencies
+from app.auth.models import AuthenticatedUser
 from app.config import Settings
 from app.web.dependencies import (
     _as_date,
@@ -94,7 +95,8 @@ def test_mock_web_service_filters_sorts_and_updates_rows() -> None:
     assert service.update_lead_status(lead_id, "contactado") is True
     assert service.update_lead_status(lead_id, "cerrado") is True
     assert service.get_solicitud_detalle(lead_id)["estado_lead"] == "cerrado"
-    assert service.append_lead_comment(lead_id, "Nota de seguimiento", "Alvaro Local") is True
+    actor = AuthenticatedUser("subject-1", "tester", "Alvaro Local", "tester")
+    assert service.append_lead_comment(lead_id, "Nota de seguimiento", actor=actor) is True
     matching = service.get_solicitudes_por_rut("12.345.678-5")
     assert matching
     assert matching[0]["rut"] == "12.345.678-5"
