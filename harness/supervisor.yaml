@@ -1,0 +1,30 @@
+schema_version: 1
+# TPI Harness Supervisor v1 (opcional, opt-in). Lo lee solo scripts/harness/supervisor.py.
+# NO es fuente de verdad: el workflow vive en harness/state.json + harness/workflow.yaml.
+# Borrar este archivo y supervisor.py deja el Harness manual intacto.
+
+# Rol del Harness (workflow.states[state].role) -> runtime. Roles ausentes = STOP.
+roles:
+  developer: deepseek
+  reviewer: claude
+  deployer: claude
+
+# Comando por runtime (una sesion nueva por turno, sin reutilizar contexto).
+# Placeholders: {prompt} {session_id} {session_uuid} {runtime} {role} {python}
+runtimes:
+  deepseek:
+    command: [dsh, --profile, headless, "{prompt}"]
+  claude:
+    command: [claude, -p, "{prompt}", --session-id, "{session_uuid}", --permission-mode, auto]
+
+# Prompt minimo de entrada: una sola linea ASCII (sin comillas ni metacaracteres de shell).
+prompt: >-
+  Continua el proyecto siguiendo exclusivamente las instrucciones, el estado, las politicas y la
+  evidencia contenida en el repositorio. Ejecuta el protocolo de entrada completo de AGENTS.md con
+  --runtime {runtime} y actua segun el rol que determine el Harness. No uses contexto de
+  conversaciones anteriores. Usa --session {session_id} en tus transiciones. Cuando el Harness
+  cambie de rol, detente.
+
+max_turns: 20                 # tope de sesiones de worker por ejecucion de `run`
+heartbeat_seconds: 15         # frecuencia de .harness-runtime/supervisor/heartbeat.json
+interrupt_grace_seconds: 20   # espera tras Ctrl+C antes de terminar el arbol del worker

@@ -10,6 +10,9 @@ El protocolo canonico es [AGENTS.md](../../AGENTS.md). Pide al runtime leerlo pr
 
 Prompt sugerido: "Lee AGENTS.md y continua el proyecto siguiendo las instrucciones del repositorio."
 
+Opcional: Supervisor v1 lanza el Developer con `dsh --profile headless "<prompt>"`
+([SUPERVISOR_V1.md](../supervisor/SUPERVISOR_V1.md)). Sin Supervisor, el uso manual no cambia.
+
 ## Capacidades
 
 | Rol / estado | Permitido en DSH |

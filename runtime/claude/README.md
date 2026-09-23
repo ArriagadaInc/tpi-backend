@@ -19,6 +19,9 @@ Protocolo canonico: [AGENTS.md](../../AGENTS.md). Adaptador de entrada: [CLAUDE.
 2. Prompt: "Continua el proyecto siguiendo las instrucciones del repositorio."
 3. Claude ejecuta `./init.sh --runtime claude` y sigue AGENTS.md.
 
+Opcional: Supervisor v1 lanza Reviewer/Deployer con `claude -p` en sesiones nuevas
+([SUPERVISOR_V1.md](../supervisor/SUPERVISOR_V1.md)). Sin Supervisor, el uso manual no cambia.
+
 ## Limites conocidos
 
 - Las credenciales `tpi-dev` son humanas y amplias; el limite duro sigue siendo IAM
