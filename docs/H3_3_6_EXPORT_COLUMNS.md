@@ -87,13 +87,20 @@ detalle (`fecha_nacimiento`, consentimientos, `asignado_por`, `estado_asignacion
   Decisión (AC-8 prevalece sobre la representación original): la regla aplica a
   **todas** las columnas de texto sin excepciones, incluidos teléfonos en formato
   internacional; `+56 9 1234 5678` se exporta como `'+56 9 1234 5678`.
+- **Caracteres de control ilegales**: los caracteres de control `\x00-\x08`,
+  `\x0b-\x0c` y `\x0e-\x1f` (ilegales en texto de celda XML/Excel, ver
+  `openpyxl.cell.cell.ILLEGAL_CHARACTERS_RE`) se eliminan en `sanitize_cell_text`
+  antes de asignar la celda, de modo que un valor de ingesta no bloquea la
+  exportación con `IllegalCharacterError` ni se refleja en un mensaje de error.
 - **Nulos**: un valor `NULL` se escribe como celda vacía (o texto vacío), nunca como
   `"None"`.
 
 ## Límite de exportación (F8)
 
 - Constante en código: `EXPORT_MAX_ROWS = 10000` (en `app/services/xlsx_export.py`).
-- Justificación: openpyxl genera en memoria; con 14 columnas y DEV sintético, 10 000
-  filas mantiene un pico de memoria acotado y muy por encima del volumen real del
-  ambiente; el conteo es `COUNT(*)` con el mismo `WHERE` y aborta antes de construir
-  el archivo si se excede (sin truncamiento silencioso).
+- Justificación: openpyxl construye el libro completo en memoria y entrega `bytes`;
+  durante el `save` usa un temporal privado `openpyxl.*` que se elimina siempre en
+  `finally` (ver F7). Con 14 columnas y DEV sintético, 10 000 filas mantiene un pico
+  de memoria acotado y muy por encima del volumen real del ambiente; el conteo es
+  `COUNT(*)` con el mismo `WHERE` y aborta antes de construir el archivo si se excede
+  (sin truncamiento silencioso).

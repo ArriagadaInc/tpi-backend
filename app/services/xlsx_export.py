@@ -1,18 +1,32 @@
-"""Ephemeral, in-memory XLSX builder for the executive lead export (H3.3.6).
+"""Ephemeral XLSX builder for the executive lead export (H3.3.6).
 
 The builder serializes **only** the explicit ``EXPORT_COLUMNS`` allowlist. It never
 iterates over row keys, never uses reflection and never discovers columns
-dynamically. The workbook is assembled in memory and returned as raw bytes: no
-temporary file, no persistence, nothing left behind on error.
+dynamically. The finished workbook is returned as raw bytes and is never persisted
+to S3, RDS or any server path.
+
+openpyxl streams each worksheet through a private ``openpyxl.*`` temporary file
+(``openpyxl.worksheet._writer.create_temporary_file``) and only removes it on the
+happy path. ``build_xlsx_workbook`` therefore runs the save with
+``tempfile.tempdir`` pointed at a request-private directory (``mkdtemp``); the
+directory is removed in ``finally`` with ``shutil.rmtree``, so even a mid-write
+failure leaves no temporary file behind (AC-11 / F7).
 
 Formula-injection defense: text values whose first character is ``=``, ``+``, ``-``
 or ``@`` are neutralized with a leading single quote and the cell is forced to a
-text number format. Numbers and dates are written as native cell types and are
-never neutralized.
+text number format. Characters that are illegal in Excel/XML cell text are removed
+first, so openpyxl never raises ``IllegalCharacterError`` (and never echoes the
+offending value). Numbers and dates are written as native cell types and are never
+neutralized.
 """
 
 from __future__ import annotations
 
+import gc
+import shutil
+import tempfile
+import threading
+import traceback
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
@@ -21,6 +35,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from openpyxl import Workbook
+from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 
@@ -100,15 +115,20 @@ class ExportLimitExceededError(Exception):
 
 
 def sanitize_cell_text(value: Any) -> str:
-    """Neutralize text that could be interpreted as a formula prefix.
+    """Neutralize text that could be interpreted as a formula or break the file.
 
-    ``None`` becomes the empty string. Any value whose string form starts with
-    ``=``, ``+``, ``-`` or ``@`` is prefixed with a single quote, the canonical
-    spreadsheet text marker. The result is always a plain string, never a formula.
+    ``None`` becomes the empty string. Characters that are illegal in Excel/XML
+    cell text (the control characters ``\\x00-\\x08``, ``\\x0b-\\x0c`` and
+    ``\\x0e-\\x1f``, per ``openpyxl.cell.cell.ILLEGAL_CHARACTERS_RE``) are removed
+    so that openpyxl never raises ``IllegalCharacterError`` and never echoes the
+    offending value into an exception message. Any remaining value whose string
+    form starts with ``=``, ``+``, ``-`` or ``@`` is prefixed with a single quote,
+    the canonical spreadsheet text marker. The result is always a plain string,
+    never a formula.
     """
     if value is None:
         return ""
-    text = str(value)
+    text = str(ILLEGAL_CHARACTERS_RE.sub("", str(value)))
     if text.startswith(_FORMULA_TRIGGER_PREFIXES):
         return "'" + text
     return text
@@ -147,8 +167,47 @@ def _coerce_date(value: Any) -> datetime | date | None:
     return None
 
 
+# Serializes openpyxl's temporary-directory redirection. openpyxl's
+# ``create_temporary_file`` reads ``tempfile.tempdir`` (a process-global), so two
+# concurrent saves must not interleave their redirections.
+_TMPDIR_LOCK = threading.Lock()
+
+
+def _save_workbook_ephemerally(workbook: Workbook) -> bytes:
+    """Serialize ``workbook`` to bytes leaving no temporary file behind.
+
+    openpyxl streams each worksheet through a private ``openpyxl.*`` temporary
+    file. The save runs with ``tempfile.tempdir`` pointed at a request-private
+    directory created with ``mkdtemp``; the directory (and any file left by a
+    mid-write failure) is removed in ``finally`` with ``shutil.rmtree``.
+
+    On a mid-write failure openpyxl leaves the ``WorksheetWriter`` and its
+    suspended XML generator in a reference cycle that keeps the ``openpyxl.*``
+    file handle open, and the in-flight exception traceback pins the writer's
+    frame. On Windows an open file cannot be removed, so the handler clears the
+    traceback frames and runs ``gc.collect()`` to break the cycle (closing the
+    handle) before the directory is removed.
+    """
+    with _TMPDIR_LOCK:
+        tmpdir = tempfile.mkdtemp(prefix="tpi_xlsx_")
+        previous_tmpdir = tempfile.tempdir
+        tempfile.tempdir = tmpdir
+        try:
+            buffer = BytesIO()
+            workbook.save(buffer)
+            return buffer.getvalue()
+        except BaseException as exc:
+            if exc.__traceback__ is not None:
+                traceback.clear_frames(exc.__traceback__)
+            gc.collect()
+            raise
+        finally:
+            tempfile.tempdir = previous_tmpdir
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def build_xlsx_workbook(rows: list[dict[str, Any]]) -> bytes:
-    """Build the export workbook in memory and return its bytes.
+    """Build the export workbook and return its bytes.
 
     ``rows`` must be the full matching result set (already limit-checked by the
     caller). Extra keys in a row are ignored: only ``EXPORT_COLUMNS`` are read.
@@ -186,6 +245,4 @@ def build_xlsx_workbook(rows: list[dict[str, Any]]) -> bytes:
                 cell.value = sanitize_cell_text(value)
                 cell.number_format = _TEXT_FORMAT
 
-    buffer = BytesIO()
-    workbook.save(buffer)
-    return buffer.getvalue()
+    return _save_workbook_ephemerally(workbook)

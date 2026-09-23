@@ -502,6 +502,13 @@ def leads_export(request: Request):
             _export_error_html("No fue posible generar la exportacion."),
             status_code=400,
         )
+    except Exception:
+        # Fail closed without a traceback: the exception message could embed a
+        # cell value (PII). The client gets a clear page; nothing is logged here.
+        return HTMLResponse(
+            _export_error_html("No fue posible generar la exportacion. Intenta nuevamente."),
+            status_code=500,
+        )
 
     return Response(
         content=content,

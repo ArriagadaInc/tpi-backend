@@ -107,6 +107,18 @@ def test_limit_exceeded_aborts_before_fetch() -> None:
     assert repo.audit_calls == []
 
 
+def test_limit_exact_is_allowed_and_exports() -> None:
+    # AC-16: count == EXPORT_MAX_ROWS must export (only count > limit aborts).
+    repo = _ExportRepository()
+    repo.count_override = EXPORT_MAX_ROWS
+    service, _ = _service(repo)
+    content = service.export_leads_xlsx(_user("ceo"))
+    assert isinstance(content, bytes)
+    assert content[:2] == b"PK"
+    assert repo.export_calls != []
+    assert len(repo.audit_calls) == 1
+
+
 def test_filters_forwarded_to_repository() -> None:
     repo = _ExportRepository()
     service, _ = _service(repo)

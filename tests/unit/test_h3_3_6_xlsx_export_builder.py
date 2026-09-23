@@ -9,8 +9,10 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta, timezone
 from io import BytesIO
+from pathlib import Path
 from typing import Any
 
+import pytest
 from openpyxl import load_workbook
 
 from app.services.xlsx_export import (
@@ -204,3 +206,50 @@ def test_export_limit_error_carries_total_and_limit() -> None:
     assert error.total == EXPORT_MAX_ROWS + 1
     assert error.limit == EXPORT_MAX_ROWS
     assert str(EXPORT_MAX_ROWS) in str(error)
+
+
+def test_sanitize_cell_text_removes_illegal_characters() -> None:
+    assert sanitize_cell_text("a\x01b\x0b c") == "ab c"
+    assert sanitize_cell_text("\x00") == ""
+    assert sanitize_cell_text("=\x01cmd") == "'=cmd"
+    assert sanitize_cell_text("normal") == "normal"
+    assert sanitize_cell_text(None) == ""
+
+
+def test_control_characters_removed_before_cell_assignment() -> None:
+    row = _base_row(
+        nombre_completo="Juan\x01Perez",
+        comentarios="hola\x02 VALOR_SINTETICO \x1f",
+    )
+    _, sheet = _load_sheet(build_xlsx_workbook([row]))
+    assert _cell(sheet, 2, "nombre_completo").value == "JuanPerez"
+    assert _cell(sheet, 2, "comentarios").value == "hola VALOR_SINTETICO "
+
+
+def test_failure_during_generation_leaves_no_temp_files(monkeypatch: pytest.MonkeyPatch) -> None:
+    from openpyxl.worksheet import _writer
+
+    created_paths: list[str] = []
+    real_create = _writer.create_temporary_file
+
+    def recording_create(*args: Any, **kwargs: Any) -> str:
+        path = real_create(*args, **kwargs)
+        created_paths.append(path)
+        return path
+
+    monkeypatch.setattr(_writer, "create_temporary_file", recording_create)
+
+    real_write_rows = _writer.WorksheetWriter.write_rows
+
+    def exploding_write_rows(self: Any) -> None:
+        real_write_rows(self)
+        raise RuntimeError("forced generation failure")
+
+    monkeypatch.setattr(_writer.WorksheetWriter, "write_rows", exploding_write_rows)
+
+    with pytest.raises(RuntimeError):
+        build_xlsx_workbook([_base_row()])
+
+    assert created_paths, "openpyxl debió crear un archivo temporal"
+    for path in created_paths:
+        assert not Path(path).exists(), f"archivo temporal residual: {path}"

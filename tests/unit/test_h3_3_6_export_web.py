@@ -53,6 +53,7 @@ class _Repo:
         self.rows = [_row()]
         self.count_override: int | None = None
         self.calls: list[str] = []
+        self.fail_audit = False
 
     def get_crm_solicitudes(self, **kwargs: Any) -> tuple[list[dict[str, Any]], int]:
         self.calls.append("get_crm_solicitudes")
@@ -76,6 +77,8 @@ class _Repo:
 
     def record_xlsx_export_event(self, **kwargs: Any) -> None:
         self.calls.append("record_xlsx_export_event")
+        if self.fail_audit:
+            raise RuntimeError("SENSITIVE_PII_SHOULD_NOT_LEAK")
 
 
 class _AuthProvider:
@@ -196,3 +199,12 @@ def test_limit_exceeded_clear_message() -> None:
     assert response.status_code == 413
     assert "limite" in response.text.lower()
     assert "Acota los filtros" in response.text
+
+
+def test_generation_failure_returns_clear_error_without_pii() -> None:
+    repo = _Repo()
+    repo.fail_audit = True
+    response = _client("ceo", repo).get("/leads/export.xlsx")
+    assert response.status_code == 500
+    assert "No fue posible generar la exportacion" in response.text
+    assert "SENSITIVE_PII_SHOULD_NOT_LEAK" not in response.text
