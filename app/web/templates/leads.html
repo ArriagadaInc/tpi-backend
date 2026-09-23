@@ -11,6 +11,11 @@
       {% if web_env_label %}
         <span class="pill pill-accent">{{ web_env_label }}</span>
       {% endif %}
+      {# Hiding the button is a convenience, never the access control: the route
+         /leads/export.xlsx returns a real server-side 403 for non-ceo/cto roles. #}
+      {% if can_export_xlsx %}
+        <a class="primary" href="{{ export_url }}">Exportar XLSX</a>
+      {% endif %}
     </div>
   </section>
 
