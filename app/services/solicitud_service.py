@@ -28,6 +28,11 @@ from app.models.test_lead_cleanup import TestLeadCleanupResult
 from app.notifications import LeadCreatedEvent, LeadEventPublisher, build_lead_event_publisher
 from app.repositories import SolicitudRepository
 from app.security.masking import mask_row_for_display
+from app.services.xlsx_export import (
+    EXPORT_MAX_ROWS,
+    ExportLimitExceededError,
+    build_xlsx_workbook,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -352,6 +357,140 @@ class SolicitudService:
             "page": page,
             "page_size": page_size,
             "total_pages": total_pages,
+        }
+
+    def export_leads_xlsx(
+        self,
+        user: AuthenticatedUser,
+        *,
+        search: str | None = None,
+        estado_lead: str | None = None,
+        afp_id: UUID | None = None,
+        date_from: datetime | date | None = None,
+        date_to: datetime | date | None = None,
+        sort_by: str | None = None,
+        sort_direction: str = "desc",
+        asesor_id: UUID | None = None,
+        origen_lead: str | None = None,
+        fuente_actual: str | None = None,
+        sin_asignar: bool = False,
+        estancado: bool = False,
+    ) -> bytes:
+        """Build the executive XLSX export for the active filters (CEO/CTO only).
+
+        Reuses the exact server-side filter contract of :meth:`get_crm_bandeja`
+        (same normalization, same repository predicates) but ignores pagination:
+        it counts first, aborts before generating if the limit is exceeded, then
+        fetches the full deterministically ordered result set and builds the
+        workbook in memory. On success it records the single append-only audit
+        event. Any non-superuser is rejected before any repository access.
+        """
+        if not isinstance(user, AuthenticatedUser):
+            raise TypeError("actor must be an AuthenticatedUser")
+        if not self.can_view_full_pii(user):
+            raise PermissionError("Usuario no autorizado para exportar leads")
+
+        normalized_date_from = self._normalize_crm_date(date_from, end_of_day=False)
+        normalized_date_to = self._normalize_crm_date(date_to, end_of_day=True)
+        if (
+            normalized_date_from
+            and normalized_date_to
+            and normalized_date_from > normalized_date_to
+        ):
+            raise ValueError("date_from cannot be greater than date_to")
+
+        normalized_estado = None
+        if estado_lead is not None:
+            normalized_estado = self._normalize_crm_state_for_filter(estado_lead)
+
+        total = self.repository.count_crm_solicitudes(
+            search=search,
+            estado_lead=normalized_estado,
+            afp_id=afp_id,
+            date_from=normalized_date_from,
+            date_to=normalized_date_to,
+            asesor_id=asesor_id,
+            origen_lead=origen_lead,
+            fuente_actual=fuente_actual,
+            sin_asignar=sin_asignar,
+            estancado=estancado,
+        )
+        if total > EXPORT_MAX_ROWS:
+            raise ExportLimitExceededError(total=total, limit=EXPORT_MAX_ROWS)
+
+        rows = self.repository.get_crm_solicitudes_export(
+            search=search,
+            estado_lead=normalized_estado,
+            afp_id=afp_id,
+            date_from=normalized_date_from,
+            date_to=normalized_date_to,
+            sort_by=sort_by,
+            sort_direction=sort_direction,
+            asesor_id=asesor_id,
+            origen_lead=origen_lead,
+            fuente_actual=fuente_actual,
+            sin_asignar=sin_asignar,
+            estancado=estancado,
+        )
+
+        content = build_xlsx_workbook(rows)
+
+        self.repository.record_xlsx_export_event(
+            actor_subject=user.subject,
+            role=user.role,
+            row_count=len(rows),
+            filters_summary=self._build_export_filters_summary(
+                search=search,
+                estado_lead=normalized_estado,
+                afp_id=afp_id,
+                date_from=normalized_date_from,
+                date_to=normalized_date_to,
+                sort_by=sort_by,
+                sort_direction=sort_direction,
+                asesor_id=asesor_id,
+                origen_lead=origen_lead,
+                fuente_actual=fuente_actual,
+                sin_asignar=sin_asignar,
+                estancado=estancado,
+            ),
+        )
+
+        return content
+
+    @staticmethod
+    def _build_export_filters_summary(
+        *,
+        search: str | None,
+        estado_lead: str | None,
+        afp_id: UUID | None,
+        date_from: datetime | None,
+        date_to: datetime | None,
+        sort_by: str | None,
+        sort_direction: str,
+        asesor_id: UUID | None,
+        origen_lead: str | None,
+        fuente_actual: str | None,
+        sin_asignar: bool,
+        estancado: bool,
+    ) -> dict[str, Any]:
+        """Sanitized filter summary for the audit event (never the free-text search).
+
+        ``search`` is deliberately reduced to a boolean: the raw term can contain
+        PII (RUT, name, phone, email) and must never reach the audit log.
+        """
+        return {
+            "search_applied": bool(search),
+            "estado_lead": estado_lead,
+            "afp_id": str(afp_id) if afp_id is not None else None,
+            "date_from": date_from.isoformat() if date_from is not None else None,
+            "date_to": date_to.isoformat() if date_to is not None else None,
+            "sort_by": sort_by or "created_at",
+            "sort_direction": sort_direction or "desc",
+            "asesor_id": str(asesor_id) if asesor_id is not None else None,
+            "origen_lead": origen_lead,
+            "fuente_actual": fuente_actual,
+            "sin_asignar": sin_asignar,
+            "estancado": estancado,
         }
 
     @classmethod

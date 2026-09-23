@@ -56,6 +56,47 @@ class SolicitudRepository:
         "estado_lead": "l.estado_lead",
     }
 
+    # Shared view model for the board and the executive XLSX export: both surfaces
+    # project the exact same columns from the exact same joins, so the export can
+    # never diverge from the listing contract (AC-3). The export builder projects
+    # only its explicit allowlist subset from these rows.
+    _CRM_BOARD_SELECT = """
+                l.id_lead,
+                l.id_persona,
+                p.rut,
+                p.nombre_completo,
+                p.email,
+                p.telefono,
+                l.genero_id,
+                cg.nombre AS genero,
+                l.estado_civil_id,
+                cec.nombre AS estado_civil,
+                l.afp_id,
+                ca.nombre AS afp,
+                l.saldo_afp,
+                l.comentarios,
+                l.estado_lead,
+                l.created_at,
+                ass.id_asesor,
+                ass.asesor_nombre
+    """
+
+    _CRM_BOARD_FROM = """
+            FROM tpi.leads l
+            INNER JOIN tpi.personas p ON l.id_persona = p.id_persona
+            LEFT JOIN tpi.catalogo_genero cg ON l.genero_id = cg.id
+            LEFT JOIN tpi.catalogo_estado_civil cec ON l.estado_civil_id = cec.id
+            LEFT JOIN tpi.catalogo_afp ca ON l.afp_id = ca.id
+            LEFT JOIN LATERAL (
+                SELECT a.id_asesor, ases.nombre AS asesor_nombre, a.fecha_asignacion
+                FROM tpi.asignaciones a
+                LEFT JOIN tpi.asesores ases ON ases.id_asesor = a.id_asesor
+                WHERE a.id_lead = l.id_lead
+                ORDER BY a.fecha_asignacion DESC, a.id_asignacion DESC
+                LIMIT 1
+            ) ass ON TRUE
+    """
+
     @staticmethod
     def _build_crm_query_filters(
         *,
@@ -677,43 +718,10 @@ class SolicitudRepository:
             LEFT JOIN tpi.catalogo_afp ca ON l.afp_id = ca.id
             {where_clause}
         """).format(where_clause=sql.SQL(where_clause))
-        query_data = sql.SQL("""
-            SELECT
-                l.id_lead,
-                l.id_persona,
-                p.rut,
-                p.nombre_completo,
-                p.email,
-                p.telefono,
-                l.genero_id,
-                cg.nombre AS genero,
-                l.estado_civil_id,
-                cec.nombre AS estado_civil,
-                l.afp_id,
-                ca.nombre AS afp,
-                l.saldo_afp,
-                l.comentarios,
-                l.estado_lead,
-                l.created_at,
-                ass.id_asesor,
-                ass.asesor_nombre
-            FROM tpi.leads l
-            INNER JOIN tpi.personas p ON l.id_persona = p.id_persona
-            LEFT JOIN tpi.catalogo_genero cg ON l.genero_id = cg.id
-            LEFT JOIN tpi.catalogo_estado_civil cec ON l.estado_civil_id = cec.id
-            LEFT JOIN tpi.catalogo_afp ca ON l.afp_id = ca.id
-            LEFT JOIN LATERAL (
-                SELECT a.id_asesor, ases.nombre AS asesor_nombre, a.fecha_asignacion
-                FROM tpi.asignaciones a
-                LEFT JOIN tpi.asesores ases ON ases.id_asesor = a.id_asesor
-                WHERE a.id_lead = l.id_lead
-                ORDER BY a.fecha_asignacion DESC, a.id_asignacion DESC
-                LIMIT 1
-            ) ass ON TRUE
-            {where_clause}
-            ORDER BY {order_clause}
-            LIMIT %s OFFSET %s
-        """).format(
+        query_data = sql.SQL(
+            "SELECT" + cls._CRM_BOARD_SELECT + cls._CRM_BOARD_FROM + "{where_clause}"
+            " ORDER BY {order_clause} LIMIT %s OFFSET %s"
+        ).format(
             where_clause=sql.SQL(where_clause),
             order_clause=sql.SQL(f"{order_column} {direction}, l.created_at DESC, l.id_lead DESC"),
         )
@@ -726,6 +734,167 @@ class SolicitudRepository:
                 cur.execute(query_data, [*where_params, limit, offset])
                 rows = cur.fetchall()
                 return [dict(row) for row in rows], total
+
+    @classmethod
+    def count_crm_solicitudes(
+        cls,
+        *,
+        search: str | None = None,
+        estado_lead: str | None = None,
+        afp_id: UUID | None = None,
+        genero_id: UUID | None = None,
+        estado_civil_id: UUID | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        asesor_id: UUID | None = None,
+        portfolio_asesor_id: UUID | None = None,
+        origen_lead: str | None = None,
+        fuente_actual: str | None = None,
+        sin_asignar: bool = False,
+        estancado: bool = False,
+        estancamiento_dias: int | None = None,
+    ) -> int:
+        """Return the number of rows matching the CRM filters (pre-export count).
+
+        Uses the exact ``_build_crm_query_filters`` of the board listing so the
+        count always describes the same population the export would produce.
+        """
+        where_clause, where_params = cls._build_crm_query_filters(
+            search=search,
+            estado_lead=estado_lead,
+            afp_id=afp_id,
+            genero_id=genero_id,
+            estado_civil_id=estado_civil_id,
+            date_from=date_from,
+            date_to=date_to,
+            asesor_id=asesor_id,
+            portfolio_asesor_id=portfolio_asesor_id,
+            origen_lead=origen_lead,
+            fuente_actual=fuente_actual,
+            sin_asignar=sin_asignar,
+            estancado=estancado,
+            estancamiento_dias=estancamiento_dias,
+        )
+        query_count = sql.SQL("""
+            SELECT COUNT(*) AS total
+            FROM tpi.leads l
+            INNER JOIN tpi.personas p ON l.id_persona = p.id_persona
+            LEFT JOIN tpi.catalogo_afp ca ON l.afp_id = ca.id
+            {where_clause}
+        """).format(where_clause=sql.SQL(where_clause))
+        with get_db_connection(operation="count_crm_solicitudes") as conn:
+            with conn.cursor() as cur:
+                cur.execute(query_count, where_params)
+                row = cur.fetchone()
+                return int(row["total"]) if row else 0
+
+    @classmethod
+    def get_crm_solicitudes_export(
+        cls,
+        *,
+        search: str | None = None,
+        estado_lead: str | None = None,
+        afp_id: UUID | None = None,
+        genero_id: UUID | None = None,
+        estado_civil_id: UUID | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        sort_by: str | None = None,
+        sort_direction: str = "desc",
+        asesor_id: UUID | None = None,
+        portfolio_asesor_id: UUID | None = None,
+        origen_lead: str | None = None,
+        fuente_actual: str | None = None,
+        sin_asignar: bool = False,
+        estancado: bool = False,
+        estancamiento_dias: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return the full, deterministically ordered result set (no pagination).
+
+        Shares the board view model (``_CRM_BOARD_SELECT`` / ``_CRM_BOARD_FROM``)
+        and the exact filter/sort rules of ``get_crm_solicitudes``. The caller must
+        have already checked the count against ``EXPORT_MAX_ROWS``.
+        """
+        where_clause, where_params = cls._build_crm_query_filters(
+            search=search,
+            estado_lead=estado_lead,
+            afp_id=afp_id,
+            genero_id=genero_id,
+            estado_civil_id=estado_civil_id,
+            date_from=date_from,
+            date_to=date_to,
+            asesor_id=asesor_id,
+            portfolio_asesor_id=portfolio_asesor_id,
+            origen_lead=origen_lead,
+            fuente_actual=fuente_actual,
+            sin_asignar=sin_asignar,
+            estancado=estancado,
+            estancamiento_dias=estancamiento_dias,
+        )
+        order_column, direction = cls._normalize_crm_sort(sort_by, sort_direction)
+        query_data = sql.SQL(
+            "SELECT" + cls._CRM_BOARD_SELECT + cls._CRM_BOARD_FROM + "{where_clause}"
+            " ORDER BY {order_clause}"
+        ).format(
+            where_clause=sql.SQL(where_clause),
+            order_clause=sql.SQL(f"{order_column} {direction}, l.created_at DESC, l.id_lead DESC"),
+        )
+        with get_db_connection(operation="get_crm_solicitudes_export") as conn:
+            with conn.cursor() as cur:
+                cur.execute(query_data, where_params)
+                rows = cur.fetchall()
+                return [dict(row) for row in rows]
+
+    @staticmethod
+    def record_xlsx_export_event(
+        *,
+        actor_subject: str,
+        role: str,
+        row_count: int,
+        filters_summary: dict[str, Any],
+    ) -> None:
+        """Append the functional audit event for a successful XLSX export.
+
+        ``detalle`` carries only sanitized, PII-free metadata: the free-text search
+        term is never stored (only ``search_applied``). ``id_lead``/``id_persona``
+        are ``NULL`` because the export is a bulk read, not a single-lead operation.
+        ``accion='exportacion_xlsx'`` fits the existing ``VARCHAR(100)`` contract
+        without any schema change (class A). The application never reads
+        ``tpi.auditoria`` directly; this is the same append-only write path already
+        granted to ``tpi_app`` by migration 006.
+        """
+        import json
+
+        query = """
+            INSERT INTO tpi.auditoria
+                (id_usuario, id_persona, id_lead, accion, tabla_afectada, detalle)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        detalle = {
+            "actor_subject": actor_subject,
+            "role": role,
+            "row_count": row_count,
+            "format": "xlsx",
+            "filters": filters_summary,
+        }
+        with get_db_connection(operation="record_xlsx_export_event") as conn:
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        query,
+                        (
+                            None,
+                            None,
+                            None,
+                            "exportacion_xlsx",
+                            "tpi.leads",
+                            json.dumps(detalle),
+                        ),
+                    )
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
 
     @staticmethod
     def get_solicitudes_by_rut(rut: str) -> list[dict[str, Any]]:

@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import secrets
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Any, cast
 from urllib.parse import parse_qs, urlencode, urlsplit
 from uuid import UUID
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 
 from app.auth.models import AuthenticatedUser, UserRole, is_superuser
 from app.models.crm_states import normalize_crm_state_for_display
@@ -17,6 +17,7 @@ from app.models.lead_assignment import (
     LeadAssignmentConflictError,
     LeadAssignmentValidationError,
 )
+from app.services.xlsx_export import ExportLimitExceededError
 from app.web.dependencies import build_service_for_web
 from app.web.presentation import (
     build_timeline_items,
@@ -76,6 +77,32 @@ def _can_view_executive_dashboard(user: AuthenticatedUser | None) -> bool:
     This only hides a link: /dashboard enforces the real 403 server-side.
     """
     return bool(user) and is_superuser(user.role)  # type: ignore[union-attr]
+
+
+def _can_export_xlsx(user: AuthenticatedUser | None) -> bool:
+    """Whether to render the export button.
+
+    This only hides a button: /leads/export.xlsx enforces the real server-side
+    authorization (403 for any non-ceo/cto authenticated role).
+    """
+    return bool(user) and is_superuser(user.role)  # type: ignore[union-attr]
+
+
+def _export_filename(now: datetime | None = None) -> str:
+    """Server-generated, predictable download filename (no user-controlled input)."""
+    timestamp = now or datetime.now(UTC)
+    return f"leads_export_{timestamp.strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+
+def _export_error_html(message: str) -> str:
+    """Minimal, self-contained error page for the export (clear message, no PII)."""
+    return (
+        "<!doctype html><html lang='es'><head><meta charset='utf-8'>"
+        "<title>Exportacion XLSX</title></head><body style='font-family:sans-serif;"
+        "max-width:40rem;margin:3rem auto;padding:0 1rem'>"
+        f"<h1>Exportacion XLSX</h1><p>{message}</p>"
+        "<p><a href='/leads'>Volver a Leads</a></p></body></html>"
+    )
 
 
 def _active_filter_labels(sin_asignar: bool, estancado: bool) -> list[str]:
@@ -302,6 +329,8 @@ def _resolve_board_data(request: Request) -> dict[str, Any]:
         "page_title": "Leads",
         "selected_user": user,
         "can_view_executive_dashboard": _can_view_executive_dashboard(user),
+        "can_export_xlsx": _can_export_xlsx(user),
+        "export_url": _build_query_url("/leads/export.xlsx", current_query),
         "active_nav": "leads",
         "can_write": _can_write(user),
         "csrf_token": _get_csrf_token(request),
@@ -431,6 +460,65 @@ def leads_clear(request: Request):
     if not _require_web_user(request):
         return RedirectResponse(url="/login", status_code=307)
     return RedirectResponse(url="/leads", status_code=303)
+
+
+@router.get("/leads/export.xlsx")
+def leads_export(request: Request):
+    user = _require_web_user(request)
+    if user is None:
+        return RedirectResponse(url="/login", status_code=307)
+    if not is_superuser(user.role):
+        return PlainTextResponse("No autorizado", status_code=403)
+
+    service = _resolve_service(request)
+    params = request.query_params
+    estado_raw = params.get("estado_lead") or None
+    estado = normalize_crm_state_for_display(estado_raw) or estado_raw
+
+    try:
+        content = service.export_leads_xlsx(
+            user,
+            search=params.get("search") or None,
+            estado_lead=estado,
+            afp_id=params.get("afp_id") or None,
+            date_from=_parse_date(params.get("date_from")),
+            date_to=_parse_date(params.get("date_to")),
+            sort_by=params.get("sort_by") or "created_at",
+            sort_direction=params.get("sort_direction") or "desc",
+            asesor_id=_parse_uuid(params.get("asesor")),
+            origen_lead=_normalize_text(params.get("origen")),
+            fuente_actual=_normalize_text(params.get("fuente")),
+            sin_asignar=_parse_flag(params.get("sin_asignar")),
+            estancado=_parse_flag(params.get("estancado")),
+        )
+    except ExportLimitExceededError as exc:
+        message = (
+            f"La exportacion supera el limite de {exc.limit} filas "
+            f"({exc.total} coinciden). Acota los filtros e intenta nuevamente."
+        )
+        return HTMLResponse(_export_error_html(message), status_code=413)
+    except (ValueError, TypeError):
+        return HTMLResponse(
+            _export_error_html("No fue posible generar la exportacion."),
+            status_code=400,
+        )
+    except Exception:
+        # Fail closed without a traceback: the exception message could embed a
+        # cell value (PII). The client gets a clear page; nothing is logged here.
+        return HTMLResponse(
+            _export_error_html("No fue posible generar la exportacion. Intenta nuevamente."),
+            status_code=500,
+        )
+
+    return Response(
+        content=content,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="{_export_filename()}"',
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.get("/leads/{lead_id}", response_class=HTMLResponse)
