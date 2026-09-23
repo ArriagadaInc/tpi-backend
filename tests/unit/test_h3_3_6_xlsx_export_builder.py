@@ -7,7 +7,7 @@ writing a workbook in memory and reading it back with openpyxl.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime, timedelta, timezone
 from io import BytesIO
 from typing import Any
 
@@ -17,6 +17,7 @@ from app.services.xlsx_export import (
     EXPORT_COLUMNS,
     EXPORT_MAX_ROWS,
     EXPORT_SHEET_NAME,
+    EXPORT_TIMEZONE,
     ExportLimitExceededError,
     build_xlsx_workbook,
     sanitize_cell_text,
@@ -132,9 +133,43 @@ def test_uuids_rut_phone_leading_zeros_as_text() -> None:
     _, sheet = _load_sheet(build_xlsx_workbook([row]))
     assert _cell(sheet, 2, "rut").value == "00123456-7"
     assert _cell(sheet, 2, "rut").data_type == "s"
-    assert _cell(sheet, 2, "telefono").value == "+56 9 0123 4567"
+    # AC-8 prevails over the original representation: a phone starting with "+"
+    # is neutralized with the leading single quote and kept as text.
+    assert _cell(sheet, 2, "telefono").value == "'+56 9 0123 4567"
     assert _cell(sheet, 2, "telefono").data_type == "s"
     assert _cell(sheet, 2, "id_lead").value == "00000000-0000-0000-0000-000000000001"
+
+
+def test_phone_with_leading_zero_kept_as_text() -> None:
+    _, sheet = _load_sheet(build_xlsx_workbook([_base_row(telefono="0912345678")]))
+    assert _cell(sheet, 2, "telefono").value == "0912345678"
+    assert _cell(sheet, 2, "telefono").data_type == "s"
+
+
+def test_timezone_aware_timestamp_converted_to_crm_local_naive() -> None:
+    # 2026-09-01 02:30 UTC == 2026-08-31 22:30 America/Santiago (UTC-4 before DST).
+    created = datetime(2026, 9, 1, 2, 30, tzinfo=UTC)
+    _, sheet = _load_sheet(build_xlsx_workbook([_base_row(created_at=created)]))
+    cell = _cell(sheet, 2, "created_at")
+    assert cell.data_type == "d"
+    assert cell.value == datetime(2026, 8, 31, 22, 30)
+    assert cell.value.tzinfo is None
+    assert cell.number_format == "dd/mm/yyyy"
+
+
+def test_timezone_aware_non_utc_offset_preserves_instant() -> None:
+    # Same instant expressed with another offset yields the same local value (DST, UTC-3).
+    created = datetime(2026, 12, 1, 15, 0, tzinfo=timezone(timedelta(hours=2)))
+    _, sheet = _load_sheet(build_xlsx_workbook([_base_row(created_at=created)]))
+    expected = created.astimezone(EXPORT_TIMEZONE).replace(tzinfo=None)
+    assert expected == datetime(2026, 12, 1, 10, 0)
+    assert _cell(sheet, 2, "created_at").value == expected
+
+
+def test_naive_timestamp_written_unchanged() -> None:
+    created = datetime(2026, 9, 1, 10, 30)
+    _, sheet = _load_sheet(build_xlsx_workbook([_base_row(created_at=created)]))
+    assert _cell(sheet, 2, "created_at").value == created
 
 
 def test_unicode_survives_roundtrip() -> None:

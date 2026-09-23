@@ -43,33 +43,39 @@ def _row() -> dict[str, Any]:
 
 
 class _Repo:
+    """Fake of the repository methods the real service uses for /leads and the export.
+
+    Every call is recorded so tests can assert that unauthorized requests never reach
+    the repository (no count, no query, no audit write).
+    """
+
     def __init__(self) -> None:
         self.rows = [_row()]
         self.count_override: int | None = None
+        self.calls: list[str] = []
 
-    def get_crm_bandeja(self, **kwargs: Any) -> dict[str, Any]:
-        return {
-            "solicitudes": [dict(row) for row in self.rows],
-            "total": len(self.rows),
-            "page": 1,
-            "page_size": 10,
-            "total_pages": 1,
-        }
+    def get_crm_solicitudes(self, **kwargs: Any) -> tuple[list[dict[str, Any]], int]:
+        self.calls.append("get_crm_solicitudes")
+        return [dict(row) for row in self.rows], len(self.rows)
 
-    def get_catalogo_afp(self) -> list[dict[str, Any]]:
+    def get_active_afp(self) -> list[dict[str, Any]]:
+        self.calls.append("get_active_afp")
         return []
 
     def get_crm_estado_lead_options(self) -> list[str]:
+        self.calls.append("get_crm_estado_lead_options")
         return ["nuevo", "contactado", "cerrado"]
 
     def count_crm_solicitudes(self, **kwargs: Any) -> int:
+        self.calls.append("count_crm_solicitudes")
         return self.count_override if self.count_override is not None else len(self.rows)
 
     def get_crm_solicitudes_export(self, **kwargs: Any) -> list[dict[str, Any]]:
+        self.calls.append("get_crm_solicitudes_export")
         return [dict(row) for row in self.rows]
 
     def record_xlsx_export_event(self, **kwargs: Any) -> None:
-        return None
+        self.calls.append("record_xlsx_export_event")
 
 
 class _AuthProvider:
@@ -108,8 +114,8 @@ def _client(role: str, repo: _Repo | None = None) -> TestClient:
     return client
 
 
-def _anonymous_client() -> TestClient:
-    service = SolicitudService(repository=cast(Any, _Repo()))
+def _anonymous_client(repo: _Repo | None = None) -> TestClient:
+    service = SolicitudService(repository=cast(Any, repo or _Repo()))
     app = create_web_app()
     app.state.web_service = service
     app.state.auth_provider = _AuthProvider("ceo")
@@ -136,10 +142,38 @@ def test_non_superuser_gets_403() -> None:
         assert response.status_code == 403, role
 
 
+def test_non_superuser_rejected_before_any_repository_access() -> None:
+    for role in ("advisor", "admin", "executive", "operations", "readonly", "tester"):
+        repo = _Repo()
+        client = _client(role, repo)
+        repo.calls.clear()
+        response = client.get("/leads/export.xlsx?search=juan&estado_lead=contactado")
+        assert response.status_code == 403, role
+        assert repo.calls == [], role
+        assert "spreadsheetml" not in response.headers.get("content-type", ""), role
+
+
+def test_ceo_and_cto_authorized_download() -> None:
+    for role in ("ceo", "cto"):
+        repo = _Repo()
+        client = _client(role, repo)
+        repo.calls.clear()
+        response = client.get("/leads/export.xlsx")
+        assert response.status_code == 200, role
+        assert response.content.startswith(b"PK"), role
+        assert repo.calls == [
+            "count_crm_solicitudes",
+            "get_crm_solicitudes_export",
+            "record_xlsx_export_event",
+        ], role
+
+
 def test_anonymous_redirects_to_login() -> None:
-    response = _anonymous_client().get("/leads/export.xlsx")
+    repo = _Repo()
+    response = _anonymous_client(repo).get("/leads/export.xlsx", follow_redirects=False)
     assert response.status_code == 307
     assert response.headers.get("location") == "/login"
+    assert repo.calls == []
 
 
 def test_response_security_headers_and_filename() -> None:

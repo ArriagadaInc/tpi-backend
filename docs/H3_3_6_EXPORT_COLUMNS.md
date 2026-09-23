@@ -70,6 +70,13 @@ detalle (`fecha_nacimiento`, consentimientos, `asignado_por`, `estado_asignacion
   `#,##0`. Nunca se neutraliza un número.
 - **Fechas**: `created_at` se escribe como celda de fecha nativa (`datetime`) con
   formato `dd/mm/yyyy`. Nunca se neutraliza una fecha.
+- **Zona horaria de fechas**: Excel no soporta datetimes con zona horaria. Un
+  `TIMESTAMPTZ` (datetime *aware*) se convierte a `America/Santiago`
+  (`EXPORT_TIMEZONE`, la misma convención CRM que usan los filtros `date_from/date_to`
+  del listado y la presentación web) y se escribe *naive* en hora local CRM,
+  preservando el instante. Un datetime *naive* se asume ya en hora local CRM y se
+  escribe sin cambios. Se eligió la convención CRM existente (no UTC) para que la
+  fecha exportada coincida con el filtro de fechas aplicado y con lo que ve el usuario.
 - **Texto** (`id_lead`, `rut`, `nombre_completo`, `email`, `telefono`, `genero`,
   `estado_civil`, `afp`, `comentarios`, `estado_lead`, `id_asesor`, `asesor_nombre`):
   se escribe como texto. UUID, RUT, teléfonos y códigos conservan los ceros
@@ -77,6 +84,9 @@ detalle (`fecha_nacimiento`, consentimientos, `asignado_por`, `estado_asignacion
 - **Formula injection (F6)**: todo valor de texto cuyo primer carácter sea `=`, `+`,
   `-` o `@` se neutraliza prefijando una comilla simple (`'`) y la celda se fuerza a
   texto. La protección no toca fechas ni montos (se escriben como tipos nativos).
+  Decisión (AC-8 prevalece sobre la representación original): la regla aplica a
+  **todas** las columnas de texto sin excepciones, incluidos teléfonos en formato
+  internacional; `+56 9 1234 5678` se exporta como `'+56 9 1234 5678`.
 - **Nulos**: un valor `NULL` se escribe como celda vacía (o texto vacío), nunca como
   `"None"`.
 

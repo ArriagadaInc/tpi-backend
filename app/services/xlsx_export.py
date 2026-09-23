@@ -18,6 +18,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from io import BytesIO
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from openpyxl import Workbook
 from openpyxl.styles import Font
@@ -31,6 +32,12 @@ EXPORT_MAX_ROWS = 10000
 _TEXT = "text"
 _NUMBER = "number"
 _DATE = "date"
+
+# Same CRM business timezone used by the board filters and the web presentation
+# (``SolicitudService._CRM_TZ`` / ``app.web.presentation._CRM_TZ``). Excel has no
+# timezone support, so aware timestamps are converted to this zone and written as
+# naive local datetimes; naive values are assumed to already be CRM-local.
+EXPORT_TIMEZONE = ZoneInfo("America/Santiago")
 
 _FORMULA_TRIGGER_PREFIXES = ("=", "+", "-", "@")
 _TEXT_FORMAT = "@"
@@ -126,8 +133,16 @@ def _coerce_number(value: Any) -> int | float | None:
 
 
 def _coerce_date(value: Any) -> datetime | date | None:
-    """Coerce a DB timestamp/date to a native spreadsheet date, or ``None``."""
-    if isinstance(value, (datetime, date)):
+    """Coerce a DB timestamp/date to a native spreadsheet date, or ``None``.
+
+    Timezone-aware datetimes (TIMESTAMPTZ) are converted to ``EXPORT_TIMEZONE`` and
+    returned naive, preserving the instant in the CRM's local convention.
+    """
+    if isinstance(value, datetime):
+        if value.tzinfo is not None and value.utcoffset() is not None:
+            return value.astimezone(EXPORT_TIMEZONE).replace(tzinfo=None)
+        return value.replace(tzinfo=None)
+    if isinstance(value, date):
         return value
     return None
 
