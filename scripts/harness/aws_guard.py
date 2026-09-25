@@ -2,6 +2,7 @@
 
 Usage:
   python scripts/harness/aws_guard.py [--dry-run] <service> <operation> [options...]
+  python scripts/harness/aws_guard.py --help      (local only: no AWS, no audit, exit 0)
 
 The permitted operation set depends on ROLE (derived from state) + STATE + ENVIRONMENT
 (harness/policies.yaml). Profile and region are always forced. Output is redacted.
@@ -23,9 +24,11 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from . import common, evidence
+    from . import common, denials, evidence
 except ImportError:  # executed as a script
     import common  # type: ignore[no-redef]
+    import denials  # type: ignore[no-redef]
+
     import evidence  # type: ignore[no-redef]
 
 BOOLEAN_FLAGS = {
@@ -56,6 +59,12 @@ COMMON_OUTPUT_FLAGS = {
     "--page-size",
 }
 CANONICAL_REMOTE = "ArriagadaInc/tpi-backend"
+HELP_FLAGS = ("-h", "--help")
+# Options that take a list of values (`--repository-names a b`). Only the ones some validator
+# checks value by value; any other multi-value use still fails the parser (fail closed).
+LIST_FLAGS = {"--repository-names"}
+IMAGE_ID_RE = re.compile(r"imageDigest=sha256:[0-9a-f]{64}|imageTag=[A-Za-z0-9._-]{1,128}")
+COUNT_ONLY_QUERY_RE = re.compile(r"\s*length\(\s*events\s*\)\s*")
 
 
 @dataclass
@@ -76,6 +85,9 @@ class ParsedCommand:
         if len(values) != 1:
             raise common.HarnessError(f"opcion repetida: {name}")
         return values[0]
+
+    def many(self, name: str) -> list[str]:
+        return [value for value in self.options.get(name) or [] if value is not None]
 
 
 @dataclass
@@ -108,6 +120,14 @@ def parse(tokens: list[str]) -> ParsedCommand:
                 name, value = token.split("=", 1)
                 options.setdefault(name, []).append(value)
                 index += 1
+            elif token in LIST_FLAGS:
+                index += 1
+                values = options.setdefault(token, [])
+                while index < len(tokens) and not tokens[index].startswith("-"):
+                    values.append(tokens[index])
+                    index += 1
+                if not values:
+                    raise common.HarnessError(f"{token} requiere al menos un valor")
             elif (
                 token in BOOLEAN_FLAGS
                 or index + 1 >= len(tokens)
@@ -315,10 +335,25 @@ def v_ecr(
 ) -> list[str]:
     repositories = set(env["artifacts"]["ecr_repositories"].values())
     if cmd.operation == "describe-repositories":
-        return _only_options(cmd, {"--repository-names"})
-    reasons = _only_options(cmd, {"--repository-name", "--image-ids"})
+        # v1.1: only the DEV repositories of this environment, always named explicitly
+        # (without --repository-names the call would list every repository of the account).
+        reasons = _only_options(cmd, {"--repository-names"})
+        names = cmd.many("--repository-names")
+        if not names:
+            reasons.append("describe-repositories requiere --repository-names de DEV")
+        reasons += [
+            f"repositorio ECR fuera del entorno DEV: {n}" for n in names if n not in repositories
+        ]
+        return reasons
+    image_flag = "--image-id" if cmd.operation == "describe-image-scan-findings" else "--image-ids"
+    reasons = _only_options(cmd, {"--repository-name", image_flag})
     if cmd.one("--repository-name") not in repositories:
         reasons.append("repositorio ECR fuera del entorno DEV")
+    image = cmd.one(image_flag)
+    if cmd.operation == "describe-image-scan-findings" and image is None:
+        reasons.append("describe-image-scan-findings requiere --image-id")
+    if image is not None and not IMAGE_ID_RE.fullmatch(image):
+        reasons.append(f"{image_flag} debe ser imageDigest=sha256:<64 hex> o imageTag=<tag>")
     return reasons
 
 
@@ -331,7 +366,9 @@ def v_logs_filter(
     group_prefix = f"/aws/elasticbeanstalk/{env['deployment_target']['environment_name']}/"
     if not (cmd.one("--log-group-name") or "").startswith(group_prefix):
         reasons.append("log group fuera del environment DEV")
-    if "length(" not in (cmd.one("--query") or ""):
+    # Count-only, exact: `length(` anywhere was not enough (`events[?length(message)>`0`].message`
+    # returns full lines). The Deployer never reads log lines; classification is human.
+    if not COUNT_ONLY_QUERY_RE.fullmatch(cmd.one("--query") or ""):
         reasons.append("filter-log-events solo con --query 'length(events)' (sin volcar lineas)")
     return reasons
 
@@ -442,6 +479,8 @@ def _audit(root: Path, state: dict[str, Any], decision: Decision, **extra: Any) 
         "reasons": decision.reasons,
         # D5/D6: mantenimiento auditado; nunca cambia mode/allowed (ver evaluate()).
         "maintenance_mode": getattr(decision, "maintenance", False),
+        # v1.1: Supervisor turn of the calling process tree (null in manual mode).
+        "supervisor_turn": denials.turn_id(),
         **extra,
     }
     with (directory / "aws-audit.jsonl").open("a", encoding="utf-8", newline="\n") as handle:
@@ -477,6 +516,7 @@ def run(
     decision = evaluate(root, tokens, env_vars=env_vars)
     if not decision.allowed:
         _audit(root, state, decision, executed=False)
+        denials.record(root, "aws_guard", "; ".join(decision.reasons), label=decision.operation)
         print("AWS GUARD: DENIED", file=sys.stderr)
         for reason in decision.reasons:
             print(f"  - {reason}", file=sys.stderr)
@@ -515,6 +555,9 @@ def run(
                 account = None
         if account != environment["account_id"]:
             _audit(root, state, decision, executed=False, identity_check="failed")
+            denials.record(
+                root, "aws_guard", "identidad AWS no verificada", label=decision.operation
+            )
             print(
                 "AWS GUARD: STOP - identidad AWS no verificada o cuenta distinta", file=sys.stderr
             )
@@ -537,6 +580,7 @@ def run(
     sys.stderr.write(common.redact(result.stderr))
     if access_denied:
         _record_access_denied(root, state, decision, result)
+        denials.record(root, "aws_guard", "AccessDenied de AWS: STOP", label=decision.operation)
         print(
             "\nAWS GUARD: ACCESS DENIED -> STOP. No agregar permisos, no reintentar, no cambiar principal.",
             file=sys.stderr,
@@ -581,9 +625,15 @@ def main(argv: list[str] | None = None) -> int:
         tokens = tokens[1:]
     if tokens and tokens[0] == "aws":
         tokens = tokens[1:]
+    # v1.1: `--help` alone is a purely local operation: no state, no AWS, no audit, exit 0.
+    # Anything else (including `<service> <operation> --help`) goes through strict validation.
+    if len(tokens) == 1 and tokens[0] in HELP_FLAGS:
+        print((__doc__ or "").strip())
+        return 0
     try:
         return run(common.ROOT, tokens, dry_run=dry_run)
     except common.HarnessError as error:
+        denials.record(common.ROOT, "aws_guard", f"STOP: {error}", label=" ".join(tokens[:2]))
         print(f"AWS GUARD: STOP - {error}", file=sys.stderr)
         return 3
 

@@ -9,9 +9,10 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from . import common
+    from . import common, log_scan
 except ImportError:  # executed as a script
     import common  # type: ignore[no-redef]
+    import log_scan  # type: ignore[no-redef]
 
 
 class GuardFailure(Exception):
@@ -67,7 +68,9 @@ def g_task_selected(ctx: GuardContext) -> None:
 
 def g_task_active(ctx: GuardContext) -> None:
     task = _task(ctx)
-    _check(task["id"] == ctx.state.get("task_id"), "tasks/current.yaml no coincide con state.task_id")
+    _check(
+        task["id"] == ctx.state.get("task_id"), "tasks/current.yaml no coincide con state.task_id"
+    )
 
 
 def g_developer_evidence_valid(ctx: GuardContext) -> None:
@@ -101,7 +104,9 @@ def g_review_approved(ctx: GuardContext) -> None:
     review = ctx.require("review_evidence")
     dev = ctx.require("developer_evidence")
     _check(review["decision"] == "APPROVED", "la revision no esta APPROVED")
-    _check(review["reviewed_sha"] == dev["head_sha"], "reviewed_sha distinto del head_sha entregado")
+    _check(
+        review["reviewed_sha"] == dev["head_sha"], "reviewed_sha distinto del head_sha entregado"
+    )
     _check(review["pr_number"] == dev["pr_number"], "PR revisado distinto del PR entregado")
     _check(str(review["ci"]["conclusion"]).lower() == "success", "CI no verde en el SHA exacto")
     _check(
@@ -109,7 +114,10 @@ def g_review_approved(ctx: GuardContext) -> None:
         "hay hallazgos blocker/major en una aprobacion",
     )
     _check(_checks_pass(review["checks"]), "checks de revision incompletos o fallidos")
-    _check(review.get("session_id") != dev.get("session_id"), "revision en la misma sesion del Developer")
+    _check(
+        review.get("session_id") != dev.get("session_id"),
+        "revision en la misma sesion del Developer",
+    )
     tree = common.git_tree(ctx.root, review["reviewed_sha"])
     _check(tree is not None, "reviewed_sha no existe localmente (ejecutar git fetch)")
     _check(tree == review["reviewed_tree"], "reviewed_tree no corresponde al reviewed_sha")
@@ -212,15 +220,25 @@ def g_candidate_valid(ctx: GuardContext) -> None:
     observed = cand["environment_observed"]
     lkg = cand["lkg"]
     _check(common.env_healthy(observed), "environment no Ready/Green/Ok antes del release")
-    _check(observed["version_label"] == lkg["version_label"], "el LKG debe ser la version sana observada")
+    _check(
+        observed["version_label"] == lkg["version_label"],
+        "el LKG debe ser la version sana observada",
+    )
     _check(lkg["version_label"] != label, "LKG igual al candidate")
-    _check(lkg["status"] in ("UNPROCESSED", "PROCESSED"), "Application Version del LKG no utilizable")
+    _check(
+        lkg["status"] in ("UNPROCESSED", "PROCESSED"), "Application Version del LKG no utilizable"
+    )
     _check(lkg["option_settings_required"] is False, "el LKG requeriria option settings")
     _check(
-        all(image["present"] is True and common.DIGEST_RE.fullmatch(image["digest"]) for image in lkg["images"]),
+        all(
+            image["present"] is True and common.DIGEST_RE.fullmatch(image["digest"])
+            for image in lkg["images"]
+        ),
         "digests del LKG ausentes en ECR: STOP antes del Human Gate",
     )
-    _check(cand["rollback_plan"]["version_label"] == lkg["version_label"], "plan de rollback != LKG")
+    _check(
+        cand["rollback_plan"]["version_label"] == lkg["version_label"], "plan de rollback != LKG"
+    )
     commands = " ".join(cand["deployment_plan"]["commands"])
     _check("--option-settings" not in commands, "el plan contiene --option-settings")
 
@@ -230,13 +248,21 @@ def g_candidate_review_approved(ctx: GuardContext) -> None:
     cand = ctx.require("candidate_evidence")
     merge = ctx.require("merge_evidence")
     code_review = ctx.require("review_evidence")
-    _check(review["decision"] == "APPROVED" and review["cause"] is None, "candidate review no aprobado")
-    _check(review["release_sha"] == cand["release_sha"] == merge["release_sha"], "release_sha inconsistente")
+    _check(
+        review["decision"] == "APPROVED" and review["cause"] is None, "candidate review no aprobado"
+    )
+    _check(
+        review["release_sha"] == cand["release_sha"] == merge["release_sha"],
+        "release_sha inconsistente",
+    )
     _check(
         review["release_tree"] == review["reviewed_tree"] == code_review["reviewed_tree"],
         "arbol del release distinto del arbol revisado",
     )
-    _check(common.git_tree(ctx.root, review["release_sha"]) == review["release_tree"], "arbol git no coincide")
+    _check(
+        common.git_tree(ctx.root, review["release_sha"]) == review["release_tree"],
+        "arbol git no coincide",
+    )
     _check(_checks_pass(review["checks"]), "checks del candidate review incompletos o fallidos")
 
 
@@ -252,7 +278,10 @@ def g_approval_valid(ctx: GuardContext) -> None:
     cand = ctx.require("candidate_evidence")
     candidate_review = ctx.require("candidate_review_evidence")
     _check(approval["decision"] == "approved", "la aprobacion no es approved")
-    _check(approval["created_by"] == "scripts/harness/approve.py", "aprobacion no creada por approve.py")
+    _check(
+        approval["created_by"] == "scripts/harness/approve.py",
+        "aprobacion no creada por approve.py",
+    )
     _check(approval["interactive"] is True, "aprobacion no interactiva")
     _check(candidate_review["decision"] == "APPROVED", "candidate review no aprobado")
     _check(approval["approved_commit"] == cand["release_sha"], "approved_commit != release_sha")
@@ -266,18 +295,28 @@ def g_approval_valid(ctx: GuardContext) -> None:
     ref_path = ctx.state["refs"]["candidate_evidence"]
     _check(approval["candidate_evidence"]["path"] == ref_path, "aprobacion ligada a otra evidencia")
     digest = common.sha256_file(common.resolve_repo_path(ctx.root, ref_path))
-    _check(approval["candidate_evidence"]["sha256"] == digest, "la evidencia del candidate cambio tras aprobar")
+    _check(
+        approval["candidate_evidence"]["sha256"] == digest,
+        "la evidencia del candidate cambio tras aprobar",
+    )
     authorization = approval["rollback_authorization"]
     expected_conditions = set(ctx.policies["rollback_authorization"]["conditions"])
     _check(authorization["max_attempts"] == 1, "rollback autorizado con mas de un intento")
-    _check(authorization["lkg_version_label"] == cand["lkg"]["version_label"], "rollback a otro LKG")
-    _check(set(authorization["conditions"]) == expected_conditions, "condiciones de rollback incompletas")
+    _check(
+        authorization["lkg_version_label"] == cand["lkg"]["version_label"], "rollback a otro LKG"
+    )
+    _check(
+        set(authorization["conditions"]) == expected_conditions,
+        "condiciones de rollback incompletas",
+    )
 
 
 def g_approval_rejected(ctx: GuardContext) -> None:
     approval = ctx.require("approval")
     _check(approval["decision"] == "rejected", "la decision no es rejected")
-    _check(approval["created_by"] == "scripts/harness/approve.py", "decision no creada por approve.py")
+    _check(
+        approval["created_by"] == "scripts/harness/approve.py", "decision no creada por approve.py"
+    )
 
 
 def g_deployment_succeeded(ctx: GuardContext) -> None:
@@ -286,15 +325,24 @@ def g_deployment_succeeded(ctx: GuardContext) -> None:
     _check(dep["result"] == "success", "deployment no exitoso")
     _check(dep["update_accepted"] is True, "update-environment no aceptado")
     _check(dep["approved_commit"] == approval["approved_commit"], "approved_commit alterado")
-    _check(dep["deployed_commit"] == approval["approved_commit"], "approved_commit != deployed_commit")
-    _check(dep["application_version"] == approval["application_version"], "AV desplegada != aprobada")
+    _check(
+        dep["deployed_commit"] == approval["approved_commit"], "approved_commit != deployed_commit"
+    )
+    _check(
+        dep["application_version"] == approval["application_version"], "AV desplegada != aprobada"
+    )
     _check(dep["environment"] == approval["environment"], "environment desplegado != aprobado")
     _check(dep["account_id"] == ctx.environment["account_id"], "cuenta AWS distinta")
     _check(dep["region"] == ctx.environment["region"], "region AWS distinta")
     final = dep["final_state"]
     _check(common.env_healthy(final), "environment final no Ready/Green/Ok")
-    _check(final["version_label"] == approval["application_version"], "VersionLabel final != aprobada")
-    _check(all(value is True for value in dep["runtime_identity"].values()), "identidad de runtime no verificada")
+    _check(
+        final["version_label"] == approval["application_version"], "VersionLabel final != aprobada"
+    )
+    _check(
+        all(value is True for value in dep["runtime_identity"].values()),
+        "identidad de runtime no verificada",
+    )
 
 
 def g_deployment_failed(ctx: GuardContext) -> None:
@@ -309,9 +357,14 @@ def g_verification_passed(ctx: GuardContext) -> None:
     dep = ctx.require("deployment_evidence")
     _check(ver["result"] == "PASS", "verificacion no PASS")
     _check(ver["approved_commit"] == approval["approved_commit"], "approved_commit alterado")
-    _check(ver["deployed_commit"] == dep["deployed_commit"] == approval["approved_commit"], "commit desplegado distinto")
+    _check(
+        ver["deployed_commit"] == dep["deployed_commit"] == approval["approved_commit"],
+        "commit desplegado distinto",
+    )
     _check(_checks_pass(ver["smoke"]), "smoke incompleto o fallido")
-    _check(int(ver["pii_log_scan"]["matches"]) == 0, "posible PII en logs")
+    # v1.1: strong indicators always block; weak ones need a recorded human classification.
+    log_reasons = log_scan.check(ver["pii_log_scan"], ctx.policies)
+    _check(not log_reasons, "; ".join(log_reasons))
     reported = {item["id"]: item for item in ver["acceptance_criteria"]}
     human_ids = set()
     for criterion in task["acceptance_criteria"]:
@@ -324,15 +377,23 @@ def g_verification_passed(ctx: GuardContext) -> None:
     if task.get("requires_human_acceptance") or human_ids:
         acceptance = ctx.require("acceptance")
         _check(acceptance["decision"] == "accepted", "aceptacion humana no otorgada")
-        _check(acceptance["created_by"] == "scripts/harness/approve.py", "aceptacion no creada por approve.py")
-        accepted = {item["id"] for item in acceptance["criteria"] if item.get("status") == "accepted"}
+        _check(
+            acceptance["created_by"] == "scripts/harness/approve.py",
+            "aceptacion no creada por approve.py",
+        )
+        accepted = {
+            item["id"] for item in acceptance["criteria"] if item.get("status") == "accepted"
+        }
         _check(human_ids <= accepted, "criterios humanos sin aceptacion")
 
 
 def g_verification_failed(ctx: GuardContext) -> None:
     ver = ctx.require("verification_evidence")
     _check(ver["result"] == "FAIL", "la verificacion no registra fallo")
-    _check(ver["failure_class"] in ("infrastructure", "functional", "observability"), "fallo sin clasificar")
+    _check(
+        ver["failure_class"] in ("infrastructure", "functional", "observability"),
+        "fallo sin clasificar",
+    )
 
 
 def g_rollback_permitted(ctx: GuardContext) -> None:
@@ -345,15 +406,24 @@ def g_rollback_permitted(ctx: GuardContext) -> None:
     _check(approval.get("decision") == "approved", "sin aprobacion vigente")
     authorization = approval.get("rollback_authorization") or {}
     _check(authorization.get("max_attempts") == 1, "sin autorizacion condicionada de rollback")
-    _check(pre["to_version"] == approval["lkg_version_label"] == cand["lkg"]["version_label"], "LKG distinto del aprobado")
+    _check(
+        pre["to_version"] == approval["lkg_version_label"] == cand["lkg"]["version_label"],
+        "LKG distinto del aprobado",
+    )
     _check(pre["update_accepted_prior"] is True, "UpdateEnvironment no fue aceptado: NO rollback")
     if ctx.state["state"] == "DEPLOY_FAILED":
         dep = ctx.require("deployment_evidence")
         _check(dep["update_accepted"] is True, "UpdateEnvironment rechazado: NO rollback")
     if ctx.state["state"] == "VERIFY_FAILED":
         ver = ctx.require("verification_evidence")
-        _check(ver["failure_class"] == "infrastructure", "defecto funcional u observabilidad: NO rollback")
-    _check(pre["failure_class"] == "infrastructure", "solo degradacion de infraestructura habilita rollback")
+        _check(
+            ver["failure_class"] == "infrastructure",
+            "defecto funcional u observabilidad: NO rollback",
+        )
+    _check(
+        pre["failure_class"] == "infrastructure",
+        "solo degradacion de infraestructura habilita rollback",
+    )
     _check(pre["lkg_usable"] is True, "LKG no utilizable")
     _check(pre["lkg_images_present"] is True, "imagenes del LKG ausentes en ECR")
     _check(pre["option_settings_required"] is False, "rollback requeriria option settings")
@@ -372,7 +442,10 @@ def g_failure_recorded(ctx: GuardContext) -> None:
 
 def g_resolution_target(ctx: GuardContext, target: str) -> None:
     resolution = ctx.require("resolution")
-    _check(resolution["created_by"] == "scripts/harness/approve.py", "resolucion no creada por approve.py")
+    _check(
+        resolution["created_by"] == "scripts/harness/approve.py",
+        "resolucion no creada por approve.py",
+    )
     _check(resolution["from_state"] == "BLOCKED_HUMAN", "resolucion fuera de BLOCKED_HUMAN")
     _check(resolution["to_state"] == target, f"resolucion no apunta a {target}")
 

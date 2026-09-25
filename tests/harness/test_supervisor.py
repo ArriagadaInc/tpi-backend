@@ -21,7 +21,15 @@ from scripts.harness import common, init, supervisor, transition, validate_repo
 from tests.harness.conftest import REAL_ROOT, bind_task
 
 FAKE_RUNTIME = Path(__file__).with_name("supervisor_fake_runtime.py")
-FAKE_COMMAND = ["{python}", str(FAKE_RUNTIME), "{runtime}", "{session_id}", "{role}", "{prompt}"]
+FAKE_COMMAND = [
+    "{python}",
+    str(FAKE_RUNTIME),
+    "{runtime}",
+    "{session_id}",
+    "{role}",
+    "{prompt}",
+    "{session_uuid}",
+]
 
 
 class Harness:
@@ -58,8 +66,9 @@ class Harness:
         return "\n".join(self.output)
 
 
-@pytest.fixture
-def harness(tmp_harness_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Harness:
+def make_harness(
+    tmp_harness_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Harness:
     config_path = tmp_harness_repo / "harness" / "supervisor.yaml"
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     config["runtimes"] = {
@@ -68,12 +77,20 @@ def harness(tmp_harness_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPa
     }
     config["heartbeat_seconds"] = 0.2
     config["interrupt_grace_seconds"] = 1
+    # Preflight thresholds are exercised in test_supervisor_v11.py; here the host disk must not
+    # decide the outcome of unrelated tests.
+    config["preflight"] = {"min_free_disk_gb": 0, "warn_free_disk_gb": 0}
     config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
     h = Harness(tmp_harness_repo, tmp_path)
     monkeypatch.setenv("TPI_FAKE_RUNTIME_PLAN", str(h.plan_path))
     monkeypatch.setenv("TPI_FAKE_RUNTIME_LOG", str(h.log_path))
     h.plan()
     return h
+
+
+@pytest.fixture
+def harness(tmp_harness_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Harness:
+    return make_harness(tmp_harness_repo, tmp_path, monkeypatch)
 
 
 def _plan_for(root: Path, state_name: str) -> supervisor.Plan:
@@ -87,9 +104,11 @@ def _plan_for(root: Path, state_name: str) -> supervisor.Plan:
 # status: role -> runtime mapping (real harness/supervisor.yaml copy)
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("state_name", ["NEW", "DEVELOPING", "REVIEW_REJECTED"])
-def test_status_developer_maps_to_deepseek(tmp_harness_repo: Path, state_name: str):
+def test_status_developer_maps_to_deepseek_disabled_in_v11(tmp_harness_repo: Path, state_name: str):
+    """v1.1: DeepSeek stays mapped but disabled as automatic Developer -> config STOP."""
     current = _plan_for(tmp_harness_repo, state_name)
-    assert (current.role, current.runtime, current.auto) == ("developer", "deepseek", True)
+    assert (current.role, current.runtime, current.auto) == ("developer", "deepseek", False)
+    assert current.stop_kind == "config" and "deshabilitado" in str(current.reason)
 
 
 @pytest.mark.parametrize("state_name", ["READY_FOR_REVIEW", "REVIEWING", "CANDIDATE_REVIEW"])
@@ -129,6 +148,7 @@ def test_status_refuses_non_capable_runtime_for_candidate_review(tmp_harness_rep
     path = tmp_harness_repo / "harness" / "supervisor.yaml"
     config = yaml.safe_load(path.read_text(encoding="utf-8"))
     config["roles"]["reviewer"] = "deepseek"
+    config["runtimes"]["deepseek"]["enabled"] = True  # isolate the deploy-capability check
     path.write_text(yaml.safe_dump(config), encoding="utf-8")
     current = _plan_for(tmp_harness_repo, "CANDIDATE_REVIEW")
     assert current.auto is False and current.stop_kind == "config"
@@ -358,7 +378,7 @@ def test_ctrl_c_is_safe_and_manual_harness_continues(
     harness.plan({"role": "developer", "sleep": 30, "events": ["start_development"]})
     original_wait = supervisor.wait_worker
 
-    def interrupted_wait(proc, tick, every):
+    def interrupted_wait(proc, tick, every, deadline=None):
         with pytest.raises(subprocess.TimeoutExpired):
             proc.wait(timeout=1.5)  # worker is alive and sleeping
         raise KeyboardInterrupt

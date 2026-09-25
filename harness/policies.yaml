@@ -54,6 +54,9 @@ protected_paths:
   - "init.ps1"
   - "progress/decisions.md"
   - "progress/archive/**"
+  # v1.1: latch DENIED del Supervisor y log del guard: ningun agente puede borrarlos.
+  - ".harness-runtime/supervisor/**"
+  - ".harness-runtime/guard.log"
 
 # Lectura denegada para todos los roles (secretos locales).
 secret_read_deny:
@@ -133,10 +136,19 @@ mcp:
   forbidden_tools: [aws___run_script, aws___get_presigned_url, aws___get_tasks]
 
 bash:
+  # v1.1: estas tres reglas distinguen EJECUTAR de MENCIONAR. guard.py las evalua sobre la
+  # estructura del comando (palabra de comando, argumentos, redirecciones, heredocs, codigo
+  # python via ast; command_analysis.py), no sobre el texto crudo: un patron de grep, un payload
+  # JSON o un string de evidencia que solo mencionan la operacion no son la operacion.
+  # legacy_pattern se aplica SOLO al texto que no puede analizarse (codigo opaco, parser fallido,
+  # stdin canalizado a un shell): ahi se mantiene el comportamiento conservador de v1.
+  structural_rules:
+    human_script: {legacy_pattern: "approve\\.py|import\\s+approve\\b|harness[/\\\\.]approve", reason: "Las decisiones humanas se ejecutan por el humano en su propia terminal"}
+    aws_cli: {legacy_pattern: "(^|[\\s;&|(`])aws(\\.exe)?\\s", reason: "AWS CLI directo prohibido: usar python scripts/harness/aws_guard.py"}
+    # Establecer/modificar/eliminar la variable (VAR=, export, $env:VAR =, setx, os.environ[...]=,
+    # putenv, Set-Item env:, env -u ...) se deniega siempre. Leerla o mencionarla no.
+    maintenance_env: {reason: "El modo mantenimiento solo lo fija el humano al lanzar el runtime"}
   forbidden_everywhere:
-    - {pattern: "(^|[\\s;&|(`])aws(\\.exe)?\\s", reason: "AWS CLI directo prohibido: usar python scripts/harness/aws_guard.py"}
-    - {pattern: "approve\\.py", reason: "Las decisiones humanas se ejecutan por el humano en su propia terminal"}
-    - {pattern: "TPI_HARNESS_MAINTENANCE", reason: "El modo mantenimiento solo lo fija el humano al lanzar el runtime"}
     - {pattern: "get-secret-value|batch-get-secret-value|AUTH_USERS_JSON|DATABASE_PASSWORD|WEB_SESSION_SECRET|API_IDEMPOTENCY_HMAC_SECRET", reason: "Lectura o manejo de secretos prohibido"}
     - {pattern: "\\bdocker\\s+(push|login)\\b", reason: "Publicar imagenes solo via workflow publish-dev-ecr-images"}
     - {pattern: "git\\s+push\\b[^\\n]*(--force|\\s-f\\b|--force-with-lease|--mirror|--delete)", reason: "Push forzado o destructivo prohibido"}
@@ -210,6 +222,7 @@ aws:
       - "s3api head-object"
       - "ecr describe-images"
       - "ecr describe-image-scan-findings"
+      - "ecr describe-repositories"   # v1.1 (dogfood H3.3.6): solo repos DEV del environment
     prepare: ["@read", "s3api put-object", "elasticbeanstalk create-application-version"]
     cutover: ["@read", "elasticbeanstalk update-environment"]
     rollback: ["@read", "elasticbeanstalk update-environment"]
@@ -237,3 +250,12 @@ rollback_authorization:
     - no_option_settings_required
     - not_purely_functional_defect
     - no_previous_rollback_attempt
+
+# v1.1: indicadores de datos sensibles en logs (count-only via aws_guard; nunca se leen lineas).
+# strong: una coincidencia bloquea el cierre y NUNCA se degrada automaticamente.
+# weak: termino generico (p. ej. `hash` en `cert_hash` de Caddy/ACME); no equivale a un secreto,
+# pero toda coincidencia exige clasificacion humana registrada antes de `verified`.
+observability:
+  log_indicators:
+    strong: [Authorization, Bearer, password, cookie, raw_payload, secret, token]
+    weak: [hash]

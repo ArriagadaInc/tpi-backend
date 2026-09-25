@@ -45,6 +45,11 @@ REQUIRED_PATHS = (
     "scripts/harness/approve.py",
     "scripts/harness/aws_guard.py",
     "scripts/harness/guard.py",
+    # v1.1: imported by guard.py / aws_guard.py / transition.py (a missing one fails closed)
+    "scripts/harness/command_analysis.py",
+    "scripts/harness/denials.py",
+    "scripts/harness/progress_sync.py",
+    "scripts/harness/log_scan.py",
     "scripts/harness/context_compact.py",
     "scripts/harness/worktree.py",
     "scripts/harness/evidence.py",

@@ -17,12 +17,14 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from . import closure, common, evidence, guards
+    from . import closure, common, evidence, guards, progress_sync
 except ImportError:  # executed as a script
     import closure  # type: ignore[no-redef]
     import common  # type: ignore[no-redef]
-    import evidence  # type: ignore[no-redef]
     import guards  # type: ignore[no-redef]
+    import progress_sync  # type: ignore[no-redef]
+
+    import evidence  # type: ignore[no-redef]
 
 RELEASE_REFS = (
     "developer_evidence",
@@ -41,7 +43,9 @@ RELEASE_REFS = (
 )
 
 
-def _context(root: Path, state: dict[str, Any], session: str | None, runtime: str | None) -> guards.GuardContext:
+def _context(
+    root: Path, state: dict[str, Any], session: str | None, runtime: str | None
+) -> guards.GuardContext:
     return guards.GuardContext(
         root=root,
         state=state,
@@ -74,7 +78,11 @@ def _apply_effect(
     elif name == "record_session":
         if not runtime or not session:
             raise common.HarnessError("--runtime y --session son obligatorios")
-        state["sessions"][argument] = {"runtime": runtime, "session_id": session, "at": common.now_iso()}
+        state["sessions"][argument] = {
+            "runtime": runtime,
+            "session_id": session,
+            "at": common.now_iso(),
+        }
     elif name == "clear_refs":
         for key in argument.split(","):
             state["refs"].pop(key, None)
@@ -126,7 +134,9 @@ def apply_transition(
     policies = common.load_policies(root)
     current = state["state"]
     active_role = common.state_role(workflow, current)
-    candidates = [t for t in workflow["transitions"] if t["event"] == event and t["from"] == current]
+    candidates = [
+        t for t in workflow["transitions"] if t["event"] == event and t["from"] == current
+    ]
     if not candidates:
         raise common.HarnessError(f"Transicion no declarada: '{event}' desde {current}")
 
@@ -136,7 +146,9 @@ def apply_transition(
     if actor == "system" and not (_system or active_role == "system"):
         raise common.HarnessError("Evento de sistema fuera de estado de sistema")
     if actor in common.AGENT_ROLES and actor != active_role:
-        raise common.HarnessError(f"El estado {current} pertenece al rol {active_role}, no a {actor}")
+        raise common.HarnessError(
+            f"El estado {current} pertenece al rol {active_role}, no a {actor}"
+        )
     if actor == "deployer" and runtime not in policies["harness"]["deploy_capable_runtimes"]:
         raise common.HarnessError(
             f"Runtime '{runtime}' sin enforcement demostrado para el Deployer; STOP"
@@ -148,7 +160,11 @@ def apply_transition(
         if not evidence_path:
             raise common.HarnessError(f"El evento '{event}' requiere --evidence ({records})")
         relative_evidence = evidence.validate_reference(
-            root, state, evidence_path, expected_kind=workflow["evidence_kinds"][records], actor=actor
+            root,
+            state,
+            evidence_path,
+            expected_kind=workflow["evidence_kinds"][records],
+            actor=actor,
         )
     elif evidence_path:
         raise common.HarnessError(f"El evento '{event}' no acepta evidencia")
@@ -191,6 +207,11 @@ def apply_transition(
     new_state["history"] = (new_state.get("history") or [])[-19:] + [entry]
     _append_transition_log(root, task_id_before or new_state.get("task_id"), entry)
     common.save_state(root, new_state)
+    # v1.1: deterministic projection into progress/current.md, AFTER the authoritative write.
+    # A failure is a warning only; the transition above is already complete and valid.
+    warning = progress_sync.sync(root, new_state)
+    if warning:
+        print(f"WARNING: {warning}; harness/state.json conserva la autoridad", file=sys.stderr)
 
     if new_state["state"] == "DONE" and workflow.get("auto_close_on_done"):
         return apply_transition(root, "close", runtime=runtime, session=session, _system=True)
@@ -210,9 +231,13 @@ def describe(root: Path, state: dict[str, Any], previous_role: str | None) -> st
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("event")
-    parser.add_argument("--runtime", required=True, choices=["claude", "codex", "deepseek", "other"])
+    parser.add_argument(
+        "--runtime", required=True, choices=["claude", "codex", "deepseek", "other"]
+    )
     parser.add_argument("--session", required=True)
     parser.add_argument("--evidence")
     args = parser.parse_args(argv)
@@ -221,7 +246,11 @@ def main(argv: list[str] | None = None) -> int:
         before = common.load_state(root)
         role_before = common.state_role(common.load_workflow(root), before["state"])
         state = apply_transition(
-            root, args.event, runtime=args.runtime, session=args.session, evidence_path=args.evidence
+            root,
+            args.event,
+            runtime=args.runtime,
+            session=args.session,
+            evidence_path=args.evidence,
         )
     except common.HarnessError as error:
         print(f"TRANSITION DENIED: {error}", file=sys.stderr)

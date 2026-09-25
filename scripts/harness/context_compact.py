@@ -17,9 +17,10 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from . import common
+    from . import common, progress_sync
 except ImportError:  # executed as a script
     import common  # type: ignore[no-redef]
+    import progress_sync  # type: ignore[no-redef]
 
 KEEP_RECENT = 5
 
@@ -73,7 +74,6 @@ def compact(
     original = current_path.read_text(encoding="utf-8") if current_path.is_file() else ""
     state = {**common.load_state(root), **(state_override or {})}
     workflow = common.load_workflow(root)
-    spec = workflow["states"][state["state"]]
     limit = int(common.load_policies(root)["harness"]["progress_current_max_lines"])
 
     session_path = _unique_session_path(root, label)
@@ -83,30 +83,39 @@ def compact(
     archived = session_path.read_text(encoding="utf-8")
     missing = [line for line in original.splitlines() if line.strip() and line not in archived]
     if missing:
-        raise common.HarnessError("compactacion abortada: el archivo de sesion no preserva el contenido")
+        raise common.HarnessError(
+            "compactacion abortada: el archivo de sesion no preserva el contenido"
+        )
 
-    decisions = [line.strip() for line in original.splitlines() if line.strip().startswith("DECISION:")]
+    decisions = [
+        line.strip() for line in original.splitlines() if line.strip().startswith("DECISION:")
+    ]
     _append_decisions(root, decisions, session_rel)
 
-    blockers = [line for line in original.splitlines() if line.strip().startswith(("BLOCKER:", "- BLOCKER:"))]
-    recent = [line for line in _section(original, "Estado reciente") if not line.startswith("DECISION:")]
+    blockers = [
+        line
+        for line in original.splitlines()
+        if line.strip().startswith(("BLOCKER:", "- BLOCKER:"))
+    ]
+    recent = [
+        line for line in _section(original, "Estado reciente") if not line.startswith("DECISION:")
+    ]
     if note:
         recent.append(f"- {common.today()}: {note}")
     recent = recent[-KEEP_RECENT:]
 
+    # v1.1: state/task/role/next_action live in the projection block that transition.py
+    # refreshes after every transition, so compacting BEFORE a transition can no longer leave
+    # progress/current.md describing the previous state.
     lines = [
         "# Progreso actual",
         "",
         "## Estado",
-        f"- Estado del Harness: {state['state']} (rol: {spec['role']})",
-        f"- Tarea: {state.get('task_id') or 'ninguna'}",
+        *progress_sync.render(state, workflow),
         f"- Ultima sesion archivada: {session_rel}",
         "",
         "## Estado reciente",
         *(recent or ["- (sin novedades)"]),
-        "",
-        "## Proximo paso",
-        f"- {spec['next_action']}",
         "",
         "## Bloqueos",
         *(blockers or ["- Ninguno."]),
@@ -119,7 +128,9 @@ def compact(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("--label", required=True)
     parser.add_argument("--note")
     args = parser.parse_args(argv)
