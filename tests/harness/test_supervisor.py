@@ -104,11 +104,11 @@ def _plan_for(root: Path, state_name: str) -> supervisor.Plan:
 # status: role -> runtime mapping (real harness/supervisor.yaml copy)
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("state_name", ["NEW", "DEVELOPING", "REVIEW_REJECTED"])
-def test_status_developer_maps_to_deepseek_disabled_in_v11(tmp_harness_repo: Path, state_name: str):
-    """v1.1: DeepSeek stays mapped but disabled as automatic Developer -> config STOP."""
+def test_status_developer_maps_to_claude(tmp_harness_repo: Path, state_name: str):
+    """v1.1 routing: automatic Developer is Claude (DeepSeek stays disabled) -> no config STOP."""
     current = _plan_for(tmp_harness_repo, state_name)
-    assert (current.role, current.runtime, current.auto) == ("developer", "deepseek", False)
-    assert current.stop_kind == "config" and "deshabilitado" in str(current.reason)
+    assert (current.role, current.runtime, current.auto) == ("developer", "claude", True)
+    assert current.stop_kind is None and current.reason is None
 
 
 @pytest.mark.parametrize("state_name", ["READY_FOR_REVIEW", "REVIEWING", "CANDIDATE_REVIEW"])
@@ -199,7 +199,7 @@ def test_developer_valid_transition_launches_next_role(harness: Harness):
     )
     assert harness.run(max_turns=2) == supervisor.EXIT_STOP  # stops on the turn cap
     assert [(x["role"], x["runtime"]) for x in harness.launches()] == [
-        ("developer", "deepseek"),
+        ("developer", "claude"),
         ("reviewer", "claude"),
     ]
     assert harness.state()["state"] == "REVIEW_REJECTED"
@@ -260,7 +260,7 @@ def test_worker_exit_without_progress_stops(harness: Harness):
     assert len(harness.launches()) == 1, "no automatic retry in v1"
     text = harness.text()
     assert "worker exited without workflow progress" in text
-    for expected in ("TEST-1", "developer", "deepseek", "DEVELOPING"):
+    for expected in ("TEST-1", "developer", "claude", "DEVELOPING"):
         assert expected in text
     assert harness.state_digest() == digest
 
@@ -549,7 +549,7 @@ def test_telemetry_has_required_fields_and_no_secrets(
 
 def test_real_config_prompt_is_minimal_and_shell_safe():
     config = supervisor.load_config(REAL_ROOT)
-    assert config["roles"] == {"developer": "deepseek", "reviewer": "claude", "deployer": "claude"}
+    assert config["roles"] == {"developer": "claude", "reviewer": "claude", "deployer": "claude"}
     prompt = config["prompt"]
     assert len(prompt) < 600 and "AGENTS.md" in prompt and "{session_id}" in prompt
     assert not supervisor._UNSAFE_ARG.search(prompt) and prompt.isascii()
@@ -570,9 +570,9 @@ def test_dogfood_full_cycle_until_human_gate(harness: Harness):
     )
     assert harness.run() == supervisor.EXIT_HUMAN
     assert [(x["role"], x["runtime"]) for x in harness.launches()] == [
-        ("developer", "deepseek"),
+        ("developer", "claude"),
         ("reviewer", "claude"),
-        ("developer", "deepseek"),
+        ("developer", "claude"),
         ("reviewer", "claude"),
         ("deployer", "claude"),
         ("reviewer", "claude"),

@@ -25,9 +25,13 @@ read state.json -> rol = workflow.states[state].role -> runtime (harness/supervi
 
 | Rol | Runtime | Estado v1.1 |
 | --- | --- | --- |
-| developer | deepseek | **deshabilitado** (`enabled: false`): el Supervisor se detiene en NEW/DEVELOPING/REVIEW_REJECTED |
-| reviewer | claude | `claude -p "<prompt>" --session-id <uuid> --permission-mode auto` |
+| developer | claude | `claude -p "<prompt>" --session-id <uuid> --permission-mode auto` |
+| reviewer | claude | idem (sesion y `session_uuid` distintos a los del Developer) |
 | deployer | claude | idem (unico runtime con enforcement demostrado para deploy) |
+
+DeepSeek (DSH) sigue en `runtimes` con `enabled: false`: no se usa como Developer automatico.
+La independencia Developer/Reviewer se mantiene porque cada turno es una sesion nueva con
+`session_id` y `session_uuid` propios (sin reutilizar contexto).
 
 ## Uso
 
@@ -191,4 +195,5 @@ Propuesta minima segura, **no implementada** (ampliaria la autoridad de un compo
   declarar en `workflow.yaml`/politicas quien publica -> cambio de maquina de estados); (b) Git
   Publisher deterministico fuera del LLM (requiere dar al Supervisor/otro script autoridad de
   push -> ampliacion de autoridad). Ambas requieren decision humana explicita.
-- Alternativa sin cambios de codigo: `roles.developer: claude` en `harness/supervisor.yaml`.
+- Alternativa sin cambios de codigo (**aplicada**): `roles.developer: claude` en
+  `harness/supervisor.yaml`; DeepSeek permanece deshabilitado.

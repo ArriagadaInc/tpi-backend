@@ -220,6 +220,7 @@ def test_real_config_disables_deepseek_as_automatic_developer():
 def test_disabled_runtime_is_never_launched(harness: Harness):
     _config(
         harness,
+        roles={"developer": "deepseek", "reviewer": "claude", "deployer": "claude"},
         runtimes={
             "deepseek": {"command": FAKE_COMMAND, "enabled": False, "disabled_reason": "x"},
             "claude": {"command": FAKE_COMMAND},
@@ -228,6 +229,56 @@ def test_disabled_runtime_is_never_launched(harness: Harness):
     bind_task(harness.root, state_name="NEW")
     assert harness.run() == supervisor.EXIT_STOP
     assert harness.launches() == [] and "deshabilitado" in harness.text()
+
+
+# ---------------------------------------------------------------------------
+# Routing: automatic Developer -> Claude (DeepSeek stays disabled)
+# ---------------------------------------------------------------------------
+def test_real_config_routes_every_agent_role_to_claude():
+    config = supervisor.load_config(REAL_ROOT)
+    assert config["roles"] == {"developer": "claude", "reviewer": "claude", "deployer": "claude"}
+    assert config["runtimes"]["deepseek"]["enabled"] is False
+    assert config["runtimes"]["claude"].get("enabled", True) is True
+
+
+@pytest.mark.parametrize("state_name", ["NEW", "DEVELOPING", "REVIEW_REJECTED"])
+def test_real_config_developer_state_no_longer_stops(tmp_harness_repo: Path, state_name: str):
+    """Real supervisor.yaml copy (not the fake-runtime override): no 'deshabilitado' STOP."""
+    bind_task(tmp_harness_repo, state_name=state_name)
+    config = supervisor.load_config(tmp_harness_repo)
+    current = supervisor.plan(tmp_harness_repo, config, supervisor.read_state(tmp_harness_repo))
+    assert (current.role, current.runtime, current.auto) == ("developer", "claude", True)
+    assert current.stop_kind is None and "deshabilitado" not in str(current.reason)
+
+
+def test_claude_developer_and_reviewer_turns_use_fresh_sessions(harness: Harness):
+    bind_task(harness.root, state_name="NEW")
+    harness.plan(
+        {"role": "developer", "events": ["start_development", "submit_for_review"]},
+        {"role": "reviewer", "events": ["start_review", "review_reject"]},
+        {"role": "developer", "events": ["resume_development", "submit_for_review"]},
+    )
+    harness.run(max_turns=3)
+    launches = harness.launches()
+    assert [(x["role"], x["runtime"]) for x in launches] == [
+        ("developer", "claude"),
+        ("reviewer", "claude"),
+        ("developer", "claude"),
+    ]
+    assert len({x["session"] for x in launches}) == 3 and len({x["pid"] for x in launches}) == 3
+    records = _sessions(harness)
+    assert len({r["runtime_session_uuid"] for r in records}) == 3
+
+
+def test_manual_mode_unaffected_by_claude_developer_routing(harness: Harness):
+    bind_task(harness.root, state_name="NEW")
+    state = transition.apply_transition(
+        harness.root, "start_development", runtime="claude", session="manual-dev-claude"
+    )
+    assert state["state"] == "DEVELOPING"
+    assert harness.launches() == []
+    assert not (harness.root / supervisor.TELEMETRY_DIR).exists()
+    assert validate_repo.validate(harness.root)[0] == []
 
 
 def _enable_fake_developer(h: Harness) -> None:
