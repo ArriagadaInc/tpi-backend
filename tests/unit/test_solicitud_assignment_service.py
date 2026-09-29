@@ -38,7 +38,14 @@ class _AssignmentRepositoryStub:
             return dict(self.detail)
         return None
 
-    def update_lead_status(self, id_lead: UUID, estado_lead: str) -> bool:
+    def update_lead_status(
+        self,
+        id_lead: UUID,
+        estado_lead: str,
+        *,
+        actor: AuthenticatedUser,
+        advisor_scope: UUID | None = None,
+    ) -> bool:
         self.status_calls.append((id_lead, estado_lead))
         return True
 
@@ -78,6 +85,8 @@ def test_assignment_access_control_is_centralized() -> None:
 
     assert service.can_assign_lead(_actor("executive")) is True
     assert service.can_assign_lead(_actor("admin")) is True
+    assert service.can_assign_lead(_actor("ceo")) is True
+    assert service.can_assign_lead(_actor("cto")) is True
     assert service.can_assign_lead(_actor("readonly")) is False
     assert "asignado" not in service.get_crm_estado_lead_options_for_update()
 
@@ -90,9 +99,34 @@ def test_generic_update_rejects_asignado_state() -> None:
     service, repo = _build_service()
 
     with pytest.raises(ValueError, match="asignacion valida"):
-        service.update_lead_status("11111111-1111-1111-1111-111111111111", "asignado")
+        service.update_lead_status(
+            "11111111-1111-1111-1111-111111111111",
+            "asignado",
+            actor=_actor("executive"),
+        )
 
     assert repo.status_calls == []
+
+
+def test_generic_update_propagates_authenticated_actor() -> None:
+    service, repo = _build_service()
+
+    assert (
+        service.update_lead_status(
+            "11111111-1111-1111-1111-111111111111",
+            "contactado",
+            actor=_actor("executive"),
+        )
+        is True
+    )
+    assert repo.status_calls == [(UUID("11111111-1111-1111-1111-111111111111"), "contactado")]
+
+    with pytest.raises(TypeError, match="AuthenticatedUser"):
+        service.update_lead_status(
+            "11111111-1111-1111-1111-111111111111",
+            "contactado",
+            actor=cast(Any, None),
+        )
 
 
 def test_assignment_requires_privileged_actor_and_normalizes_identifiers() -> None:

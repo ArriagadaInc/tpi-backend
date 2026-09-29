@@ -1,4 +1,4 @@
-﻿"""
+"""
 Capa de acceso a datos para Solicitudes de SimulaciÃ³n.
 
 Responsabilidades:
@@ -22,6 +22,7 @@ from app.models.crm_states import (
     crm_state_filter_terms,
     normalize_crm_state_for_write,
 )
+from app.models.executive_dashboard import estancamiento_dias_default
 from app.models.idempotency import IdempotencyConflictError, IdempotentSolicitudResult
 from app.models.lead_assignment import (
     ASSIGNMENT_ACTIVE_STATE,
@@ -33,6 +34,12 @@ from app.models.solicitud import (
     PersonaData,
     SolicitudData,
     SolicitudResponse,
+)
+from app.repositories.lead_activity_sql import (
+    estancado_params,
+    estancado_predicate,
+    sin_asignar_params,
+    sin_asignar_predicate,
 )
 
 
@@ -49,6 +56,47 @@ class SolicitudRepository:
         "estado_lead": "l.estado_lead",
     }
 
+    # Shared view model for the board and the executive XLSX export: both surfaces
+    # project the exact same columns from the exact same joins, so the export can
+    # never diverge from the listing contract (AC-3). The export builder projects
+    # only its explicit allowlist subset from these rows.
+    _CRM_BOARD_SELECT = """
+                l.id_lead,
+                l.id_persona,
+                p.rut,
+                p.nombre_completo,
+                p.email,
+                p.telefono,
+                l.genero_id,
+                cg.nombre AS genero,
+                l.estado_civil_id,
+                cec.nombre AS estado_civil,
+                l.afp_id,
+                ca.nombre AS afp,
+                l.saldo_afp,
+                l.comentarios,
+                l.estado_lead,
+                l.created_at,
+                ass.id_asesor,
+                ass.asesor_nombre
+    """
+
+    _CRM_BOARD_FROM = """
+            FROM tpi.leads l
+            INNER JOIN tpi.personas p ON l.id_persona = p.id_persona
+            LEFT JOIN tpi.catalogo_genero cg ON l.genero_id = cg.id
+            LEFT JOIN tpi.catalogo_estado_civil cec ON l.estado_civil_id = cec.id
+            LEFT JOIN tpi.catalogo_afp ca ON l.afp_id = ca.id
+            LEFT JOIN LATERAL (
+                SELECT a.id_asesor, ases.nombre AS asesor_nombre, a.fecha_asignacion
+                FROM tpi.asignaciones a
+                LEFT JOIN tpi.asesores ases ON ases.id_asesor = a.id_asesor
+                WHERE a.id_lead = l.id_lead
+                ORDER BY a.fecha_asignacion DESC, a.id_asignacion DESC
+                LIMIT 1
+            ) ass ON TRUE
+    """
+
     @staticmethod
     def _build_crm_query_filters(
         *,
@@ -59,8 +107,21 @@ class SolicitudRepository:
         estado_civil_id: UUID | None = None,
         date_from: datetime | date | None = None,
         date_to: datetime | date | None = None,
+        asesor_id: UUID | None = None,
+        portfolio_asesor_id: UUID | None = None,
+        origen_lead: str | None = None,
+        fuente_actual: str | None = None,
+        sin_asignar: bool = False,
+        estancado: bool = False,
+        estancamiento_dias: int | None = None,
     ) -> tuple[str, list[Any]]:
-        """Build the CRM WHERE clause and parameters using whitelisted filters."""
+        """Build the CRM WHERE clause and parameters using whitelisted filters.
+
+        ``sin_asignar`` and ``estancado`` reuse the shared predicates of
+        :mod:`app.repositories.lead_activity_sql`, the same ones the executive
+        dashboard counts with, so an alert and the listing it links to always
+        describe the same population.
+        """
         clauses: list[str] = []
         params: list[Any] = []
 
@@ -109,6 +170,53 @@ class SolicitudRepository:
                 date_to = datetime.combine(date_to, time.max, tzinfo=UTC)
             clauses.append("l.created_at <= %s")
             params.append(date_to)
+
+        if asesor_id:
+            clauses.append(
+                "EXISTS ("
+                "SELECT 1 FROM tpi.asignaciones a "
+                "WHERE a.id_lead = l.id_lead "
+                "AND a.estado_asignacion = %s "
+                "AND a.id_asesor = %s"
+                ")"
+            )
+            params.extend([ASSIGNMENT_ACTIVE_STATE, str(asesor_id)])
+
+        if portfolio_asesor_id:
+            # Mandatory server-side portfolio scope: the authenticated advisor only
+            # ever sees leads whose currently-active assignment belongs to them.
+            # This predicate is always AND-ed with the user-supplied filters and is
+            # never overridable from the request.
+            clauses.append(
+                "EXISTS ("
+                "SELECT 1 FROM tpi.asignaciones a "
+                "WHERE a.id_lead = l.id_lead "
+                "AND a.estado_asignacion = %s "
+                "AND a.id_asesor = %s"
+                ")"
+            )
+            params.extend([ASSIGNMENT_ACTIVE_STATE, str(portfolio_asesor_id)])
+
+        if origen_lead:
+            clauses.append("LOWER(TRIM(l.origen_lead)) = LOWER(%s)")
+            params.append(origen_lead)
+
+        if fuente_actual:
+            clauses.append("LOWER(TRIM(l.fuente_actual)) = LOWER(%s)")
+            params.append(fuente_actual)
+
+        if sin_asignar:
+            clauses.append(sin_asignar_predicate("l"))
+            params.extend(sin_asignar_params())
+
+        if estancado:
+            umbral = (
+                estancamiento_dias
+                if estancamiento_dias is not None
+                else estancamiento_dias_default()
+            )
+            clauses.append(estancado_predicate("l"))
+            params.extend(estancado_params(umbral))
 
         if not clauses:
             return "", params
@@ -577,6 +685,13 @@ class SolicitudRepository:
         date_to: datetime | None = None,
         sort_by: str | None = None,
         sort_direction: str = "desc",
+        asesor_id: UUID | None = None,
+        portfolio_asesor_id: UUID | None = None,
+        origen_lead: str | None = None,
+        fuente_actual: str | None = None,
+        sin_asignar: bool = False,
+        estancado: bool = False,
+        estancamiento_dias: int | None = None,
     ) -> tuple[list[dict[str, Any]], int]:
         """Return a CRM-ready lead board using only the current schema."""
         where_clause, where_params = cls._build_crm_query_filters(
@@ -587,6 +702,13 @@ class SolicitudRepository:
             estado_civil_id=estado_civil_id,
             date_from=date_from,
             date_to=date_to,
+            asesor_id=asesor_id,
+            portfolio_asesor_id=portfolio_asesor_id,
+            origen_lead=origen_lead,
+            fuente_actual=fuente_actual,
+            sin_asignar=sin_asignar,
+            estancado=estancado,
+            estancamiento_dias=estancamiento_dias,
         )
         order_column, direction = cls._normalize_crm_sort(sort_by, sort_direction)
         query_count = sql.SQL("""
@@ -596,43 +718,10 @@ class SolicitudRepository:
             LEFT JOIN tpi.catalogo_afp ca ON l.afp_id = ca.id
             {where_clause}
         """).format(where_clause=sql.SQL(where_clause))
-        query_data = sql.SQL("""
-            SELECT
-                l.id_lead,
-                l.id_persona,
-                p.rut,
-                p.nombre_completo,
-                p.email,
-                p.telefono,
-                l.genero_id,
-                cg.nombre AS genero,
-                l.estado_civil_id,
-                cec.nombre AS estado_civil,
-                l.afp_id,
-                ca.nombre AS afp,
-                l.saldo_afp,
-                l.comentarios,
-                l.estado_lead,
-                l.created_at,
-                ass.id_asesor,
-                ass.asesor_nombre
-            FROM tpi.leads l
-            INNER JOIN tpi.personas p ON l.id_persona = p.id_persona
-            LEFT JOIN tpi.catalogo_genero cg ON l.genero_id = cg.id
-            LEFT JOIN tpi.catalogo_estado_civil cec ON l.estado_civil_id = cec.id
-            LEFT JOIN tpi.catalogo_afp ca ON l.afp_id = ca.id
-            LEFT JOIN LATERAL (
-                SELECT a.id_asesor, ases.nombre AS asesor_nombre, a.fecha_asignacion
-                FROM tpi.asignaciones a
-                LEFT JOIN tpi.asesores ases ON ases.id_asesor = a.id_asesor
-                WHERE a.id_lead = l.id_lead
-                ORDER BY a.fecha_asignacion DESC, a.id_asignacion DESC
-                LIMIT 1
-            ) ass ON TRUE
-            {where_clause}
-            ORDER BY {order_clause}
-            LIMIT %s OFFSET %s
-        """).format(
+        query_data = sql.SQL(
+            "SELECT" + cls._CRM_BOARD_SELECT + cls._CRM_BOARD_FROM + "{where_clause}"
+            " ORDER BY {order_clause} LIMIT %s OFFSET %s"
+        ).format(
             where_clause=sql.SQL(where_clause),
             order_clause=sql.SQL(f"{order_column} {direction}, l.created_at DESC, l.id_lead DESC"),
         )
@@ -645,6 +734,167 @@ class SolicitudRepository:
                 cur.execute(query_data, [*where_params, limit, offset])
                 rows = cur.fetchall()
                 return [dict(row) for row in rows], total
+
+    @classmethod
+    def count_crm_solicitudes(
+        cls,
+        *,
+        search: str | None = None,
+        estado_lead: str | None = None,
+        afp_id: UUID | None = None,
+        genero_id: UUID | None = None,
+        estado_civil_id: UUID | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        asesor_id: UUID | None = None,
+        portfolio_asesor_id: UUID | None = None,
+        origen_lead: str | None = None,
+        fuente_actual: str | None = None,
+        sin_asignar: bool = False,
+        estancado: bool = False,
+        estancamiento_dias: int | None = None,
+    ) -> int:
+        """Return the number of rows matching the CRM filters (pre-export count).
+
+        Uses the exact ``_build_crm_query_filters`` of the board listing so the
+        count always describes the same population the export would produce.
+        """
+        where_clause, where_params = cls._build_crm_query_filters(
+            search=search,
+            estado_lead=estado_lead,
+            afp_id=afp_id,
+            genero_id=genero_id,
+            estado_civil_id=estado_civil_id,
+            date_from=date_from,
+            date_to=date_to,
+            asesor_id=asesor_id,
+            portfolio_asesor_id=portfolio_asesor_id,
+            origen_lead=origen_lead,
+            fuente_actual=fuente_actual,
+            sin_asignar=sin_asignar,
+            estancado=estancado,
+            estancamiento_dias=estancamiento_dias,
+        )
+        query_count = sql.SQL("""
+            SELECT COUNT(*) AS total
+            FROM tpi.leads l
+            INNER JOIN tpi.personas p ON l.id_persona = p.id_persona
+            LEFT JOIN tpi.catalogo_afp ca ON l.afp_id = ca.id
+            {where_clause}
+        """).format(where_clause=sql.SQL(where_clause))
+        with get_db_connection(operation="count_crm_solicitudes") as conn:
+            with conn.cursor() as cur:
+                cur.execute(query_count, where_params)
+                row = cur.fetchone()
+                return int(row["total"]) if row else 0
+
+    @classmethod
+    def get_crm_solicitudes_export(
+        cls,
+        *,
+        search: str | None = None,
+        estado_lead: str | None = None,
+        afp_id: UUID | None = None,
+        genero_id: UUID | None = None,
+        estado_civil_id: UUID | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        sort_by: str | None = None,
+        sort_direction: str = "desc",
+        asesor_id: UUID | None = None,
+        portfolio_asesor_id: UUID | None = None,
+        origen_lead: str | None = None,
+        fuente_actual: str | None = None,
+        sin_asignar: bool = False,
+        estancado: bool = False,
+        estancamiento_dias: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return the full, deterministically ordered result set (no pagination).
+
+        Shares the board view model (``_CRM_BOARD_SELECT`` / ``_CRM_BOARD_FROM``)
+        and the exact filter/sort rules of ``get_crm_solicitudes``. The caller must
+        have already checked the count against ``EXPORT_MAX_ROWS``.
+        """
+        where_clause, where_params = cls._build_crm_query_filters(
+            search=search,
+            estado_lead=estado_lead,
+            afp_id=afp_id,
+            genero_id=genero_id,
+            estado_civil_id=estado_civil_id,
+            date_from=date_from,
+            date_to=date_to,
+            asesor_id=asesor_id,
+            portfolio_asesor_id=portfolio_asesor_id,
+            origen_lead=origen_lead,
+            fuente_actual=fuente_actual,
+            sin_asignar=sin_asignar,
+            estancado=estancado,
+            estancamiento_dias=estancamiento_dias,
+        )
+        order_column, direction = cls._normalize_crm_sort(sort_by, sort_direction)
+        query_data = sql.SQL(
+            "SELECT" + cls._CRM_BOARD_SELECT + cls._CRM_BOARD_FROM + "{where_clause}"
+            " ORDER BY {order_clause}"
+        ).format(
+            where_clause=sql.SQL(where_clause),
+            order_clause=sql.SQL(f"{order_column} {direction}, l.created_at DESC, l.id_lead DESC"),
+        )
+        with get_db_connection(operation="get_crm_solicitudes_export") as conn:
+            with conn.cursor() as cur:
+                cur.execute(query_data, where_params)
+                rows = cur.fetchall()
+                return [dict(row) for row in rows]
+
+    @staticmethod
+    def record_xlsx_export_event(
+        *,
+        actor_subject: str,
+        role: str,
+        row_count: int,
+        filters_summary: dict[str, Any],
+    ) -> None:
+        """Append the functional audit event for a successful XLSX export.
+
+        ``detalle`` carries only sanitized, PII-free metadata: the free-text search
+        term is never stored (only ``search_applied``). ``id_lead``/``id_persona``
+        are ``NULL`` because the export is a bulk read, not a single-lead operation.
+        ``accion='exportacion_xlsx'`` fits the existing ``VARCHAR(100)`` contract
+        without any schema change (class A). The application never reads
+        ``tpi.auditoria`` directly; this is the same append-only write path already
+        granted to ``tpi_app`` by migration 006.
+        """
+        import json
+
+        query = """
+            INSERT INTO tpi.auditoria
+                (id_usuario, id_persona, id_lead, accion, tabla_afectada, detalle)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        detalle = {
+            "actor_subject": actor_subject,
+            "role": role,
+            "row_count": row_count,
+            "format": "xlsx",
+            "filters": filters_summary,
+        }
+        with get_db_connection(operation="record_xlsx_export_event") as conn:
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        query,
+                        (
+                            None,
+                            None,
+                            None,
+                            "exportacion_xlsx",
+                            "tpi.leads",
+                            json.dumps(detalle),
+                        ),
+                    )
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
 
     @staticmethod
     def get_solicitudes_by_rut(rut: str) -> list[dict[str, Any]]:
@@ -753,24 +1003,226 @@ class SolicitudRepository:
                 return dict(row) if row else None
 
     @staticmethod
+    def get_active_advisor_by_id(id_asesor: UUID) -> dict[str, Any] | None:
+        """Return one active advisor row, or ``None`` when absent/inactive/not an advisor.
+
+        This is the server-side resolution step ``advisor_id -> registro valido/activo``
+        of the portfolio chain. ``rol='asesor'`` and ``estado_disponibilidad='activo'``
+        are enforced in SQL, never by presentation names.
+        """
+        query = """
+            SELECT
+                id_asesor,
+                nombre,
+                rol,
+                estado_disponibilidad,
+                especialidad,
+                carga_activa
+            FROM tpi.asesores
+            WHERE id_asesor = %s
+              AND rol = 'asesor'
+              AND estado_disponibilidad = 'activo'
+            LIMIT 1
+        """
+        with get_db_connection(operation="get_active_advisor_by_id") as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (str(id_asesor),))
+                row = cur.fetchone()
+                return dict(row) if row else None
+
+    @staticmethod
+    def lead_active_assignment_belongs_to(id_lead: UUID, id_asesor: UUID) -> bool:
+        """Return whether the lead's currently-active assignment belongs to ``id_asesor``.
+
+        Used for the advisor detail/mutation ownership check. A lead with no active
+        assignment, or whose active assignment belongs to another advisor, returns
+        ``False`` (the caller must surface a 404 without revealing existence).
+        """
+        query = """
+            SELECT 1
+            FROM tpi.asignaciones
+            WHERE id_lead = %s
+              AND estado_asignacion = %s
+              AND id_asesor = %s
+            LIMIT 1
+        """
+        with get_db_connection(operation="lead_active_assignment_belongs_to") as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    query,
+                    (str(id_lead), ASSIGNMENT_ACTIVE_STATE, str(id_asesor)),
+                )
+                return cur.fetchone() is not None
+
+    @staticmethod
+    def get_lead_assignment_events(id_lead: UUID) -> list[dict[str, Any]]:
+        """Return assignment traceability events from the sanitized read model only.
+
+        Reads tpi.v_asignacion_auditoria (migration 007) and joins tpi.asesores for the
+        advisor name. Never reads tpi.auditoria directly from the application.
+        """
+        query = """
+            SELECT
+                v.id_auditoria,
+                v.id_lead,
+                v.fecha_hora,
+                v.actor_subject,
+                v.id_asesor,
+                v.estado_anterior,
+                v.estado_nuevo,
+                ases.nombre AS asesor_nombre
+            FROM tpi.v_asignacion_auditoria v
+            LEFT JOIN tpi.asesores ases ON ases.id_asesor = v.id_asesor
+            WHERE v.id_lead = %s
+            ORDER BY v.fecha_hora DESC, v.id_auditoria DESC
+        """
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (str(id_lead),))
+                rows = cur.fetchall()
+                return [dict(row) for row in rows]
+
+    @staticmethod
+    def get_lead_state_change_events(id_lead: UUID) -> list[dict[str, Any]]:
+        """Return general state-change traceability events from the sanitized read model.
+
+        Reads tpi.v_historial_estado_lead (migration 008). Never reads tpi.auditoria
+        directly from the application; the read model stays behind the least-privilege
+        view, mirroring the assignment-events pattern of migration 007.
+        """
+        query = """
+            SELECT
+                v.id_auditoria,
+                v.id_lead,
+                v.fecha_hora,
+                v.actor_subject,
+                v.estado_anterior,
+                v.estado_nuevo
+            FROM tpi.v_historial_estado_lead v
+            WHERE v.id_lead = %s
+            ORDER BY v.fecha_hora DESC, v.id_auditoria DESC
+        """
+        with get_db_connection(operation="get_lead_state_change_events") as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (str(id_lead),))
+                rows = cur.fetchall()
+                return [dict(row) for row in rows]
+
+    @staticmethod
     def get_crm_estado_lead_options() -> list[str]:
         """Return the canonical lead states accepted by the CRM."""
         return list(CRM_STATE_CONTRACT)
 
     @staticmethod
-    def update_lead_status(id_lead: UUID, estado_lead: str) -> bool:
-        """Update the lead status using a single parametrized transaction."""
+    def update_lead_status(
+        id_lead: UUID,
+        estado_lead: str,
+        *,
+        actor: AuthenticatedUser,
+        advisor_scope: UUID | None = None,
+    ) -> bool:
+        """Update a lead status transactionally, auditing only effective changes.
+
+        Follows the proven ``assign_lead`` pattern: one transaction, ``SELECT ...
+        FOR UPDATE`` to serialize concurrent writers, compare previous/new state,
+        skip the write and the audit when there is no effective change (idempotent
+        no-op), and otherwise persist ``UPDATE tpi.leads`` + ``INSERT tpi.auditoria``
+        (accion ``cambio_estado_lead``) in a single commit. Any failure rolls both
+        statements back. The ``asignado`` state is rejected defensively here as well
+        as in the service: it is only reachable through ``assign_lead``.
+        """
         normalized_estado = normalize_crm_state_for_write(estado_lead)
-        query = """
+        if normalized_estado == "asignado":
+            raise ValueError(
+                "El estado asignado solo puede establecerse mediante una asignacion valida"
+            )
+        assigned_by = actor.subject.strip()
+        if not assigned_by:
+            raise ValueError("El actor autenticado no posee un identificador estable")
+        if len(assigned_by) > 150:
+            raise ValueError("El identificador tecnico del actor excede la longitud permitida")
+
+        import json
+
+        query_lock = """
+            SELECT estado_lead, id_persona
+            FROM tpi.leads
+            WHERE id_lead = %s
+            FOR UPDATE
+        """
+        query_ownership = """
+            SELECT 1
+            FROM tpi.asignaciones
+            WHERE id_lead = %s
+              AND estado_asignacion = %s
+              AND id_asesor = %s
+            LIMIT 1
+        """
+        query_update = """
             UPDATE tpi.leads
-            SET estado_lead = %s
+            SET estado_lead = %s,
+                updated_at = NOW()
             WHERE id_lead = %s
         """
+        query_trace = """
+            INSERT INTO tpi.auditoria
+                (id_usuario, id_persona, id_lead, accion, tabla_afectada, detalle)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
         with get_db_connection(operation="update_lead_status") as conn:
-            with conn.cursor() as cur:
-                cur.execute(query, (normalized_estado, str(id_lead)))
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(query_lock, (str(id_lead),))
+                    current_row = cur.fetchone()
+                    if current_row is None:
+                        return False
+
+                    # Advisor ownership is checked inside the same transaction that
+                    # holds the lead row lock, so a concurrent assignment cannot slip
+                    # between the check and the write. Non-owned -> no write, no audit.
+                    if advisor_scope is not None:
+                        cur.execute(
+                            query_ownership,
+                            (str(id_lead), ASSIGNMENT_ACTIVE_STATE, str(advisor_scope)),
+                        )
+                        if cur.fetchone() is None:
+                            return False
+
+                    estado_anterior = str(current_row["estado_lead"])
+                    id_persona = current_row.get("id_persona")
+
+                    if estado_anterior == normalized_estado:
+                        # Idempotent no-op: no UPDATE, no audit. The open transaction
+                        # (which only holds the row lock) is rolled back on exit.
+                        return True
+
+                    cur.execute(query_update, (normalized_estado, str(id_lead)))
+                    if cur.rowcount != 1:
+                        raise RuntimeError("No se pudo actualizar el estado del lead")
+                    cur.execute(
+                        query_trace,
+                        (
+                            None,
+                            str(id_persona) if id_persona is not None else None,
+                            str(id_lead),
+                            "cambio_estado_lead",
+                            "tpi.leads",
+                            json.dumps(
+                                {
+                                    "actor_subject": assigned_by,
+                                    "estado_anterior": estado_anterior,
+                                    "estado_nuevo": normalized_estado,
+                                }
+                            ),
+                        ),
+                    )
+                    if cur.rowcount != 1:
+                        raise RuntimeError("No se pudo registrar la auditoria de cambio de estado")
                 conn.commit()
-                return cur.rowcount == 1
+                return True
+            except Exception:
+                conn.rollback()
+                raise
 
     @staticmethod
     def assign_lead(
@@ -903,21 +1355,44 @@ class SolicitudRepository:
                 raise
 
     @staticmethod
-    def append_lead_comment(id_lead: UUID, new_fragment: str) -> bool:
-        """Append a new follow-up note atomically to the existing comments."""
-        query = """
+    def append_lead_comment(
+        id_lead: UUID,
+        new_fragment: str,
+        *,
+        advisor_scope: UUID | None = None,
+    ) -> bool:
+        """Append a new follow-up note atomically to the existing comments.
+
+        When ``advisor_scope`` is set, the ownership predicate is part of the UPDATE
+        itself, so a non-owned lead yields ``rowcount == 0`` and no write happens.
+        """
+        ownership_sql = ""
+        # Placeholder order in the statement below is: fragment (x2), id_lead, then
+        # (when advisor_scope is set) estado_asignacion and id_asesor. The params list
+        # must match that exact order so "activa" is never bound to a UUID column.
+        params: list[Any] = [new_fragment, new_fragment, str(id_lead)]
+        if advisor_scope is not None:
+            ownership_sql = (
+                " AND EXISTS (SELECT 1 FROM tpi.asignaciones a "
+                "WHERE a.id_lead = tpi.leads.id_lead "
+                "AND a.estado_asignacion = %s "
+                "AND a.id_asesor = %s)"
+            )
+            params.extend([ASSIGNMENT_ACTIVE_STATE, str(advisor_scope)])
+
+        query = f"""
             UPDATE tpi.leads
             SET comentarios =
                 CASE
                     WHEN COALESCE(NULLIF(TRIM(comentarios), ''), '') = '' THEN %s
                     ELSE comentarios || E'\n\n' || %s
                 END
-            WHERE id_lead = %s
+            WHERE id_lead = %s{ownership_sql}
             RETURNING id_lead
         """
         with get_db_connection(operation="append_lead_comment") as conn:
             with conn.cursor() as cur:
-                cur.execute(query, (new_fragment, new_fragment, str(id_lead)))
+                cur.execute(query, params)
                 row = cur.fetchone()
                 conn.commit()
                 return row is not None

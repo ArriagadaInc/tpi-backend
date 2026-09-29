@@ -3,21 +3,27 @@
 from __future__ import annotations
 
 import secrets
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Any, cast
 from urllib.parse import parse_qs, urlencode, urlsplit
+from uuid import UUID
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 
-from app.auth.models import AuthenticatedUser, UserRole
+from app.auth.models import AuthenticatedUser, UserRole, is_superuser
 from app.models.crm_states import normalize_crm_state_for_display
 from app.models.lead_assignment import (
     LeadAssignmentConflictError,
     LeadAssignmentValidationError,
 )
+from app.services.xlsx_export import ExportLimitExceededError
 from app.web.dependencies import build_service_for_web
-from app.web.presentation import parse_lead_comments
+from app.web.presentation import (
+    build_timeline_items,
+    parse_lead_comments,
+    state_history_cutover_notice,
+)
 
 router = APIRouter()
 _WRITE_ROLES = {"tester", "advisor", "operations", "admin"}
@@ -41,19 +47,78 @@ def _require_web_user(request: Request) -> AuthenticatedUser | None:
         username=username,
         display_name=display_name,
         role=cast(UserRole, role),
+        advisor_id=_parse_session_advisor_id(user.get("advisor_id")),
     )
+
+
+def _parse_session_advisor_id(value: Any) -> UUID | None:
+    """Parse the session ``advisor_id``; a malformed value fails closed to ``None``.
+
+    The session value is derived server-side at login from the authenticated user,
+    never from client input, but it is still validated on read.
+    """
+    if value is None:
+        return None
+    try:
+        return UUID(str(value).strip())
+    except (ValueError, AttributeError):
+        return None
 
 
 def _can_write(user: AuthenticatedUser | None) -> bool:
     if not user:
         return False
-    return user.role in _WRITE_ROLES
+    return is_superuser(user.role) or user.role in _WRITE_ROLES
+
+
+def _can_view_executive_dashboard(user: AuthenticatedUser | None) -> bool:
+    """Whether to render the dashboard nav link.
+
+    This only hides a link: /dashboard enforces the real 403 server-side.
+    """
+    return bool(user) and is_superuser(user.role)  # type: ignore[union-attr]
+
+
+def _can_export_xlsx(user: AuthenticatedUser | None) -> bool:
+    """Whether to render the export button.
+
+    This only hides a button: /leads/export.xlsx enforces the real server-side
+    authorization (403 for any non-ceo/cto authenticated role).
+    """
+    return bool(user) and is_superuser(user.role)  # type: ignore[union-attr]
+
+
+def _export_filename(now: datetime | None = None) -> str:
+    """Server-generated, predictable download filename (no user-controlled input)."""
+    timestamp = now or datetime.now(UTC)
+    return f"leads_export_{timestamp.strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+
+def _export_error_html(message: str) -> str:
+    """Minimal, self-contained error page for the export (clear message, no PII)."""
+    return (
+        "<!doctype html><html lang='es'><head><meta charset='utf-8'>"
+        "<title>Exportacion XLSX</title></head><body style='font-family:sans-serif;"
+        "max-width:40rem;margin:3rem auto;padding:0 1rem'>"
+        f"<h1>Exportacion XLSX</h1><p>{message}</p>"
+        "<p><a href='/leads'>Volver a Leads</a></p></body></html>"
+    )
+
+
+def _active_filter_labels(sin_asignar: bool, estancado: bool) -> list[str]:
+    """Visible chips describing the operational filters coming from the dashboard."""
+    labels: list[str] = []
+    if sin_asignar:
+        labels.append("Solo leads sin asignar")
+    if estancado:
+        labels.append("Solo leads estancados")
+    return labels
 
 
 def _can_cleanup(user: AuthenticatedUser | None) -> bool:
     if not user:
         return False
-    return user.role in _CLEANUP_ROLES
+    return is_superuser(user.role) or user.role in _CLEANUP_ROLES
 
 
 def _build_query_url(base_path: str, params: dict[str, Any]) -> str:
@@ -84,6 +149,30 @@ def _parse_date(value: str | None) -> date | None:
     if not value:
         return None
     return date.fromisoformat(value)
+
+
+def _parse_uuid(value: str | None) -> UUID | None:
+    """Accept only a well-formed UUID; anything else is ignored (fail closed)."""
+    if not value:
+        return None
+    try:
+        return UUID(str(value).strip())
+    except (ValueError, AttributeError):
+        return None
+
+
+def _normalize_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = " ".join(str(value).strip().split())
+    return normalized or None
+
+
+def _parse_flag(value: str | None) -> bool:
+    """Whitelisted truthy values for boolean query params."""
+    if value is None:
+        return False
+    return str(value).strip().casefold() in {"1", "true", "si", "sí", "on", "yes"}
 
 
 def _parse_int(value: str | None, default: int) -> int:
@@ -134,7 +223,7 @@ def _pop_flash(request: Request) -> dict[str, str] | None:
 
 def _resolve_board_data(request: Request) -> dict[str, Any]:
     service = _resolve_service(request)
-    settings = getattr(request.app.state, "settings", None)
+    user = _require_web_user(request)
     params = request.query_params
     page = _parse_int(params.get("page"), 1)
     page_size = 10
@@ -146,8 +235,15 @@ def _resolve_board_data(request: Request) -> dict[str, Any]:
     sort_direction = params.get("sort_direction") or "desc"
     date_from = _parse_date(params.get("date_from"))
     date_to = _parse_date(params.get("date_to"))
+    asesor_id = _parse_uuid(params.get("asesor"))
+    origen = _normalize_text(params.get("origen"))
+    fuente = _normalize_text(params.get("fuente"))
+    sin_asignar = _parse_flag(params.get("sin_asignar"))
+    estancado = _parse_flag(params.get("estancado"))
 
-    mask_pii = bool(getattr(settings, "should_mask_web_pii", True))
+    # PII masking is unconditionally role-based: only can_view_full_pii
+    # (ceo/cto) bypasses masking. The environment flag does not override roles.
+    effective_mask_pii = not (user is not None and service.can_view_full_pii(user))
 
     board = service.get_crm_bandeja(
         page=page,
@@ -159,7 +255,13 @@ def _resolve_board_data(request: Request) -> dict[str, Any]:
         date_to=date_to,
         sort_by=sort_by,
         sort_direction=sort_direction,
-        masked=mask_pii,
+        masked=True,
+        user=user,
+        asesor_id=asesor_id,
+        origen_lead=origen,
+        fuente_actual=fuente,
+        sin_asignar=sin_asignar,
+        estancado=estancado,
     )
     afp_options = service.get_catalogo_afp()
     estado_options = service.get_crm_estado_lead_options()
@@ -171,6 +273,11 @@ def _resolve_board_data(request: Request) -> dict[str, Any]:
         "date_to": params.get("date_to") or None,
         "sort_by": sort_by,
         "sort_direction": sort_direction,
+        "asesor": str(asesor_id) if asesor_id is not None else None,
+        "origen": origen,
+        "fuente": fuente,
+        "sin_asignar": "1" if sin_asignar else None,
+        "estancado": "1" if estancado else None,
     }
     current_board_url = _build_query_url("/leads", current_query | {"page": page})
 
@@ -201,7 +308,7 @@ def _resolve_board_data(request: Request) -> dict[str, Any]:
 
     return {
         "board": board,
-        "mask_pii": mask_pii,
+        "mask_pii": effective_mask_pii,
         "afp_options": afp_options,
         "estado_options": estado_options,
         "current_filters": {
@@ -212,14 +319,25 @@ def _resolve_board_data(request: Request) -> dict[str, Any]:
             "date_to": params.get("date_to") or "",
             "sort_by": sort_by,
             "sort_direction": sort_direction,
+            "asesor": str(asesor_id) if asesor_id is not None else "",
+            "origen": origen or "",
+            "fuente": fuente or "",
+            "sin_asignar": sin_asignar,
+            "estancado": estancado,
         },
+        "active_filter_labels": _active_filter_labels(sin_asignar, estancado),
         "page_title": "Leads",
-        "selected_user": _require_web_user(request),
-        "can_write": _can_write(_require_web_user(request)),
+        "selected_user": user,
+        "can_view_executive_dashboard": _can_view_executive_dashboard(user),
+        "can_export_xlsx": _can_export_xlsx(user),
+        "export_url": _build_query_url("/leads/export.xlsx", current_query),
+        "active_nav": "leads",
+        "can_write": _can_write(user),
         "csrf_token": _get_csrf_token(request),
         "web_env_label": getattr(request.app.state, "web_env_label", ""),
         "web_cleanup_enabled": bool(getattr(request.app.state, "web_cleanup_enabled", False)),
         "simulator_url": getattr(request.app.state, "web_simulator_url", None),
+        "public_site_url": getattr(request.app.state, "web_public_site_url", None),
         "service_mode": "real" if hasattr(service, "repository") else "mock",
         "pagination_prev_url": _url_for_page(page - 1) if page > 1 else None,
         "pagination_next_url": (
@@ -259,36 +377,39 @@ def _resolve_detail_context(
     error_message: str | None = None,
 ) -> tuple[dict[str, Any], int]:
     service = _resolve_service(request)
-    settings = getattr(request.app.state, "settings", None)
-    mask_pii = bool(getattr(settings, "should_mask_web_pii", True))
     user = _require_web_user(request)
+    # PII masking is unconditionally role-based in detail view.
+    # Always use the masked variant which respects can_view_full_pii.
     selected_lead = lead
-    if selected_lead is None and not lead_not_found:
-        selected_lead = (
-            service.get_solicitud_detalle_masked(lead_id, user=user)
-            if mask_pii
-            else service.get_solicitud_detalle(lead_id)
-        )
-    elif selected_lead is None and mask_pii:
+    if selected_lead is None:
         selected_lead = service.get_solicitud_detalle_masked(lead_id, user=user)
-    elif selected_lead is None:
-        selected_lead = service.get_solicitud_detalle(lead_id)
 
     state_options = service.get_crm_estado_lead_options_for_update()
     can_assign = bool(user and service.can_assign_lead(user))
     parsed_comments = parse_lead_comments(
         (selected_lead or {}).get("comentarios") if selected_lead else None
     )
+    timeline_items: list[dict[str, Any]] = []
+    if selected_lead is not None:
+        events = service.get_lead_assignment_events(lead_id)
+        state_changes = service.get_lead_state_change_events(lead_id)
+        timeline_items = build_timeline_items(events, parsed_comments.notes, state_changes)
+
+    app_settings = getattr(request.app.state, "settings", None)
+    cutover = getattr(app_settings, "lead_state_history_cutover", None)
     context = {
         "request": request,
         "selected_user": user,
+        "can_view_executive_dashboard": _can_view_executive_dashboard(user),
+        "active_nav": "leads",
         "can_write": _can_write(user),
         "can_assign": can_assign,
         "can_cleanup": _can_cleanup(user),
         "web_env_label": getattr(request.app.state, "web_env_label", ""),
         "web_cleanup_enabled": bool(getattr(request.app.state, "web_cleanup_enabled", False)),
         "simulator_url": getattr(request.app.state, "web_simulator_url", None),
-        "mask_pii": mask_pii,
+        "public_site_url": getattr(request.app.state, "web_public_site_url", None),
+        "mask_pii": not (user is not None and service.can_view_full_pii(user)),
         "selected_lead": selected_lead,
         "selected_lead_id": lead_id,
         "selected_lead_state_canonical": normalize_crm_state_for_display(
@@ -299,6 +420,8 @@ def _resolve_detail_context(
             service.get_asesores_disponibles_para_asignacion() if can_assign else []
         ),
         "comment_view": parsed_comments,
+        "timeline_items": timeline_items,
+        "state_history_cutover_notice": state_history_cutover_notice(cutover),
         "csrf_token": _get_csrf_token(request),
         "return_to_url": _sanitize_return_to(request.query_params.get("return_to"))
         or _build_return_to_url(request),
@@ -339,18 +462,73 @@ def leads_clear(request: Request):
     return RedirectResponse(url="/leads", status_code=303)
 
 
+@router.get("/leads/export.xlsx")
+def leads_export(request: Request):
+    user = _require_web_user(request)
+    if user is None:
+        return RedirectResponse(url="/login", status_code=307)
+    if not is_superuser(user.role):
+        return PlainTextResponse("No autorizado", status_code=403)
+
+    service = _resolve_service(request)
+    params = request.query_params
+    estado_raw = params.get("estado_lead") or None
+    estado = normalize_crm_state_for_display(estado_raw) or estado_raw
+
+    try:
+        content = service.export_leads_xlsx(
+            user,
+            search=params.get("search") or None,
+            estado_lead=estado,
+            afp_id=params.get("afp_id") or None,
+            date_from=_parse_date(params.get("date_from")),
+            date_to=_parse_date(params.get("date_to")),
+            sort_by=params.get("sort_by") or "created_at",
+            sort_direction=params.get("sort_direction") or "desc",
+            asesor_id=_parse_uuid(params.get("asesor")),
+            origen_lead=_normalize_text(params.get("origen")),
+            fuente_actual=_normalize_text(params.get("fuente")),
+            sin_asignar=_parse_flag(params.get("sin_asignar")),
+            estancado=_parse_flag(params.get("estancado")),
+        )
+    except ExportLimitExceededError as exc:
+        message = (
+            f"La exportacion supera el limite de {exc.limit} filas "
+            f"({exc.total} coinciden). Acota los filtros e intenta nuevamente."
+        )
+        return HTMLResponse(_export_error_html(message), status_code=413)
+    except (ValueError, TypeError):
+        return HTMLResponse(
+            _export_error_html("No fue posible generar la exportacion."),
+            status_code=400,
+        )
+    except Exception:
+        # Fail closed without a traceback: the exception message could embed a
+        # cell value (PII). The client gets a clear page; nothing is logged here.
+        return HTMLResponse(
+            _export_error_html("No fue posible generar la exportacion. Intenta nuevamente."),
+            status_code=500,
+        )
+
+    return Response(
+        content=content,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="{_export_filename()}"',
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
 @router.get("/leads/{lead_id}", response_class=HTMLResponse)
 def lead_detail(request: Request, lead_id: str):
     if not _require_web_user(request):
         return RedirectResponse(url="/login", status_code=307)
     service = _resolve_service(request)
-    settings = getattr(request.app.state, "settings", None)
-    mask_pii = bool(getattr(settings, "should_mask_web_pii", True))
-    lead = (
-        service.get_solicitud_detalle_masked(lead_id, user=_require_web_user(request))
-        if mask_pii
-        else service.get_solicitud_detalle(lead_id)
-    )
+    user = _require_web_user(request)
+    # PII masking is unconditionally role-based; always use masked variant.
+    lead = service.get_solicitud_detalle_masked(lead_id, user=user)
     if not lead:
         context, _ = _resolve_detail_context(
             request,
@@ -480,7 +658,7 @@ async def lead_status_update(request: Request, lead_id: str):
     if not _require_web_user(request):
         return RedirectResponse(url="/login", status_code=307)
     user = _require_web_user(request)
-    if not _can_write(user):
+    if not user or not _can_write(user):
         context, _ = _resolve_detail_context(
             request,
             lead_id,
@@ -526,7 +704,7 @@ async def lead_status_update(request: Request, lead_id: str):
 
     service = _resolve_service(request)
     try:
-        updated = service.update_lead_status(lead_id, estado_lead)
+        updated = service.update_lead_status(lead_id, estado_lead, actor=user)
     except ValueError:
         context, _ = _resolve_detail_context(
             request,
@@ -568,7 +746,7 @@ async def lead_comment_append(request: Request, lead_id: str):
     if not _require_web_user(request):
         return RedirectResponse(url="/login", status_code=307)
     user = _require_web_user(request)
-    if not _can_write(user):
+    if not user or not _can_write(user):
         context, _ = _resolve_detail_context(
             request,
             lead_id,
@@ -617,7 +795,7 @@ async def lead_comment_append(request: Request, lead_id: str):
         updated = service.append_lead_comment(
             lead_id,
             comment_text,
-            user.display_name if user else "Usuario",
+            actor=user,
         )
     except ValueError:
         context, _ = _resolve_detail_context(

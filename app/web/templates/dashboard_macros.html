@@ -1,0 +1,70 @@
+{#
+  Reusable pieces of the Executive Dashboard (H3.3.4, Parte B).
+
+  Every chart is a projection of the same rows that the accessible table shows,
+  so the table is the single source of truth for assistive technology. Values are
+  precomputed server-side in app/web/dashboard_presentation.py: these macros only
+  place already-formatted text and one bounded geometric custom property.
+#}
+
+{% macro section_error(message) %}
+  <div class="alert alert-error" role="status">{{ message }}</div>
+{% endmacro %}
+
+{% macro empty_state(title, text) %}
+  <div class="empty-state">
+    <h4>{{ title }}</h4>
+    <p>{{ text }}</p>
+  </div>
+{% endmacro %}
+
+{% macro bar_list(rows, table_id, caption, label_header, value_header) %}
+  <div class="bar-list">
+    {% for row in rows %}
+      <div class="bar-row">
+        {% if row.href %}
+          <a class="bar-label" href="{{ row.href }}">{{ row.label }}<span class="sr-only"> — filtrar por este valor</span></a>
+        {% else %}
+          <span class="bar-label">{{ row.label }}</span>
+        {% endif %}
+        <span class="bar-track" aria-hidden="true">
+          <span class="bar-fill" style="--bar-fill: {{ row.width_pct }}%"></span>
+        </span>
+        <span class="bar-value">{{ row.value_text }}</span>
+      </div>
+    {% endfor %}
+  </div>
+  <details class="chart-table">
+    <summary>Ver como tabla</summary>
+    <table class="data-table" id="{{ table_id }}">
+      <caption>{{ caption }}</caption>
+      <thead>
+        <tr>
+          <th scope="col">{{ label_header }}</th>
+          <th scope="col">{{ value_header }}</th>
+          <th scope="col">Porcentaje</th>
+          <th scope="col">Base</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <th scope="row">{{ row.label }}</th>
+            <td class="num">{{ row.n|format_int }}</td>
+            <td class="num">{{ row.percentage_text }}</td>
+            <td class="num">{{ row.denominador|format_int }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </details>
+{% endmacro %}
+
+{% macro categoria_block(title, rows, table_id, caption) %}
+  <h4 class="categoria-title">{{ title }}</h4>
+  {% if rows %}
+    {{ bar_list(rows, table_id, caption, title, 'Leads') }}
+  {% else %}
+    <p class="categoria-empty">Sin datos para esta categoría.</p>
+  {% endif %}
+{% endmacro %}

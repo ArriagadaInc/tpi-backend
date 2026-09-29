@@ -26,8 +26,62 @@ import pytest
 
 from tests.harness.conftest import REAL_ROOT
 
-BASH = shutil.which("bash") or shutil.which("sh")
-pytestmark = pytest.mark.skipif(BASH is None, reason="requires a POSIX shell (bash/sh) on PATH")
+
+def _git_bash_candidates() -> list[Path]:
+    """Git for Windows bash.exe candidates, derived from the git on PATH (no fixed install dir)."""
+    candidates: list[Path] = []
+    override = os.environ.get("CLAUDE_CODE_GIT_BASH_PATH")
+    if override:
+        candidates.append(Path(override))
+    roots: list[Path] = []
+    git = shutil.which("git")
+    if git:
+        # <root>\cmd\git.exe, <root>\bin\git.exe or <root>\mingw64\bin\git.exe
+        git_path = Path(git).resolve()
+        roots += [git_path.parent.parent, git_path.parent.parent.parent]
+        try:
+            exec_path = subprocess.run(  # noqa: S603
+                [git, "--exec-path"], capture_output=True, text=True, timeout=10, check=True
+            ).stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            exec_path = ""
+        if exec_path:
+            # <root>\mingw64\libexec\git-core
+            roots.append(Path(exec_path).resolve().parents[2])
+    for root in roots:
+        candidates += [root / "bin" / "bash.exe", root / "usr" / "bin" / "bash.exe"]
+    return candidates
+
+
+def _is_wsl_launcher(path: Path) -> bool:
+    # %SystemRoot%\System32\bash.exe (and WindowsApps aliases) launch WSL, not the hook's shell.
+    system_root = Path(os.environ.get("SystemRoot", r"C:\Windows")).resolve()
+    resolved = path.resolve()
+    return resolved.is_relative_to(system_root) or "windowsapps" in str(resolved).lower()
+
+
+def _resolve_posix_shell() -> str | None:
+    """POSIX shell matching the hook's real runtime.
+
+    On Windows Claude Code runs hooks with Git Bash, so prefer Git for Windows' bash and never
+    fall back to the WSL launcher. Elsewhere, bash (or sh) from PATH.
+    """
+    if os.name != "nt":
+        return shutil.which("bash") or shutil.which("sh")
+    for candidate in _git_bash_candidates():
+        if candidate.is_file() and not _is_wsl_launcher(candidate):
+            return str(candidate)
+    for name in ("bash", "sh"):
+        found = shutil.which(name)
+        if found and not _is_wsl_launcher(Path(found)):
+            return found
+    return None
+
+
+BASH = _resolve_posix_shell()
+pytestmark = pytest.mark.skipif(
+    BASH is None, reason="requires a POSIX shell (Git Bash on Windows, bash/sh elsewhere)"
+)
 
 
 def _hook_command() -> str:

@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.auth.models import AuthenticatedUser, AuthenticationResult
-from app.components.ui import get_public_simulator_url
+from app.components.ui import get_public_simulator_url, get_public_site_url
 from app.config import Settings
 from app.validators import mask_email, mask_phone, mask_rut
 from app.web.main import create_web_app
@@ -50,7 +50,11 @@ class _FakeWebService:
         rows: list[dict[str, object]] | None = None,
         *,
         cleanup_enabled: bool = True,
+        events: list[dict[str, object]] | None = None,
+        state_changes: list[dict[str, object]] | None = None,
     ) -> None:
+        self.events = events or []
+        self.state_changes = state_changes or []
         self._full_detail = {
             "id_lead": "11111111-1111-1111-1111-111111111111",
             "nombre_completo": "Juan Perez",
@@ -92,6 +96,9 @@ class _FakeWebService:
         self.comment_appends: list[tuple[str, str, str]] = []
         self.cleanup_calls: list[str] = []
         self._cleanup_enabled = cleanup_enabled
+
+    def can_view_full_pii(self, user) -> bool:
+        return user.role in ("ceo", "cto")
 
     def get_crm_bandeja(self, *args, **kwargs):
         self.last_board_kwargs = dict(kwargs)
@@ -157,7 +164,7 @@ class _FakeWebService:
 
     @staticmethod
     def can_assign_lead(user: AuthenticatedUser) -> bool:
-        return user.role in {"admin", "executive"}
+        return user.role in {"admin", "executive", "ceo", "cto"}
 
     def get_solicitud_detalle_masked(self, id_lead, *, user=None):
         if str(id_lead) != str(self._full_detail["id_lead"]):
@@ -171,7 +178,13 @@ class _FakeWebService:
             return None
         return dict(self._full_detail)
 
-    def update_lead_status(self, id_lead, estado_lead):
+    def get_lead_assignment_events(self, id_lead):
+        return list(self.events)
+
+    def get_lead_state_change_events(self, id_lead):
+        return list(self.state_changes)
+
+    def update_lead_status(self, id_lead, estado_lead, *, actor=None):
         if str(id_lead) != str(self._full_detail["id_lead"]):
             return False
         allowed = {
@@ -197,9 +210,10 @@ class _FakeWebService:
         self.status_updates.append((str(id_lead), estado_lead))
         return True
 
-    def append_lead_comment(self, id_lead, comment_text, author):
+    def append_lead_comment(self, id_lead, comment_text, *, actor=None):
         if str(id_lead) != str(self._full_detail["id_lead"]):
             return False
+        author = getattr(actor, "display_name", "Usuario") if actor else "Usuario"
         fragment = f"[23/08/2026 10:15] {author}\n{comment_text}"
         previous = str(self._full_detail.get("comentarios") or "")
         self._full_detail["comentarios"] = f"{previous}\n\n{fragment}" if previous else fragment
@@ -259,6 +273,7 @@ def _build_client(
     )
     app.state.web_cleanup_enabled = app.state.settings.is_test_lead_cleanup_enabled
     app.state.web_simulator_url = get_public_simulator_url(app.state.settings)
+    app.state.web_public_site_url = get_public_site_url(app.state.settings)
     return TestClient(app)
 
 
@@ -316,9 +331,9 @@ def test_login_and_leads_routes_render() -> None:
     assert "Mostrando" not in detail.text
     assert "Abrir simulación" in detail.text
     assert "Juan Perez" in detail.text
-    assert "12.345.678-5" in detail.text
-    assert "juan@example.com" in detail.text
-    assert "+56 9 1234 5678" in detail.text
+    assert "12.***.***-5" in detail.text
+    assert "ju***@example.com" in detail.text
+    assert "+56 9 **** 5678" in detail.text
 
     missing = client.get("/leads/00000000-0000-0000-0000-000000000000")
     assert missing.status_code == 404
@@ -398,6 +413,53 @@ def test_ceo_and_cto_can_view_full_pii() -> None:
     assert "12.345.678-5" in cto_detail.text
     assert "juan@example.com" in cto_detail.text
     assert "+56 9 1234 5678" in cto_detail.text
+
+
+def test_ceo_and_cto_can_execute_superuser_actions() -> None:
+    for username, role in (("ceo.local", "ceo"), ("cto.local", "cto")):
+        service = _FakeWebService(cleanup_enabled=True)
+        client = _build_client(service, auth_provider=_FakeAuthProvider(authenticated_role=role))
+        client.app.state.web_cleanup_enabled = True
+        _login(client, username=username)
+
+        detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
+        assert detail.status_code == 200
+        # Superusers see assignment, write and cleanup controls.
+        assert 'name="id_asesor"' in detail.text
+        assert "Guardar estado" in detail.text
+        assert "Agregar nueva nota de seguimiento" in detail.text
+        assert "Eliminar lead de prueba" in detail.text
+
+        csrf = _extract_csrf(detail.text)
+
+        assign = client.post(
+            "/leads/11111111-1111-1111-1111-111111111111/assign",
+            data={"csrf_token": csrf, "id_asesor": "22222222-2222-2222-2222-222222222222"},
+            follow_redirects=False,
+        )
+        assert assign.status_code == 303
+        assert service._full_detail["estado_lead"] == "asignado"
+
+        status = client.post(
+            "/leads/11111111-1111-1111-1111-111111111111/status",
+            data={"csrf_token": csrf, "estado_lead": "contactado"},
+            follow_redirects=False,
+        )
+        assert status.status_code == 303
+
+        comment = client.post(
+            "/leads/11111111-1111-1111-1111-111111111111/comments",
+            data={"csrf_token": csrf, "new_comment": "Nota de superusuario"},
+            follow_redirects=False,
+        )
+        assert comment.status_code == 303
+
+        cleanup = client.post(
+            "/leads/11111111-1111-1111-1111-111111111111/cleanup",
+            data={"csrf_token": csrf},
+            follow_redirects=False,
+        )
+        assert cleanup.status_code == 200
 
 
 def test_non_privileged_users_continue_to_see_masked_pii() -> None:
@@ -873,45 +935,6 @@ def test_web_board_empty_states_are_distinct() -> None:
     assert "No encontramos leads con estos filtros" in with_filters.text
 
 
-def test_web_masking_can_be_disabled_for_non_production_local_demo() -> None:
-    client = _build_client(
-        settings=Settings(
-            APP_ENV="local",
-            AUTH_ENABLED=True,
-            AUTH_MODE="simple-dev",
-            AUTH_USERS_JSON='{"users":[{"subject":"local-demo-alvaro","username":"alvaro.local","display_name":"Alvaro Local","role":"tester","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"}]}',
-            WEB_MASK_PII=False,
-        )
-    )
-    _login(client)
-
-    detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
-    assert "12.345.678-5" in detail.text
-    assert mask_rut("12.345.678-5") not in detail.text
-    assert "juan@example.com" in detail.text
-    assert mask_email("juan@example.com") not in detail.text
-    assert "+56 9 1234 5678" in detail.text
-    assert mask_phone("+56 9 1234 5678") not in detail.text
-
-
-def test_web_masking_stays_enabled_in_production_even_if_disabled() -> None:
-    client = _build_client(
-        settings=Settings(
-            APP_ENV="production",
-            AUTH_ENABLED=True,
-            AUTH_MODE="simple-dev",
-            AUTH_USERS_JSON='{"users":[{"subject":"local-demo-alvaro","username":"alvaro.local","display_name":"Alvaro Local","role":"tester","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"}]}',
-            WEB_MASK_PII=False,
-        )
-    )
-    _login(client)
-
-    detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
-    assert mask_rut("12.345.678-5") in detail.text
-    assert mask_email("juan@example.com") in detail.text
-    assert mask_phone("+56 9 1234 5678") in detail.text
-
-
 def test_templates_and_static_assets_exist() -> None:
     for relative in (
         Path("app/web/templates/base.html"),
@@ -948,3 +971,135 @@ def test_board_html_uses_relative_static_asset_urls() -> None:
     assert "/static/css/app.css" in response.text
     assert "/static/js/app.js" in response.text
     assert "http://backoffice.dev.tupensioninteligente.cl/static/" not in response.text
+
+
+def test_detail_renders_volver_al_sitio_when_approved_and_authenticated() -> None:
+    client = _build_client(
+        settings=Settings(
+            _env_file=None,
+            APP_ENV="aws-dev",
+            TPI_PUBLIC_SITE_URL="https://dev.tupensioninteligente.cl/",
+        )
+    )
+    _login(client)
+
+    detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert detail.status_code == 200
+    assert "Volver al sitio" in detail.text
+    assert 'href="https://dev.tupensioninteligente.cl/"' in detail.text
+
+
+def test_login_page_does_not_render_volver_al_sitio() -> None:
+    client = _build_client(
+        settings=Settings(
+            _env_file=None,
+            APP_ENV="aws-dev",
+            TPI_PUBLIC_SITE_URL="https://dev.tupensioninteligente.cl/",
+        )
+    )
+
+    login = client.get("/login")
+    assert login.status_code == 200
+    assert "Volver al sitio" not in login.text
+
+
+def test_detail_hides_volver_al_sitio_when_url_missing_or_invalid() -> None:
+    missing = _build_client(settings=Settings(_env_file=None, APP_ENV="aws-dev"))
+    _login(missing)
+    missing_detail = missing.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert "Volver al sitio" not in missing_detail.text
+
+    invalid = _build_client(
+        settings=Settings(
+            _env_file=None,
+            APP_ENV="aws-dev",
+            TPI_PUBLIC_SITE_URL="https://unapproved.example/",
+        )
+    )
+    _login(invalid)
+    invalid_detail = invalid.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert "Volver al sitio" not in invalid_detail.text
+
+
+def test_detail_timeline_merges_event_and_note_with_badge() -> None:
+    service = _FakeWebService(
+        events=[
+            {
+                "fecha_hora": datetime(2026, 9, 5, 12, 0, tzinfo=UTC),
+                "actor_subject": "user-001",
+                "asesor_nombre": "Asesor Demo",
+                "estado_anterior": "nuevo",
+                "estado_nuevo": "asignado",
+            }
+        ]
+    )
+    service._full_detail["comentarios"] = (
+        "Solicitud original.\n\n[05/09/2026 10:00] Alvaro\nNota humana"
+    )
+    client = _build_client(service, auth_provider=_FakeAuthProvider(authenticated_role="tester"))
+    _login(client)
+
+    detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert detail.status_code == 200
+    assert "Automático" in detail.text
+    assert "user-001" in detail.text
+    assert "Asesor Demo" in detail.text
+    assert "nuevo" in detail.text
+    assert "asignado" in detail.text
+    assert "Nota humana" in detail.text
+    assert "Alvaro" in detail.text
+
+
+def test_detail_timeline_escapes_html_in_event_fields() -> None:
+    service = _FakeWebService(
+        events=[
+            {
+                "fecha_hora": datetime(2026, 9, 5, 12, 0, tzinfo=UTC),
+                "actor_subject": "<script>alert(1)</script>",
+                "asesor_nombre": "<b>Asesor</b>",
+                "estado_anterior": "<i>nuevo</i>",
+                "estado_nuevo": "<i>asignado</i>",
+            }
+        ]
+    )
+    client = _build_client(service, auth_provider=_FakeAuthProvider(authenticated_role="tester"))
+    _login(client)
+
+    detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert detail.status_code == 200
+    assert "<script>alert(1)</script>" not in detail.text
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in detail.text
+
+
+def test_detail_timeline_renders_state_change_with_badge_and_no_edit_delete() -> None:
+    service = _FakeWebService(
+        state_changes=[
+            {
+                "fecha_hora": datetime(2026, 9, 5, 12, 0, tzinfo=UTC),
+                "actor_subject": "user-001",
+                "estado_anterior": "contactado",
+                "estado_nuevo": "cerrado",
+            }
+        ]
+    )
+    client = _build_client(service, auth_provider=_FakeAuthProvider(authenticated_role="tester"))
+    _login(client)
+
+    detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert detail.status_code == 200
+    assert "Automático" in detail.text
+    assert "user-001" in detail.text
+    assert "Cambio de estado: contactado → cerrado" in detail.text
+    assert "migracion 008" in detail.text
+    # System events are read-only: no edit/delete controls are rendered.
+    assert "Editar" not in detail.text
+    assert "Eliminar" not in detail.text
+
+
+def test_detail_timeline_empty_state_is_coherent() -> None:
+    client = _build_client(_FakeWebService())
+    _login(client)
+
+    detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert detail.status_code == 200
+    assert "Aún no existen notas de seguimiento, asignaciones ni cambios de estado." in detail.text

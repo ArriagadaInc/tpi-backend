@@ -193,6 +193,53 @@ Notas:
   - advisor id
 - `detalle` must not be used as an operational relationship store.
 
+### `tpi.v_asignacion_auditoria` (vista de la migracion 007)
+
+Read model de solo lectura sobre `tpi.auditoria` (migracion 007, change_class D).
+Contrato versionado:
+
+| Columna | Tipo | Origen | Proposito |
+| ------- | ---- | ------ | --------- |
+| `id_auditoria` | UUID | `tpi.auditoria.id_auditoria` | Identificador del evento |
+| `id_lead` | UUID | `tpi.auditoria.id_lead` | Lead afectado |
+| `fecha_hora` | TIMESTAMPTZ | `tpi.auditoria.fecha_hora` | Momento del evento |
+| `actor_subject` | TEXT | `detalle->>'actor_subject'` | Identidad historica del actor |
+| `id_asesor` | UUID | `detalle->>'id_asesor'` validado con CASE + regex canonica case-insensitive | Asesor; `NULL` si el valor no es UUID canonico |
+| `estado_anterior` | TEXT | `detalle->>'estado_anterior'` | Estado previo a la asignacion |
+| `estado_nuevo` | TEXT | `detalle->>'estado_nuevo'` | Estado posterior a la asignacion |
+
+Notas:
+
+- Filtro fijo: `accion = 'asignacion_lead'` AND `tabla_afectada = 'tpi.asignaciones'`.
+- `security_barrier = true`.
+- `REVOKE ALL ... FROM PUBLIC`; `GRANT SELECT` unicamente a `tpi_app`.
+- No expone `detalle` crudo, `id_persona`, `id_usuario` ni `ip_origen`.
+- **No aplicada en AWS RDS DEV al cierre de la etapa de desarrollo.**
+
+### `tpi.v_historial_estado_lead` (vista de la migracion 008)
+
+Read model de solo lectura sobre `tpi.auditoria` (migracion 008, change_class D).
+Contrato versionado:
+
+| Columna | Tipo | Origen | Proposito |
+| ------- | ---- | ------ | --------- |
+| `id_auditoria` | UUID | `tpi.auditoria.id_auditoria` | Identificador del evento |
+| `id_lead` | UUID | `tpi.auditoria.id_lead` | Lead afectado |
+| `fecha_hora` | TIMESTAMPTZ | `tpi.auditoria.fecha_hora` | Momento del evento |
+| `actor_subject` | TEXT | `detalle->>'actor_subject'` | Identidad historica del actor |
+| `estado_anterior` | TEXT | `detalle->>'estado_anterior'` | Estado previo al cambio |
+| `estado_nuevo` | TEXT | `detalle->>'estado_nuevo'` | Estado posterior al cambio |
+
+Notas:
+
+- Filtro fijo: `accion = 'cambio_estado_lead'` AND `tabla_afectada = 'tpi.leads'`.
+- `security_barrier = true`.
+- `REVOKE ALL ... FROM PUBLIC`; `GRANT SELECT` unicamente a `tpi_app`.
+- No expone `detalle` crudo, `id_persona`, `id_usuario` ni `ip_origen`.
+- Indice de apoyo `auditoria_state_history_idx (accion, tabla_afectada, id_lead,
+  fecha_hora)` justificado por EXPLAIN real.
+- **No aplicada en AWS RDS DEV al cierre de la etapa de desarrollo.**
+
 ### `tpi.consentimientos`
 
 Contrato versionado:

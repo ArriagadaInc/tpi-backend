@@ -59,11 +59,13 @@ The public header exposes `Acceso Backoffice` only on approved local/DEV
 hostnames. It derives the matching private hostname while preserving the local
 port; no credentials, tokens, or query parameters are transferred.
 
-After authentication, the backoffice sidebar displays `Volver al sitio` only
-when `TPI_PUBLIC_SITE_URL` matches the approved environment URL: local uses
-`http://tpi.localhost:8080/` and temporary AWS DEV uses
-`https://dev.tupensioninteligente.cl/`.
-The link does not log out or transfer session data.
+After authentication, the backoffice sidebar (Streamlit) and the CRM Lite Web UX
+topbar (FastAPI/Jinja2) display `Volver al sitio` only when `TPI_PUBLIC_SITE_URL`
+matches the approved environment URL: local uses `http://tpi.localhost:8080/` and
+temporary AWS DEV uses `https://dev.tupensioninteligente.cl/`. Both surfaces reuse
+`get_public_site_url()`, which fails closed on absent or unapproved URLs and never
+carries query, fragment, credentials, or session data. The Web UX link appears only
+for authenticated users, never on the login page.
 
 Running services are `postgres`, one-shot `db-init`, `api`, `backoffice` and
 `caddy`. Only Caddy publishes `127.0.0.1:8080` and `127.0.0.1:443`; API,
@@ -154,7 +156,20 @@ The private boundary fails closed on absent or malformed auth configuration,
 invalid hashes, unsupported `AUTH_MODE`, missing session, or unknown roles.
 Those failures must not affect the public landing or form.
 
-## Docker and Caddy
+## Database migration 007 (read model)
+
+H3.3.3 versions the read model `tpi.v_asignacion_auditoria`
+(`scripts/sql/007_create_audit_assignment_view.sql`, rollback
+`scripts/sql/007_drop_audit_assignment_view.sql`). It is a sanitized view over
+`tpi.auditoria` (`security_barrier`, fixed assignment filter, `REVOKE ALL FROM
+PUBLIC`, `GRANT SELECT` only to `tpi_app`) that the application reads instead of
+`tpi.auditoria`.
+
+**The migration has NOT been applied to AWS RDS DEV at the close of the development
+stage.** It is `change_class D` and requires an explicit Human Gate before touching
+AWS RDS DEV. Local integration tests exercise the view and its rollback against
+PostgreSQL; they never touch AWS RDS.
+
 
 The AWS-oriented Compose topology runs three application services:
 

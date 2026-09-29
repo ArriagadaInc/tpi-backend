@@ -97,13 +97,42 @@ def test_new_structured_fields_are_honoured():
     assert log_scan.check(scan, POLICIES) == []
 
 
+# Minimal synthetic reproduction of the `pii_log_scan` shape recorded by H3.3.6
+# (verification-02): a count-only scan with a single raw `hash` hit coming from Caddy's
+# `cert_hash`, classified FALSE_POSITIVE by a human. Operational evidence is not versioned,
+# so only the structure relevant to log_scan.check is kept here.
+H336_PII_LOG_SCAN = {
+    "matches": 0,
+    "raw_pattern_hits": {"hash": 1},
+    "false_positives": [
+        {
+            "pattern": "hash",
+            "count": 1,
+            "classified_by": "human",
+            "classification": "FALSE_POSITIVE",
+            "source": "log informativo de Caddy",
+            "logger": "tls.cache.maintenance",
+            "triggering_field": "cert_hash",
+            "inspected_by_deployer": False,
+        }
+    ],
+    "result": "PASS",
+    "patterns": ["Authorization", "Bearer", "raw_payload", "password", "hash", "cookie"],
+}
+
+
 def test_h336_real_evidence_passes_under_v11_model():
-    data = json.loads(
-        (REAL_ROOT / "evidence" / "H3.3.6" / "deployment" / "verification-02.json").read_text(
-            encoding="utf-8"
-        )
-    )
-    assert log_scan.check(data["pii_log_scan"], POLICIES) == []
+    assert log_scan.check(H336_PII_LOG_SCAN, POLICIES) == []
+
+
+@pytest.mark.parametrize("pattern", STRONG)
+def test_h336_shape_with_strong_hit_is_not_degraded(pattern):
+    scan = dict(H336_PII_LOG_SCAN, raw_pattern_hits={"hash": 1, pattern: 1})
+    scan["false_positives"] = H336_PII_LOG_SCAN["false_positives"] + [
+        dict(H336_PII_LOG_SCAN["false_positives"][0], pattern=pattern)
+    ]
+    reasons = log_scan.check(scan, POLICIES)
+    assert reasons and "indicador fuerte" in reasons[0]
 
 
 def test_cli_classify(capsys):

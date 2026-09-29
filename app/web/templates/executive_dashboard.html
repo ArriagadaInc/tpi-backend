@@ -1,0 +1,420 @@
+{% extends "base.html" %}
+{% import "dashboard_macros.html" as ui %}
+
+{% block content %}
+  <section class="hero">
+    <div>
+      <p class="kicker">CRM Lite · exclusivo CEO / CTO</p>
+      <h1>Dashboard Ejecutivo</h1>
+      <p class="lead">
+        Volumen, cobertura y carga operacional de la cartera de leads. Datos
+        agregados: sin RUT, nombres, teléfono ni correo de leads.
+      </p>
+    </div>
+    <div class="hero-badges">
+      <span class="pill pill-accent">Período: {{ period_label }}</span>
+      {% if web_env_label %}
+        <span class="pill pill-muted">{{ web_env_label }}</span>
+      {% endif %}
+    </div>
+  </section>
+
+  <p class="scope-note">{{ scope_explanation }}</p>
+
+  {% if filter_error %}
+    <div class="alert alert-error" role="alert">
+      <strong>Revisa los filtros:</strong> {{ filter_error }}
+    </div>
+  {% endif %}
+
+  {# ------------------------------------------------------------------ #}
+  {# 2. Filtros (GET, sin JavaScript obligatorio, URL reproducible)      #}
+  {# ------------------------------------------------------------------ #}
+  <section class="filters card" aria-labelledby="filtros-title">
+    <h2 id="filtros-title" class="sr-only">Filtros del dashboard</h2>
+    <form method="get" action="/dashboard" class="filters-grid filters-grid--dashboard">
+      <label for="f-desde">
+        Desde
+        <input id="f-desde" name="fecha_desde" type="date" value="{{ raw_filters.fecha_desde }}">
+      </label>
+      <label for="f-hasta">
+        Hasta
+        <input id="f-hasta" name="fecha_hasta" type="date" value="{{ raw_filters.fecha_hasta }}">
+      </label>
+      <label for="f-granularidad">
+        Granularidad
+        <select id="f-granularidad" name="granularidad">
+          <option value="diaria" {% if raw_filters.granularidad in ('', 'diaria') %}selected{% endif %}>Diaria</option>
+          <option value="semanal" {% if raw_filters.granularidad == 'semanal' %}selected{% endif %}>Semanal</option>
+          <option value="mensual" {% if raw_filters.granularidad == 'mensual' %}selected{% endif %}>Mensual</option>
+        </select>
+      </label>
+      <label for="f-asesor">
+        Asesor
+        <select id="f-asesor" name="asesor">
+          <option value="">Todos los asesores</option>
+          {% for option in filter_options.asesores %}
+            <option value="{{ option.value }}" {% if raw_filters.asesor == option.value %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label for="f-afp">
+        AFP
+        <select id="f-afp" name="afp">
+          <option value="">Todas las AFP</option>
+          {% for option in filter_options.afps %}
+            <option value="{{ option.value }}" {% if raw_filters.afp == option.value %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label for="f-estado">
+        Estado
+        <select id="f-estado" name="estado">
+          <option value="">Todos los estados</option>
+          {% for option in filter_options.estados %}
+            <option value="{{ option.value }}" {% if raw_filters.estado == option.value %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label for="f-origen">
+        Origen del lead
+        <select id="f-origen" name="origen">
+          <option value="">Todos los orígenes</option>
+          {% for option in filter_options.origenes %}
+            <option value="{{ option }}" {% if raw_filters.origen == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label for="f-fuente">
+        Fuente actual
+        <select id="f-fuente" name="fuente">
+          <option value="">Todas las fuentes</option>
+          {% for option in filter_options.fuentes %}
+            <option value="{{ option }}" {% if raw_filters.fuente == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <div class="filters-actions">
+        <button class="primary" type="submit">Aplicar</button>
+        <a class="secondary" href="/dashboard">Limpiar</a>
+      </div>
+    </form>
+    <nav class="quick-ranges" aria-label="Rangos rápidos de período">
+      <span class="quick-ranges-label">Rangos rápidos:</span>
+      {% for range in quick_ranges %}
+        <a class="quick-range{% if range.active %} is-active{% endif %}" href="{{ range.href }}"
+           {% if range.active %}aria-current="true"{% endif %}>{{ range.label }}</a>
+      {% endfor %}
+    </nav>
+  </section>
+
+  {% if global_error %}
+    <section class="card panel" aria-labelledby="global-error-title">
+      <h2 id="global-error-title">Dashboard no disponible</h2>
+      {{ ui.section_error(global_error) }}
+    </section>
+  {% elif dashboard %}
+
+    {# ---------------------------------------------------------------- #}
+    {# Nivel 1 — Resumen ejecutivo                                       #}
+    {# ---------------------------------------------------------------- #}
+    <div class="section-level">
+      <h2>Resumen ejecutivo</h2>
+      <p>Situación actual de la cartera (<code>current_snapshot</code>), salvo los ingresos del período (<code>period_activity</code>).</p>
+    </div>
+
+    {% if dashboard.section_failed('resumen') %}
+      {{ ui.section_error('No fue posible calcular el resumen ejecutivo. Las demás secciones no se ven afectadas.') }}
+    {% else %}
+      <dl class="kpi-grid">
+        <div class="kpi-card">
+          <dt>Total de leads</dt>
+          <dd>{{ kpi_total }}</dd>
+          <span class="kpi-period">Histórico completo · situación actual</span>
+        </div>
+        <div class="kpi-card">
+          <dt>Ingresados en el período</dt>
+          <dd>{{ kpi_ingresados }}</dd>
+          <span class="kpi-period">{{ period_label }} · según <code>fecha_ingreso</code> (distinta de <code>created_at</code>)</span>
+        </div>
+        <div class="kpi-card">
+          <dt>Cartera activa</dt>
+          <dd>{{ kpi_cartera_activa }} <span class="kpi-secondary">({{ kpi_cartera_activa_pct }})</span></dd>
+          <span class="kpi-period">Excluye cerrado, perdido, no califica y duplicado</span>
+        </div>
+        <div class="kpi-card">
+          <dt>Leads sin asignar</dt>
+          <dd>{{ kpi_sin_asignar }}</dd>
+          <span class="kpi-period">Sin asignación activa · situación actual</span>
+        </div>
+      </dl>
+
+      <div class="alert-row">
+        {% for alert in alerts %}
+          <div class="alert-chip alert-chip--{{ alert.tone }}">
+            <span class="chip-icon" aria-hidden="true">{{ alert.icon }}</span>
+            <span class="chip-text">{{ alert.text }}</span>
+            <a class="chip-link" href="{{ alert.href }}">Ver detalle<span class="sr-only"> — {{ alert.link_label }}</span></a>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {# 11. Aviso de cobertura histórica #}
+    <div class="notice notice-soft coverage-banner">
+      <strong>Cobertura de datos:</strong>
+      {% if cutover %}
+        el funnel y el tiempo hasta la primera gestión solo incluyen leads con historia
+        completa desde el corte de la migración 008 ({{ cutover.strftime('%d/%m/%Y') }}).
+      {% else %}
+        el corte de la migración 008 aún no está configurado, por lo que no hay historia
+        completa de transiciones y el funnel no se calcula.
+      {% endif %}
+      Los leads anteriores aportan al conteo del estado actual, nunca a tasas de avance.
+    </div>
+
+    {# ---------------------------------------------------------------- #}
+    {# Nivel 2 — Análisis                                                #}
+    {# ---------------------------------------------------------------- #}
+    <div class="section-level">
+      <h2>Análisis</h2>
+      <p>Distribución, evolución, antigüedad y categorías MVP de la cartera.</p>
+    </div>
+
+    <div class="grid-2">
+      <article class="card panel" aria-labelledby="evolucion-title">
+        <h3 id="evolucion-title">Evolución de ingresos</h3>
+        <p class="panel-sub">Leads ingresados por <code>fecha_ingreso</code> · granularidad {{ filters.granularidad }}</p>
+        {% if dashboard.section_failed('evolucion') %}
+          {{ ui.section_error('No fue posible calcular la evolución de ingresos.') }}
+        {% elif timeseries %}
+          <p class="chart-summary">{{ timeseries.summary }}</p>
+          <div class="timeseries-wrap">
+            <svg class="timeseries-svg" viewBox="0 0 {{ timeseries.width }} {{ timeseries.height }}"
+                 role="img" aria-labelledby="ts-title ts-desc">
+              <title id="ts-title">Evolución {{ filters.granularidad }} de leads ingresados</title>
+              <desc id="ts-desc">{{ timeseries.summary }}</desc>
+              <line class="timeseries-axis-line" x1="0" y1="{{ timeseries.baseline_y }}"
+                    x2="{{ timeseries.width }}" y2="{{ timeseries.baseline_y }}"></line>
+              {% if timeseries.polyline %}
+                <polyline class="timeseries-line" points="{{ timeseries.polyline }}"></polyline>
+              {% endif %}
+              {% for point in timeseries.points %}
+                <circle class="timeseries-dot" cx="{{ point.x }}" cy="{{ point.y }}" r="4">
+                  <title>{{ point.label }}: {{ point.n|format_int }} leads</title>
+                </circle>
+              {% endfor %}
+              {% for tick in timeseries.axis_ticks %}
+                <text class="timeseries-axis" x="{{ tick.x }}" y="{{ timeseries.height - 8 }}"
+                      text-anchor="{{ tick.anchor }}">{{ tick.label }}</text>
+              {% endfor %}
+            </svg>
+          </div>
+          <details class="chart-table">
+            <summary>Ver como tabla</summary>
+            <table class="data-table">
+              <caption>Leads ingresados por punto de la serie</caption>
+              <thead>
+                <tr><th scope="col">Período</th><th scope="col">Leads ingresados</th></tr>
+              </thead>
+              <tbody>
+                {% for point in timeseries.points %}
+                  <tr><th scope="row">{{ point.label }}</th><td class="num">{{ point.n|format_int }}</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </details>
+        {% else %}
+          {{ ui.empty_state('Sin ingresos en el período', 'Selecciona un rango de fechas con leads ingresados para ver la evolución.') }}
+        {% endif %}
+      </article>
+
+      <article class="card panel" aria-labelledby="estado-title">
+        <h3 id="estado-title">Casos por estado</h3>
+        <p class="panel-sub">COUNT(DISTINCT id_lead) por estado · base {{ kpi_total }} leads</p>
+        {% if dashboard.section_failed('casos_por_estado') %}
+          {{ ui.section_error('No fue posible calcular la distribución por estado.') }}
+        {% elif estado_rows %}
+          <p class="chart-summary">{{ estado_rows|length }} estados con casos, ordenados por volumen descendente.</p>
+          {{ ui.bar_list(estado_rows, 'tabla-estado', 'Casos por estado', 'Estado', 'Leads') }}
+        {% else %}
+          {{ ui.empty_state('Sin leads con estos filtros', 'Ajusta los filtros para ver la distribución por estado.') }}
+        {% endif %}
+      </article>
+    </div>
+
+    <div class="grid-2 grid-gap-top">
+      <article class="card panel" id="antiguedad" aria-labelledby="antiguedad-title">
+        <h3 id="antiguedad-title">Antigüedad de la cartera activa</h3>
+        <p class="panel-sub">Días corridos (calendario) desde <code>fecha_ingreso</code> · base {{ kpi_cartera_activa }} leads activos</p>
+        {% if dashboard.section_failed('antiguedad') %}
+          {{ ui.section_error('No fue posible calcular la antigüedad de la cartera.') }}
+        {% elif age_steps %}
+          <p class="chart-summary">Cinco tramos de antigüedad; el tramo de más de 30 días requiere revisión prioritaria.</p>
+          <div class="age-ladder">
+            {% for step in age_steps %}
+              <div class="age-step age-step--l{{ step.level }}">
+                <span class="age-range">{{ step.label }}</span>
+                <span class="age-fill-track" aria-hidden="true">
+                  <span class="age-fill" style="--bar-fill: {{ step.width_pct }}%"></span>
+                </span>
+                <span class="age-value">
+                  {{ step.value_text }}
+                  {% if step.flag %}<span class="age-flag">{{ step.flag }}</span>{% endif %}
+                </span>
+              </div>
+            {% endfor %}
+          </div>
+          <details class="chart-table">
+            <summary>Ver como tabla</summary>
+            <table class="data-table">
+              <caption>Antigüedad de la cartera activa por tramo</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Tramo</th><th scope="col">Leads</th>
+                  <th scope="col">Porcentaje</th><th scope="col">Base</th><th scope="col">Nota</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for step in age_steps %}
+                  <tr>
+                    <th scope="row">{{ step.label }}</th>
+                    <td class="num">{{ step.n|format_int }}</td>
+                    <td class="num">{{ step.percentage|format_percentage }}</td>
+                    <td class="num">{{ step.denominador|format_int }}</td>
+                    <td>{{ step.flag or '' }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </details>
+        {% else %}
+          {{ ui.empty_state('Sin cartera activa', 'No hay leads activos para clasificar por antigüedad.') }}
+        {% endif %}
+      </article>
+
+      <article class="card panel" aria-labelledby="categorias-title">
+        <h3 id="categorias-title">Distribución por categorías (MVP)</h3>
+        <p class="panel-sub">Estado, asesor, AFP, origen del lead y fuente actual son las únicas categorías del MVP.</p>
+        {% if dashboard.section_failed('categorias') %}
+          {{ ui.section_error('No fue posible calcular la distribución por categorías.') }}
+        {% elif afp_rows or origen_rows or fuente_rows %}
+          {{ ui.categoria_block('AFP', afp_rows, 'tabla-afp', 'Distribución por AFP') }}
+          {{ ui.categoria_block('Origen del lead', origen_rows, 'tabla-origen', 'Distribución por origen del lead') }}
+          {{ ui.categoria_block('Fuente actual', fuente_rows, 'tabla-fuente', 'Distribución por fuente actual') }}
+        {% else %}
+          {{ ui.empty_state('Sin datos por categoría', 'No hay leads para distribuir por AFP, origen o fuente.') }}
+        {% endif %}
+      </article>
+    </div>
+
+    {# 9. Funnel observable #}
+    <article class="card panel grid-gap-top" aria-labelledby="funnel-title">
+      <h3 id="funnel-title">Funnel y tasas observables</h3>
+      <p class="panel-sub">Solo transiciones observables desde el corte de la migración 008 · denominador COUNT(DISTINCT id_lead).</p>
+      {% if dashboard.section_failed('funnel') %}
+        {{ ui.section_error('No fue posible calcular el funnel observable.') }}
+      {% elif funnel_rows %}
+        <p class="chart-summary">
+          {{ funnel_rows|length }} transiciones observables sobre
+          {{ dashboard.period_activity.funnel.denominador|format_int }} leads con historia completa.
+        </p>
+        {{ ui.bar_list(funnel_rows, 'tabla-funnel', 'Transiciones observables del período', 'Transición', 'Leads') }}
+      {% else %}
+        <div class="notice notice-warning funnel-unavailable" role="status">
+          <strong>{{ funnel_unavailable_title }}:</strong> {{ funnel_unavailable_reason }}
+        </div>
+      {% endif %}
+    </article>
+
+    {# ---------------------------------------------------------------- #}
+    {# Nivel 3 — Operacional                                             #}
+    {# ---------------------------------------------------------------- #}
+    <div class="section-level" id="resumen-asesor">
+      <h2>Operacional</h2>
+      <p>
+        Carga y tiempos de respuesta por asesor. El nombre del asesor es visible solo para
+        CEO/CTO; nunca se muestra RUT, teléfono ni correo.
+      </p>
+    </div>
+
+    {% if dashboard.section_failed('tiempos') %}
+      {{ ui.section_error('No fue posible calcular los tiempos de asignación y primera gestión.') }}
+    {% else %}
+      <dl class="kpi-grid kpi-grid--pair">
+        <div class="kpi-card">
+          <dt>Tiempo medio hasta asignación</dt>
+          <dd>{{ tiempo_asignacion_text }}</dd>
+          <span class="kpi-period">n = {{ dashboard.period_activity.tiempo_asignacion.n|format_int }} leads con asignación registrada</span>
+        </div>
+        <div class="kpi-card">
+          <dt>Tiempo medio hasta primera gestión</dt>
+          <dd>{{ tiempo_gestion_text }}</dd>
+          <span class="kpi-period">n = {{ dashboard.period_activity.tiempo_primera_gestion.n|format_int }} leads post-corte con primera gestión (excluye la asignación)</span>
+        </div>
+      </dl>
+    {% endif %}
+
+    <article class="card panel grid-gap-top" aria-labelledby="asesores-title">
+      <h3 id="asesores-title">Resumen por asesor</h3>
+      <p class="panel-sub">Cartera, estancamiento y tiempos de respuesta por asesor.</p>
+      {% if dashboard.section_failed('asesores') %}
+        {{ ui.section_error('No fue posible calcular el resumen por asesor. El resto del dashboard no se ve afectado.') }}
+      {% elif asesor_rows %}
+        <div class="table-wrap">
+          <table class="board-table asesor-table">
+            <caption class="sr-only">Resumen de cartera y tiempos por asesor</caption>
+            <thead>
+              <tr>
+                <th scope="col">Asesor</th>
+                <th scope="col">Cartera total</th>
+                <th scope="col">Cartera activa</th>
+                <th scope="col">Estancados</th>
+                <th scope="col">Tiempo a asignación</th>
+                <th scope="col">Tiempo a primera gestión</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in asesor_rows %}
+                <tr>
+                  <th scope="row">{{ row.nombre }}</th>
+                  <td class="num">{{ row.cartera_total|format_int }}</td>
+                  <td class="num">{{ row.cartera_activa|format_int }}</td>
+                  <td class="num">{{ row.estancados|format_int }}</td>
+                  <td class="num">{{ row.tiempo_asignacion_dias|format_dias }}</td>
+                  <td class="num">{{ row.tiempo_primera_gestion_dias|format_dias }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="table-foot-note">
+          «Sin asesor» agrupa los leads sin asignación activa. «N/D» indica que el evento aún no
+          ocurre para ningún lead del asesor: nunca se reporta como cero.
+        </p>
+        {% if dashboard.current_snapshot.casos_por_estado_y_asesor %}
+          <details class="chart-table">
+            <summary>Ver casos por estado y asesor</summary>
+            <table class="data-table">
+              <caption>Casos por estado y asesor</caption>
+              <thead>
+                <tr><th scope="col">Asesor</th><th scope="col">Estado</th><th scope="col">Leads</th></tr>
+              </thead>
+              <tbody>
+                {% for cell in dashboard.current_snapshot.casos_por_estado_y_asesor %}
+                  <tr>
+                    <th scope="row">{{ cell.nombre }}</th>
+                    <td>{{ cell.estado_label or cell.estado }}</td>
+                    <td class="num">{{ cell.n|format_int }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </details>
+        {% endif %}
+      {% else %}
+        {{ ui.empty_state('Sin asesores con cartera', 'Ajusta los filtros para ver el resumen por asesor.') }}
+      {% endif %}
+    </article>
+  {% endif %}
+{% endblock %}
