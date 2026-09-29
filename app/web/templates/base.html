@@ -1,9 +1,11 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-theme="light">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ page_title or "Tu Pensión Inteligente" }}</title>
+    {# Synchronous on purpose: applies the stored theme before first paint. #}
+    <script src="/static/js/theme.js"></script>
     <link rel="stylesheet" href="/static/css/app.css">
     <script defer src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script defer src="/static/js/app.js"></script>
@@ -28,6 +30,11 @@
         {% endif %}
       </div>
       <div class="topbar-user">
+        {# aria-pressed is kept in sync by theme.js; the server always renders light. #}
+        <button type="button" class="link-button theme-toggle" data-theme-toggle aria-pressed="false">
+          <span class="theme-toggle-icon" aria-hidden="true"></span>
+          <span class="theme-toggle-label">Tema oscuro</span>
+        </button>
         {% if selected_user %}
           <div class="user-meta">
             <span class="user-name">{{ selected_user.display_name }}</span>

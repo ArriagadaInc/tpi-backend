@@ -1707,3 +1707,240 @@ a:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Tema claro / oscuro (H3.3.7)
+   theme.js sets <html data-theme="light|dark"> before first paint. The light
+   theme is the :root token set above and is left untouched; the dark theme
+   only overrides tokens and the rules that hard-code light colours.
+   --------------------------------------------------------------------------- */
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  font-size: 0.82rem;
+}
+
+.theme-toggle-icon::before {
+  content: "\263E";
+}
+
+.theme-toggle[aria-pressed="true"] {
+  background: var(--surface-muted);
+}
+
+.theme-toggle[aria-pressed="true"] .theme-toggle-icon::before {
+  content: "\2600";
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b1120;
+  --surface: #111827;
+  --surface-soft: #162032;
+  --surface-muted: #1e293b;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --border: #334155;
+  --primary: #e2e8f0;
+  --accent: #2dd4bf;
+  --accent-soft: #123332;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --info: #60a5fa;
+  --slate: #cbd5e1;
+  --shadow: 0 24px 48px rgba(0, 0, 0, 0.45);
+  --accent-strong: #0f766e;
+  --accent-strong-hover: #115e59;
+  --text-soft: #cbd5e1;
+  --accent-text: #5eead4;
+}
+
+[data-theme="dark"] .topbar {
+  background: rgba(11, 17, 32, 0.92);
+  border-bottom-color: var(--border);
+}
+
+[data-theme="dark"] .brand-mark {
+  background: linear-gradient(135deg, var(--accent-strong), #1e3a8a);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* The dark accent is a light teal for text and lines; filled buttons keep a
+   deep teal so their white label stays readable. */
+[data-theme="dark"] .primary,
+[data-theme="dark"] .btn-save-state,
+[data-theme="dark"] .note-submit,
+[data-theme="dark"] .btn-primary-simulator {
+  background: var(--accent-strong);
+  color: #fff;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .btn-primary-simulator:hover {
+  background-color: var(--accent-strong-hover);
+}
+
+[data-theme="dark"] .card {
+  background: rgba(17, 24, 39, 0.92);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .auth-card,
+[data-theme="dark"] .modal-card {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background: var(--surface-soft);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+[data-theme="dark"] textarea {
+  border-radius: 14px;
+  padding: 11px 13px;
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--muted);
+}
+
+[data-theme="dark"] .table-wrap {
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .board-table {
+  background: var(--surface);
+}
+
+[data-theme="dark"] .board-table th,
+[data-theme="dark"] .board-table td {
+  border-bottom-color: var(--border);
+}
+
+[data-theme="dark"] .board-table th {
+  background: var(--surface-muted);
+}
+
+[data-theme="dark"] .board-table tbody tr:hover {
+  background: rgba(45, 212, 191, 0.08);
+}
+
+[data-theme="dark"] .status-badge.pendiente,
+[data-theme="dark"] .status-badge.nuevo,
+[data-theme="dark"] .badge-status.nuevo {
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .status-badge.contactado {
+  color: #34d399;
+}
+
+[data-theme="dark"] .status-badge.prospecto,
+[data-theme="dark"] .status-badge.asignado,
+[data-theme="dark"] .badge-status.prospecto,
+[data-theme="dark"] .badge-status.asignado,
+[data-theme="dark"] .badge-status.contactado {
+  color: var(--accent-text);
+}
+
+[data-theme="dark"] .status-badge.en-evaluacion,
+[data-theme="dark"] .status-badge.en-evaluación,
+[data-theme="dark"] .status-badge.citado,
+[data-theme="dark"] .status-badge.en-tramite,
+[data-theme="dark"] .status-badge.expediente,
+[data-theme="dark"] .status-badge.duplicado,
+[data-theme="dark"] .status-badge.dormido,
+[data-theme="dark"] .badge-status.citado,
+[data-theme="dark"] .badge-status.en-tramite,
+[data-theme="dark"] .badge-status.expediente,
+[data-theme="dark"] .badge-status.duplicado,
+[data-theme="dark"] .badge-status.dormido {
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .status-badge.ficha-generada,
+[data-theme="dark"] .status-badge.cerrado,
+[data-theme="dark"] .badge-status.ficha-generada,
+[data-theme="dark"] .badge-status.cerrado {
+  background: rgba(148, 163, 184, 0.14);
+  color: var(--text-soft);
+  border-color: rgba(148, 163, 184, 0.28);
+}
+
+[data-theme="dark"] .status-badge.perdido,
+[data-theme="dark"] .status-badge.no-califica,
+[data-theme="dark"] .badge-status.perdido,
+[data-theme="dark"] .badge-status.no-califica,
+[data-theme="dark"] .alert-error,
+[data-theme="dark"] .age-step--l5 .age-flag {
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .detail-head {
+  border-bottom-color: var(--border);
+}
+
+[data-theme="dark"] .info-card-v2,
+[data-theme="dark"] .story-card,
+[data-theme="dark"] .dev-tools-card,
+[data-theme="dark"] .ops-card,
+[data-theme="dark"] .info-card,
+[data-theme="dark"] .comment-card,
+[data-theme="dark"] .kpi-card {
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .original-request-box {
+  background: var(--surface-soft);
+  color: var(--text-soft);
+}
+
+[data-theme="dark"] .timeline-item {
+  background: var(--surface-soft);
+}
+
+[data-theme="dark"] .timeline-text,
+[data-theme="dark"] .comment-history,
+[data-theme="dark"] .comment-card p {
+  color: var(--text-soft);
+}
+
+[data-theme="dark"] .toast {
+  background: var(--surface-muted);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: 0 18px 35px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .modal {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .quick-range {
+  background: var(--surface-soft);
+}
+
+[data-theme="dark"] .quick-range.is-active,
+[data-theme="dark"] .alert-chip .chip-link,
+[data-theme="dark"] .coverage-banner,
+[data-theme="dark"] .chart-table > summary {
+  color: var(--accent-text);
+}
+
+[data-theme="dark"] .notice-warning {
+  color: #fdba74;
+}
+
+[data-theme="dark"] .age-step .age-fill-track {
+  background: var(--border);
+}
