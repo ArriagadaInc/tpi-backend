@@ -88,7 +88,9 @@ def close_task(root: Path, state: dict[str, Any], *, cancelled: bool) -> dict[st
 
     _append_bitacora(root, _bitacora_entry(task, summary, cancelled))
     worktree.cleanup_task(root, state, task_id)
-    state["worktrees"] = [w for w in state.get("worktrees", []) if not Path(w["path"]).name.startswith(f"{task_id}-")]
+    state["worktrees"] = [
+        w for w in state.get("worktrees", []) if not Path(w["path"]).name.startswith(f"{task_id}-")
+    ]
 
     common.write_yaml_atomic(
         root / "tasks" / "current.yaml",

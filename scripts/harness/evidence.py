@@ -79,7 +79,9 @@ def write_evidence(
     if role not in KIND_ROLES[kind]:
         raise common.HarnessError(f"el rol activo '{role}' no puede registrar evidencia '{kind}'")
     if RESERVED & set(payload):
-        raise common.HarnessError(f"campos reservados en payload: {sorted(RESERVED & set(payload))}")
+        raise common.HarnessError(
+            f"campos reservados en payload: {sorted(RESERVED & set(payload))}"
+        )
     data = {
         "schema_version": 1,
         "kind": kind,
@@ -132,7 +134,9 @@ def validate_reference(
         raise common.HarnessError(f"no existe la evidencia {relative}")
     data = common.read_json(path)
     if data.get("kind") != expected_kind:
-        raise common.HarnessError(f"se esperaba evidencia '{expected_kind}' y llego '{data.get('kind')}'")
+        raise common.HarnessError(
+            f"se esperaba evidencia '{expected_kind}' y llego '{data.get('kind')}'"
+        )
     if data.get("task_id") != task_id:
         raise common.HarnessError("evidencia de otra tarea")
     _check_payload(root, data)
@@ -140,7 +144,9 @@ def validate_reference(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     sub = parser.add_subparsers(dest="command", required=True)
     write = sub.add_parser("write")
     write.add_argument("--kind", required=True)
@@ -156,7 +162,9 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "write":
             payload = json.loads(Path(args.input).read_text(encoding="utf-8"))
-            path = write_evidence(root, args.kind, payload, runtime=args.runtime, session=args.session)
+            path = write_evidence(
+                root, args.kind, payload, runtime=args.runtime, session=args.session
+            )
             print(path.relative_to(root).as_posix())
         elif args.command == "validate":
             _check_payload(root, common.read_json(Path(args.file)))

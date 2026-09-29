@@ -15,7 +15,7 @@ except ImportError:  # executed as a script
     import log_scan  # type: ignore[no-redef]
 
 
-class GuardFailure(Exception):
+class GuardError(Exception):
     """Raised by a guard whose condition does not hold."""
 
 
@@ -37,13 +37,13 @@ class GuardContext:
     def require(self, key: str) -> dict[str, Any]:
         data = self.ref(key)
         if data is None:
-            raise GuardFailure(f"falta la evidencia '{key}'")
+            raise GuardError(f"falta la evidencia '{key}'")
         return data
 
 
 def _check(condition: object, message: str) -> None:
     if not condition:
-        raise GuardFailure(message)
+        raise GuardError(message)
 
 
 def _max_rework(ctx: GuardContext) -> int:
@@ -496,7 +496,7 @@ def evaluate(name: str, ctx: GuardContext) -> str | None:
             guard(ctx, argument)
         else:
             guard(ctx)
-    except GuardFailure as failure:
+    except GuardError as failure:
         return f"{name}: {failure}"
     except (KeyError, TypeError, ValueError, common.HarnessError) as error:
         return f"{name}: evidencia invalida ({error})"

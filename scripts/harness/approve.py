@@ -20,8 +20,9 @@ try:
     from . import common, evidence, transition
 except ImportError:  # executed as a script
     import common  # type: ignore[no-redef]
-    import evidence  # type: ignore[no-redef]
     import transition  # type: ignore[no-redef]
+
+    import evidence  # type: ignore[no-redef]
 
 
 def _require_tty() -> None:
@@ -56,7 +57,9 @@ def activate(root: Path, task_id: str) -> dict[str, Any]:
     backlog = common.load_backlog(root)
     item = next((i for i in backlog.get("items", []) if i.get("id") == task_id), None)
     if item is None or not item.get("task"):
-        raise common.HarnessError(f"'{task_id}' no existe en backlog o no tiene definicion de tarea")
+        raise common.HarnessError(
+            f"'{task_id}' no existe en backlog o no tiene definicion de tarea"
+        )
     task = {**item["task"], "status": "active"}
     errors = common.validate_schema(root, "task", {"schema_version": 1, "task": task})
     if errors:
@@ -91,7 +94,9 @@ def gate_package(root: Path, state: dict[str, Any]) -> dict[str, Any]:
         "lkg_version_label": candidate["lkg"]["version_label"],
         "candidate_evidence": {
             "path": state["refs"]["candidate_evidence"],
-            "sha256": common.sha256_file(common.resolve_repo_path(root, state["refs"]["candidate_evidence"])),
+            "sha256": common.sha256_file(
+                common.resolve_repo_path(root, state["refs"]["candidate_evidence"])
+            ),
         },
         "rollback_authorization": {
             "scope": policies["rollback_authorization"]["scope"],
@@ -109,8 +114,16 @@ def gate(root: Path, decision: str, reason: str = "") -> dict[str, Any]:
     state = _require_state(root, "WAITING_HUMAN_APPROVAL")
     package = gate_package(root, state)
     print("=== AUTORIZAR DEPLOYMENT DEV ===")
-    for key in ("approved_commit", "application_version", "environment", "app_digest", "caddy_digest",
-                "bundle_sha256", "s3_key", "lkg_version_label"):
+    for key in (
+        "approved_commit",
+        "application_version",
+        "environment",
+        "app_digest",
+        "caddy_digest",
+        "bundle_sha256",
+        "s3_key",
+        "lkg_version_label",
+    ):
         print(f"{key}: {package[key]}")
     print(f"environment_observed: {package['environment_observed']}")
     print("smoke_plan:", ", ".join(str(step) for step in package["smoke_plan"]))
@@ -136,10 +149,16 @@ def accept(root: Path, decision: str, criteria: list[str], notes: str = "") -> d
     _require_tty()
     state = _require_state(root, "VERIFYING")
     task = common.load_current_task(root) or {}
-    human_ids = {c["id"] for c in task.get("acceptance_criteria", []) if c["verification"] in ("human", "both")}
+    human_ids = {
+        c["id"]
+        for c in task.get("acceptance_criteria", [])
+        if c["verification"] in ("human", "both")
+    }
     unknown = set(criteria) - human_ids
     if not criteria or unknown:
-        raise common.HarnessError(f"criterios invalidos para aceptacion humana: {sorted(unknown) or 'vacio'}")
+        raise common.HarnessError(
+            f"criterios invalidos para aceptacion humana: {sorted(unknown) or 'vacio'}"
+        )
     status = "accepted" if decision == "accept" else "rejected"
     _confirm(f"Escribe {status.upper()} para confirmar: ", status.upper())
     payload = {
@@ -165,7 +184,9 @@ def resolve(root: Path, to_state: str, reason: str) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     sub = parser.add_subparsers(dest="command", required=True)
     act = sub.add_parser("activate")
     act.add_argument("--task", required=True)
@@ -187,7 +208,12 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "gate":
             state = gate(root, args.decision, args.reason)
         elif args.command == "accept":
-            state = accept(root, args.decision, [c.strip() for c in args.criteria.split(",") if c.strip()], args.notes)
+            state = accept(
+                root,
+                args.decision,
+                [c.strip() for c in args.criteria.split(",") if c.strip()],
+                args.notes,
+            )
         else:
             state = resolve(root, args.to, args.reason)
     except (common.HarnessError, EOFError, KeyboardInterrupt) as error:

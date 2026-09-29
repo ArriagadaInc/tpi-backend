@@ -54,7 +54,10 @@ _SENSITIVE_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
 
 _REDACTIONS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"X-Amz-(Signature|Credential|Security-Token)=[^&\s\"']+"), r"X-Amz-\1=[REDACTED]"),
-    (re.compile(r"https://[^\s\"']*amazonaws\.com[^\s\"']*\?[^\s\"']*"), "[REDACTED_PRESIGNED_URL]"),
+    (
+        re.compile(r"https://[^\s\"']*amazonaws\.com[^\s\"']*\?[^\s\"']*"),
+        "[REDACTED_PRESIGNED_URL]",
+    ),
     (re.compile(r"\b(AKIA|ASIA)[0-9A-Z]{16}\b"), "[REDACTED_ACCESS_KEY]"),
     (
         re.compile(

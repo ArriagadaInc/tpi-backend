@@ -14,9 +14,7 @@ from tests.harness.conftest import bind_task
 
 
 def test_skill_file_exists_and_declared_for_developer():
-    path = Path(
-        "agents/developer/skills/python-design-patterns/SKILL.md"
-    )
+    path = Path("agents/developer/skills/python-design-patterns/SKILL.md")
     assert (common.ROOT / path).is_file()
     policies = common.load_policies(common.ROOT)
     assert "python-design-patterns" in policies["roles"]["developer"]["skills"]["by_task"]

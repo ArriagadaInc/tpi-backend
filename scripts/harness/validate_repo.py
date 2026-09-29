@@ -58,8 +58,15 @@ REQUIRED_PATHS = (
     "runtime/deepseek/README.md",
 )
 SCHEMAS = (
-    "state", "task", "backlog", "workflow", "policies", "knowledge-sources", "environment",
-    "project-profile", "evidence",
+    "state",
+    "task",
+    "backlog",
+    "workflow",
+    "policies",
+    "knowledge-sources",
+    "environment",
+    "project-profile",
+    "evidence",
 )
 ROLE_FILES = ("PROMPT.md", "CONTEXT.md", "POLICIES.md")
 SKILL_SECTIONS = (
@@ -120,11 +127,15 @@ def validate(root: Path) -> tuple[list[str], list[str]]:
             "task": common.read_yaml(root / "tasks" / "current.yaml"),
             "backlog": common.load_backlog(root),
         }
-        loaded["environment"] = common.load_environment(root, loaded["state"].get("environment", "dev"))
+        loaded["environment"] = common.load_environment(
+            root, loaded["state"].get("environment", "dev")
+        )
     except (OSError, ValueError, yaml.YAMLError, common.HarnessError) as error:
         return [f"archivo del Harness ilegible: {error}"], warnings
     for schema, data in loaded.items():
-        errors.extend(f"{schema}: {message}" for message in common.validate_schema(root, schema, data))
+        errors.extend(
+            f"{schema}: {message}" for message in common.validate_schema(root, schema, data)
+        )
     if errors:
         return errors, warnings
 
@@ -134,7 +145,14 @@ def validate(root: Path) -> tuple[list[str], list[str]]:
     states = workflow["states"]
     if workflow["initial_state"] not in states:
         errors.append("initial_state no declarado")
-    for required_state in ("DEPLOY_FAILED", "VERIFY_FAILED", "BLOCKED_HUMAN", "WAITING_HUMAN_APPROVAL", "CANDIDATE_REVIEW", "DONE"):
+    for required_state in (
+        "DEPLOY_FAILED",
+        "VERIFY_FAILED",
+        "BLOCKED_HUMAN",
+        "WAITING_HUMAN_APPROVAL",
+        "CANDIDATE_REVIEW",
+        "DONE",
+    ):
         if required_state not in states:
             errors.append(f"estado obligatorio ausente: {required_state}")
     seen_ids: set[str] = set()
@@ -144,15 +162,22 @@ def validate(root: Path) -> tuple[list[str], list[str]]:
         seen_ids.add(transition["id"])
         for end in ("from", "to"):
             if transition[end] not in states:
-                errors.append(f"transicion {transition['id']}: estado desconocido {transition[end]}")
+                errors.append(
+                    f"transicion {transition['id']}: estado desconocido {transition[end]}"
+                )
         for guard in transition.get("guards", []):
             if not guards.known_guard(guard):
                 errors.append(f"transicion {transition['id']}: guard desconocido {guard}")
         records = transition.get("records")
         if records and records not in workflow["evidence_kinds"]:
             errors.append(f"transicion {transition['id']}: records desconocido {records}")
-        if transition["actor"] in common.AGENT_ROLES and states[transition["from"]]["role"] != transition["actor"]:
-            errors.append(f"transicion {transition['id']}: actor distinto del rol del estado origen")
+        if (
+            transition["actor"] in common.AGENT_ROLES
+            and states[transition["from"]]["role"] != transition["actor"]
+        ):
+            errors.append(
+                f"transicion {transition['id']}: actor distinto del rol del estado origen"
+            )
     reachable = {workflow["initial_state"]}
     frontier = [workflow["initial_state"]]
     while frontier:
@@ -194,7 +219,9 @@ def validate(root: Path) -> tuple[list[str], list[str]]:
             if not path.is_file():
                 errors.append(f"falta agents/{role}/{filename}")
             elif len(path.read_text(encoding="utf-8").splitlines()) > MAX_CONTEXT_LINES[filename]:
-                warnings.append(f"agents/{role}/{filename} supera {MAX_CONTEXT_LINES[filename]} lineas")
+                warnings.append(
+                    f"agents/{role}/{filename} supera {MAX_CONTEXT_LINES[filename]} lineas"
+                )
         for skill in sorted(skills_by_role.get(role, set())):
             path = root / "agents" / role / "skills" / skill / "SKILL.md"
             if not path.is_file():
@@ -220,8 +247,12 @@ def validate(root: Path) -> tuple[list[str], list[str]]:
     for source_id, spec in {**knowledge["sources"], **knowledge["tools"]}.items():
         path = root / spec["path"]
         if not path.exists():
-            (errors if spec.get("required", True) else warnings).append(f"fuente {source_id} ausente: {spec['path']}")
-    tracked_candidates = [spec["path"] for spec in knowledge["sources"].values() if spec.get("required")]
+            (errors if spec.get("required", True) else warnings).append(
+                f"fuente {source_id} ausente: {spec['path']}"
+            )
+    tracked_candidates = [
+        spec["path"] for spec in knowledge["sources"].values() if spec.get("required")
+    ]
     ignored = _git_ignored(root, list(REQUIRED_PATHS) + tracked_candidates)
     errors.extend(f"ruta obligatoria ignorada por .gitignore: {path}" for path in ignored)
 
@@ -235,9 +266,16 @@ def validate(root: Path) -> tuple[list[str], list[str]]:
     limit = int(policies["harness"]["progress_current_max_lines"])
     current_lines = len((root / "progress" / "current.md").read_text(encoding="utf-8").splitlines())
     if current_lines > limit:
-        errors.append(f"progress/current.md supera {limit} lineas ({current_lines}); ejecutar context_compact.py")
+        errors.append(
+            f"progress/current.md supera {limit} lineas ({current_lines}); ejecutar context_compact.py"
+        )
 
-    for adapter in ("CLAUDE.md", "runtime/claude/README.md", "runtime/codex/README.md", "runtime/deepseek/README.md"):
+    for adapter in (
+        "CLAUDE.md",
+        "runtime/claude/README.md",
+        "runtime/codex/README.md",
+        "runtime/deepseek/README.md",
+    ):
         text = (root / adapter).read_text(encoding="utf-8")
         if "AGENTS.md" not in text:
             errors.append(f"{adapter} no remite al protocolo canonico AGENTS.md")
@@ -250,7 +288,9 @@ def validate(root: Path) -> tuple[list[str], list[str]]:
                 text = path.read_text(encoding="utf-8", errors="replace")
                 found = [f for f in common.find_sensitive(text) if f not in ("rut", "phone")]
                 if found:
-                    errors.append(f"material sensible en {path.relative_to(root).as_posix()}: {found}")
+                    errors.append(
+                        f"material sensible en {path.relative_to(root).as_posix()}: {found}"
+                    )
     return errors, warnings
 
 

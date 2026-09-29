@@ -305,7 +305,7 @@ def test_developer_can_update_existing_pr(state_as):
         REAL_ROOT,
         {
             "tool_name": "Bash",
-            "tool_input": {"command": "gh pr edit 51 --body \"actualizado tras rework\""},
+            "tool_input": {"command": 'gh pr edit 51 --body "actualizado tras rework"'},
             "cwd": WORKTREE_CWD,
         },
         {},
