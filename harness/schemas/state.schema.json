@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Harness state",
+  "type": "object",
+  "required": ["schema_version", "state", "task_id", "environment", "rework_round", "candidate_rework_round", "rollback_attempted", "refs", "sessions", "worktrees", "updated_at", "history"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "state": {"type": "string", "pattern": "^[A-Z_]+$"},
+    "task_id": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9._-]+$"},
+    "environment": {"const": "dev"},
+    "rework_round": {"type": "integer", "minimum": 0},
+    "candidate_rework_round": {"type": "integer", "minimum": 0},
+    "rollback_attempted": {"type": "boolean"},
+    "refs": {"type": "object", "additionalProperties": {"type": "string"}},
+    "sessions": {
+      "type": "object",
+      "properties": {
+        "developer": {"type": ["object", "null"]},
+        "reviewer": {"type": ["object", "null"]},
+        "deployer": {"type": ["object", "null"]}
+      }
+    },
+    "worktrees": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "role", "sha", "purpose", "created_at"],
+        "properties": {
+          "path": {"type": "string"},
+          "role": {"enum": ["developer", "reviewer", "deployer"]},
+          "sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+          "branch": {"type": ["string", "null"]},
+          "purpose": {"type": "string"},
+          "created_at": {"type": "string"}
+        }
+      }
+    },
+    "updated_at": {"type": "string"},
+    "last_transition": {"type": ["object", "null"]},
+    "history": {"type": "array", "maxItems": 20}
+  },
+  "additionalProperties": false
+}

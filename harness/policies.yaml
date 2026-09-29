@@ -1,0 +1,261 @@
+schema_version: 1
+# Politicas maquina del Harness. Aplicadas por scripts/harness/guard.py (hooks Claude),
+# scripts/harness/aws_guard.py (todo acceso AWS) y transition.py (guards de workflow).
+# Permiso efectivo = ROL (derivado del estado) + ESTADO + ENTORNO.
+
+harness:
+  max_rework_rounds: 3
+  max_candidate_artifact_rework: 2
+  progress_current_max_lines: 60
+  deploy_capable_runtimes: [claude]
+  deploy_states: [PREPARING_DEPLOYMENT, DEPLOYING, VERIFYING, DEPLOY_FAILED, VERIFY_FAILED, ROLLING_BACK]
+  maintenance_env_var: TPI_HARNESS_MAINTENANCE
+  human_script: scripts/harness/approve.py
+  # D3: allowlist declarativa y explicita de mantenimiento. Solo estas rutas quedan
+  # habilitadas para escritura fuera de worktree cuando TPI_HARNESS_MAINTENANCE=1.
+  # NO incluye app/**, front/** funcional, tests funcionales de aplicacion, deployment
+  # operativo, .github/workflows, secrets ni infraestructura. Fuera de esta lista,
+  # mantenimiento no cambia el resultado del guard (se evaluan las reglas normales).
+  maintenance_allowlist:
+    - "harness/**"
+    - "agents/**"
+    - "scripts/harness/**"
+    - "tests/harness/**"
+    - "runtime/**"
+    - ".claude/**"
+    - ".mcp.json"
+    - "AGENTS.md"
+    - "CLAUDE.md"
+    - "init.sh"
+    - "init.ps1"
+    - "environments/**"
+    - "tasks/**"
+    - "progress/**"
+    - "evidence/**"
+    - "docs/cicd/**"
+
+# Rutas que ningun agente escribe con herramientas de edicion. Solo scripts del Harness o
+# mantenimiento humano (proceso Claude lanzado por el humano con TPI_HARNESS_MAINTENANCE=1).
+protected_paths:
+  - "harness/**"
+  - "agents/**"
+  - "environments/**"
+  - "tasks/**"
+  - "evidence/**"
+  - "scripts/harness/**"
+  - "tests/harness/**"
+  - "runtime/**"
+  - "docs/cicd/**"
+  - ".claude/**"
+  - ".mcp.json"
+  - "AGENTS.md"
+  - "CLAUDE.md"
+  - "init.sh"
+  - "init.ps1"
+  - "progress/decisions.md"
+  - "progress/archive/**"
+  # v1.1: latch DENIED del Supervisor y log del guard: ningun agente puede borrarlos.
+  - ".harness-runtime/supervisor/**"
+  - ".harness-runtime/guard.log"
+
+# Lectura denegada para todos los roles (secretos locales).
+secret_read_deny:
+  - ".env"
+  - ".env.local"
+  - "**/.env.*.local"
+  - "**/*.pem"
+  - "**/*.key"
+  - "**/.aws/credentials"
+  - "**/.aws/config"
+
+roles:
+  developer:
+    work_states: [DEVELOPING]
+    write_allow:
+      - "app/**"
+      - "tests/**"
+      - "front/**"
+      - "docs/**"
+      - "scripts/sql/**"
+      - "scripts/*.py"
+      - "README.md"
+      - "CHANGELOG.md"
+    write_requires_change_class_c:
+      - ".github/**"
+      - "deployment/**"
+      - "scripts/release/**"
+      - "Dockerfile"
+      - "docker-compose*.yml"
+      - ".ebextensions/**"
+    write_requires_lockfile_flag:
+      - "requirements/**"
+      - "pyproject.toml"
+    always_writable: ["progress/current.md", "progress/sessions/**", ".harness-runtime/payloads/**"]
+    aws_access: none
+    mcp_aws_tools: []
+    git_push: task_branch_only
+    gh_allow: ["pr create", "pr view", "pr checks", "pr diff", "pr list", "pr edit", "run view", "run list", "run watch"]
+    skills:
+      always: [tpi-testing, tpi-docs-bitacora]
+      by_task: [tpi-python-fastapi, tpi-postgresql-repository, tpi-sql-migrations, tpi-pii-rbac, tpi-crm-domain, python-design-patterns]
+  reviewer:
+    work_states: [REVIEWING, CANDIDATE_REVIEW]
+    write_allow: []
+    always_writable: ["progress/current.md", "progress/sessions/**", ".harness-runtime/payloads/**"]
+    aws_access: state_controlled
+    mcp_aws_tools: [knowledge]
+    git_push: never
+    gh_allow: ["pr view", "pr checks", "pr diff", "pr list", "run view", "run list", "run watch", "run download", "api-get"]
+    skills:
+      by_state:
+        REVIEWING: [tpi-code-architecture-review, tpi-security-pii-review, tpi-test-quality-review, tpi-cicd-review, tpi-db-migration-review]
+        CANDIDATE_REVIEW: [tpi-release-readiness, tpi-deployment-safety-review]
+  deployer:
+    work_states: [MERGING, PREPARING_DEPLOYMENT, DEPLOYING, VERIFYING, DEPLOY_FAILED, VERIFY_FAILED, ROLLING_BACK]
+    write_allow: [".harness-release/**"]
+    always_writable: ["progress/current.md", "progress/sessions/**", ".harness-runtime/payloads/**"]
+    aws_access: state_controlled
+    mcp_aws_tools: [knowledge]
+    git_push: never
+    gh_allow: ["pr view", "pr checks", "pr diff", "pr list", "run view", "run list", "run watch", "run download", "api-get"]
+    gh_state_allow:
+      MERGING: ["pr merge"]
+      PREPARING_DEPLOYMENT: ["workflow run"]
+    skills:
+      by_state:
+        MERGING: [tpi-release-candidate]
+        PREPARING_DEPLOYMENT: [aws-read-preflight, tpi-release-candidate, elastic-beanstalk-version-only, aws-deployment-planning]
+        DEPLOYING: [aws-read-preflight, elastic-beanstalk-version-only, aws-observability, aws-failure-analysis]
+        VERIFYING: [aws-observability, smoke-testing-dev, aws-failure-analysis]
+        DEPLOY_FAILED: [aws-failure-analysis, rollback-version-only]
+        VERIFY_FAILED: [aws-failure-analysis, rollback-version-only]
+        ROLLING_BACK: [rollback-version-only, aws-observability, aws-failure-analysis]
+
+mcp:
+  knowledge_tools: [aws___search_documentation, aws___read_documentation, aws___retrieve_skill, aws___list_regions, aws___get_regional_availability]
+  forbidden_tools: [aws___run_script, aws___get_presigned_url, aws___get_tasks]
+
+bash:
+  # v1.1: estas tres reglas distinguen EJECUTAR de MENCIONAR. guard.py las evalua sobre la
+  # estructura del comando (palabra de comando, argumentos, redirecciones, heredocs, codigo
+  # python via ast; command_analysis.py), no sobre el texto crudo: un patron de grep, un payload
+  # JSON o un string de evidencia que solo mencionan la operacion no son la operacion.
+  # legacy_pattern se aplica SOLO al texto que no puede analizarse (codigo opaco, parser fallido,
+  # stdin canalizado a un shell): ahi se mantiene el comportamiento conservador de v1.
+  structural_rules:
+    human_script: {legacy_pattern: "approve\\.py|import\\s+approve\\b|harness[/\\\\.]approve", reason: "Las decisiones humanas se ejecutan por el humano en su propia terminal"}
+    aws_cli: {legacy_pattern: "(^|[\\s;&|(`])aws(\\.exe)?\\s", reason: "AWS CLI directo prohibido: usar python scripts/harness/aws_guard.py"}
+    # Establecer/modificar/eliminar la variable (VAR=, export, $env:VAR =, setx, os.environ[...]=,
+    # putenv, Set-Item env:, env -u ...) se deniega siempre. Leerla o mencionarla no.
+    maintenance_env: {reason: "El modo mantenimiento solo lo fija el humano al lanzar el runtime"}
+  forbidden_everywhere:
+    - {pattern: "get-secret-value|batch-get-secret-value|AUTH_USERS_JSON|DATABASE_PASSWORD|WEB_SESSION_SECRET|API_IDEMPOTENCY_HMAC_SECRET", reason: "Lectura o manejo de secretos prohibido"}
+    - {pattern: "\\bdocker\\s+(push|login)\\b", reason: "Publicar imagenes solo via workflow publish-dev-ecr-images"}
+    - {pattern: "git\\s+push\\b[^\\n]*(--force|\\s-f\\b|--force-with-lease|--mirror|--delete)", reason: "Push forzado o destructivo prohibido"}
+    - {pattern: "git\\s+push\\b[^\\n]*\\b(main|master)\\b", reason: "Push directo a main prohibido"}
+    - {pattern: "\\bgh\\s+(secret|variable|auth\\s+token|repo\\s+(edit|delete)|release\\s+(create|delete))\\b", reason: "Operacion gh sensible prohibida"}
+    - {pattern: "\\bboto3\\b", reason: "SDK AWS directo prohibido: usar aws_guard.py"}
+    # D4: operaciones destructivas bloqueadas SIEMPRE, incluso bajo mantenimiento (esta lista
+    # se evalua sin excepcion de maintenance en guard.py:check_command). Enforcement parcial:
+    # cubre los patrones literales soportados; no puede demostrarse cobertura total frente a
+    # shell arbitrario/ofuscado (alias, variables indirectas, codificacion, binarios propios).
+    - {pattern: "git\\s+reset\\s+--hard", reason: "git reset --hard destructivo prohibido; requiere autorizacion humana explicita"}
+    - {pattern: "git\\s+clean\\s+-[a-zA-Z-]*[fdx]", reason: "git clean destructivo prohibido; requiere autorizacion humana explicita"}
+    - {pattern: "git\\s+checkout\\s+--(\\s|$)", reason: "git checkout -- descarta cambios; requiere autorizacion humana explicita"}
+    - {pattern: "git\\s+restore\\b", reason: "git restore descarta cambios; requiere autorizacion humana explicita"}
+    - {pattern: "\\brm\\b[^\\n]*-[a-zA-Z]*r[a-zA-Z]*f|\\brm\\b[^\\n]*-[a-zA-Z]*f[a-zA-Z]*r", reason: "rm -rf/-fr prohibido; requiere autorizacion humana explicita"}
+    - {pattern: "Remove-Item\\b[^\\n]*-Recurse", reason: "Remove-Item -Recurse destructivo prohibido; requiere autorizacion humana explicita"}
+    - {pattern: "\\brmdir\\s+/s\\b", reason: "rmdir /s destructivo prohibido; requiere autorizacion humana explicita"}
+    - {pattern: "\\bdel\\s+/s\\b", reason: "del /s destructivo prohibido; requiere autorizacion humana explicita"}
+    # D7: lectura de secretos por shell (complementa check_read; enforcement parcial, ver arriba).
+    - {pattern: "\\b(cat|type|more|less|head|tail|Get-Content|gc)\\b[^\\n]*\\.env(\\.[A-Za-z0-9._-]*)?(?!\\.example)\\b", reason: "lectura de .env por shell prohibida"}
+    - {pattern: "\\b(cat|type|more|less|head|tail|Get-Content|gc)\\b[^\\n]*credentials\\b", reason: "lectura de credenciales por shell prohibida"}
+    - {pattern: "\\.aws[\\\\/](credentials|config)\\b", reason: "acceso a credenciales AWS locales por shell prohibido"}
+  protected_write_verbs: "(>|>>|\\btee\\b|\\bsed\\s+-i|\\brm\\b|\\bmv\\b|\\bcp\\b|\\btruncate\\b|Set-Content|Add-Content|Out-File|Remove-Item|Move-Item|Copy-Item|New-Item|git\\s+(checkout|restore|rm|mv)\\b)"
+
+aws:
+  profile: tpi-dev
+  region: us-east-2
+  mcp_region: us-east-1
+  global_deny_operations:
+    - "elasticbeanstalk describe-configuration-settings"
+    - "elasticbeanstalk delete-application-version"
+    - "elasticbeanstalk delete-application"
+    - "elasticbeanstalk terminate-environment"
+    - "elasticbeanstalk rebuild-environment"
+    - "elasticbeanstalk restart-app-server"
+    - "elasticbeanstalk swap-environment-cnames"
+    - "elasticbeanstalk create-environment"
+    - "elasticbeanstalk abort-environment-update"
+    - "s3 rm"
+    - "s3api delete-object"
+    - "s3api delete-objects"
+    - "ecr batch-delete-image"
+    - "ecr put-lifecycle-policy"
+    - "secretsmanager get-secret-value"
+    - "secretsmanager batch-get-secret-value"
+    - "ssm send-command"
+    - "codepipeline start-pipeline-execution"
+    - "codepipeline enable-stage-transition"
+  global_deny_services: [iam, route53, route53domains, rds, ec2, cloudformation, autoscaling, kms, sts-assume]
+  global_deny_flags: ["--option-settings", "--options-to-remove", "--template-name", "--solution-stack-name", "--platform-arn", "--tier", "--endpoint-url", "--no-verify-ssl", "--process", "--auto-create-application", "--acl"]
+  modes:
+    none: []
+    read:
+      - "sts get-caller-identity"
+      - "elasticbeanstalk describe-environments"
+      - "elasticbeanstalk describe-application-versions"
+      - "elasticbeanstalk describe-events"
+      - "elasticbeanstalk describe-environment-health"
+      - "elasticbeanstalk describe-instances-health"
+      - "s3api head-object"
+      - "ecr describe-images"
+      - "ecr describe-image-scan-findings"
+      - "ecr describe-repositories"
+      - "codepipeline get-pipeline-state"
+      - "logs describe-log-groups"
+      - "logs filter-log-events"
+    candidate_read:
+      - "sts get-caller-identity"
+      - "elasticbeanstalk describe-environments"
+      - "elasticbeanstalk describe-application-versions"
+      - "s3api head-object"
+      - "ecr describe-images"
+      - "ecr describe-image-scan-findings"
+      - "ecr describe-repositories"   # v1.1 (dogfood H3.3.6): solo repos DEV del environment
+    prepare: ["@read", "s3api put-object", "elasticbeanstalk create-application-version"]
+    cutover: ["@read", "elasticbeanstalk update-environment"]
+    rollback: ["@read", "elasticbeanstalk update-environment"]
+  state_modes:
+    PREPARING_DEPLOYMENT: {deployer: prepare}
+    CANDIDATE_REVIEW: {reviewer: candidate_read}
+    DEPLOYING: {deployer: cutover}
+    VERIFYING: {deployer: read}
+    DEPLOY_FAILED: {deployer: read}
+    VERIFY_FAILED: {deployer: read}
+    ROLLING_BACK: {deployer: rollback}
+  # D6: mantenimiento NO amplia el acceso AWS. No existe maintenance_mode/maintenance_states:
+  # el modo AWS depende exclusivamente de rol + workflow_state + entorno (state_modes arriba).
+  # Si un estado+rol normalmente resuelve a "none", mantenimiento tambien resuelve a "none".
+  access_denied_markers: [AccessDenied, AccessDeniedException, UnauthorizedOperation, InsufficientPrivilegesException, "not authorized to perform", ExpiredToken, InvalidClientTokenId]
+
+rollback_authorization:
+  scope: single_version_only_rollback_to_named_lkg
+  max_attempts: 1
+  conditions:
+    - update_environment_accepted
+    - environment_degraded_inconsistent_or_not_expected_state
+    - lkg_application_version_usable
+    - lkg_images_present_in_ecr
+    - no_option_settings_required
+    - not_purely_functional_defect
+    - no_previous_rollback_attempt
+
+# v1.1: indicadores de datos sensibles en logs (count-only via aws_guard; nunca se leen lineas).
+# strong: una coincidencia bloquea el cierre y NUNCA se degrada automaticamente.
+# weak: termino generico (p. ej. `hash` en `cert_hash` de Caddy/ACME); no equivale a un secreto,
+# pero toda coincidencia exige clasificacion humana registrada antes de `verified`.
+observability:
+  log_indicators:
+    strong: [Authorization, Bearer, password, cookie, raw_payload, secret, token]
+    weak: [hash]

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Project profile",
+  "type": "object",
+  "required": ["schema_version", "project", "scope", "knowledge_sources", "stack", "quality_gates", "git", "release", "harness"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "project": {
+      "type": "object",
+      "required": ["id", "name", "repository", "default_branch"],
+      "properties": {"id": {"const": "tpi"}}
+    },
+    "scope": {"type": "object", "required": ["environments"], "properties": {"environments": {"const": ["dev"]}}},
+    "quality_gates": {"type": "object", "required": ["coverage_min", "commands"], "properties": {"coverage_min": {"const": 85}}},
+    "release": {"type": "object", "required": ["identity_chain", "invariant", "change_classes", "harness_deployable_classes"]},
+    "harness": {"type": "object", "required": ["max_rework_rounds", "deploy_capable_runtimes"]}
+  }
+}

@@ -1,0 +1,166 @@
+schema_version: 1
+# Backlog reconstruido en el Discovery (2026-09-14). Ninguna tarea es current hasta que el humano la active.
+items:
+  - id: H3.3.1
+    title: Completar RBAC/PII y asignacion manual en DEV
+    priority: P0
+    category: functional
+    status: pending
+    change_class: A
+    summary: CEO/CTO ven PII completa, roles restringidos enmascarada server-side sin fuga en HTML; control de asignacion manual visible; smoke de asignacion y validacion DB; corregir docs H3.3.
+    evidence: ["issue #50", "docs/BITACORA.md 2026-09-12", "docs/cicd/TPI_Contrato_CICD_AWS_v2.md seccion 9"]
+    dependencies: []
+    task:
+      id: H3.3.1
+      title: Completar RBAC/PII y asignacion manual en DEV
+      objective: Cerrar la deuda funcional H3.3.1 del issue #50 y desplegarla por el fast path version-only.
+      source: {type: issue, ref: "ArriagadaInc/tpi-backend#50"}
+      change_class: A
+      deploy_required: true
+      requires_human_acceptance: true
+      acceptance_criteria:
+        - {id: AC-1, description: "CEO/CTO ven PII completa en bandeja y detalle", verification: both}
+        - {id: AC-2, description: "Roles restringidos reciben PII enmascarada server-side y el HTML servido no contiene PII completa", verification: both}
+        - {id: AC-3, description: "El control de asignacion manual aparece para roles autorizados", verification: both}
+        - {id: AC-4, description: "Asignar un lead sin asignacion activa cambia estado a asignado, persiste en tpi.asignaciones, registra tpi.auditoria y una sola asignacion activa", verification: human}
+        - {id: AC-5, description: "Documentacion H3.3 corregida sin versiones/acceptance antiguos", verification: automated}
+      constraints: ["No tocar AWS/IAM/CodePipeline/Route53", "No reejecutar migraciones 005/006", "No leer AUTH_USERS_JSON"]
+      dependencies: []
+      risk: {level: medium, notes: "PII; requiere smoke autenticado humano"}
+      status: active
+  - id: AUTOMATED_AUTHENTICATED_SMOKE
+    title: Smoke autenticado automatizado con identidad sintetica
+    priority: P0
+    category: h3.2
+    status: pending
+    change_class: E
+    summary: Cuenta sintetica de minimo privilegio y ejecucion del smoke sin revelar secretos al LLM (p. ej. asm-exec) para eliminar la aceptacion humana excepcional en VERIFYING.
+    evidence: ["docs/cicd/TPI_Contrato_CICD_AWS_v2.md secciones 11 y 16", "decision owner 2026-09-14"]
+  - id: H3.2-ECR-LIFECYCLE
+    title: Lifecycle de ECR compatible con rollback
+    priority: P0
+    category: infra
+    status: pending
+    change_class: C
+    summary: "ECR lifecycle keep-20 puede eliminar imagenes requeridas por el LKG. Mientras no se corrija, preflight y candidate review verifican todos los digests del LKG."
+    evidence: ["deployment/ecr/lifecycle-policy.json", "aws ecr get-lifecycle-policy (2026-09-14): aplicada; tpi-dev-app con 20 imagenes"]
+  - id: H3.2-LEAST-PRIVILEGE-ROLES
+    title: Perfiles tpi-dev-readonly y tpi-dev-release con roles IAM minimos
+    priority: P1
+    category: infra
+    status: pending
+    change_class: C
+    summary: Reemplazar el uso transitorio del usuario IAM humano (perfil tpi-dev) por roles de minimo privilegio para lectura y release version-only.
+    evidence: ["aws sts get-caller-identity: user/Alvaro", "docs/cicd/TPI_Contrato_CICD_AWS_v2.md secciones 6 y 16"]
+  - id: H3.2-DOMAIN-LOCKED-BUNDLE-IN-CI
+    title: Construir el bundle domain-locked en CI
+    priority: P1
+    category: h3.2
+    status: pending
+    change_class: C
+    summary: publish-dev-ecr-images genera el bundle ecr (dependiente de option settings); el bundle domain-locked se genera localmente. Incorporarlo al workflow con manifest.
+    evidence: ["deployment/build_eb_ecr_bundle.py (sin CLI domain-locked)", ".github/workflows/publish-dev-ecr-images.yml"]
+  - id: H3.2-RUNTIME-RELEASE-IDENTITY
+    title: Identidad de release verificable en runtime
+    priority: P1
+    category: h3.2
+    status: pending
+    change_class: A
+    summary: Endpoint o header controlado con commit/version/digest para verificar runtime sin inferir por cadena.
+    evidence: ["app/ sin endpoint de version (grep 2026-09-14)"]
+  - id: HARNESS-ENFORCEMENT-CODEX-DEEPSEEK
+    title: Enforcement equivalente para Codex y DeepSeek
+    priority: P1
+    category: harness
+    status: pending
+    change_class: none
+    summary: Demostrar controles equivalentes a los hooks Claude antes de permitir estados de deploy en esos runtimes.
+    evidence: ["runtime/codex/README.md", "runtime/deepseek/README.md"]
+  - id: H3.2-RECONCILE-HISTORICAL-TOOLING
+    title: Reconciliar tooling historico con option-settings y rollback automatico
+    priority: P1
+    category: h3.2
+    status: pending
+    change_class: C
+    summary: promote_eb_candidate.py y promote_domain_baseline.py usan --option-settings y rollback automatico; preflight-dev-eb.yml elige rollback por DateUpdated y usa describe-configuration-settings; deploy-dev-eb.yml tiene valores hardcodeados y "|| true".
+    evidence: ["deployment/aws/promote_eb_candidate.py:335", ".github/workflows/preflight-dev-eb.yml:128,164", ".github/workflows/deploy-dev-eb.yml:180"]
+  - id: H3.2-RETIRE-HISTORICAL-WORKFLOWS
+    title: Retiro o control de workflows historicos no autorizados
+    priority: P1
+    category: h3.2
+    status: pending
+    change_class: C
+    summary: deploy-dev-eb.yml y preflight-dev-eb.yml siguen ejecutables por workflow_dispatch; retirarlos o protegerlos.
+    evidence: [".github/workflows/"]
+  - id: H3.2-AUTOMERGE-BRANCH-PROTECTION
+    title: Auto-merge y branch protection para main
+    priority: P1
+    category: h3.2
+    status: pending
+    change_class: C
+    summary: "allow_auto_merge=false, main sin protection ni rulesets (2026-09-14). Un Reviewer con las mismas credenciales GitHub no puede aprobar su propio PR; evaluar required checks + GitHub App/identidad separada."
+    evidence: ["gh api repos/ArriagadaInc/tpi-backend", "gh api .../branches/main"]
+  - id: H3.2-INDUSTRIALIZATION
+    title: Industrializar el fast path (IaC control plane, service roles, promocion automatizada)
+    priority: P1
+    category: h3.2
+    status: pending
+    change_class: C
+    summary: Roadmap P1 del contrato v2; no reactivar CodePipeline a ciegas.
+    evidence: ["docs/cicd/TPI_Contrato_CICD_AWS_v2.md seccion 16"]
+  - id: DB-PATH-MECHANISM
+    title: Mecanismo controlado para migraciones clase D en AWS DEV
+    priority: P2
+    category: db
+    status: pending
+    change_class: D
+    summary: Hasta existir, cualquier tarea que requiera ejecutar migraciones en AWS termina en BLOCKED_HUMAN. No reejecutar 005/006.
+    evidence: ["docs/database/04_MIGRATIONS.md", "docs/cicd/TPI_Contrato_CICD_AWS_v2.md seccion 10"]
+  - id: OPS-EB-EXTRA-ENVIRONMENTS
+    title: Investigar environments EB adicionales activos
+    priority: P2
+    category: ops
+    status: investigating
+    change_class: C
+    summary: tpi-backoffice-dev (Green) y tpi-backoffice-dev-ecr (Yellow) siguen activos; la documentacion describe un unico environment. No limpiar ni terminar sin decision humana.
+    evidence: ["aws elasticbeanstalk describe-environments (2026-09-14)"]
+  - id: OPS-HISTORICAL-GH-DEPLOY-ROLE
+    title: Verificar retiro del rol historico tpi-github-actions-dev-eb-deploy-role
+    priority: P2
+    category: ops
+    status: investigating
+    change_class: none
+    summary: El PDF de lecciones H3.3 afirma que fue eliminado; confirmar con lectura IAM.
+    evidence: ["docs/DEV_EB_DEPLOYMENT_RUNBOOK.md paso 7", "docs/cicd/LECCIONES_DEPLOY_AWS_H3_2_H3_3.md"]
+  - id: DOC-COVERAGE-80-85
+    title: Alinear ENGINEERING_STANDARDS (80%) con el gate CI (85%)
+    priority: P2
+    category: docs
+    status: pending
+    change_class: A
+    summary: El umbral operativo es 85%; no reducir CI.
+    evidence: ["docs/ENGINEERING_STANDARDS.md", ".github/workflows/ci.yml"]
+  - id: DOC-STALE-DOCUMENTATION
+    title: Corregir documentacion desactualizada
+    priority: P2
+    category: docs
+    status: pending
+    change_class: A
+    summary: README/DEVELOPMENT_GUIDE describen backoffice Streamlit; INDEX enlaza archivos inexistentes; DECISIONES_TECNICAS #4; DEPLOYMENT.md deprecado; operador/SHA de migraciones 005/006; estado formal de AWS_DEPLOYMENT_POLICY.
+    evidence: ["Discovery 2026-09-14"]
+  - id: HYG-PREEXISTING-WORKTREES
+    title: Limpiar worktrees y temporales preexistentes
+    priority: P3
+    category: hygiene
+    status: pending
+    change_class: none
+    summary: 5 worktrees .tmp-*, 2 prunables, 4 en %TEMP%, directorios pytest-cache-files-*, archivos sueltos sin versionar. No los administra el Harness.
+    evidence: ["git worktree list (2026-09-14)"]
+  - id: HARNESS-RECORDS-COMMIT
+    title: Automatizar el versionado de registros del Harness
+    priority: P2
+    category: harness
+    status: pending
+    change_class: none
+    summary: state/evidence/progress/tasks quedan en el working tree; su commit es manual. Necesario para continuidad entre maquinas.
+    evidence: ["scripts/harness/closure.py"]

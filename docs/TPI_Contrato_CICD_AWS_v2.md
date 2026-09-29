@@ -1,5 +1,9 @@
 # Contrato CI/CD AWS — v2 (golden path operativo)
 
+> Resumen. El texto completo y canonico esta en
+> [`docs/cicd/TPI_Contrato_CICD_AWS_v2.md`](cicd/TPI_Contrato_CICD_AWS_v2.md); ante cualquier
+> diferencia manda el texto completo.
+
 Estado: referencia operativa vigente para releases de aplicacion en AWS DEV.
 Sustituye el enfoque de promocion que mezclaba aplicacion e infraestructura.
 

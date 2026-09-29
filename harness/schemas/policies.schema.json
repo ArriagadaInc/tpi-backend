@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Policies",
+  "type": "object",
+  "required": ["schema_version", "harness", "protected_paths", "secret_read_deny", "roles", "mcp", "bash", "aws", "rollback_authorization"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "harness": {
+      "type": "object",
+      "required": ["max_rework_rounds", "max_candidate_artifact_rework", "progress_current_max_lines", "deploy_capable_runtimes", "deploy_states", "maintenance_allowlist"],
+      "properties": {
+        "max_rework_rounds": {"type": "integer", "minimum": 1},
+        "maintenance_allowlist": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+      }
+    },
+    "protected_paths": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "roles": {
+      "type": "object",
+      "required": ["developer", "reviewer", "deployer"],
+      "additionalProperties": {
+        "type": "object",
+        "required": ["work_states", "write_allow", "always_writable", "aws_access", "mcp_aws_tools", "git_push", "gh_allow", "skills"]
+      }
+    },
+    "bash": {
+      "type": "object",
+      "required": ["structural_rules", "forbidden_everywhere", "protected_write_verbs"],
+      "properties": {
+        "structural_rules": {
+          "type": "object",
+          "required": ["human_script", "aws_cli", "maintenance_env"],
+          "additionalProperties": {"type": "object", "required": ["reason"]}
+        }
+      }
+    },
+    "observability": {
+      "type": "object",
+      "properties": {
+        "log_indicators": {
+          "type": "object",
+          "required": ["strong", "weak"],
+          "properties": {
+            "strong": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+            "weak": {"type": "array", "items": {"type": "string"}}
+          }
+        }
+      }
+    },
+    "aws": {
+      "type": "object",
+      "required": ["profile", "region", "global_deny_operations", "global_deny_services", "global_deny_flags", "modes", "state_modes"],
+      "properties": {"profile": {"const": "tpi-dev"}, "region": {"const": "us-east-2"}}
+    },
+    "rollback_authorization": {
+      "type": "object",
+      "required": ["scope", "max_attempts", "conditions"],
+      "properties": {"max_attempts": {"const": 1}, "conditions": {"type": "array", "minItems": 7}}
+    }
+  }
+}

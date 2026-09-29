@@ -84,3 +84,8 @@ _pw_*.py
 current-eb-options*.json
 smoke-*.json
 tmp*
+
+# Harness: recursos operacionales administrados (no versionados)
+.harness-worktrees/
+.harness-release/
+.harness-runtime/

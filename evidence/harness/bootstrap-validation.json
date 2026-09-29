@@ -1,0 +1,216 @@
+{
+  "schema_version": 1,
+  "kind": "harness_bootstrap_maintenance_validation",
+  "timestamp": "2026-09-15T14:21:30Z",
+  "updated_at": "2026-09-15T18:00:00Z",
+  "runtime": "claude",
+  "maintenance": {
+    "used": true,
+    "env_var": "TPI_HARNESS_MAINTENANCE",
+    "verified_via": "attempted a real Edit to harness/policies.yaml (a protected path) before making any other change; it was ALLOWED by the normal guard hook, which is only possible with maintenance_mode=true. No bypass or alternate check was used."
+  },
+  "corrections": {
+    "D1_role_authority": "N/A: D1 was not a defect number in the corrections list (D2-D8 only); role/state authority itself was already correctly enforced (role derived from harness/state.json + workflow.yaml, never chosen by the caller).",
+    "D2_hook_stdin_fallback_bypass": {
+      "defect": ".claude/settings.json PreToolUse hook was `python3 guard.py 2>/dev/null || python guard.py || exit 2`. If python3 existed and guard.py legitimately DENIED (exit 2), bash's `||` treated that as \"python3 failed\" and retried with `python guard.py`, but stdin had already been drained by the first invocation. The retry parsed an empty JSON event (tool_name==\"\"), which falls through every guard.py branch to the default ALLOW -- silently converting a real DENY into an ALLOW.",
+      "fix": "Hook now resolves a canonical interpreter ONCE via a loop over (python3, python) using `command -v` plus a functional smoke check (`\"$P\" -c ''`, which never touches stdin or guard.py), then execs guard.py exactly once so its exit code IS the hook's exit code. No invocation after the first one can occur under any interpreter-availability outcome.",
+      "extra_finding": "On this dev machine, `python3` resolves via PATH to a non-functional Windows Store execution-alias stub that exits with an error without ever running a script. A naive `command -v python3 || command -v python` (checking only PATH presence, not functionality) would have picked this broken stub and made the hook deny every tool call. The functional smoke check was added specifically to catch this class of problem; init.py's `_guard_interpreter()` now runs the identical check at cold start.",
+      "regression_tests": ["tests/harness/test_hook_invocation.py::test_hook_command_has_no_stdin_fallback_chain", "tests/harness/test_hook_invocation.py::test_hook_invokes_guard_exactly_once_and_preserves_deny", "tests/harness/test_hook_invocation.py::test_hook_fails_closed_when_no_python_interpreter_available"]
+    },
+    "D3_maintenance_global_bypass": {
+      "defect": "guard.py check_write() had `if maintenance and not worktree: return True, \"\"` -- an unconditional bypass for ANY non-worktree write path under maintenance, including app/**, front/**, or any arbitrary path outside the Harness, before protected_paths or role checks ran.",
+      "fix": "Replaced with an explicit allowlist check against the new `harness.maintenance_allowlist` in policies.yaml (harness/**, agents/**, scripts/harness/**, tests/harness/**, runtime/**, .claude/**, .mcp.json, AGENTS.md, CLAUDE.md, init.sh, init.ps1, environments/**, tasks/**, progress/**, evidence/**, docs/cicd/**). Paths outside that allowlist fall through to the normal protected_paths + role + state checks exactly as without maintenance.",
+      "regression_tests": ["tests/harness/test_maintenance.py::test_m2_maintenance_allows_only_allowlisted_paths", "tests/harness/test_maintenance.py::test_m2_maintenance_does_not_allow_paths_outside_allowlist", "tests/harness/test_guard_headless.py::test_app_write_with_maintenance_unauthorized_role_denied"]
+    },
+    "D4_no_destructive_command_blocking": {
+      "defect": "policies.yaml bash.forbidden_everywhere had no patterns at all for git reset --hard, git clean -f/-fd/-xdf, git checkout -- ., git restore, rm -rf, Remove-Item -Recurse, rmdir /s, del /s. These were unblocked for any role/state, maintenance or not.",
+      "fix": "Added explicit forbidden_everywhere patterns for all of the above (case-insensitive match). They are checked unconditionally, before the maintenance branch, so they are blocked even under maintenance.",
+      "classification": "enforcement parcial + fail-closed para los patrones soportados (regex sobre el texto del comando). No se afirma cobertura total frente a shell arbitrario/ofuscado (alias, variables indirectas, encoding, binarios propios, wrappers).",
+      "regression_tests": ["tests/harness/test_guard_headless.py::test_destructive_command_with_maintenance_denied", "tests/harness/test_maintenance.py::test_m4_maintenance_never_allows_destructive_commands"]
+    },
+    "D5_maintenance_audit": {
+      "defect": "guard.py's hook-invocation log (.harness-runtime/guard.log) never recorded whether maintenance was active for a given decision.",
+      "fix": "Every guard.log record now includes `maintenance_mode: true/false` and `context: \"maintenance-bootstrap\"|\"runtime-normal\"`. aws_guard.py's evidence/<task>/aws-audit.jsonl records now include `maintenance_mode` too (informational only; per D6 it never changes `mode`/`allowed`). No environment values or secrets are logged, only the boolean.",
+      "regression_tests": ["tests/harness/test_maintenance.py::test_m6_maintenance_is_recorded_in_guard_log", "tests/harness/test_maintenance.py::test_m6_normal_runtime_recorded_as_non_maintenance"]
+    },
+    "D6_maintenance_widened_aws": {
+      "defect": "policies.yaml had `aws.maintenance_mode: read` and `aws.maintenance_states: [IDLE, BLOCKED_HUMAN]`, and aws_guard.py's evaluate() granted AWS read access in IDLE/BLOCKED_HUMAN whenever TPI_HARNESS_MAINTENANCE=1 -- directly violating \"if IDLE normally has no AWS, IDLE+maintenance must not either\".",
+      "fix": "Removed both keys from policies.yaml and the corresponding widening branch from aws_guard.py evaluate(). AWS mode now depends exclusively on role + workflow_state + environment (state_modes), unconditionally. Maintenance is recorded on the Decision/audit for traceability but never read to affect `mode` or `allowed`.",
+      "regression_tests": ["tests/harness/test_aws_guard.py::test_maintenance_never_changes_aws_decision", "tests/harness/test_maintenance.py::test_m3_maintenance_never_widens_aws_access", "tests/harness/test_guard_headless.py::test_aws_mcp_with_maintenance_idle_denied"]
+    },
+    "D7_secrets_shell_gap": {
+      "defect": "Secret-file protection relied only on the Read/Glob/Grep tool check (check_read) plus a short list of native Claude Code `Read()` permission denies. A shell command (Bash/PowerShell `cat`/`type`/`Get-Content`/etc. against .env/credentials/.aws files) went through check_command, which had no secret-file pattern at all.",
+      "fix": [
+        "Native runtime denies expanded in .claude/settings.json: Read() now also denies **/.env (nested), **/*.pem, **/*.key, **/.aws/credentials, **/.aws/config (mirrors policies.yaml secret_read_deny exactly; .env.example stays readable everywhere, matching guard.py's own exception).",
+        "guard.py forbidden_everywhere gained shell-level patterns for cat/type/more/less/head/tail/Get-Content/gc against .env(.*) (excluding .example) and against 'credentials', plus a direct pattern for .aws/credentials and .aws/config paths."
+      ],
+      "classification": "enforcement parcial. No se afirma protección total contra shell arbitrario u ofuscado (variables indirectas, encoding, herramientas no listadas, wrappers, named pipes). Documentado explícitamente como limitación conocida, no como garantía.",
+      "residual_limitation": "A sufficiently indirect shell command (e.g. reading via a variable-built path, a non-listed reader binary, or base64/otherwise-encoded access) can still evade the regex-based check_command patterns. This is inherent to any denylist over free-form shell text and is called out here rather than claimed as closed."
+    },
+    "D8_maintenance_human_only_limitation": {
+      "acknowledged_as_requested": "Not declared as proven. Within the same trust boundary, with arbitrary shell available, it cannot be mechanically demonstrated that TPI_HARNESS_MAINTENANCE=1 was set exclusively by a human at runtime launch (a process in that same boundary could in principle have set it before launch too).",
+      "what_is_demonstrated": "M1: a CHILD shell spawned during this session cannot alter this (parent) process's environment -- confirmed via tests/harness/test_maintenance.py::test_m1_child_shell_cannot_alter_parent_environment. This is real OS-level process isolation, not a human-only guarantee.",
+      "mitigation": "policies.yaml forbidden_everywhere includes a pattern denying any Bash/PowerShell command that textually contains \"TPI_HARNESS_MAINTENANCE\", which blocks the most direct in-session attempt to set/export/unset it from a Claude-issued shell command. This is a mitigation, not a proof.",
+      "classification": "LIMITACIÓN CONOCIDA, documentada explícitamente; no se afirma enforcement real de \"human-only\"."
+    }
+  },
+  "tests_a_to_j": {
+    "file": "tests/harness/test_workflow_a_to_j.py",
+    "A_init_fail_closed": {"tests": ["test_a_init_fails_closed_on_missing_required_file", "test_a_init_fails_closed_on_corrupt_state_json"], "result": "PASS"},
+    "B_clean_clone": {"tests": ["test_b_clean_clone_validates"], "result": "PASS", "note": "git clone of an isolated tmp harness repo validates with zero errors"},
+    "C_cold_start": {"tests": ["test_c_cold_start_briefing_idle"], "result": "PASS"},
+    "D_runtime_swap": {"tests": ["test_d_deploy_state_requires_deploy_capable_runtime", "test_d_transition_denies_deployer_event_from_non_claude_runtime"], "result": "PASS"},
+    "E_role_isolation": {"tests": ["test_e_transition_denies_human_event_without_human_flag", "test_e_developer_cannot_invoke_reviewer_event_from_developing", "test_e_reviewer_must_use_different_session_than_developer"], "result": "PASS"},
+    "F_context_compaction": {"tests": ["test_f_context_compact_preserves_history_and_extracts_decisions"], "result": "PASS"},
+    "G_workflow_transitions": {"tests": ["test_g_activate_start_submit_for_review_real_chain", "test_g_submit_for_review_rejects_evidence_with_wrong_change_class"], "result": "PASS", "note": "real evidence-gated transition chain: bind task -> start_development -> submit_for_review, schema-validated developer_evidence, real git SHA"},
+    "H_aws_safety": {"tests": ["test_h_candidate_review_requires_claude_runtime"], "result": "PASS", "note": "full AWS state-machine coverage lives in test_aws_guard.py (see below)"},
+    "I_immutable_candidate_release": {"tests": ["test_i_evidence_reference_rejects_wrong_kind", "test_i_evidence_reference_rejects_foreign_task"], "result": "PASS", "note": "single-cutover/single-rollback audit dedup covered by test_deploying_update_environment_requires_version_label_and_approval + aws_guard v_update_environment audit checks (not independently re-tested here to avoid duplication)"},
+    "J_failure_paths": {"tests": ["test_j_blocked_human_resolution_requires_human_flag", "test_j_failure_evidence_must_match_current_state", "test_j_rework_exhausted_routes_to_blocked_human"], "result": "PASS"}
+  },
+  "tests_m1_to_m6": {
+    "file": "tests/harness/test_maintenance.py",
+    "M1_child_shell_cannot_alter_parent_env": {"result": "PASS", "known_limitation": "does not prove human-only, see D8"},
+    "M2_maintenance_allowlist_exclusive": {"result": "PASS"},
+    "M3_maintenance_never_widens_aws": {"result": "PASS"},
+    "M4_maintenance_never_allows_destructive_commands": {"result": "PASS"},
+    "M5_maintenance_never_allows_arbitrary_app_writes": {"result": "PASS"},
+    "M6_maintenance_recorded_in_evidence_log": {"result": "PASS"}
+  },
+  "mcp_aws": {
+    "status": "SUPERSEDED_BY_aws_mcp_SECTION_BELOW",
+    "note": "This block is kept for session history. The prior session's hypothesis here (that AWS_MCP_PROXY_PROFILES might be an unsupported/no-op env var for v1.6.6, possibly contributing to -32602) was investigated further in a follow-up session by reading the installed package source directly and was DISPROVEN: server.py in mcp_proxy_for_aws 1.6.6 explicitly reads os.environ['AWS_MCP_PROXY_PROFILES'] (space-separated profile list, first = default, takes precedence over --profile/AWS_PROFILE) -- it is simply undocumented in --help because that parsing lives in server.py, not in cli.py's argparse. The real root cause, reproduced directly, is recorded in the aws_mcp section below."
+  },
+  "aws_mcp": {
+    "connection": "PASS",
+    "read_only": "PASS -- live tool list from the connected server with --read-only has exactly 6 tools: aws___get_tasks, aws___get_regional_availability, aws___list_regions, aws___read_documentation, aws___retrieve_skill, aws___search_documentation. aws___run_script and aws___get_presigned_url are ABSENT from this live list (server-side filtering by ToolFilteringMiddleware on readOnlyHint), on top of the harness's own structural denial (see forbidden_tools).",
+    "knowledge_call": "PASS -- aws___search_documentation(\"Elastic Beanstalk update environment version label\") returned real AWS documentation content (Elastic Beanstalk update-environment CLI examples, UpdateEnvironment API reference, versionLabel SDK docs). No AWS resource operation performed.",
+    "resolution": {
+      "what_changed": "Human re-authenticated the local tpi-dev AWS session (refreshed the expired 'aws login' credentials) between the previous session's FAIL report and this retry. No repository configuration was changed -- confirms the root cause diagnosis: the -32602 was solely an expired local credential, not a .mcp.json/proxy/protocol defect.",
+      "retry_method": "Identical reproduction as before: real mcp SDK stdio_client + ClientSession against the exact .mcp.json command/args/env, calling initialize() then list_tools() then call_tool('aws___search_documentation', ...).",
+      "server_identity_on_initialize": "serverInfo=Implementation(name='MCP Proxy for AWS', version='1.6.6'), protocolVersion='2025-11-25'"
+    },
+    "forbidden_tools": {
+      "run_script": "DENIED structurally, independent of connection status: present in .claude/settings.json permissions.deny (mcp__aws__aws___run_script) AND guard.py check_mcp() via policies.mcp.forbidden_tools. Verified by tests/harness/test_guard_headless.py::test_forbidden_mcp_tools_denied (passing).",
+      "get_presigned_url": "DENIED structurally by the same two layers. Same test.",
+      "get_tasks": "Also denied at both layers (present in forbidden_tools and permissions.deny) as an extra harness-level restriction beyond what the proxy's own --read-only classifies as read-only."
+    },
+    "proxy_version": {
+      "pinned_in_mcp_json": "mcp-proxy-for-aws-cli@1.6.6",
+      "resolved_locally": "mcp-proxy-for-aws-cli 1.6.6 (confirmed via `uvx --from mcp-proxy-for-aws-cli==1.6.6 python -c \"import importlib.metadata; ...\"`)",
+      "bundled_deps": {"mcp": "1.28.1", "fastmcp": "3.4.7", "httpx": "0.28.1"},
+      "mcp_protocol_supported": "LATEST_PROTOCOL_VERSION = 2025-11-25 (from mcp.types in the installed mcp 1.28.1 package). Not implicated in the failure -- see root cause."
+    },
+    "configuration": {
+      "exact_command": "uvx mcp-proxy-for-aws-cli@1.6.6 https://aws-mcp.us-east-1.api.aws/mcp --region us-east-1 --read-only",
+      "env": {"AWS_MCP_PROXY_PROFILES": "tpi-dev"},
+      "transport": "stdio, newline-delimited JSON-RPC (confirmed by reading mcp.client.stdio.stdio_client source)",
+      "profile_contract_confirmed": "server.py (installed 1.6.6): env_profiles = os.environ.get('AWS_MCP_PROXY_PROFILES'); if set, split() -> profiles list, first = default_profile; takes precedence over --profile/AWS_PROFILE. .mcp.json's use of AWS_MCP_PROXY_PROFILES=tpi-dev matches this contract exactly -- NOT a misconfiguration, NOT malformed, NOT in conflict with --profile (which isn't passed), NOT version-mismatched. This closes out the D6-era open hypothesis.",
+      "read_only_contract_confirmed": "--read-only is parsed by cli.py and passed to add_tool_filtering_middleware -> ToolFilteringMiddleware(read_only=True), which filters tools without readOnlyHint=True. Present and correctly placed in .mcp.json args."
+    },
+    "root_cause": {
+      "method": "Reproduced the exact failure directly: spawned the exact command+args+env from .mcp.json using the real `mcp` SDK's stdio_client + ClientSession (same library Claude Code's MCP client is built on), and called session.initialize() against the live endpoint. No AWS resource operation was performed -- this is the connection handshake plus, had it succeeded, a single search_documentation call (never reached).",
+      "exact_exception_chain": [
+        "botocore.errorfactory.AccessDeniedException: An error occurred (AccessDeniedException) when calling the CreateOAuth2Token operation: The refresh token has expired.",
+        "botocore.exceptions.LoginRefreshRequired: Your session has expired or credentials have changed. Please reauthenticate using 'aws login'.",
+        "mcp.shared.exceptions.McpError: Invalid request parameters  <-- this is the -32602 the session/system reports"
+      ],
+      "interpretation": "The proxy must SigV4-sign every request (including `initialize`) using local credentials for profile tpi-dev. Resolving those credentials triggers botocore's OAuth2/device-token refresh, which fails because the refresh token for profile tpi-dev has expired (docs/AWS_MCP_SERVER_SETUP.md documents these `aws login` credentials as valid ~12h, renewable up to 90 days -- the renewal window has lapsed). Because credential resolution fails while the request is being prepared/signed, the initialize call that reaches (or fails to correctly reach) the backend results in the generic JSON-RPC -32602 'Invalid request parameters' response being surfaced to the client, rather than a clear authentication-error message. -32602 is therefore a MISLEADING surface symptom of an expired local credential, not a literal malformed MCP parameter, and not a bug in this repository's .mcp.json/policies.yaml/harness configuration.",
+      "confidence": "DEMOSTRADA (not a hypothesis): reproduced end-to-end with the real mcp SDK against the real command from .mcp.json; the traceback is unambiguous (AccessDeniedException on CreateOAuth2Token -> LoginRefreshRequired -> McpError 'Invalid request parameters').",
+      "not_the_cause": [
+        "AWS_MCP_PROXY_PROFILES env var: confirmed correctly read and precedenced by server.py source (see configuration.profile_contract_confirmed above); ruled out.",
+        "--read-only flag / tool filtering: confirmed correctly wired in cli.py/server.py; ruled out.",
+        "Missing/broken local uvx or package install: `uvx mcp-proxy-for-aws-cli@1.6.6 --help` and module introspection both succeed; ruled out.",
+        "MCP protocol version mismatch: installed mcp 1.28.1 supports up to 2025-11-25, a current version; no evidence of a negotiation failure surfaced (the failure occurs during credential/signing, before a protocol-level response is formed)."
+      ]
+    },
+    "next_action_required": "NONE -- resolved. Human refreshed the tpi-dev AWS session; connection and a read-only knowledge call both succeeded on retry.",
+    "changes_made_to_repo_config": "NONE, in either session. .mcp.json, harness/tooling.yaml, and harness/policies.yaml's mcp section were inspected and found already correct for v1.6.6's actual contract in the first session; nothing needed changing then or now. No credentials, no IAM, no global (~/.claude, ~/.codex, ~/.dsh) config was touched at any point.",
+    "result": "AWS_MCP_CONNECTION = PASS. READ_ONLY_KNOWLEDGE_CALL = PASS. AWS_MCP_INTEGRATION = PASS (read-only knowledge only; no write/resource operations were performed or enabled)."
+  },
+  "hook_tests_section14": {
+    "file": "tests/harness/test_guard_headless.py",
+    "scenarios": {
+      "read_dotenv_file_denied": "PASS (test_read_secret_denied)",
+      "developer_aws_denied": "PASS (test_developer_aws_mcp_denied)",
+      "reviewer_write_app_denied": "PASS (test_reviewer_write_app_denied)",
+      "deployer_write_app_denied": "PASS (test_deployer_write_app_denied)",
+      "harness_write_without_maintenance_denied": "PASS (test_harness_write_without_maintenance_denied)",
+      "harness_write_with_maintenance_allowed": "PASS (test_harness_write_with_maintenance_allowed)",
+      "app_write_with_maintenance_unauthorized_role_denied": "PASS (test_app_write_with_maintenance_unauthorized_role_denied)",
+      "destructive_command_with_maintenance_denied": "PASS (test_destructive_command_with_maintenance_denied, parametrized x5)",
+      "aws_write_with_maintenance_idle_denied": "PASS (test_aws_mcp_with_maintenance_idle_denied for MCP surface; test_maintenance.py::test_m3_maintenance_never_widens_aws_access + test_aws_guard.py::test_maintenance_never_changes_aws_decision for aws_guard.py surface)"
+    },
+    "additional_regressions_found_and_fixed_during_this_session": [
+      "aws_guard.py canonical-path regex false-positive: any shell command mentioning a filename merely ENDING in 'aws_guard.py' (e.g. running pytest on tests/harness/test_aws_guard.py) was denied as if invoking a rogue aws_guard.py. Fixed with a word-boundary anchor; regression tests test_pytest_command_naming_test_aws_guard_not_denied and test_fake_aws_guard_outside_repo_still_denied confirm the fix while preserving the original protection."
+    ]
+  },
+  "aws_guard_tests_section10": {
+    "file": "tests/harness/test_aws_guard.py",
+    "PREPARING_DEPLOYMENT": "read allowed; update-environment denied (mode-level)",
+    "CANDIDATE_REVIEW": "reviewer read-only confirmed (write denied)",
+    "WAITING_HUMAN_APPROVAL": "mode=none, all AWS denied",
+    "DEPLOYING": "only @read + update-environment allowed; staging ops (s3api put-object) denied; update-environment requires version-label + valid Human Gate approval (denied without it); --option-settings denied; iam service denied; route53 service denied; delete-application-version denied",
+    "VERIFYING": "read allowed, write denied",
+    "DONE_and_BLOCKED_HUMAN": "mode=none, all AWS denied",
+    "maintenance_never_changes_decision": "parametrized across IDLE/BLOCKED_HUMAN/PREPARING_DEPLOYMENT/DEPLOYING: identical mode+allowed with and without TPI_HARNESS_MAINTENANCE=1",
+    "result": "PASS (17/17)"
+  },
+  "total_tests": {
+    "collected": 112,
+    "passed": 112,
+    "failed": 0,
+    "breakdown": {
+      "test_aws_guard.py": 17,
+      "test_cold_start_readonly.py": 26,
+      "test_guard_headless.py": 19,
+      "test_hook_invocation.py": 3,
+      "test_maintenance.py": 29,
+      "test_workflow_a_to_j.py": 18
+    }
+  },
+  "quality_gates": {
+    "init": "HARNESS INIT: PASS",
+    "validate_repo": "VALIDATE: PASS",
+    "pytest": "112 passed, 0 failed",
+    "black_check": "PASS on all files touched this session (scripts/harness/guard.py -- no reformat needed; tests/harness/test_cold_start_readonly.py -- reformatted to compliance, no content change)",
+    "ruff": "PASS on all files touched this session (scripts/harness/guard.py, tests/harness/test_cold_start_readonly.py). Four PRE-EXISTING findings left untouched outside scope in files this session did not edit: scripts/harness/guards.py N818 (GuardFailure exception name) and scripts/harness/transition.py I001 (import order in a try/except ImportError fallback block)",
+    "mypy": "0 new errors in guard.py (the only scripts/harness/*.py file touched this session); confirmed by inspecting mypy's own line numbers, none of which fall in the added _SAFE_REDIRECTS/_strip_safe_redirects code or the modified check_command line. 11 pre-existing errors remain, all in scripts/harness/common.py (no-any-return / missing stubs for yaml, jsonschema) and one import-not-found note on guard.py's pre-existing try/except ImportError pattern (unchanged this session); left untouched per 'no unrelated changes'",
+    "git_diff_check": "clean (exit 0)"
+  },
+  "restrictions_honored": [
+    "No AWS write, no deploy, no ECR push, no S3 write, no Application Version, no update-environment, no IAM, no Route53, no DB migrations performed",
+    "No H3.3.1 work performed",
+    "No cleanup of pre-existing AWS resources",
+    "No git commit created (STOP after delivering this report, per instructions)"
+  ],
+  "limitations": {
+    "D7_shell_secret_protection": "enforcement parcial, regex-based; no cobertura total ante shell arbitrario/ofuscado",
+    "D4_destructive_command_protection": "enforcement parcial, regex-based; no cobertura total ante shell arbitrario/ofuscado",
+    "D8_maintenance_human_only": "no demostrado ni declarado como propiedad garantizada; ver bloque D8 arriba",
+    "mcp_aws": "RESOLVED 2026-09-15T14:37:14Z. AWS_MCP_CONNECTION = PASS, READ_ONLY_KNOWLEDGE_CALL = PASS. Root cause had been DEMOSTRADA (no hipotesis): credenciales locales del perfil tpi-dev expiradas (refresh token expirado en la renovacion 'aws login'), reproducido end-to-end con el SDK mcp real contra el comando exacto de .mcp.json. El humano re-autentico la sesion tpi-dev fuera de esta sesion; el reintento con el mismo comando/config (sin cambios de repo) conecto, listo herramientas (6, sin run_script/get_presigned_url) y ejecuto una llamada real de conocimiento read-only exitosa. Ver seccion aws_mcp para el detalle completo."
+  },
+  "followup_session_2026_09_15b": {
+    "trigger": "User reported AWS_MCP_INTEGRATION=FAILED as the one remaining acceptance blocker and asked for a definitive diagnosis (not a hypothesis).",
+    "outcome_part1_diagnosis": "Root cause found and reproduced (see aws_mcp.root_cause): expired local credentials for profile tpi-dev, not a repo/config defect. No repo configuration changed (none was needed).",
+    "outcome_part2_retry_after_human_reauth": "User re-authenticated the tpi-dev AWS session and asked for a retry. Re-ran the identical reproduction (same command/args/env from .mcp.json, no repo changes) -- initialize() succeeded, list_tools() returned the expected 6 read-only tools (run_script/get_presigned_url absent), and search_documentation('Elastic Beanstalk update environment version label') returned real AWS documentation. AWS_MCP_CONNECTION and READ_ONLY_KNOWLEDGE_CALL both PASS.",
+    "residue_reported_not_fixed": ".pytest-tmp/ (pytest --basetemp scratch dir from prior test runs) remains as local residue, not a Harness blocker, per explicit instruction not to expand maintenance_allowlist just for .gitignore."
+  },
+  "followup_session_2026_09_15c_cold_start_defects": {
+    "trigger": "A real cold-start run surfaced two ergonomics/architecture defects the user asked to correct before declaring tpi-harness-v1: (1) uncertainty about whether init could stay strictly read-only under an explicit 'no realices cambios' instruction, and (2) a generic 'ls' being rejected by guard.py during discovery.",
+    "defect_1_init_read_only": {
+      "finding": "scripts/harness/init.py was ALREADY strictly read-only: build_report() only reads (validate_repo.validate, common.load_state/load_workflow/load_policies/load_profile/load_current_task, shutil.which, a harmless `python -c ''` subprocess) and never calls common.save_state/write_text_atomic/write_json_atomic/write_yaml_atomic. Session/evidence registration was already a separate, later, explicitly gated operation: the `record_session:<role>` effect applied only by scripts/harness/transition.py on specific transitions (start_development, start_review, start_merge, resume_development), each requiring an active agent role + satisfied workflow guards -- never invoked by init. No code change was needed for defect 1.",
+      "action_taken": "Added regression tests (tests/harness/test_cold_start_readonly.py) proving this invariant so it cannot silently regress: git-tracked-file hashes and `git status --porcelain` are byte-identical before/after running init (both via the Python API and via the real init.py CLI subprocess), init succeeds from IDLE with no task, and a monkeypatch-based test asserts init never calls any of the four state/evidence-writing helpers. Also documented the contract explicitly in AGENTS.md (new '## Contrato read-only vs mutacion' section) so Codex/DeepSeek enforce the same semantics even though their mechanism differs from Claude's hooks.",
+      "regression_tests": ["test_init_does_not_modify_filesystem_or_git", "test_init_cli_subprocess_does_not_modify_filesystem_or_git", "test_init_works_in_idle_without_task", "test_init_never_calls_a_state_mutating_helper"]
+    },
+    "defect_2_read_only_discovery_false_positive": {
+      "root_cause_confirmed_by_direct_reproduction": "scripts/harness/guard.py's check_command() denies a Bash/PowerShell command when it BOTH mentions a protected-path token (e.g. 'harness/') AND matches policies.yaml's bash.protected_write_verbs regex. That regex includes a bare '>' to catch real file-write redirection (`cmd > file`), but '>' also matches harmless, non-mutating shell plumbing: fd duplication (`2>&1`, `1>&2`) and null-device discards (`2>/dev/null`, `2>$null`). Reproduced directly: `ls harness/ 2>&1`, `git status 2>&1`, and even `python scripts/harness/init.py --runtime claude 2>&1` were all DENIED before the fix, purely because of the trailing stderr redirect -- not because of any actual write.",
+      "fix": "Added `_SAFE_REDIRECTS` (a documented regex distinguishing fd-duplication and /dev/null or $null discards from real file writes) and `_strip_safe_redirects()` in guard.py. check_command() now evaluates `protected_write_verbs` against the command with safe redirects stripped, instead of the raw command. This is a general classifier fix, not a hardcoded 'ls' exception: it improves the existing read/write distinction (protected_paths readable, not writable) that was already correctly gating on write-verb presence, rather than adding a special case for any one command name.",
+      "unaffected_by_design": "forbidden_everywhere (AWS CLI direct, secrets, docker push/login, gh sensitive ops, boto3), the always-unconditional destructive-command patterns (git reset --hard, git clean -f*, git checkout --, git restore, rm -rf, Remove-Item -Recurse, rmdir /s, del /s), the aws_guard.py canonical-path check, and the git push/commit/merge/rebase/reset role+state gates all still run on the ORIGINAL (non-stripped) command text and are completely untouched by this fix.",
+      "documented": "AGENTS.md '## Contrato read-only vs mutacion' section states the semantic contract (protected_path != unreadable_path; read-only discovery -- listing, git status/diff/log/ls-files, non-secret reads, non-sensitive search -- always permitted including in IDLE, even with an incidental protected-path mention or a harmless stream redirect; mutation/secrets/AWS/destructive commands remain fully gated) so any runtime's enforcement mechanism can be checked against it.",
+      "verified_still_denied_after_fix": ["ls harness/ 2>&1; rm harness/x", "echo x > harness/policies.yaml", "cmd 2>&1 > harness/out.log", "git reset --hard origin/main 2>&1 (disguised with a safe redirect)", "Read of .env", "mcp__aws__aws___search_documentation in IDLE"],
+      "regression_tests": ["test_read_only_discovery_allowed_in_idle (parametrized x14, includes the exact ls/git/find/init.py + 2>&1|2>/dev/null false positives)", "test_read_harness_workflow_allowed", "test_edit_harness_workflow_denied_in_idle", "test_secret_read_still_denied", "test_aws_mcp_still_denied", "test_disguised_write_still_denied_despite_safe_redirect (parametrized x3)", "test_destructive_command_with_safe_redirect_still_denied"]
+    },
+    "scope_honored": "No AWS, no deployment, no H3.3.1 work, no workflow/agents/skills/AWS-MCP/CI-CD/application changes. Only guard.py (one regex-driven classifier addition), AGENTS.md (documentation), a new test file, and this evidence file were touched. No git commit created (STOP after delivering this report, per instructions).",
+    "files_changed": ["scripts/harness/guard.py", "AGENTS.md", "tests/harness/test_cold_start_readonly.py", "evidence/harness/bootstrap-validation.json"]
+  }
+}

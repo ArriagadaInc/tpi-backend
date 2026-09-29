@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "state": "IDLE",
+  "task_id": null,
+  "environment": "dev",
+  "rework_round": 0,
+  "candidate_rework_round": 0,
+  "rollback_attempted": false,
+  "refs": {},
+  "sessions": {
+    "developer": null,
+    "reviewer": null,
+    "deployer": null
+  },
+  "worktrees": [],
+  "updated_at": "2026-09-14T00:00:00Z",
+  "last_transition": null,
+  "history": []
+}

@@ -1,0 +1,54 @@
+schema_version: 1
+# TPI Harness Supervisor v1.1 (opcional, opt-in). Lo lee solo scripts/harness/supervisor.py.
+# NO es fuente de verdad: el workflow vive en harness/state.json + harness/workflow.yaml.
+# Borrar este archivo y supervisor.py deja el Harness manual intacto.
+
+# Rol del Harness (workflow.states[state].role) -> runtime. Roles ausentes = STOP.
+roles:
+  developer: claude     # DeepSeek sigue deshabilitado abajo; independencia via sesion/session_uuid nuevos por turno
+  reviewer: claude
+  deployer: claude
+
+# Comando por runtime (una sesion nueva por turno, sin reutilizar contexto).
+# Placeholders: {prompt} {session_id} {session_uuid} {runtime} {role} {python}
+# probe: comando inocuo de salud/version (sin sesion LLM, fuera del repo, timeout corto).
+runtimes:
+  deepseek:
+    # v1.1 P0 de seguridad (dogfood H3.3.6): bajo el sandbox DSH el push fallo (sh.exe /
+    # CreateFileMapping 5) y en el rework el agente lo esquivo con un GIT_ASKPASS que ejecutaba
+    # `gh auth token`, desactivo la config git de sistema y altero .git/config compartido.
+    # DSH no tiene enforcement demostrado (guard.py no aplica). Queda deshabilitado como
+    # Developer automatico hasta una decision humana (ver runtime/supervisor/SUPERVISOR_V1.md).
+    enabled: false
+    disabled_reason: "DSH sin enforcement demostrado; cierre Git inseguro observado en H3.3.6 (decision humana pendiente)"
+    command: [dsh, --profile, headless, "{prompt}"]
+    probe: null   # sin probe fiable demostrado para dsh: solo se verifica el ejecutable
+  claude:
+    command: [claude, -p, "{prompt}", --session-id, "{session_uuid}", --permission-mode, auto]
+    probe: [claude, --version]
+
+# Prompt minimo de entrada: una sola linea ASCII (sin comillas ni metacaracteres de shell).
+prompt: >-
+  Continua el proyecto siguiendo exclusivamente las instrucciones, el estado, las politicas y la
+  evidencia contenida en el repositorio. Ejecuta el protocolo de entrada completo de AGENTS.md con
+  --runtime {runtime} y actua segun el rol que determine el Harness. No uses contexto de
+  conversaciones anteriores. Usa --session {session_id} en tus transiciones. Cuando el Harness
+  cambie de rol, detente.
+
+max_turns: 20                 # tope de sesiones de worker por ejecucion de `run`
+heartbeat_seconds: 15         # frecuencia de .harness-runtime/supervisor/heartbeat.json
+interrupt_grace_seconds: 20   # espera tras Ctrl+C/timeout antes de forzar el arbol del worker
+
+# v1.1: nada se lanza si el disco o el runtime no estan sanos. El Supervisor nunca borra archivos.
+preflight:
+  min_free_disk_gb: 5         # debajo: STOP sin lanzar el LLM (repo y perfil de usuario)
+  warn_free_disk_gb: 10       # debajo: warning en consola y telemetria
+  probe_timeout_seconds: 20
+
+# v1.1: timeout por worker (segundos). Conservador: turnos reales H3.3.6 duraron hasta ~55 min.
+# Prioridad: by_runtime > by_role > default_seconds. 0 = desactivado explicitamente.
+worker_timeout:
+  default_seconds: 7200       # 2 h (Reviewer / Deployer)
+  by_role:
+    developer: 14400          # 4 h
+  by_runtime: {}

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Backlog",
+  "type": "object",
+  "required": ["schema_version", "items"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "priority", "category", "status", "change_class", "summary", "evidence"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+          "title": {"type": "string"},
+          "priority": {"enum": ["P0", "P1", "P2", "P3"]},
+          "category": {"enum": ["functional", "h3.2", "infra", "ops", "docs", "hygiene", "harness", "db"]},
+          "status": {"enum": ["pending", "blocked", "investigating", "active"]},
+          "change_class": {"enum": ["A", "B", "C", "D", "E", "none"]},
+          "summary": {"type": "string"},
+          "evidence": {"type": "array", "items": {"type": "string"}},
+          "dependencies": {"type": "array", "items": {"type": "string"}},
+          "task": {"type": "object"}
+        }
+      }
+    }
+  }
+}

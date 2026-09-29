@@ -1,0 +1,19 @@
+schema_version: 1
+# Herramientas por rol/estado. init.py verifica disponibilidad (no instala nada).
+python_min: "3.12"
+python_modules: [yaml, jsonschema]
+tools:
+  git: {required_for: [all], check: ["git", "--version"]}
+  python: {required_for: [all], check: ["python", "--version"]}
+  gh: {required_for: [developer, reviewer, deployer], check: ["gh", "--version"]}
+  docker: {required_for: [developer, reviewer], optional: true, check: ["docker", "--version"]}
+  aws: {required_for_states: [PREPARING_DEPLOYMENT, DEPLOYING, VERIFYING, DEPLOY_FAILED, VERIFY_FAILED, ROLLING_BACK, CANDIDATE_REVIEW], check: ["aws", "--version"]}
+  uvx: {required_for: [], optional: true, purpose: "AWS MCP proxy (conocimiento)", check: ["uvx", "--version"]}
+mcp:
+  aws_knowledge:
+    server: aws
+    package: mcp-proxy-for-aws-cli@1.6.6
+    endpoint: https://aws-mcp.us-east-1.api.aws/mcp
+    mode: read-only
+    verified: "flag --read-only filtra tools sin readOnlyHint=True (codigo fuente 1.6.6: tool_filter.py)"
+    catalog: [aws___search_documentation, aws___read_documentation, aws___retrieve_skill, aws___get_regional_availability, aws___list_regions, aws___get_tasks, aws___get_presigned_url, aws___run_script]
