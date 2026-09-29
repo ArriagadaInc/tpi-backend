@@ -37,9 +37,12 @@ def _config(h: Harness, **changes: Any) -> None:
 
 
 def _sessions(h: Harness) -> list[dict[str, Any]]:
+    # Ordered by the append-only events.jsonl (one worker_finished per turn), not finished_at:
+    # its 1s resolution ties turns finished in the same second.
     directory = h.root / supervisor.TELEMETRY_DIR / "sessions"
     records = [json.loads(p.read_text(encoding="utf-8")) for p in directory.glob("*.json")]
-    return sorted(records, key=lambda r: r["finished_at"])
+    finished = [e["session_id"] for e in h.events() if e["event"] == "worker_finished"]
+    return sorted(records, key=lambda r: finished.index(r["session_id"]))
 
 
 # ---------------------------------------------------------------------------
