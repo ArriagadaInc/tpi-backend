@@ -5,6 +5,10 @@ Usage:
   python scripts/harness/approve.py gate --decision approve|reject [--reason <text>]
   python scripts/harness/approve.py accept --decision accept|reject --criteria AC-1,AC-2 [--notes <text>]
   python scripts/harness/approve.py resolve --to <STATE> --reason <text>
+  python scripts/harness/approve.py maintenance-scope open --id <id> --worktree <path>
+      --write-path <glob> [--write-path <glob> ...] --hours <h> --reason <text>
+      [--allow-test-runs --test-basetemp-root <absolute dir outside the repo>]
+  python scripts/harness/approve.py maintenance-scope close --id <id> --reason <text>
 
 Agents must never run this script (Claude hooks deny it). Never type credentials here.
 """
@@ -12,14 +16,17 @@ Agents must never run this script (Claude hooks deny it). Never type credentials
 from __future__ import annotations
 
 import argparse
+import datetime as dt
+import json
 import sys
 from pathlib import Path
 from typing import Any
 
 try:
-    from . import common, evidence, transition
+    from . import common, evidence, maintenance_scope, transition
 except ImportError:  # executed as a script
     import common  # type: ignore[no-redef]
+    import maintenance_scope  # type: ignore[no-redef]
     import transition  # type: ignore[no-redef]
 
     import evidence  # type: ignore[no-redef]
@@ -183,6 +190,109 @@ def resolve(root: Path, to_state: str, reason: str) -> dict[str, Any]:
     return transition.apply_transition(root, "human_resolve", evidence_path=str(path), _human=True)
 
 
+def _scope_event(root: Path, policies: dict[str, Any], payload: dict[str, Any]) -> None:
+    """Append-only open/close log: ids, paths, commits and actor; never secrets."""
+    path = maintenance_scope.registry_dir(root, policies) / "events.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps({"at": common.now_iso(), **payload}, ensure_ascii=False) + "\n")
+
+
+def open_scope(
+    root: Path,
+    scope_id: str,
+    worktree: str,
+    write_paths: list[str],
+    hours: float,
+    reason: str,
+    allow_test_runs: bool = False,
+    test_basetemp_root: str | None = None,
+) -> Path:
+    _require_tty()
+    policies = common.load_policies(root)
+    cfg = maintenance_scope.config(policies)
+    path = maintenance_scope.registry_path(root, policies, scope_id)
+    if not 0 < hours <= cfg["max_hours"]:
+        raise common.HarnessError(f"--hours debe estar entre 0 y {cfg['max_hours']}")
+    if path.exists():
+        raise common.HarnessError("ya existe un registro con ese identificador: usa uno nuevo")
+    if allow_test_runs != (test_basetemp_root is not None):
+        raise common.HarnessError("--allow-test-runs y --test-basetemp-root van juntos")
+    worktree_path = Path(worktree).resolve()
+    branch, head = maintenance_scope.worktree_identity(root, worktree_path)
+    now = dt.datetime.now(dt.UTC).replace(microsecond=0)
+    record: dict[str, Any] = {
+        "schema_version": 1,
+        "id": scope_id,
+        "status": "open",
+        "reason": reason.strip(),
+        "control_checkout": str(root.resolve()),
+        "worktree": str(worktree_path),
+        "branch": branch,
+        "head": head,
+        "write_paths": list(write_paths),
+        "allow_test_runs": allow_test_runs,
+        "test_basetemp_root": test_basetemp_root,
+        "created_at": maintenance_scope.iso(now),
+        "expires_at": maintenance_scope.iso(now + dt.timedelta(hours=hours)),
+        "opened_by": _actor(root),
+        "closed_at": None,
+        "closed_by": None,
+        "close_reason": None,
+    }
+    maintenance_scope.check_record(root, policies, scope_id, record, now=now)
+    summary = {
+        key: record[key]
+        for key in ("id", "worktree", "branch", "head", "write_paths", "allow_test_runs")
+    }
+    print(json.dumps({**summary, "expires_at": record["expires_at"]}, indent=2))
+    _confirm(f"Escribe ABRIR {scope_id} para confirmar: ", f"ABRIR {scope_id}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    common.write_json_atomic(path, record)
+    _scope_event(root, policies, {"event": "opened", **summary, "actor": record["opened_by"]})
+    return path
+
+
+def close_scope(root: Path, scope_id: str, reason: str) -> Path:
+    _require_tty()
+    policies = common.load_policies(root)
+    path = maintenance_scope.registry_path(root, policies, scope_id)
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        raise common.HarnessError(f"registro de alcance ilegible: {error}") from error
+    if not isinstance(record, dict) or record.get("status") != "open":
+        raise common.HarnessError("el alcance no esta abierto")
+    if len(reason.strip()) < 10:
+        raise common.HarnessError("el cierre requiere una razon explicita")
+    _confirm(f"Escribe CERRAR {scope_id} para confirmar: ", f"CERRAR {scope_id}")
+    try:
+        _branch, head_at_close = maintenance_scope.worktree_identity(
+            root, Path(str(record.get("worktree", ""))).resolve()
+        )
+    except common.HarnessError:
+        head_at_close = None  # closing must work even if the worktree is gone or changed
+    record.update(
+        status="closed",
+        closed_at=common.now_iso(),
+        closed_by=_actor(root),
+        close_reason=reason.strip(),
+        head_at_close=head_at_close,
+    )
+    common.write_json_atomic(path, record)
+    _scope_event(
+        root,
+        policies,
+        {
+            "event": "closed",
+            "id": scope_id,
+            "head_at_close": head_at_close,
+            "actor": record["closed_by"],
+        },
+    )
+    return path
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -200,8 +310,41 @@ def main(argv: list[str] | None = None) -> int:
     rs = sub.add_parser("resolve")
     rs.add_argument("--to", required=True)
     rs.add_argument("--reason", required=True)
+    ms = sub.add_parser("maintenance-scope")
+    ms_sub = ms.add_subparsers(dest="action", required=True)
+    mo = ms_sub.add_parser("open")
+    mo.add_argument("--id", required=True)
+    mo.add_argument("--worktree", required=True)
+    mo.add_argument("--write-path", dest="write_paths", action="append", required=True)
+    mo.add_argument("--hours", type=float, required=True)
+    mo.add_argument("--reason", required=True)
+    mo.add_argument("--allow-test-runs", action="store_true")
+    mo.add_argument("--test-basetemp-root", default=None)
+    mc = ms_sub.add_parser("close")
+    mc.add_argument("--id", required=True)
+    mc.add_argument("--reason", required=True)
     args = parser.parse_args(argv)
     root = common.ROOT
+    if args.command == "maintenance-scope":
+        try:
+            if args.action == "open":
+                path = open_scope(
+                    root,
+                    args.id,
+                    args.worktree,
+                    args.write_paths,
+                    args.hours,
+                    args.reason,
+                    args.allow_test_runs,
+                    args.test_basetemp_root,
+                )
+            else:
+                path = close_scope(root, args.id, args.reason)
+        except (common.HarnessError, EOFError, KeyboardInterrupt) as error:
+            print(f"HUMAN DECISION NOT RECORDED: {error}", file=sys.stderr)
+            return 1
+        print(f"alcance {args.id}: {path}")
+        return 0
     try:
         if args.command == "activate":
             state = activate(root, args.task)

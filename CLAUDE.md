@@ -13,4 +13,5 @@ especifico de Claude Code.
   operaciones AWS van por `python scripts/harness/aws_guard.py <service> <operation> ...`.
 - Claude Code es el unico runtime autorizado para estados de deploy.
 - Decisiones humanas (`approve.py`) las ejecuta el humano en su propia terminal, nunca Claude.
-- Mantenimiento del Harness: solo si el humano lanzo Claude con `TPI_HARNESS_MAINTENANCE=1`.
+- Mantenimiento del Harness: solo si el humano lanzo Claude con `TPI_HARNESS_MAINTENANCE=1`; la
+  mantencion acotada (alcance + `--tools` + comprobacion) esta en `runtime/claude/README.md`.

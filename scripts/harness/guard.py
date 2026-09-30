@@ -15,11 +15,23 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from . import command_analysis, common, denials
+    from . import command_analysis, common, denials, maintenance_scope
 except ImportError:  # executed as a script
-    import command_analysis  # type: ignore[no-redef]
-    import common  # type: ignore[no-redef]
-    import denials  # type: ignore[no-redef]
+    try:
+        import command_analysis  # type: ignore[no-redef]
+        import common  # type: ignore[no-redef]
+        import denials  # type: ignore[no-redef]
+        import maintenance_scope  # type: ignore[no-redef]
+    except Exception as error:  # noqa: BLE001 - missing module, SyntaxError, broken import...
+        # An uncaught import error exits 1, which Claude Code treats as a NON-blocking hook error
+        # (the tool call would run unguarded). Only exit 2 blocks, so block explicitly.
+        sys.stderr.write(
+            f"TPI HARNESS GUARD: DENIED - el guard no pudo cargar sus modulos: {error!r}\n"
+        )
+        sys.stderr.write(
+            "Si esto bloquea una accion legitima: STOP y solicitar asistencia humana.\n"
+        )
+        raise SystemExit(2) from error
 
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 READ_TOOLS = {"Read", "Glob", "Grep", "NotebookRead"}
@@ -48,6 +60,9 @@ PROTECTED_TOKENS = (
     ".harness-runtime\\supervisor",
     ".harness-runtime/guard.log",
     ".harness-runtime\\guard.log",
+    # v1.2: registry of maintenance scopes (only approve.py maintenance-scope, run by the human).
+    ".harness-runtime/maintenance",
+    ".harness-runtime\\maintenance",
 )
 SENSITIVE_HOME_DIRS = ("/.aws/", "/.claude/", "/.codex/", "/.dsh/", "/.ssh/")
 
@@ -472,6 +487,15 @@ def _maintenance_assignment(command: str, var: str) -> bool:
     return any(re.search(pattern, command, re.IGNORECASE) for pattern in patterns)
 
 
+def _sets_maintenance_variable(policies: dict[str, Any], command: str) -> bool:
+    """Setting/unsetting the maintenance variable or the v1.2 maintenance scope variable."""
+    names = [policies["harness"]["maintenance_env_var"]]
+    scope = policies["harness"].get("maintenance_scope") or {}
+    if scope.get("env_var"):
+        names.append(scope["env_var"])
+    return any(_maintenance_assignment(command, name) for name in names)
+
+
 _OPAQUE_WRITE_API = re.compile(
     r"writeFile|appendFile|unlink|rmSync|rmdir|renameSync|copyFile|File\.Write|File\.Delete|"
     r"open\s*\(|fopen|file_put_contents|IO\.write|File\.open",
@@ -593,7 +617,7 @@ def check_command(
     for rule in bash["forbidden_everywhere"]:
         if re.search(rule["pattern"], command, re.IGNORECASE):
             return _deny(rule["reason"])
-    if _maintenance_assignment(command, policies["harness"]["maintenance_env_var"]):
+    if _sets_maintenance_variable(policies, command):
         return _deny(structural["maintenance_env"]["reason"])
     view = CommandView(command, dialect)
     if _executes_human_script(view, structural["human_script"]["legacy_pattern"]):
@@ -708,7 +732,31 @@ def decide(root: Path, event: dict[str, Any], env_vars: Mapping[str, str]) -> tu
     tool = str(event.get("tool_name") or "")
     tool_input = event.get("tool_input") or {}
     ctx = _load(root)
-    maintenance = env_vars.get(ctx["policies"]["harness"]["maintenance_env_var"]) == "1"
+    policies = ctx["policies"]
+    maintenance = env_vars.get(policies["harness"]["maintenance_env_var"]) == "1"
+    # v1.2 maintenance scope. Reads always keep check_read (protected != unreadable).
+    scope_id = maintenance_scope.requested_id(policies, env_vars)
+    if scope_id is not None and tool not in READ_TOOLS:
+        # Requested: valid => it only narrows; invalid, expired or inconsistent => deny.
+        try:
+            if not maintenance:
+                raise maintenance_scope.ScopeError(
+                    "el alcance requiere tambien TPI_HARNESS_MAINTENANCE=1 fijado por el humano"
+                )
+            scope = maintenance_scope.load(root, policies, scope_id)
+        except common.HarnessError as error:
+            return _deny(f"alcance de mantencion solicitado pero no activable: {error}")
+        return _decide_scoped(root, ctx, event, tool, tool_input, scope)
+    if maintenance and tool not in READ_TOOLS:
+        # Dropping the scope variable must never widen permissions: while a registry is open
+        # (or unreadable), plain maintenance is denied until the human closes it.
+        opened = maintenance_scope.open_scope_ids(root, policies)
+        if opened:
+            return _deny(
+                "hay alcances de mantencion abiertos ("
+                + ", ".join(opened)
+                + "): la mantencion simple queda bloqueada hasta que el humano los cierre"
+            )
     if tool in READ_TOOLS:
         return check_read(root, ctx, tool_input)
     if tool in WRITE_TOOLS:
@@ -727,7 +775,56 @@ def decide(root: Path, event: dict[str, Any], env_vars: Mapping[str, str]) -> tu
     return True, ""
 
 
-def _log(root: Path, event: dict[str, Any], allowed: bool, reason: str, maintenance: bool) -> None:
+def _decide_scoped(
+    root: Path,
+    ctx: dict[str, Any],
+    event: dict[str, Any],
+    tool: str,
+    tool_input: dict[str, Any],
+    scope: maintenance_scope.Scope,
+) -> tuple[bool, str]:
+    """Active scope: explicit allowlists only; nothing *delivered to this hook* falls through.
+
+    Tools outside the hook ``matcher`` of .claude/settings.json never get here: keeping them out is
+    the job of the launch (``--tools``, verified by check_scope_tools.py), not of this function.
+    """
+    policies = ctx["policies"]
+    if tool in WRITE_TOOLS:
+        raw = tool_input.get("file_path") or tool_input.get("notebook_path")
+        if not raw:
+            return _deny("herramienta de escritura sin ruta")
+        return maintenance_scope.write_allowed(root, policies, scope, str(raw))
+    if tool in SHELL_TOOLS:
+        command = str(tool_input.get("command") or "")
+        # Raw-text rules first (secrets, destructive, variable changes), then the allowlist.
+        for rule in policies["bash"]["forbidden_everywhere"]:
+            if re.search(rule["pattern"], command, re.IGNORECASE):
+                return _deny(rule["reason"])
+        if _sets_maintenance_variable(policies, command):
+            return _deny(policies["bash"]["structural_rules"]["maintenance_env"]["reason"])
+        return maintenance_scope.shell_allowed(
+            root,
+            scope,
+            command,
+            "powershell" if tool == "PowerShell" else "bash",
+            event.get("cwd") if isinstance(event.get("cwd"), str) else None,
+            lambda path: check_read(root, ctx, {"file_path": path})[0],
+        )
+    if tool.startswith("mcp__"):
+        # check_mcp allows any non-AWS server by default; a file or shell MCP tool would bypass
+        # the write and shell allowlists above. No MCP tool is on the scope allowlist.
+        return _deny(f"Bajo alcance de mantencion no se admiten tools MCP: {tool}")
+    return _deny(f"herramienta no contemplada bajo alcance de mantencion: {tool}")
+
+
+def _log(
+    root: Path,
+    event: dict[str, Any],
+    allowed: bool,
+    reason: str,
+    maintenance: bool,
+    scope_id: str | None = None,
+) -> None:
     try:
         directory = root / ".harness-runtime"
         directory.mkdir(exist_ok=True)
@@ -742,6 +839,8 @@ def _log(root: Path, event: dict[str, Any], allowed: bool, reason: str, maintena
             "session_id": event.get("session_id"),
             # D5: distingue runtime normal de bootstrap de mantenimiento en la evidencia.
             "maintenance_mode": maintenance,
+            # v1.2: requested maintenance scope id (an identifier, never a secret).
+            "maintenance_scope": scope_id[:64] if scope_id is not None else None,
             "context": "maintenance-bootstrap" if maintenance else "runtime-normal",
             # v1.1: Supervisor turn that launched this process tree (absent in manual mode).
             "supervisor_turn": denials.turn_id(),
@@ -755,14 +854,16 @@ def _log(root: Path, event: dict[str, Any], allowed: bool, reason: str, maintena
 def main() -> int:
     event: dict[str, Any] = {}
     maintenance = False
+    scope_id: str | None = None
     try:
         event = json.loads(sys.stdin.read() or "{}")
         policies = common.load_policies(common.ROOT)
         maintenance = os.environ.get(policies["harness"]["maintenance_env_var"]) == "1"
+        scope_id = maintenance_scope.requested_id(policies, os.environ)
         allowed, reason = decide(common.ROOT, event, os.environ)
     except Exception as error:  # noqa: BLE001 - fail closed
         allowed, reason = False, f"error interno del guard (fail closed): {error}"
-    _log(common.ROOT, event, allowed, reason, maintenance)
+    _log(common.ROOT, event, allowed, reason, maintenance, scope_id)
     if allowed:
         return 0
     # v1.1: structured, session-scoped latch so a Supervisor never continues after a DENIED.

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "maintenance_scope",
+  "description": "Registro de un alcance de mantencion. Solo lo escribe approve.py maintenance-scope (humano).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "status",
+    "reason",
+    "control_checkout",
+    "worktree",
+    "branch",
+    "head",
+    "write_paths",
+    "allow_test_runs",
+    "test_basetemp_root",
+    "created_at",
+    "expires_at",
+    "opened_by",
+    "closed_at",
+    "closed_by",
+    "close_reason"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,40}$"},
+    "status": {"enum": ["open", "closed"]},
+    "reason": {"type": "string", "minLength": 10, "maxLength": 500},
+    "control_checkout": {"type": "string", "minLength": 1},
+    "worktree": {"type": "string", "minLength": 1},
+    "branch": {"type": "string", "pattern": "^[A-Za-z0-9._/-]+$"},
+    "head": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "write_paths": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Za-z0-9_.*-]+(/[A-Za-z0-9_.*-]+)*$"}
+    },
+    "allow_test_runs": {"type": "boolean"},
+    "test_basetemp_root": {"type": ["string", "null"]},
+    "created_at": {"type": "string", "minLength": 20},
+    "expires_at": {"type": "string", "minLength": 20},
+    "opened_by": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "email"],
+      "properties": {"name": {"type": "string"}, "email": {"type": "string"}}
+    },
+    "closed_at": {"type": ["string", "null"]},
+    "closed_by": {"type": ["object", "null"]},
+    "close_reason": {"type": ["string", "null"]},
+    "head_at_close": {"type": ["string", "null"]}
+  },
+  "if": {"properties": {"allow_test_runs": {"const": true}}},
+  "then": {"properties": {"test_basetemp_root": {"type": "string", "minLength": 3}}}
+}
