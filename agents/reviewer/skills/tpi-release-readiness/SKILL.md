@@ -41,6 +41,10 @@ CANDIDATE_REVIEW: revision automatica del release candidate real antes del Human
 - `python scripts/harness/aws_guard.py elasticbeanstalk describe-environments --application-name tpi-backoffice --environment-names tpi-backoffice-dev-green --no-include-deleted`
 
 ## 6. Evidencia obligatoria
+- Para el check de secretos, no ejecutar busquedas por shell que el guard prohibe ni reformularlas para evitarlo.
+- Si existe un scan auxiliar realizado por el humano, verificar su procedencia, alcance y hashes contra los artefactos actuales. Citar sus limitaciones; cero coincidencias no basta por si solo.
+- Complementar con inspeccion estructural de los artefactos permitidos: referencias a variables frente a valores literales, campos y salidas seguras. No leer archivos de credenciales ni imprimir valores sensibles.
+- Revisar tambien la evidencia nueva antes de registrarla. El scan previo no la cubre. Si no puede demostrar el check, informar lo pendiente sin aprobar.
 Checks (PASS/FAIL) en `candidate_review-*.json`:
 - `release_tree_equals_reviewed_tree` y `release_sha_on_main`.
 - `publish_run_success_for_release_sha`.
