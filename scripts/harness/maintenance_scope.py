@@ -180,6 +180,24 @@ def inside(child: Path, parent: Path) -> bool:
     return c == p or c.startswith(p + os.sep)
 
 
+_MSYS_DRIVE_RE = re.compile(r"^/([A-Za-z])(?:/(.*))?$", re.DOTALL)
+
+
+def native_path_text(text: str, *, windows: bool | None = None) -> str:
+    """Path text as the OS understands it: on Windows, MSYS/Git Bash ``/c/...`` becomes ``C:/...``.
+
+    Git Bash hands the hook paths such as ``/c/t/repo`` (event cwd, command arguments) that
+    ``Path`` would read as drive-relative ``C:\\c\\t\\repo``. Only a single-letter first component
+    is a drive; everything else, and every path on other systems, is returned unchanged. The result
+    is still resolved and checked by the callers, so this grants nothing by itself.
+    """
+    if (os.name == "nt") if windows is None else windows:
+        match = _MSYS_DRIVE_RE.fullmatch(text)
+        if match:
+            return f"{match.group(1).upper()}:/{match.group(2) or ''}"
+    return text
+
+
 def _same(a: Path, b: Path) -> bool:
     return os.path.normcase(str(a)) == os.path.normcase(str(b))
 
@@ -341,7 +359,7 @@ def load(
 def write_allowed(
     root: Path, policies: Mapping[str, Any], scope: Scope, raw: str
 ) -> tuple[bool, str]:
-    target = Path(raw)
+    target = Path(native_path_text(raw))
     if not target.is_absolute():
         target = root / target
     try:
@@ -428,7 +446,7 @@ class _Shell:
     def path(self, text: str, *, within: Path | None = None) -> Path:
         if not text or _GLOB_CHARS.search(text):
             _deny(f"ruta no admitida bajo alcance: {text!r}")
-        candidate = Path(text)
+        candidate = Path(native_path_text(text))
         candidate = (candidate if candidate.is_absolute() else self.cwd / candidate).resolve()
         limit = within or self.root
         if not inside(candidate, limit):
@@ -579,7 +597,7 @@ class _Shell:
                 index += 2
                 continue
             if arg.startswith("--basetemp="):
-                target = Path(arg.split("=", 1)[1])
+                target = Path(native_path_text(arg.split("=", 1)[1]))
                 if not target.is_absolute():
                     _deny("--basetemp debe ser absoluta")
                 target = target.resolve()
@@ -650,7 +668,7 @@ def shell_allowed(
     shell = _Shell(
         root,
         scope,
-        Path(cwd).resolve() if cwd else root.resolve(),
+        Path(native_path_text(cwd)).resolve() if cwd else root.resolve(),
         path_allowed,
         _cd_binds_the_rest(command),
     )

@@ -884,3 +884,172 @@ def test_scope_commands_require_a_terminal(repo):
         _open(repo)
     with pytest.raises(common.HarnessError):
         approve.close_scope(repo, SCOPE_ID, "cierre sin terminal")
+
+
+# --- rutas MSYS (/c/...) en Windows ---------------------------------------------------------------
+windows_only = pytest.mark.skipif(os.name != "nt", reason="MSYS /c/... solo se convierte en Windows")
+
+
+def _msys(path: Path) -> str:
+    """`C:\\a\\b` -> `/c/a/b`, the form Git Bash gives the hook."""
+    drive, rest = os.path.splitdrive(str(path))
+    return "/" + drive[0].lower() + rest.replace("\\", "/")
+
+
+@windows_only
+def test_msys_path_to_authorized_worktree_is_allowed_on_windows(repo):
+    _register(repo)
+    assert _edit(repo, _msys(_wt(repo) / "scripts" / "harness" / "guard.py"))[0]
+    assert _edit(repo, _msys(_wt(repo) / "tests" / "harness" / "test_x.py"))[0]
+
+
+@windows_only
+def test_windows_path_equivalent_is_still_allowed(repo):
+    _register(repo)
+    target = _wt(repo) / "scripts" / "harness" / "guard.py"
+    assert _edit(repo, target)[0]
+    assert _edit(repo, target.as_posix())[0]
+
+
+@windows_only
+def test_msys_path_outside_authorized_area_is_denied(repo, tmp_path):
+    _register(repo)
+    for target in (
+        _wt(repo, "other") / "scripts/harness/guard.py",
+        repo / "scripts/harness/guard.py",
+        _wt(repo) / "app/main.py",
+        _wt(repo) / "harness/policies.yaml",
+        tmp_path / "hermano" / "scripts/harness/guard.py",
+        Path(str(_wt(repo)) + "-evil") / "scripts/harness/guard.py",  # prefix, not containment
+    ):
+        assert not _edit(repo, _msys(target))[0], target
+
+
+@windows_only
+def test_msys_traversal_ending_outside_is_denied(repo):
+    _register(repo)
+    base = _msys(_wt(repo) / "scripts" / "harness")
+    assert not _edit(repo, base + "/../../../../scripts/harness/guard.py")[0]
+    assert not _edit(repo, base + "/../../.git")[0]
+    assert _edit(repo, _msys(_wt(repo) / "tests" / "harness") + "/../harness/test_y.py")[0]
+
+
+@windows_only
+def test_msys_event_cwd_is_interpreted(repo):
+    _register(repo)
+    command = "python -m ruff check scripts/harness"
+    event = {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": _msys(_wt(repo))}
+    assert guard.decide(repo, event, ENV)[0]
+    event["cwd"] = _msys(repo)  # control checkout: python must run from the worktree
+    assert not guard.decide(repo, event, ENV)[0]
+    event["cwd"] = _msys(_wt(repo, "other"))
+    assert not guard.decide(repo, event, ENV)[0]
+
+
+@windows_only
+def test_msys_paths_in_shell_arguments_keep_their_controls(repo):
+    _register(repo)
+    wt = _msys(_wt(repo))
+    pytest_args = "python -m pytest tests/harness -q -p no:cacheprovider --basetemp="
+    assert _bash(repo, f"cd {wt} && python -m ruff check scripts/harness")[0]
+    assert _bash(repo, f"cd {wt} && {pytest_args}{_msys(_bt(repo))}/run1")[0]
+    assert not _bash(repo, f"cd {_msys(_wt(repo, 'other'))}")[0]
+    assert not _bash(repo, f"cd {wt} && {pytest_args}{_msys(repo)}/tmp")[0]
+
+
+@windows_only
+@pytest.mark.parametrize(
+    "relative,reason",
+    [
+        ("harness/policies.yaml", "fuera de las rutas autorizadas"),
+        (".claude/settings.json", "nunca escribible"),
+        ("tests/harness/nul", "ambiguo"),
+        ("tests/harness/aux", "ambiguo"),
+        ("tests/harness/file.py:stream", "ambiguo"),
+    ],
+)
+def test_msys_writes_inside_the_worktree_keep_their_protections(repo, relative, reason):
+    """The path is inside the worktree, so only the intended protection can produce the DENY."""
+    _register(repo)
+    assert _edit(repo, _msys(_wt(repo) / "tests/harness/test_ok.py"))[0]  # scope is valid
+    allowed, why = _edit(repo, _msys(_wt(repo)) + "/" + relative)
+    assert not allowed
+    assert reason in why, why
+    assert "solo se escribe dentro de su worktree" not in why
+    assert "no activable" not in why
+
+
+@windows_only
+@pytest.mark.parametrize("relative", ["tests/harness/.env", "tests/harness/certs/tls.pem"])
+def test_msys_secret_reads_are_denied_through_read(repo, relative):
+    _register(repo)
+    allowed, why = _decide(repo, "Read", file_path=_msys(_wt(repo)) + "/" + relative)
+    assert not allowed
+    assert "secretos" in why or ".env" in why, why
+
+
+@windows_only
+@pytest.mark.parametrize(
+    "relative,reason",
+    [
+        # `.env` is stopped earlier by the textual forbidden_everywhere rule of the whole guard.
+        ("tests/harness/.env", "lectura de .env por shell prohibida"),
+        # `.pem` is not textual: it reaches _Shell.path, which reads the converted MSYS path.
+        ("tests/harness/certs/tls.pem", "lectura protegida"),
+    ],
+)
+def test_msys_secret_reads_are_denied_through_bash_cat(repo, relative, reason):
+    _register(repo)
+    assert _bash(repo, f"cat {_msys(_wt(repo))}/tests/harness/test_ok.py")[0]  # not a blanket deny
+    allowed, why = _bash(repo, f"cat {_msys(_wt(repo))}/{relative}")
+    assert not allowed
+    assert reason in why, why
+
+
+@windows_only
+@pytest.mark.parametrize("relative", ["tests/harness/.env", "tests/harness/certs/tls.pem"])
+def test_shell_allowed_denies_msys_secret_reads_with_the_real_read_callback(repo, relative):
+    """Inner layer only (no forbidden_everywhere): the protection acts on the converted path."""
+    _register(repo)
+    ctx = guard._load(repo)
+    scope = maintenance_scope.load(repo, ctx["policies"], SCOPE_ID)
+
+    def path_allowed(path: str) -> bool:
+        return guard.check_read(repo, ctx, {"file_path": path})[0]
+
+    wt = _msys(_wt(repo))
+    cwd = _msys(_wt(repo))
+    allowed, why = maintenance_scope.shell_allowed(
+        repo, scope, f"cat {wt}/tests/harness/test_ok.py", "bash", cwd, path_allowed
+    )
+    assert allowed, why  # control: cwd and scope are valid
+    allowed, why = maintenance_scope.shell_allowed(
+        repo, scope, f"cat {wt}/{relative}", "bash", cwd, path_allowed
+    )
+    assert not allowed
+    assert "lectura protegida" in why, why
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("/c/t/repo", "C:/t/repo"),
+        ("/C/t/repo", "C:/t/repo"),
+        ("/c", "C:/"),
+        ("/c/", "C:/"),
+        ("/cc/t", "/cc/t"),  # not a single-letter drive
+        ("/dev/null", "/dev/null"),
+        ("/home/u/repo", "/home/u/repo"),
+        ("c/t/repo", "c/t/repo"),
+        ("C:/t/repo", "C:/t/repo"),
+        ("C:\\t\\repo", "C:\\t\\repo"),
+        ("", ""),
+    ],
+)
+def test_native_path_text_converts_only_msys_drives_on_windows(text, expected):
+    assert maintenance_scope.native_path_text(text, windows=True) == expected
+
+
+@pytest.mark.parametrize("text", ["/c/t/repo", "/c", "/home/u/repo", "/d/x", "C:/t", "rel/p"])
+def test_native_path_text_leaves_linux_paths_unchanged(text):
+    assert maintenance_scope.native_path_text(text, windows=False) == text
