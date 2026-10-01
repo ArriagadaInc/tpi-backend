@@ -28,7 +28,11 @@ CANDIDATE_REVIEW: revision automatica del release candidate real antes del Human
   en un directorio temporal y `sha256sum`.
 - `python scripts/harness/aws_guard.py ecr describe-images --repository-name tpi-dev-app --image-ids imageDigest=<digest>`
 - `python scripts/harness/aws_guard.py ecr describe-image-scan-findings --repository-name <repo> --image-id imageDigest=<digest>`
-- `python scripts/harness/aws_guard.py elasticbeanstalk describe-application-versions --application-name tpi-backoffice --version-labels <candidate> <lkg>`
+- Consultar candidate y LKG en DOS llamadas secuenciales, con un solo label por llamada:
+  - `python scripts/harness/aws_guard.py elasticbeanstalk describe-application-versions --application-name tpi-backoffice --version-labels <candidate>`
+  - `python scripts/harness/aws_guard.py elasticbeanstalk describe-application-versions --application-name tpi-backoffice --version-labels <lkg>`
+- Ejecutar un solo comando por llamada; no encadenar comandos ni ocultar errores.
+- Ante cualquier DENIED del Harness o AWS guard: STOP inmediato, sin mas herramientas, escrituras, compactacion ni transiciones.
 - `python scripts/harness/aws_guard.py s3api head-object --bucket <bucket> --key <key> --checksum-mode ENABLED`
 - `python scripts/harness/aws_guard.py elasticbeanstalk describe-environments --application-name tpi-backoffice --environment-names tpi-backoffice-dev-green --no-include-deleted`
 
