@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "H3.3.2",
+  "created_at": "2026-09-16T15:55:52Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609161547-deployer",
+  "approved_commit": "fec33e7951f862c95b2436b09b969e5ef1915769",
+  "deployed_commit": "fec33e7951f862c95b2436b09b969e5ef1915769",
+  "application_version": "h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1",
+  "result": "FAIL",
+  "environment_state": {
+    "version_label": "h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true,
+    "detail": "Reverificado de forma independiente en esta sesion VERIFYING (describe-environments, describe-application-versions, s3api head-object --checksum-mode ENABLED): VersionLabel=h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1 en el environment; AV SourceBundle key identica a la aprobada; ChecksumSHA256 S3 = 3cWr4gR7YktaWhqKoGFQSLVCkQd70NH/r/fE/J4nOAA= igual al aprobado en approval-01.json y deployment-01.json. Digests ECR (app sha256:96c611b6..., caddy sha256:bbf22901...) ya verificados de forma reproducible en candidate-01.json/candidate_review-01.json; el checksum de bundle identico implica contenido identico, incluidos los digests."
+  },
+  "post_cutover_events": {
+    "checked": "elasticbeanstalk describe-events --max-records 20",
+    "errors_or_aborts_found": false,
+    "note": "Sin AccessDenied, abort ni rollback inesperado desde el cutover (2026-09-16T15:34:23Z). Ultimo evento: 'Environment health has transitioned from Info to Ok. Application update completed 58 seconds ago and took 47 seconds.' a las 2026-09-16T15:36:54Z."
+  },
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "detail": "GET https://dev.tupensioninteligente.cl/ -> 200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "detail": "GET https://backoffice.dev.tupensioninteligente.cl/login -> 200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "detail": "GET https://dev.tupensioninteligente.cl/api/v1/catalogs -> 200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "detail": "GET https://backoffice.dev.tupensioninteligente.cl/static/css/app.css -> 200"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "detail": "GET https://backoffice.dev.tupensioninteligente.cl/leads -> 307 redirect a /login (Location: /login), sin seguir el redirect"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "detail": "Ninguna respuesta ni cabecera Location de los checks anteriores redirigio a genialabs.cl"
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "pending_human",
+      "method": "human",
+      "note": "diego.operaciones no fue autenticado por este rol (Verifier no ejecuta login ni maneja credenciales). Requiere que el rol autorizado configure AUTH_USERS_JSON (clase E) y que el humano realice el smoke autenticado."
+    },
+    {
+      "id": "AC-2",
+      "status": "pending_human",
+      "method": "human",
+      "note": "alvaro.operaciones no existe verificablemente sin leer AUTH_USERS_JSON (prohibido para este rol) ni fue autenticado. Misma dependencia que AC-1."
+    },
+    {
+      "id": "AC-3",
+      "status": "pending_human",
+      "method": "both",
+      "note": "Portion automatizada cubierta por tests/unit/test_h3_3_1_rbac_pii_assignment.py y tests/unit/test_web_app.py (developer-01.json, CI run 35106955650, PASS). No se declara 'met' porque el criterio exige tambien evidencia funcional en AWS DEV con sesion autenticada real de CEO/CTO, que no existe todavia (sin AUTOMATED_AUTHENTICATED_SMOKE en este harness)."
+    },
+    {
+      "id": "AC-4",
+      "status": "pending_human",
+      "method": "both",
+      "note": "Portion automatizada cubierta por tests/unit/test_rbac_superusers.py y test_solicitud_assignment_service.py. Evidencia funcional en AWS DEV (asignacion real ejecutada por CEO/CTO autenticados) pendiente."
+    },
+    {
+      "id": "AC-5",
+      "status": "pending_human",
+      "method": "both",
+      "note": "Portion automatizada cubierta por tests/unit/test_rbac_superusers.py y test_web_app.py::test_ceo_and_cto_can_execute_superuser_actions. Evidencia funcional en AWS DEV pendiente."
+    },
+    {
+      "id": "AC-6",
+      "status": "pending_human",
+      "method": "both",
+      "note": "Portion automatizada cubierta por tests/unit/test_h3_3_1_rbac_pii_assignment.py::test_ac2_pii_masked_even_with_web_mask_pii_false (sin regresion H3.3.1). Confirmacion funcional en AWS DEV con las nuevas identidades pendiente."
+    },
+    {
+      "id": "AC-7",
+      "status": "pending_human",
+      "method": "both",
+      "note": "Portion automatizada cubierta por tests/integration/test_database_runtime.py (flujo de asignacion sin cambios respecto a H3.3.1). Evidencia funcional en AWS DEV con CEO/CTO reales pendiente."
+    },
+    {
+      "id": "AC-8",
+      "status": "pending_human",
+      "method": "human",
+      "note": "Smoke autenticado humano en AWS DEV con diego.operaciones (CEO) y alvaro.operaciones (CTO) no realizado todavia."
+    }
+  ],
+  "pii_log_scan": {
+    "matches": 0,
+    "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+    "patterns": [
+      "password",
+      "Authorization"
+    ],
+    "window_start": "2026-09-16T15:34:23Z"
+  },
+  "failure_class": "functional",
+  "rollback_recommended": false,
+  "rollback_justification": "No aplica autorizacion de rollback: el environment esta Ready/Green/Ok en la version aprobada, sin degradacion ni inconsistencia; el motivo de no-cierre es puramente funcional (identidades diego.operaciones/alvaro.operaciones con rol ceo/cto aun no configuradas en AUTH_USERS_JSON y smoke autenticado humano AC-8 aun no ejecutado). Segun contrato (seccion 9) y CONTEXT.md del Deployer, un defecto puramente funcional no endurece el deploy ni dispara rollback automatico; el release puede permanecer en DEV para completar la configuracion.",
+  "human_pending_action": {
+    "summary": "Configurar identidades DEV clase E (AUTH_USERS_JSON) para diego.operaciones (CEO) y alvaro.operaciones (CTO), luego ejecutar smoke autenticado humano (AC-8) y aceptacion via approve.py.",
+    "procedure_reference": "docs/H3_3_2_SUPERUSUARIOS_CEO_CTO.md, seccion 'Identidades DEV (accion pendiente para rol autorizado)' (commit fec33e7951f862c95b2436b09b969e5ef1915769)",
+    "exact_steps": [
+      "1. diego.operaciones: cambiar 'role' de 'operations' a 'ceo' en AUTH_USERS_JSON, preservando 'subject', 'username' y 'display_name' existentes.",
+      "2. alvaro.operaciones: crear la entrada con 'role'='cto' (subject nuevo y estable, username 'alvaro.operaciones').",
+      "3. Generar cada password_hash Argon2id de forma interactiva (ver docs/DEVELOPMENT_GUIDE.md, seccion 'Local demo'; usar getpass; nunca volcar el hash en consola, logs, Git ni evidencia).",
+      "4. Reconstruir el payload AUTH_USERS_JSON preservando todos los usuarios existentes y aplicando solo los 2 cambios anteriores.",
+      "5. Publicar la nueva version en el mecanismo de secretos del environment (fuera del Harness; sin reejecutar migraciones 005/006).",
+      "6. Ejecutar el smoke autenticado humano (AC-8) con diego.operaciones y alvaro.operaciones y confirmar AC-1..AC-8.",
+      "7. Registrar la decision humana con 'python scripts/harness/approve.py accept --decision accept --criteria AC-1,AC-2,AC-3,AC-4,AC-5,AC-6,AC-7,AC-8' (o el subconjunto que corresponda segun lo efectivamente verificado)."
+    ],
+    "constraints": [
+      "No pegar contrasenas, hashes ni secretos en el chat ni en evidencia.",
+      "No modificar IAM ni Route53.",
+      "No reejecutar migraciones 005/006.",
+      "Esta accion es exclusiva del rol/humano autorizado fuera del Harness; ningun rol de Claude Code en este Harness puede leer o escribir AUTH_USERS_JSON."
+    ]
+  },
+  "note": "Cadena de identidad y smoke tecnico no autenticado: 100% PASS. Verificacion no cierra (result=FAIL, failure_class=functional) exclusivamente porque AC-1, AC-2, AC-8 (humanos) y la porcion funcional en AWS DEV de AC-3..AC-7 (both) siguen pendientes de la configuracion de identidad clase E y del smoke autenticado humano, consistente con acceptance_criteria.verification=human/both en tasks/current.yaml y con el precedente evidence/H3.3.1/deployment/verification-02.json."
+}

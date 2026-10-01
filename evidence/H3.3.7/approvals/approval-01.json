@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "approval",
+  "task_id": "H3.3.7",
+  "created_at": "2026-10-01T14:42:02Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "approved_commit": "6f0f5bb1e934742cd8e8572d4a401f8bf29ab1c7",
+  "app_digest": "sha256:841595e4758a36536133bf9a5c2089893de71fcef877e742d2bbf9c9a14f3c42",
+  "caddy_digest": "sha256:92d49b1199de6d201db48f351581be0da65ef2c544ac42e118c6eeeb5d06b40f",
+  "bundle_sha256": "efa590b9e0daef786ce1f4b69ea8026c1a160b39d8dac06999d1c79b7f82d8aa",
+  "s3_key": "tpi-backoffice/dev-releases/h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1/efa590b9e0daef786ce1f4b69ea8026c1a160b39d8dac06999d1c79b7f82d8aa.zip",
+  "application_version": "h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "lkg_version_label": "h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1",
+  "candidate_evidence": {
+    "path": "evidence/H3.3.7/deployment/candidate-01.json",
+    "sha256": "061c47e2cefba3a090eefe87f73ea8b700174e81661dbee2e4da97241c16e5f6"
+  },
+  "rollback_authorization": {
+    "scope": "single_version_only_rollback_to_named_lkg",
+    "max_attempts": 1,
+    "lkg_version_label": "h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1",
+    "conditions": [
+      "update_environment_accepted",
+      "environment_degraded_inconsistent_or_not_expected_state",
+      "lkg_application_version_usable",
+      "lkg_images_present_in_ecr",
+      "no_option_settings_required",
+      "not_purely_functional_defect",
+      "no_previous_rollback_attempt"
+    ]
+  },
+  "decision": "approved"
+}

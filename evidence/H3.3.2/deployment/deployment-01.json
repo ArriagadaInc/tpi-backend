@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "kind": "deployment",
+  "task_id": "H3.3.2",
+  "created_at": "2026-09-16T15:37:52Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609161536-deployer",
+  "approved_commit": "fec33e7951f862c95b2436b09b969e5ef1915769",
+  "deployed_commit": "fec33e7951f862c95b2436b09b969e5ef1915769",
+  "application_version": "h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "update_accepted": true,
+  "result": "success",
+  "final_state": {
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "version_label": "h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "identity_chain_detail": {
+    "environment_version_label": "h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1",
+    "approved_version_label": "h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1",
+    "application_version_source_bundle_key": "tpi-backoffice/dev-releases/h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1/ddc5abe2047b624b5a5a1a8aa0615048b54291077bd0d1ffaff7c4fc9e273800.zip",
+    "approved_s3_key": "tpi-backoffice/dev-releases/h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1/ddc5abe2047b624b5a5a1a8aa0615048b54291077bd0d1ffaff7c4fc9e273800.zip",
+    "s3_head_object_checksum_sha256": "3cWr4gR7YktaWhqKoGFQSLVCkQd70NH/r/fE/J4nOAA=",
+    "approved_checksum_sha256": "3cWr4gR7YktaWhqKoGFQSLVCkQd70NH/r/fE/J4nOAA=",
+    "bundle_sha256": "ddc5abe2047b624b5a5a1a8aa0615048b54291077bd0d1ffaff7c4fc9e273800",
+    "app_digest_approved": "sha256:96c611b6aecbb50e936621f5d9e8a2f31a5c1c7387e2fdb94409cc2adb3520a3",
+    "caddy_digest_approved": "sha256:bbf22901b5c210888cbdea83b53459772d44a7e7299a1c8a9d75b01910b3be1c",
+    "note": "Digests fijados de forma determinista dentro del bundle domain-locked ya verificado (reproducido) en candidate-01.json / candidate_review-01.json; el checksum SHA256 del bundle en S3 coincide exactamente con el aprobado, por lo que el contenido (incluidos los digests) es identico al aprobado."
+  },
+  "aws_calls": {
+    "preflight": [
+      "sts get-caller-identity",
+      "elasticbeanstalk describe-environments (pre-cutover: VersionLabel=h3-3-1-rbac-pii-4aac143-domainlocked-r1, Ready/Green/Ok, sin update en curso)",
+      "elasticbeanstalk describe-application-versions (AV aprobada: Status UNPROCESSED, SourceBundle coincide)"
+    ],
+    "cutover": [
+      "elasticbeanstalk update-environment --environment-name tpi-backoffice-dev-green --version-label h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1"
+    ],
+    "observability": [
+      "elasticbeanstalk describe-environments (post-cutover, polling 30s)",
+      "elasticbeanstalk describe-events --max-records 20",
+      "s3api head-object --checksum-mode ENABLED"
+    ]
+  },
+  "events_summary": [
+    "2026-09-16T15:34:23Z Environment update is starting.",
+    "2026-09-16T15:34:27Z Deploying new version to instance(s).",
+    "2026-09-16T15:34:54Z Environment health transitioned Ok->Info, update in progress.",
+    "2026-09-16T15:35:08Z Instance deployment completed successfully.",
+    "2026-09-16T15:35:13Z New application version was deployed to running EC2 instances.",
+    "2026-09-16T15:35:13Z Environment update completed successfully."
+  ],
+  "started_at": "2026-09-16T15:34:23Z",
+  "finished_at": "2026-09-16T15:35:13Z",
+  "warnings": [],
+  "failure_class": null,
+  "rollback_executed": false,
+  "rollback_justification": "No aplica: cutover exitoso, environment convergio a Ready/Green/Ok en la version aprobada sin degradacion ni inconsistencia observada.",
+  "notes": "Cutover version-only unico intento. No se modificaron option settings, IAM, DNS, secretos ni codigo. AUTH_USERS_JSON no fue leido ni modificado. Smoke funcional y AC-1/AC-2/AC-8 quedan reservados al rol VERIFYING."
+}

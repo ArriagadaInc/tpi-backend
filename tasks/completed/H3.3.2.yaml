@@ -1,0 +1,79 @@
+schema_version: 1
+task:
+  id: H3.3.2
+  title: Modelo de superusuarios CEO/CTO e identidades DEV
+  objective: Establecer diego.operaciones como CEO y alvaro.operaciones como CTO, superusuarios funcionales
+    del backoffice TPI con superset de permisos RBAC existentes, absorbiendo la validacion funcional diferida
+    en el cierre de H3.3.1.
+  source:
+    type: story
+    ref: 'Deuda funcional diferida de H3.3.1: evidence/H3.3.1/approvals/acceptance-02.json, evidence/H3.3.1/deployment/verification-03.json,
+      tasks/completed/H3.3.1.yaml'
+  change_class: A
+  deploy_required: true
+  requires_human_acceptance: true
+  acceptance_criteria:
+  - id: AC-1
+    description: diego.operaciones autentica en DEV con rol ceo
+    verification: human
+  - id: AC-2
+    description: alvaro.operaciones existe y autentica en DEV con rol cto
+    verification: human
+  - id: AC-3
+    description: CEO y CTO ven PII completa en bandeja y detalle
+    verification: both
+  - id: AC-4
+    description: CEO y CTO pueden ejecutar asignacion manual de leads
+    verification: both
+  - id: AC-5
+    description: CEO y CTO pueden ejecutar todas las capacidades funcionales/administrativas del CRM sujetas
+      a RBAC
+    verification: both
+  - id: AC-6
+    description: Los roles no privilegiados continuan recibiendo PII enmascarada server-side y el HTML
+      servido no contiene PII completa
+    verification: both
+  - id: AC-7
+    description: La asignacion mantiene las garantias existentes (cambio de estado a asignado, persistencia
+      en tpi.asignaciones, una sola asignacion activa, registro en tpi.auditoria)
+    verification: both
+  - id: AC-8
+    description: Smoke humano autenticado en AWS DEV realizado con diego.operaciones como CEO y alvaro.operaciones
+      como CTO
+    verification: human
+  constraints:
+  - No leer ni imprimir AUTH_USERS_JSON completo
+  - No exponer hashes, passwords ni secretos en logs/evidence
+  - No almacenar credenciales en Git
+  - No modificar IAM
+  - No modificar Route53
+  - No reejecutar migraciones 005/006
+  - Mantener PII server-side
+  - Mantener tpi.asignaciones como fuente operacional de asignacion
+  - Mantener tpi.auditoria como trazabilidad
+  - Esta regla aplica exclusivamente al backoffice TPI y no concede permisos AWS, IAM, Harness ni de deployment
+  - Los permisos actuales de otros roles no deben reducirse
+  - Si la configuracion segura de identidades DEV requiere una accion que Developer no puede realizar,
+    debe quedar preparada para el rol autorizado correspondiente, sin evadir las politicas
+  dependencies:
+  - H3.3.1
+  risk:
+    level: high
+    notes: Superusuarios con PII completa y capacidades administrativas sobre el CRM; requiere configuracion
+      segura de identidades DEV y smoke autenticado humano con diego.operaciones (CEO) y alvaro.operaciones
+      (CTO).
+  status: closed
+closure:
+  closed_at: '2026-09-16T17:44:53Z'
+  final_state: DONE
+  evidence_dir: evidence/H3.3.2
+  release:
+    release_sha: fec33e7951f862c95b2436b09b969e5ef1915769
+    pr_number: 53
+    application_version: h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1
+    bundle_sha256: ddc5abe2047b624b5a5a1a8aa0615048b54291077bd0d1ffaff7c4fc9e273800
+    lkg: h3-3-1-rbac-pii-4aac143-domainlocked-r1
+    deployment: success
+    deployed_commit: fec33e7951f862c95b2436b09b969e5ef1915769
+    verification: PASS
+  rework_rounds: 0

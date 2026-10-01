@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "H3.3.4",
+  "created_at": "2026-09-20T17:45:44Z",
+  "role": "developer",
+  "runtime": "deepseek",
+  "session_id": "deepseek-202609201745-developer",
+  "head_sha": "19725b45525d127985183e0640a2ae5b74963725",
+  "branch": "harness/H3.3.4-cutover-wiring",
+  "pr_number": 56,
+  "pr_url": "https://github.com/ArriagadaInc/tpi-backend/pull/56",
+  "change_class": "D",
+  "baseline": "c99b260ffc32aae0ab8fe80585e6243aa1be5665",
+  "rework_round": 0,
+  "remediated_review": "evidence/H3.3.4/reviewer/candidate_review-01.json",
+  "rework_commits": [
+    "19725b4 fix(H3.3.4): wire LEAD_STATE_HISTORY_CUTOVER into domain-locked compose"
+  ],
+  "tests": {
+    "command": "CI Linux run 35526661282: pytest tests/ --cov=app --cov-report=xml --cov-fail-under=85 -> 753 passed, 7 warnings in 59.62s, coverage 88.91% (>=85). Local (Windows) focused: pytest tests/unit/test_domain_locked_bundle.py tests/unit/test_h3_3_4_timeline_presentation.py -> 16 passed.",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "coverage": "PASS",
+    "docker_build": "PASS",
+    "release_tooling_validation": "PASS",
+    "ci": "PASS"
+  },
+  "ci_run": {
+    "run_id": 35526661282,
+    "conclusion": "success",
+    "head_sha": "19725b45525d127985183e0640a2ae5b74963725",
+    "jobs": {
+      "docker_build": "PASS",
+      "release_tooling_validation": "PASS",
+      "lint_format": "PASS",
+      "tests": "PASS",
+      "security_audit": "PASS"
+    },
+    "tests_summary": "753 passed, 7 warnings in 59.62s; coverage 88.91% (>=85)",
+    "pip_audit": "No known vulnerabilities found",
+    "bandit": "No issues identified."
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "tests/integration/test_lead_state_history.py (transaccional FOR UPDATE, no-op sin duplicado, rollback completo, concurrencia real)"
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "tests/unit/test_h3_3_4_migration_scripts.py (008 libre en historial, no modifica 005/006/007)"
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "tests/integration/test_audit_state_view.py (vista minimo privilegio, REVOKE PUBLIC, sin SELECT directo a tpi.auditoria)"
+    },
+    {
+      "id": "AC-4",
+      "status": "pending_verification",
+      "evidence": "tests/unit/test_h3_3_4_timeline_presentation.py; smoke humano AWS DEV pendiente (AC-9)"
+    },
+    {
+      "id": "AC-5",
+      "status": "not_applicable",
+      "evidence": "Artefacto operativo del migration candidate (Deployer/Human Gate)"
+    },
+    {
+      "id": "AC-6",
+      "status": "not_applicable",
+      "evidence": "Postflight humano de privilegios en AWS DEV (ya ejecutado; no es alcance del Developer)"
+    },
+    {
+      "id": "AC-7",
+      "status": "not_applicable",
+      "evidence": "Secuencia operativa del application candidate (Deployer/Human Gate)"
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "evidence": "tests/integration/test_audit_state_view.py (rollback REVOKE/DROP probado en integracion local)"
+    },
+    {
+      "id": "AC-9",
+      "status": "not_applicable",
+      "evidence": "Smoke funcional humano en AWS DEV (etapa Deployer/Verifying)"
+    },
+    {
+      "id": "AC-10",
+      "status": "pending_verification",
+      "evidence": "tests/unit/test_executive_dashboard_access.py (403 server-side); smoke humano 403 en DEV pendiente (AC-18)"
+    },
+    {
+      "id": "AC-11",
+      "status": "met",
+      "evidence": "tests/integration/test_executive_dashboard_repository.py y test_executive_dashboard_full.py (KPIs, fecha_ingreso, evolucion, filtros)"
+    },
+    {
+      "id": "AC-12",
+      "status": "met",
+      "evidence": "tests/integration/test_executive_dashboard_per_advisor.py (cartera, matriz estado x asesor, nombre solo CEO/CTO sin PII)"
+    },
+    {
+      "id": "AC-13",
+      "status": "met",
+      "evidence": "tests/integration/test_executive_dashboard_repository.py (buckets, umbral default=5, movimiento operativo real)"
+    },
+    {
+      "id": "AC-14",
+      "status": "met",
+      "evidence": "tests/integration/test_executive_dashboard_repository.py (tiempo hasta asignacion/primera gestion, N/D si no existe)"
+    },
+    {
+      "id": "AC-15",
+      "status": "met",
+      "evidence": "tests/integration/test_executive_dashboard_repository.py (funnel solo transiciones observables, COUNT(DISTINCT id_lead))"
+    },
+    {
+      "id": "AC-16",
+      "status": "met",
+      "evidence": "tests/unit/test_executive_dashboard_filters.py (solo categorias MVP; genero y estado civil ausentes)"
+    },
+    {
+      "id": "AC-17",
+      "status": "met",
+      "evidence": "tests/unit/test_executive_dashboard_access.py y test_h3_3_1_rbac_pii_assignment.py (cero PII, metricas agregadas)"
+    },
+    {
+      "id": "AC-18",
+      "status": "pending_verification",
+      "evidence": "tests/integration/test_executive_dashboard_full.py y per_advisor.py (automated); smoke humano Parte B en DEV pendiente"
+    }
+  ],
+  "files_changed": [
+    "deployment/aws/docker-compose.domainlocked.yml",
+    "app/config/settings.py",
+    "tests/unit/test_domain_locked_bundle.py",
+    "tests/unit/test_h3_3_4_timeline_presentation.py"
+  ],
+  "findings_disposition": [
+    {
+      "id": "CAND-01",
+      "severity": "blocker",
+      "disposition": "corregido",
+      "detail": "LEAD_STATE_HISTORY_CUTOVER cableada en deployment/aws/docker-compose.domainlocked.yml (bloque environment de backoffice, patron ${LEAD_STATE_HISTORY_CUTOVER:-}). La app conserva default None y ahora resuelve cadena vacia -> None (field_validator), preservando la falla segura cuando la variable falta. Prueba focalizada en tests/unit/test_domain_locked_bundle.py::test_domain_locked_bundle_forwards_lead_state_history_cutover_to_backoffice."
+    }
+  ],
+  "assumptions": [
+    "Correccion minima post-rechazo del application candidate (CAND-01): unicamente se cablea LEAD_STATE_HISTORY_CUTOVER; no se reabre la implementacion de H3.3.4 ni sus deudas documentales (F1/F11 fuera de alcance).",
+    "La migracion 008 ya fue aplicada una vez (postflight PASS) y NO se reejecuta ni se modifica en este PR.",
+    "La fecha de cutover no queda fijada en codigo ni en el repositorio: se suministrara como option setting de EB en el despliegue; el compose solo la reenvia y la app falla segura (None) si falta.",
+    "Cero cambios a SQL/migraciones 005-008, metricas, dashboard, RBAC/PII, dependencias, requirements, Harness ni matriz documental.",
+    "Cero AWS/RDS; sin merge, sin approve.py, sin despliegue, sin candidate.",
+    "CI Linux es la autoridad: 753 passed, coverage 88.91% (>=85)."
+  ],
+  "migrations_included": false
+}

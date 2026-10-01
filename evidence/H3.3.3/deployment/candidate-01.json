@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "kind": "candidate",
+  "task_id": "H3.3.3",
+  "created_at": "2026-09-17T03:36:24Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609170324-deployer",
+  "release_sha": "c5e738c21ba202d9c664652412e6820628b18e3c",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "environment": "tpi-backoffice-dev-green",
+  "publish_run": {
+    "run_id": 35178174524,
+    "conclusion": "success",
+    "head_sha": "c5e738c21ba202d9c664652412e6820628b18e3c",
+    "note": "6/6 jobs PASS (Authorize source revision, Tests, Security Audit, Docker Build, Lint & Format, Publish immutable images and release bundle) via gh run watch 35178174524; job 'Publish immutable images and release bundle' succeeded, which embeds the 'Fail closed on high or critical ECR findings' step (loops per repository on imageTag=c5e738c21ba202d9c664652412e6820628b18e3c until scan COMPLETE, then reads findingSeverityCounts.CRITICAL/HIGH and fails the job if either is nonzero), confirming scan critical=0, high=0 for both images."
+  },
+  "images": {
+    "app": {
+      "repository": "tpi-dev-app",
+      "digest": "sha256:9333994ef8a1bae1b4bff1b95bdaba24b3a4004b9f10ba6524f0ca326948e523",
+      "scan": {
+        "critical": 0,
+        "high": 0
+      }
+    },
+    "caddy": {
+      "repository": "tpi-dev-caddy",
+      "digest": "sha256:27e8c5dc8a1facb85eae506383a3c380a838b61c96d7ec2dd9c63acce9384ee4",
+      "scan": {
+        "critical": 0,
+        "high": 0
+      }
+    }
+  },
+  "bundle": {
+    "sha256": "6b6450b53df7e54a1d80ab637819d2f7dbc059e9435cd59221b549cfda949695",
+    "artifact_type": "domain-locked",
+    "reproducible": true,
+    "note": "Construido localmente con deployment/build_eb_ecr_bundle.py::build_domain_locked_bundle usando deployment/aws/docker-compose.domainlocked.yml, app_image/caddy_image por digest (manifest tpi-dev-ecr-c5e738c.manifest.json del run 35178174524) y runtime_git_sha=c5e738c21ba202d9c664652412e6820628b18e3c. El bundle no domain-locked embebido en el artifact del workflow (tpi-dev-ecr-c5e738c.zip, bundle_sha256 distinto) usa placeholders sin resolver y no es el artefacto de release; el bundle domain-locked se construye localmente por el Deployer y el Reviewer lo reconstruye y compara SHA256."
+  },
+  "s3": {
+    "bucket": "elasticbeanstalk-us-east-2-821656895812",
+    "key": "tpi-backoffice/dev-releases/h3-3-3-historial-web-ux-c5e738c-domainlocked-r1/6b6450b53df7e54a1d80ab637819d2f7dbc059e9435cd59221b549cfda949695.zip",
+    "checksum_sha256": "a2RQtT335UodgKtjeBnS99vAWelDXNWSIbVJz9qUlpU=",
+    "version_id": null
+  },
+  "application_version": {
+    "label": "h3-3-3-historial-web-ux-c5e738c-domainlocked-r1",
+    "status": "UNPROCESSED"
+  },
+  "environment_observed": {
+    "version_label": "h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok"
+  },
+  "lkg": {
+    "version_label": "h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1",
+    "status": "UNPROCESSED",
+    "images": [
+      {
+        "repository": "tpi-dev-app",
+        "digest": "sha256:96c611b6aecbb50e936621f5d9e8a2f31a5c1c7387e2fdb94409cc2adb3520a3",
+        "present": true
+      },
+      {
+        "repository": "tpi-dev-caddy",
+        "digest": "sha256:bbf22901b5c210888cbdea83b53459772d44a7e7299a1c8a9d75b01910b3be1c",
+        "present": true
+      }
+    ],
+    "option_settings_required": false
+  },
+  "migration_reference": {
+    "task_id": "H3.3.3",
+    "migration": "007_create_audit_assignment_view",
+    "evidence": "evidence/H3.3.3/deployment/migration-01.json",
+    "result": "PASS",
+    "applied_once": true,
+    "postflight_checks_passed": 15,
+    "note": "Migracion 007 (vista tpi.v_asignacion_auditoria) aplicada manualmente fuera del fast path del Harness, aprobada por el humano y verificada por postflight antes de resolver BLOCKED_HUMAN -> PREPARING_DEPLOYMENT (evidence/H3.3.3/approvals/resolution-01.json). Esta es la aprobacion del migration candidate; no sustituye la aprobacion humana del application candidate que se solicitara en WAITING_HUMAN_APPROVAL."
+  },
+  "smoke_plan": [
+    {
+      "name": "public_https",
+      "method": "GET",
+      "url": "https://dev.tupensioninteligente.cl/",
+      "expect_status": 200
+    },
+    {
+      "name": "backoffice_login",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/login",
+      "expect_status": 200
+    },
+    {
+      "name": "api_catalogs",
+      "method": "GET",
+      "url": "https://dev.tupensioninteligente.cl/api/v1/catalogs",
+      "expect_status": 200
+    },
+    {
+      "name": "static_css",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/static/css/app.css",
+      "expect_status": 200
+    },
+    {
+      "name": "leads_requires_auth",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/leads",
+      "expect": "redirect a /login o 401/403"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "check": "ninguna respuesta redirige a genialabs.cl"
+    },
+    {
+      "name": "AC-8_assignment_auto_projected",
+      "method": "human",
+      "expect": "la asignacion del smoke humano de H3.3.2 se proyecta automaticamente en la ficha de lead tras aplicar la vista 007, sin backfill"
+    },
+    {
+      "name": "AC-3_timeline_real_env",
+      "method": "human",
+      "expect": "linea de tiempo cronologica fusiona notas humanas y eventos automaticos de asignacion (America/Santiago, actor, asesor, estado_anterior->estado_nuevo, badge Automatico, sin edicion/eliminacion), estado vacio coherente cuando no hay datos"
+    },
+    {
+      "name": "AC-4_volver_al_sitio_real_env",
+      "method": "human",
+      "expect": "Volver al sitio visible solo autenticado, href exacto https://dev.tupensioninteligente.cl/, sin cookies/tokens/credenciales/query/fragments, ausente en login"
+    }
+  ],
+  "deployment_plan": {
+    "commands": [
+      "python scripts/harness/aws_guard.py elasticbeanstalk update-environment --environment-name tpi-backoffice-dev-green --version-label h3-3-3-historial-web-ux-c5e738c-domainlocked-r1"
+    ]
+  },
+  "rollback_plan": {
+    "version_label": "h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1"
+  }
+}

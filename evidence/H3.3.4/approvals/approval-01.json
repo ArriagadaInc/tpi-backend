@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "approval",
+  "task_id": "H3.3.4",
+  "created_at": "2026-09-21T00:37:02Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "approved_commit": "3051a6271e1626b40fe24a744abe097cab1ab0fe",
+  "app_digest": "sha256:a7881bad7e7fd9c76e3fca7e4a6efa5d197bfceeb6623d0a41f6e3585ec6620d",
+  "caddy_digest": "sha256:9da2be7ab7dd6edb2dfaaa55791209dc3f881c8946ae5b8570148750b8a52325",
+  "bundle_sha256": "bcbe935885dc50d279cd19c5f0ddf696449b29d7305c2e5506dc0a5afa9916d0",
+  "s3_key": "tpi-backoffice/dev-releases/h3-3-4-historial-dashboard-3051a62-domainlocked-r1/bcbe935885dc50d279cd19c5f0ddf696449b29d7305c2e5506dc0a5afa9916d0.zip",
+  "application_version": "h3-3-4-historial-dashboard-3051a62-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "lkg_version_label": "h3-3-3-historial-web-ux-c5e738c-domainlocked-r1",
+  "candidate_evidence": {
+    "path": "evidence/H3.3.4/deployment/candidate-02.json",
+    "sha256": "c2711e021072d3b6ebcab9f863fafd48fec4330a22c5c780a340fbd8a2919514"
+  },
+  "rollback_authorization": {
+    "scope": "single_version_only_rollback_to_named_lkg",
+    "max_attempts": 1,
+    "lkg_version_label": "h3-3-3-historial-web-ux-c5e738c-domainlocked-r1",
+    "conditions": [
+      "update_environment_accepted",
+      "environment_degraded_inconsistent_or_not_expected_state",
+      "lkg_application_version_usable",
+      "lkg_images_present_in_ecr",
+      "no_option_settings_required",
+      "not_purely_functional_defect",
+      "no_previous_rollback_attempt"
+    ]
+  },
+  "decision": "approved"
+}

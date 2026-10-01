@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "resolution",
+  "task_id": "H3.3.5",
+  "created_at": "2026-09-21T19:20:05Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "from_state": "BLOCKED_HUMAN",
+  "to_state": "PREPARING_DEPLOYMENT",
+  "reason": "Preflight AWS y RDS PASS. Se aprueba exclusivamente ejecutar el seed DEV verificado para Asesor Desarrollo 1 y 2; no se aprueba todavía el candidato de aplicación."
+}

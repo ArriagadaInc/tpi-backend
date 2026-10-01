@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "H3.3.1",
+  "created_at": "2026-09-16T13:20:57Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609161320-deployer",
+  "approved_commit": "4aac143a396934186342bab5ec97b3df5e53085c",
+  "deployed_commit": "4aac143a396934186342bab5ec97b3df5e53085c",
+  "result": "PASS",
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "detail": "GET https://dev.tupensioninteligente.cl/ -> 200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "detail": "GET https://backoffice.dev.tupensioninteligente.cl/login -> 200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "detail": "GET https://dev.tupensioninteligente.cl/api/v1/catalogs -> 200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "detail": "GET https://backoffice.dev.tupensioninteligente.cl/static/css/app.css -> 200"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "detail": "GET https://backoffice.dev.tupensioninteligente.cl/leads -> 307 redirect a /login sin seguir redirect"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "detail": "ninguna respuesta ni Location redirigio a genialabs.cl"
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "not_met",
+      "method": "both"
+    },
+    {
+      "id": "AC-2",
+      "status": "not_met",
+      "method": "both"
+    },
+    {
+      "id": "AC-3",
+      "status": "not_met",
+      "method": "both"
+    },
+    {
+      "id": "AC-4",
+      "status": "not_met",
+      "method": "human"
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "method": "automated"
+    }
+  ],
+  "pii_log_scan": {
+    "matches": 0,
+    "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+    "patterns": [
+      "password",
+      "Authorization"
+    ],
+    "window_start": "2026-09-15T20:40:11Z"
+  },
+  "failure_class": null,
+  "basis": "sin nuevo deployment ni cambio de release desde deployment-01.json/verification-02.json (mismo deployed_commit, misma application_version h3-3-1-rbac-pii-4aac143-domainlocked-r1). Se reutilizan smoke tecnico y pii_log_scan de evidence/H3.3.1/deployment/verification-02.json por no existir mutacion posterior que los invalide (instruccion humana: no repetir smoke innecesariamente).",
+  "closure_basis": "evidence/H3.3.1/approvals/resolution-01.json (human_resolve BLOCKED_HUMAN->VERIFYING) y evidence/H3.3.1/approvals/acceptance-02.json (decision=accepted, notes: aceptacion administrativa; NO se afirma validacion funcional de CEO/CTO/asignacion; esa validacion de identidades/jerarquia RBAC/superusuarios se traslada explicitamente a H3.3.2).",
+  "observability_attempt": {
+    "action": "elasticbeanstalk describe-environments (postflight de re-confirmacion, solo lectura)",
+    "result": "no_disponible",
+    "detail": "aws_guard.py y aws sts get-caller-identity fallan localmente: 'Your session has expired. Please reauthenticate using aws login' (sesion SSO local expirada, no AccessDenied de politica ni evidencia de degradacion del environment). Reautenticar es accion exclusiva del humano en su propia terminal; no se reintento. No se registra como failure_class porque no hay indicio de cambio de estado del environment: no hubo mutacion AWS desde deployment-01.json (Ready/Green/Ok, runtime_identity con los cuatro booleanos en true) y esta sesion no ejecuto ninguna operacion de escritura."
+  },
+  "note": "AC-1..AC-4 se registran not_met (sin verificacion funcional concluyente) para no reinterpretar la aceptacion administrativa del humano como comprobacion funcional. El cierre procede por override humano explicito via acceptance-02.json, consistente con el guard g_verification_passed (criterios human/both no requieren status=met, solo evidencia de aceptacion humana registrada)."
+}

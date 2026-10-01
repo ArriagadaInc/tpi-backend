@@ -1,0 +1,309 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "H3.3.4",
+  "created_at": "2026-09-20T18:37:47Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609201830-deployer-merge-pr56",
+  "pr_number": 56,
+  "pr_url": "https://github.com/ArriagadaInc/tpi-backend/pull/56",
+  "pr_title": "fix(H3.3.4): wire LEAD_STATE_HISTORY_CUTOVER into domain-locked compose",
+  "pr_state_after_merge": "MERGED",
+  "reviewed_sha": "19725b45525d127985183e0640a2ae5b74963725",
+  "reviewed_tree": "b4780f85fda23ef26c6648d5207a9a7e5362db8d",
+  "release_sha": "3051a6271e1626b40fe24a744abe097cab1ab0fe",
+  "release_tree": "b4780f85fda23ef26c6648d5207a9a7e5362db8d",
+  "main_parent_sha": "c99b260ffc32aae0ab8fe80585e6243aa1be5665",
+  "method": "squash",
+  "match_head_commit_used": true,
+  "result": "PASS",
+  "change_class": "D",
+  "merged_at": "2026-09-20T18:31:01Z",
+  "merged_by": "ArriagadaInc",
+  "gh_pr_merge_command": "gh pr merge 56 --squash --match-head-commit 19725b45525d127985183e0640a2ae5b74963725",
+  "merge_strategy": "Squash merge server-side via gh, anclado al HEAD aprobado con --match-head-commit; sin --delete-branch (la rama remota harness/H3.3.4-cutover-wiring sigue checkouteada en el worktree .harness-worktrees/H3.3.4-developer-c99b260); sin rebase, sin force-push, sin auto-merge, sin otros PR.",
+  "tree_verification": "git rev-parse 3051a6271e1626b40fe24a744abe097cab1ab0fe^{tree} == b4780f85fda23ef26c6648d5207a9a7e5362db8d == reviewed_tree; git diff 19725b4 3051a62 vacio (contenido identico).",
+  "branch": "harness/H3.3.4-cutover-wiring",
+  "remote_branch_deleted": false,
+  "remote_branch_head_after_merge": "19725b45525d127985183e0640a2ae5b74963725",
+  "prior_merge_evidence": "evidence/H3.3.4/deployment/merge-01.json",
+  "relation_to_prior_merge": "merge-01.json (PR #55 -> release c99b260) se conserva intacto. Esta evidencia registra el segundo merge de H3.3.4: el fix de cutover CAND-01 (PR #56) sobre esa misma base, produciendo un nuevo release_sha. No sustituye ni reescribe merge-01.",
+  "references": {
+    "review_evidence": "evidence/H3.3.4/reviewer/review-06.json",
+    "developer_evidence": "evidence/H3.3.4/developer/developer-05.json",
+    "candidate_review_evidence": "evidence/H3.3.4/reviewer/candidate_review-01.json",
+    "human_resolution": "evidence/H3.3.4/approvals/resolution-04.json",
+    "migration_evidence": "evidence/H3.3.4/deployment/migration-01.json"
+  },
+  "human_resolution": {
+    "ref": "evidence/H3.3.4/approvals/resolution-04.json",
+    "from_state": "BLOCKED_HUMAN",
+    "to_state": "DEVELOPING",
+    "authoritative": true,
+    "note": "Resolucion humana posterior al rechazo del application candidate (candidate_review-01, hallazgo CAND-01) que habilito el ciclo de desarrollo del fix de cutover, su revision (review-06) y este merge."
+  },
+  "ci_pr": {
+    "run_id": 35526661282,
+    "url": "https://github.com/ArriagadaInc/tpi-backend/actions/runs/35526661282",
+    "workflow": "CI - Linting, Tests & Security",
+    "event": "pull_request",
+    "sha": "19725b45525d127985183e0640a2ae5b74963725",
+    "conclusion": "success",
+    "jobs": "5/5 success: Docker Build, Lint & Format, Release Tooling Validation, Security Audit, Tests",
+    "tests": "753 passed, 7 warnings",
+    "coverage": "88.91% (>=85)",
+    "runs_for_sha": 1,
+    "note": "Unico run sobre el SHA revisado; verificado con gh run view, gh run list --commit y gh pr checks 56."
+  },
+  "ci_main": {
+    "run_id": 35529313420,
+    "url": "https://github.com/ArriagadaInc/tpi-backend/actions/runs/35529313420",
+    "workflow": "CI - Linting, Tests & Security",
+    "event": "push",
+    "branch": "main",
+    "sha": "3051a6271e1626b40fe24a744abe097cab1ab0fe",
+    "conclusion": "success",
+    "created_at": "2026-09-20T18:31:03Z",
+    "completed_at": "2026-09-20T18:33:44Z",
+    "jobs": "5/5 success: Release Tooling Validation, Docker Build, Tests, Lint & Format, Security Audit",
+    "tests": "753 passed, 7 warnings",
+    "coverage": "88.91% (>=85), TOTAL 4345 sentencias / 482 no cubiertas / 89%",
+    "docker_build": "PASS",
+    "release_tooling_validation": "PASS",
+    "security_audit": "PASS",
+    "runs_for_sha": 1,
+    "regression_vs_ci_pr": "ninguna: mismos 753 tests y misma cobertura 88.91%",
+    "note": "CI de main propio del release_sha 3051a62; no se reutiliza el CI del PR."
+  },
+  "checks": [
+    {
+      "name": "init_state_role",
+      "result": "PASS",
+      "note": "init.ps1 --runtime claude: HARNESS INIT PASS, state REVIEW_APPROVED, task H3.3.4, active_role deployer, next_action start_merge, allowed_events [start_merge], skills_to_load vacio."
+    },
+    {
+      "name": "session_new_and_distinct",
+      "result": "PASS",
+      "note": "runtime=claude session=claude-202609201830-deployer-merge-pr56; distinta de la sesion deployer previa (claude-202609201532-deployer-merge) y de toda sesion de developer y reviewer de H3.3.4."
+    },
+    {
+      "name": "pr_open_clean_mergeable_head_exact",
+      "result": "PASS",
+      "note": "Verificado dos veces (al inicio y de nuevo inmediatamente antes del merge, ya en MERGING): state=OPEN, mergeable=MERGEABLE, mergeStateStatus=CLEAN, headRefOid=19725b45525d127985183e0640a2ae5b74963725, isDraft=false, baseRefName=main, baseRefOid=c99b260 (= origin/main de entonces)."
+    },
+    {
+      "name": "review_06_pass_approved",
+      "result": "PASS",
+      "note": "review-06.json decision=APPROVED, reviewed_sha=19725b4, reviewed_tree=b4780f8, pr_number=56; diez checks en PASS; un unico hallazgo R6-01 de severidad info, sin accion requerida y sin blocker/major."
+    },
+    {
+      "name": "ci_pr_green_on_exact_sha",
+      "result": "PASS",
+      "note": "Run 35526661282 headSha=19725b45525d127985183e0640a2ae5b74963725, status completed, conclusion success, 5/5 jobs pass; gh run list --commit devuelve un unico run para ese SHA; gh pr checks 56 muestra 5 pass y ningun check pendiente ni fallido."
+    },
+    {
+      "name": "no_later_commits_on_branch",
+      "result": "PASS",
+      "note": "gh pr view 56 --json commits devuelve un unico commit (19725b4). git ls-remote origin refs/heads/harness/H3.3.4-cutover-wiring = 19725b4 antes y despues del merge: sin commits ni CI posteriores al HEAD aprobado."
+    },
+    {
+      "name": "base_up_to_date",
+      "result": "PASS",
+      "note": "origin/main estaba en c99b260 y el PR declaraba baseRefOid=c99b260: la rama estaba al dia respecto de main, sin merges intermedios (mergeStateStatus CLEAN)."
+    },
+    {
+      "name": "validate_repo",
+      "result": "PASS",
+      "note": "python scripts/harness/validate_repo.py -> VALIDATE: PASS."
+    },
+    {
+      "name": "merge_squash_match_head",
+      "result": "PASS",
+      "note": "gh pr merge 56 --squash --match-head-commit 19725b45525d127985183e0640a2ae5b74963725, sin error: GitHub confirmo que el HEAD no habia cambiado. Sin auto-merge, sin rebase, sin force-push, sin --delete-branch, sin --admin."
+    },
+    {
+      "name": "pr_merged",
+      "result": "PASS",
+      "note": "gh pr view 56: state=MERGED, mergedAt=2026-09-20T18:31:01Z, mergeCommit=3051a6271e1626b40fe24a744abe097cab1ab0fe, mergedBy=ArriagadaInc."
+    },
+    {
+      "name": "release_sha_on_origin_main",
+      "result": "PASS",
+      "note": "git fetch origin: c99b260..3051a62 main -> origin/main. git rev-parse origin/main = 3051a6271e1626b40fe24a744abe097cab1ab0fe = mergeCommit del PR."
+    },
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse origin/main^{tree} = b4780f85fda23ef26c6648d5207a9a7e5362db8d, identico a git rev-parse 19725b4^{tree} y a review-06.reviewed_tree."
+    },
+    {
+      "name": "diff_reviewed_vs_release_empty",
+      "result": "PASS",
+      "note": "git diff --stat 19725b45525d127985183e0640a2ae5b74963725 3051a6271e1626b40fe24a744abe097cab1ab0fe sin salida y exit 0: contenido identico."
+    },
+    {
+      "name": "main_linear_single_parent",
+      "result": "PASS",
+      "note": "git rev-list --parents -n 1 origin/main: 3051a62 tiene un unico parent c99b260 (main_parent_sha), consistente con squash y con historia lineal de main."
+    },
+    {
+      "name": "branch_preserved_for_worktrees",
+      "result": "PASS",
+      "note": "No se uso --delete-branch. git worktree list confirma que harness/H3.3.4-cutover-wiring esta checkouteada en .harness-worktrees/H3.3.4-developer-c99b260 (registrada en state.json). La rama remota sigue existiendo en 19725b4; ningun worktree quedo huerfano."
+    },
+    {
+      "name": "ci_main_green_on_release_sha",
+      "result": "PASS",
+      "note": "Run 35529313420 (event=push, branch=main, headSha=3051a62) status completed, conclusion success; los 5 jobs en success: Release Tooling Validation, Docker Build, Tests, Lint & Format, Security Audit. Unico run para ese SHA. 753 passed, cobertura 88.91% sobre gate 85%: sin regresion frente al CI del PR."
+    },
+    {
+      "name": "working_tree_scope",
+      "result": "PASS",
+      "note": "git status del checkout principal solo con archivos operativos del Harness modificados (harness/state.json, progress/current.md, tasks/backlog.yaml, tasks/current.yaml, docs/BITACORA.md). Cero cambios en app/, tests/, front/, deployment/, scripts/ o .github/."
+    },
+    {
+      "name": "no_cloud_no_rds",
+      "result": "PASS",
+      "note": "Cero operaciones en la nube y cero acceso a RDS en esta sesion. scripts/harness/aws_guard.py no invocado; ninguna herramienta MCP de nube utilizada. El estado MERGING no habilita ningun modo de acceso a la nube en harness/policies.yaml."
+    },
+    {
+      "name": "migration_008_not_reexecuted",
+      "result": "PASS",
+      "note": "La migracion 008 quedo aplicada en un ciclo anterior (evidence/H3.3.4/deployment/migration-01.json, result PASS); esta sesion no la vuelve a ejecutar ni la toca. review-06 verifico que los blobs de 005, 006, 007 y de ambos scripts de 008 (forward y rollback) son identicos entre c99b260 y 19725b4, por lo que el merge no altera ninguna migracion. El estado de la migracion en DEV no se re-verifico aqui: queda fuera del alcance autorizado de esta sesion."
+    },
+    {
+      "name": "no_candidates_prepared",
+      "result": "PASS",
+      "note": "Ningun migration candidate ni application candidate preparado; sin gh workflow run; sin bundle; .harness-release/ no utilizado. El application candidate anterior (candidate-01.json) quedo inerte tras el rechazo CAND-01 y requiere uno nuevo sobre el release_sha 3051a62."
+    },
+    {
+      "name": "no_deployment_no_rollback",
+      "result": "PASS",
+      "note": "Sin update-environment, sin cutover, sin rollback, sin mutacion del runtime DEV."
+    },
+    {
+      "name": "no_approve_py",
+      "result": "PASS",
+      "note": "scripts/harness/approve.py no ejecutado: las decisiones humanas quedan integramente fuera del alcance del agente."
+    },
+    {
+      "name": "merge_evidence_not_overwritten",
+      "result": "PASS",
+      "note": "Evidencia registrada como merge-02.json mediante evidence.py write, que autoincrementa el indice. merge-01.json (PR #55) se conserva intacto."
+    }
+  ],
+  "cloud_access": {
+    "operations": 0,
+    "rds_access": false,
+    "aws_guard_invocations": 0,
+    "note": "El estado MERGING no define ningun modo de acceso a la nube en harness/policies.yaml (seccion aws.state_modes)."
+  },
+  "release_scope": {
+    "migration_008_applied_previously": true,
+    "migration_008_reexecuted": false,
+    "migration_candidate_prepared": false,
+    "application_candidate_prepared": false,
+    "deployment_executed": false,
+    "environment_mutated": false,
+    "rollback_executed": false
+  },
+  "known_issues": [
+    {
+      "id": "CAND-01",
+      "kind": "cutover_wiring",
+      "blocking": false,
+      "summary": "LEAD_STATE_HISTORY_CUTOVER no se reenviaba al servicio backoffice en el bundle domain-locked.",
+      "required_action": "Ninguna: remediado por PR #56 y verificado en review-06; ahora presente en el release_sha 3051a62.",
+      "disposition": "resuelto en este merge."
+    },
+    {
+      "id": "R6-01",
+      "kind": "framework_coercion_note",
+      "blocking": false,
+      "summary": "Pydantic coerciona cadenas numericas a fecha epoch para el campo de tipo date; comportamiento preexistente identico en la base c99b260, no introducido por este cambio.",
+      "required_action": "Ninguna en este PR; observacion informativa registrada en review-06.",
+      "disposition": "informativo, aceptado."
+    },
+    {
+      "id": "F4",
+      "kind": "cutover_effective_config_dev",
+      "blocking": true,
+      "summary": "El valor efectivo de LEAD_STATE_HISTORY_CUTOVER debe definirse como propiedad de entorno al desplegar, con la fecha real del despliegue en America/Santiago; nunca una fecha inventada ni la fecha provisoria del plan anterior. Si se omite, la aplicacion arranca con None y el embudo y el tiempo a primera gestion quedan como no disponibles (falla segura).",
+      "required_action": "Definir y verificar el valor efectivo del cutover en el proximo application candidate y en el checklist humano de Deployer/Verifying.",
+      "disposition": "pendiente."
+    },
+    {
+      "id": "F1",
+      "kind": "documentary_traceability_debt",
+      "blocking": false,
+      "summary": "Endurecer referencias documentales de archivo sin funcion exacta en el gate de la matriz.",
+      "required_action": "Follow-up obligatorio; no reinterpretar como funcionalidad faltante.",
+      "disposition": "deuda no bloqueante aceptada por resolution-02; no se corrige en esta sesion."
+    },
+    {
+      "id": "F11",
+      "kind": "documentary_traceability_debt",
+      "blocking": false,
+      "summary": "Sincronizar el mapeo de smoke AC-9/AC-18 entre la columna de filas y la seccion 6 de docs/H3_3_4_REQUIREMENTS_MATRIX.md.",
+      "required_action": "Follow-up obligatorio; los smokes humanos AC-9/AC-18 siguen exigidos y pendientes en DEV.",
+      "disposition": "deuda no bloqueante aceptada por resolution-02; no se corrige en esta sesion."
+    },
+    {
+      "id": "F2",
+      "kind": "explain_normal_at_representative_volume",
+      "blocking": false,
+      "summary": "EXPLAIN (ANALYZE, BUFFERS) normal a volumen representativo pendiente antes de DONE.",
+      "required_action": "Ejecutar y documentar el EXPLAIN normal a volumen representativo antes de DONE.",
+      "disposition": "follow-up aceptado."
+    },
+    {
+      "id": "F5",
+      "kind": "prolonged_snapshot_transaction",
+      "blocking": false,
+      "summary": "Transaccion REPEATABLE READ READ ONLY prolongada por render, con efectos posibles sobre pool, xmin y autovacuum.",
+      "required_action": "Follow-up: monitorear o mitigar.",
+      "disposition": "riesgo aceptado, no resuelto."
+    },
+    {
+      "id": "F6",
+      "kind": "performance_read_model",
+      "blocking": false,
+      "summary": "Rendimiento del dashboard a volumen representativo, con el parsing regexp de notas como costo dominante.",
+      "required_action": "Follow-up: evaluar read model u optimizacion.",
+      "disposition": "riesgo aceptado, no resuelto."
+    },
+    {
+      "id": "AC-7",
+      "kind": "human_gate_application_candidate",
+      "blocking": true,
+      "summary": "Human Gate independiente del application candidate, no intercambiable con el de la migracion. El candidate anterior quedo inerte: se requiere uno nuevo sobre el release_sha 3051a62.",
+      "required_action": "Preparar un nuevo application candidate sobre 3051a62 y obtener aprobacion humana independiente via scripts/harness/approve.py gate.",
+      "disposition": "pendiente; no satisfecho en esta sesion."
+    },
+    {
+      "id": "AC-9/AC-18",
+      "kind": "human_smoke_dev",
+      "blocking": true,
+      "summary": "Smoke humano en DEV, incluido RBAC/403 para roles no autorizados y verificacion visual del Dashboard Ejecutivo.",
+      "required_action": "Ejecutar el smoke humano en DEV y registrar acceptance via approve.py accept.",
+      "disposition": "pendiente; ningun criterio humano se declara satisfecho en esta sesion."
+    }
+  ],
+  "follow_up_required": [
+    "F4: definir y verificar LEAD_STATE_HISTORY_CUTOVER efectivo en DEV (fecha real del despliegue, America/Santiago).",
+    "AC-7: nuevo application candidate sobre el release_sha 3051a62 y su Human Gate independiente.",
+    "AC-9/AC-18: smoke humano en DEV, incluido RBAC/403 y dashboard visual.",
+    "F1: endurecer referencias documentales de archivo sin funcion exacta.",
+    "F11: sincronizar el mapeo de smoke AC-9/AC-18 en la matriz.",
+    "F2: EXPLAIN normal a volumen representativo antes de DONE.",
+    "F5: riesgo de snapshot prolongado (monitorear o mitigar).",
+    "F6: rendimiento y posible read model por parsing regexp de notas."
+  ],
+  "human_pending": [
+    "AC-7 Human Gate application candidate sobre 3051a62",
+    "AC-9/AC-18 smoke humano DEV (RBAC/403 y dashboard visual)",
+    "Decision humana de salida de BLOCKED_HUMAN (change_class D, sin fast path)"
+  ],
+  "scope_of_session": "Solo merge controlado de PR #56: preflight e init read-only, start_merge, verificacion previa del PR y del CI, merge squash anclado al HEAD aprobado, verificacion de main y del arbol, espera del CI de main sobre el release_sha, evidencia merge-02 y transicion posterior. Sin candidates, sin operaciones en la nube ni RDS, sin despliegue, sin rollback, sin reejecutar la migracion 008, sin approve.py."
+}

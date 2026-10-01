@@ -1,0 +1,263 @@
+schema_version: 1
+task:
+  id: H3.3.5
+  title: Asesores DEV y cartera propia
+  objective: 'Crear y validar dos asesores de desarrollo (asesor.desarrollo1 / Asesor Desarrollo 1 y asesor.desarrollo2
+    / Asesor Desarrollo 2, role advisor) vinculados de manera inequivoca entre (1) su identidad de autenticacion
+    DEV en AUTH_USERS_JSON, (2) su registro en tpi.asesores, (3) las asignaciones activas en tpi.asignaciones
+    y (4) el alcance de autorizacion de la aplicacion. La cartera de un asesor son los leads cuya asignacion
+    actualmente activa en tpi.asignaciones pertenece a su id_asesor. El asesor autenticado accede a /leads
+    y ve, busca, filtra, ordena, cuenta y pagina exclusivamente su cartera (filtro server-side en repositorios/servicios,
+    no ocultamiento HTML); abre el detalle de sus propios leads; ejecuta las acciones ya permitidas al
+    rol advisor solo sobre sus propios leads; no puede asignar ni reasignar; no puede consultar ni modificar
+    leads ajenos manipulando IDs, parametros, formularios o endpoints (lead ajeno o no asignado -> 404
+    sin revelar existencia); /dashboard responde 403 real y la navegacion no muestra el acceso. CEO y
+    CTO conservan acceso global, PII completa, dashboard y asignacion manual. D1 (vinculo auth<->asesor):
+    el modelo de autenticacion se extiende con advisor_id, que contiene el identificador estable de tpi.asesores.id_asesor
+    (UUID); es funcionalmente obligatorio para role=advisor; los demas roles siguen siendo compatibles
+    sin ese campo; esta prohibido resolver el vinculo comparando nombres; un advisor sin advisor_id valido
+    y activo falla de forma segura (fail-closed). D2 (PII de cartera propia): un advisor ve, unicamente
+    para leads propios, nombre completo, RUT, telefono, email, fecha de nacimiento y los campos previsionales
+    y comerciales ya visibles en el CRM; no accede a PII de leads ajenos, a raw_payload, a datos internos
+    no presentados por el CRM, a PII de otros asesores, ni a PII mediante logs, errores o HTML residual;
+    la autorizacion de PII es contextual por lead y asignacion, nunca un permiso global por rol. D3 (aplicacion
+    del seed): el Harness no autoriza al Deployer a escribir en AWS RDS; el Developer prepara un mecanismo
+    DEV idempotente y revisable, el Reviewer valida el candidato de datos, el Human Gate lo aprueba, el
+    OPERADOR HUMANO ejecuta el seed, y el Deployer realiza exclusivamente postflight read-only; si el
+    seed falla se registra STOP con evidencia y no se despliega la aplicacion. D4 (advisors anteriores):
+    no se borran ni modifican otras identidades existentes; un advisor existente sin advisor_id no obtiene
+    acceso global, su cartera es vacia, no puede abrir detalles ni ejecutar mutaciones, /dashboard sigue
+    respondiendo 403 y se emite una advertencia segura sin secretos ni PII. D5 (proteccion operacional
+    del seed): antes de ejecutarlo el procedimiento humano verifica identidad AWS por STS, cuenta, region,
+    environment AWS DEV, endpoint/base de datos, usuario de base autorizado y estado saludable del environment,
+    con valores tomados de la documentacion y configuracion canonicas (nunca inventados); la transaccion
+    SQL solo comienza tras pasar ese preflight y el SQL verifica ademas base, esquema y usuario cuando
+    sea posible. D6 (registro preexistente): por cada nombre normalizado, si no existe se crea; si existe
+    exactamente uno con atributos compatibles se adopta su UUID; si hay datos incompatibles o ambiguos
+    se aborta; nunca se sobrescribe silenciosamente ni se crean duplicados; una segunda ejecucion produce
+    el mismo resultado. D7 (orden seguro de cutover): invariante obligatorio - ninguna credencial advisor
+    puede quedar utilizable mientras este corriendo una version que no aplique el nuevo alcance por cartera;
+    orden - (1) aplicar y verificar datos DEV, (2) desplegar la aplicacion con RBAC por cartera, (3) verificar
+    runtime Ready/Green/Ok, (4) configurar las dos identidades en AUTH_USERS_JSON, (5) reinicio o refresh
+    controlado que requiera el mecanismo real, (6) volver a verificar salud y release desplegado, (7)
+    smoke autenticado; Developer y Reviewer determinan y documentan como el runtime carga AUTH_USERS_JSON
+    sin asumir que un cambio del secreto se aplica sin reinicio. No se generan, solicitan, imprimen ni
+    guardan contrasenas ni hashes en el repositorio, PR, logs, evidencia ni salidas del Harness. Baseline:
+    origin/main@3051a6271e1626b40fe24a744abe097cab1ab0fe (= tasks/completed/H3.3.4.yaml closure.release.release_sha).'
+  source:
+    type: story
+    ref: 'Solicitud humana 2026-09-21 (Human/Orchestrator): H3.3.5 Asesores DEV y cartera propia; AC-1..AC-20
+      del humano + AC-21 derivado (vinculo fail-closed); decisiones humanas D1-D7 incorporadas en la sesion
+      de mantenimiento de activacion.'
+  change_class: D
+  deploy_required: true
+  requires_human_acceptance: true
+  allow_lockfile_update: false
+  acceptance_criteria:
+  - id: AC-1
+    description: Existe exactamente un registro identificable para Asesor Desarrollo 1 en tpi.asesores;
+      el mecanismo DEV lo crea si no existe, adopta su UUID si existe exactamente uno con atributos compatibles
+      y aborta si los datos son incompatibles o ambiguos (D6), sin sobrescribir ni duplicar.
+    verification: both
+  - id: AC-2
+    description: Existe exactamente un registro identificable para Asesor Desarrollo 2 en tpi.asesores;
+      el mecanismo DEV lo crea si no existe, adopta su UUID si existe exactamente uno con atributos compatibles
+      y aborta si los datos son incompatibles o ambiguos (D6), sin sobrescribir ni duplicar.
+    verification: both
+  - id: AC-3
+    description: Existe una identidad DEV asesor.desarrollo1 (display name Asesor Desarrollo 1), role
+      advisor, cuya entrada de autenticacion contiene advisor_id igual al tpi.asesores.id_asesor estable
+      de Asesor Desarrollo 1 (D1); el vinculo nunca se resuelve por nombre visible.
+    verification: both
+  - id: AC-4
+    description: Existe una identidad DEV asesor.desarrollo2 (display name Asesor Desarrollo 2), role
+      advisor, cuya entrada de autenticacion contiene advisor_id igual al tpi.asesores.id_asesor estable
+      de Asesor Desarrollo 2 (D1); el vinculo nunca se resuelve por nombre visible.
+    verification: both
+  - id: AC-5
+    description: Las contrasenas y hashes permanecen fuera del repositorio, PR, logs, evidencias y salidas
+      del Harness; el Harness no crea contrasenas, hashes ni identidades reales.
+    verification: both
+  - id: AC-6
+    description: Asesor Desarrollo 1 ve solamente los leads de su propia asignacion activa y, unicamente
+      para esos leads, nombre completo, RUT, telefono, email, fecha de nacimiento y los campos previsionales
+      y comerciales ya visibles en el CRM (D2).
+    verification: both
+  - id: AC-7
+    description: Asesor Desarrollo 2 ve solamente los leads de su propia asignacion activa y, unicamente
+      para esos leads, nombre completo, RUT, telefono, email, fecha de nacimiento y los campos previsionales
+      y comerciales ya visibles en el CRM (D2).
+    verification: both
+  - id: AC-8
+    description: Busqueda, filtros (incluidos los operacionales sin_asignar/estancado y el tablero /leads/board),
+      ordenamiento, conteos y paginacion respetan el alcance de cartera server-side.
+    verification: automated
+  - id: AC-9
+    description: Un advisor no puede abrir el detalle de un lead ajeno o no asignado manipulando la URL;
+      recibe 404 sin revelar su existencia.
+    verification: both
+  - id: AC-10
+    description: Un advisor no puede modificar estado, notas u otros datos de un lead ajeno o no asignado
+      mediante requests directos (POST /leads/{id}/status, /comments, /cleanup y cualquier otra mutacion);
+      la mutacion no ocurre y la respuesta no revela existencia.
+    verification: both
+  - id: AC-11
+    description: Un advisor puede ejecutar las acciones ya autorizadas a su rol (cambio de estado, notas)
+      unicamente sobre leads propios.
+    verification: both
+  - id: AC-12
+    description: Un advisor no puede asignar ni reasignar leads (UI oculta y POST /leads/{id}/assign rechazado
+      server-side).
+    verification: both
+  - id: AC-13
+    description: /dashboard devuelve 403 real para ambos advisors.
+    verification: both
+  - id: AC-14
+    description: El menu advisor no muestra acceso al dashboard ejecutivo.
+    verification: both
+  - id: AC-15
+    description: CEO y CTO mantienen acceso global, PII completa, dashboard y asignacion manual (no regresion).
+    verification: both
+  - id: AC-16
+    description: 'La autorizacion de PII es contextual por lead y asignacion, no un permiso global por
+      rol (D2): no se expone PII de leads ajenos, raw_payload, datos internos no presentados por el CRM
+      ni PII de otros asesores en HTML (incluido HTML residual), mensajes de error, logs, metricas ni
+      evidencias.'
+    verification: both
+  - id: AC-17
+    description: El smoke AWS DEV, ejecutado solo despues de completar el orden de cutover D7 (runtime
+      nuevo Ready/Green/Ok, identidades configuradas, refresh controlado y salud/release reverificados),
+      valida como minimo login de ambos advisors; un lead propio para cada advisor; intento de acceso
+      cruzado entre asesores; un lead no asignado; dashboard prohibido; asignacion/reasignacion prohibida;
+      y, si existe un advisor preexistente sin advisor_id, cartera vacia sin acceso a detalles ni mutaciones
+      (D4).
+    verification: human
+  - id: AC-18
+    description: La escritura de datos DEV es idempotente (una segunda ejecucion produce el mismo resultado,
+      no duplica asesores ni modifica registros no relacionados ni otras identidades) y la ejecuta el
+      operador humano solo tras un preflight que verifica STS, cuenta, region, environment AWS DEV, endpoint/base,
+      usuario de base autorizado y salud del environment con valores canonicos (D5); la transaccion SQL
+      comienza despues del preflight y verifica ademas base, esquema y usuario; ante datos incompatibles
+      o ambiguos aborta sin sobrescribir (D6).
+    verification: both
+  - id: AC-19
+    description: El postflight DB read-only (el Deployer no escribe en AWS RDS) demuestra la existencia
+      y unicidad de ambos asesores sin registrar PII o secretos innecesarios; si el seed falla se registra
+      STOP con evidencia y la aplicacion no se despliega (D3).
+    verification: human
+  - id: AC-20
+    description: Las pruebas automatizadas relevantes mantienen cobertura igual o superior al umbral vigente
+      del proyecto (85%).
+    verification: automated
+  - id: AC-21
+    description: 'Vinculo fail-closed (D1, D4): un usuario advisor sin advisor_id, con advisor_id malformado,
+      inexistente o no activo en tpi.asesores (incluidos advisors preexistentes sin advisor_id) no obtiene
+      acceso global, tiene cartera vacia, no puede abrir detalles ni ejecutar mutaciones y recibe 403
+      en /dashboard; se emite una advertencia segura sin secretos ni PII; la configuracion invalida se
+      detecta sin registrar valores del secreto; la vinculacion nunca se resuelve comparando nombres visibles
+      y el parser sigue siendo retrocompatible para los demas roles.'
+    verification: automated
+  constraints:
+  - 'Baseline: origin/main@3051a6271e1626b40fe24a744abe097cab1ab0fe; re-verificar al iniciar DEVELOPING;
+    no trabajar sobre rama obsoleta ni cherry-pick ciego.'
+  - Tarea unica H3.3.5; no mezclar H3.3.6, H3.3.7 ni H3.3.8; sin alcance diferido.
+  - 'change_class D: sin fast path; tras el merge la transicion obligatoria es merged_non_fast_path hacia
+    BLOCKED_HUMAN.'
+  - 'Gates separados y no intercambiables: (1) Requirements Coverage Gate en DEVELOPING antes de tocar
+    codigo funcional; (2) revision tecnica completa del Reviewer, incluido el candidato de datos DEV (SQL
+    del seed, checksum, procedimiento de preflight D5, runbook); (3) Human Gate del data candidate DEV
+    (BLOCKED_HUMAN tras el merge); (4) el OPERADOR HUMANO ejecuta el seed DEV en su propia terminal tras
+    el preflight D5 - el Harness y el Deployer NO escriben en AWS RDS; si el seed falla se registra STOP
+    con evidencia y no se despliega la aplicacion; (5) el Deployer realiza exclusivamente postflight DB
+    read-only; (6) application candidate con Human Gate independiente (WAITING_HUMAN_APPROVAL); (7) deploy
+    AWS DEV version-only de la version con RBAC por cartera; (8) verificar runtime Ready/Green/Ok y release
+    exacto; (9) el humano configura las dos identidades en AUTH_USERS_JSON (solo humano, fuera del Harness)
+    y ejecuta el reinicio o refresh controlado que requiera el mecanismo real; (10) reverificar salud
+    y release desplegado; (11) smoke autenticado humano con ambas cuentas; (12) verificacion tecnica y
+    aceptacion humana; (13) cierre administrativo y retorno a IDLE. Ninguna aprobacion sustituye a otra
+    ni se usa retroactivamente. No se declara que el Deployer aplica el seed.'
+  - 'Invariante D7: ninguna credencial advisor puede quedar utilizable mientras este corriendo una version
+    que no aplique el nuevo alcance por cartera. Las identidades advisor solo se configuran despues de
+    verificar el runtime nuevo (paso 8). El refresh de AUTH_USERS_JSON no puede usar operaciones denegadas
+    por aws_guard (por ejemplo restart-app-server) ni --option-settings; lo ejecuta el humano o se registra
+    BLOCKER, sin ampliar permisos del Harness.'
+  - Developer y Reviewer determinan y documentan (runbook DEV) como el runtime carga AUTH_USERS_JSON (al
+    arranque, por request o por refresco del environment) y que refresh exige; no asumir que modificar
+    el secreto se aplica sin reinicio. Sin evidencia del mecanismo real, es BLOCKER.
+  - 'Como el Harness impide crear docs/ durante IDLE: al entrar en DEVELOPING y antes de cualquier cambio
+    funcional, el Developer crea docs/H3_3_5_REQUIREMENTS_MATRIX.md (requisito -> AC -> componente previsto
+    -> prueba automatizada -> smoke/evidencia) cubriendo listado, detalle, mutaciones, filtros, paginacion,
+    dashboard, navegacion, asignacion, PII contextual, vinculacion auth<->asesor por advisor_id, advisors
+    preexistentes sin vinculo, seed DEV, preflight operacional, registro preexistente, idempotencia, orden
+    de cutover y no regresion CEO/CTO; ejecuta y registra el Requirements Coverage Gate y se detiene sin
+    implementar si falla. Todo requisito sin AC, implementacion prevista o mecanismo verificable es BLOCKER.'
+  - Antes de disenar la escritura, inspeccionar el esquema real de tpi.asesores desde la documentacion
+    y los scripts read-only canonicos (claves, NOT NULL, UNIQUE lower(nombre), defaults, mecanismo de
+    activacion rol/estado_disponibilidad); no asumir nombres de columnas ni tipos; el Developer no tiene
+    acceso AWS.
+  - 'Seed DEV (D3, D5, D6): los datos Asesor Desarrollo son exclusivos de DEV; prohibido introducirlos
+    en una migracion numerada (scripts/sql/NNN_*) ni en ningun artefacto que se aplique fuera de DEV.
+    El seed vive bajo scripts/sql/dev/ o equivalente DEV-only, es idempotente y revisable, abre su transaccion
+    solo tras el preflight operacional, verifica base/esquema/usuario en SQL cuando sea posible y, por
+    cada nombre normalizado (lower(nombre)), crea, adopta el UUID de un unico registro compatible o aborta;
+    nunca sobrescribe ni duplica. El preflight del operador (STS, cuenta 821656895812, region us-east-2,
+    environment tpi-backoffice-dev-green, endpoint/base, usuario de base, salud) toma sus valores de environments/dev.yaml,
+    docs/cicd/TPI_Contrato_CICD_AWS_v2.md, docs/AWS_RDS_CONNECTION.md y docs/database/06_OPERATIONS_RUNBOOK.md;
+    todo valor no documentado canonicamente se registra como BLOCKER, no se inventa. Si no existe mecanismo
+    seguro, detenerse y documentar el blocker.'
+  - No eliminar ni modificar otros asesores, asignaciones ni identidades existentes; el seed no escribe
+    tpi.asignaciones.
+  - tpi_app mantiene SELECT-only sobre tpi.asesores; no se amplian grants de la aplicacion.
+  - Filtrado de cartera server-side en repositorios/servicios; ocultar filas o botones en HTML no cuenta
+    como control.
+  - 'Vinculo (D1): advisor_id (UUID = tpi.asesores.id_asesor) obligatorio para role=advisor y opcional/ignorado
+    para los demas roles; validado sin registrar valores del secreto; prohibido comparar nombres visibles;
+    sin advisor_id valido y activo la cartera es vacia y toda mutacion se deniega.'
+  - 'PII (D2): la decision de mostrar PII sin mascara se toma por lead y asignacion activa del advisor
+    autenticado, nunca por rol global; raw_payload y datos internos no presentados por el CRM nunca se
+    exponen a advisors.'
+  - Lead ajeno o no asignado para advisor -> 404; recurso exclusivo por rol (/dashboard, asignacion) ->
+    403.
+  - Nunca leer, imprimir ni registrar AUTH_USERS_JSON, password_hash ni contrasenas; el Harness no crea
+    usuarios ni hashes; la configuracion del secreto la hace el humano.
+  - El parser de AUTH_USERS_JSON debe ser retrocompatible con el formato vigente (subject, username, display_name,
+    password_hash, role) para roles distintos de advisor.
+  - Sin --option-settings; sin cambios de infraestructura, IAM, dominios ni networking.
+  - No reducir la cobertura minima (85%); no mezclar cambios no relacionados.
+  dependencies:
+  - H3.3.4
+  risk:
+    level: high
+    notes: Cambio de autorizacion (IDOR/fuga de PII entre carteras) mas escritura de datos en RDS DEV
+      por el operador humano fuera de migraciones numeradas. Riesgos - filtrado solo en UI, vinculo por
+      nombre visible, fuga de existencia de leads ajenos (403 vs 404), PII contextual convertida en permiso
+      global, regresion CEO/CTO, seed no idempotente, que toque registros ajenos o sobrescriba preexistentes,
+      ejecucion del seed en cuenta/entorno equivocado, credenciales advisor utilizables sobre una version
+      sin RBAC por cartera (orden de cutover), refresh de AUTH_USERS_JSON no cubierto por el Harness,
+      exposicion de secretos, y advisors preexistentes sin advisor_id que quedan sin cartera (fail-closed,
+      esperado).
+  scope:
+    paths:
+    - app/auth/**
+    - app/web/**
+    - app/repositories/**
+    - app/services/**
+    - tests/**
+    - scripts/sql/dev/**
+    - docs/H3_3_5_REQUIREMENTS_MATRIX.md
+    - docs/H3_3_5_DEV_RUNBOOK.md
+  status: closed
+closure:
+  closed_at: '2026-09-22T16:32:37Z'
+  final_state: DONE
+  evidence_dir: evidence/H3.3.5
+  release:
+    release_sha: 78bf33bcb946fc442a8e5488cdf0d2f89fd190c2
+    pr_number: 57
+    application_version: h3-3-5-asesores-cartera-78bf33b-domainlocked-r1
+    bundle_sha256: f7e661411bbaacaf456a95405fd0e787136ac6cb04eb790fd78039d7938731f1
+    lkg: h3-3-4-historial-dashboard-3051a62-domainlocked-r1
+    deployment: success
+    deployed_commit: 78bf33bcb946fc442a8e5488cdf0d2f89fd190c2
+    verification: PASS
+  rework_rounds: 1

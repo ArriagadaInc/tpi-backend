@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "H3.3.4",
+  "created_at": "2026-09-19T17:23:27Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609191015-reviewer-r2",
+  "reviewed_sha": "5262f1ccea99320be562a2dd33725edfd904c85b",
+  "reviewed_tree": "2e6aebad232b19ee4cecad254708f8883929dc49",
+  "pr_number": 55,
+  "ci": {
+    "run_id": 35345911854,
+    "sha": "5262f1ccea99320be562a2dd33725edfd904c85b",
+    "conclusion": "success",
+    "note": "gh run view 35345911854 --json headSha,jobs: headSha coincide exactamente con reviewed_sha (event=pull_request). 5/5 jobs SUCCESS (Release Tooling Validation, Lint & Format, Tests, Docker Build, Security Audit). Log crudo Tests: 'Required test coverage of 85% reached. Total coverage: 88.87%', '722 passed, 7 warnings in 58.00s'; los 7 tests de tests/unit/test_h3_3_4_requirements_matrix_gate.py PASSED. Log crudo Security Audit: pip-audit 'No known vulnerabilities found'; bandit 'No issues identified.' Lint & Format: 'All checks passed!'."
+  },
+  "decision": "REJECTED",
+  "cause": "docs",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "major",
+      "file": "tests/unit/test_h3_3_4_requirements_matrix_gate.py",
+      "line": "22 (_TEST_PATH_RE), 51-78, 131-150",
+      "summary": "F1 (review-01) PARCIALMENTE remediado, permanece ABIERTO. Lo corregido (verificado independientemente): las 9 rutas planificadas/inexistentes fueron sustituidas; inventario propio de la matriz en 5262f1c: 130 referencias con prefijo tests/<dir>/ y 38 referencias abreviadas '::test_x' resuelven todas a funciones existentes; 67 filas REQ preservadas con texto, AC, smoke y evidencia identicos a 5ffb2a2 (solo cambia la columna de prueba y la calificacion F2 de REQ-A-12); secciones 1 (definiciones humanas) y 6 (mapeo AC<->REQ) identicas byte a byte. Lo NO cerrado: el gate automatico no ofrece proteccion razonable contra la reincidencia del defecto exacto de F1. _TEST_PATH_RE solo reconoce 'tests/(unit|integration|security|e2e)/<f>.py'; (a) referencias sin prefijo ('test_executive_dashboard_kpis.py::...'), que es precisamente la forma de 36 de las referencias invalidas originales, son invisibles al gate; (b) las 38 referencias abreviadas '::test_x' (sin ruta) nunca se validan. Reproduccion: gate ejecutado contra la matriz de 5ffb2a2 falla solo por UNA referencia (REQ-B-01 'tests/unit/test_executive_dashboard.py'); quitando ese unico prefijo, el gate pasa 7/7 con las 36 referencias a archivos inexistentes aun presentes. Igualmente, sustituir '::test_cto_can_access_dashboard' por '::test_does_not_exist_anywhere' en la matriz actual deja el gate en 7/7 PASS.",
+      "required_action": "Endurecer el gate: (1) toda referencia 'test_\\w+\\.py' dentro de las tablas REQ/TC debe llevar el prefijo 'tests/<dir>/' o fallar (o resolverse inequivocamente contra tests/**); (2) cada '::nombre' abreviado debe validarse contra el archivo ancla precedente en la misma celda; (3) agregar un test negativo del propio gate que demuestre que falla sobre un fixture con referencias sin prefijo inexistentes (patron de 5ffb2a2) y con '::nombre' inexistente. Sin cambios funcionales."
+    },
+    {
+      "id": "F7",
+      "severity": "major",
+      "file": "docs/H3_3_4_REQUIREMENTS_MATRIX.md",
+      "line": "121-122 (REQ-B-13, REQ-B-14); evidence/H3.3.4/developer/developer-02.json AC-12",
+      "summary": "Nuevo. La matriz declara cobertura automatizada para REQ-B-14 'Casos por estado y asesor / Matriz estado x asesor' (AC-12) que no existe. Pruebas citadas: tests/integration/test_executive_dashboard_full.py::test_per_advisor_metrics_use_the_shared_definitions (llama get_metricas_operacionales_por_asesor y afirma solo estancados, n_asignacion, tiempo_asignacion_dias, n_primera_gestion; nunca invoca get_casos_por_estado_y_asesor) y tests/unit/test_executive_dashboard_render.py::test_state_by_advisor_matrix_is_available_without_extra_columns (3 lineas: afirma solo que el texto 'Ver casos por estado y asesor' aparece en el HTML con datos falsos). Busqueda en tests/**: ExecutiveDashboardRepository.get_casos_por_estado_y_asesor (app/repositories/executive_dashboard_repository.py:544) solo se ejecuta dentro de test_full_dashboard_latency_with_representative_volume para medir tiempo, sin ninguna afirmacion sobre sus valores (conteo por estado x asesor, bucket sin asesor, fan-out con asignaciones inactivas, estados desconocidos). Analogamente para REQ-B-13 'cartera total y activa por asesor': la columna cartera_activa de get_cartera_por_asesor no se afirma en ninguna prueba de integracion (las citadas cubren cartera_activa global del KPI y metricas operacionales por asesor; cartera_total por asesor si esta cubierta en test_leads_sin_asesor_have_own_bucket/test_inactive_assignments_do_not_count_and_fanout_is_safe, que no se citan en B-13). La misma prueba test_per_advisor_metrics_use_the_shared_definitions se reutiliza en B-12, B-13, B-14 y TC-17 aparentando cobertura que para B-13/B-14 no aporta. developer-02.json declara AC-12 'met' incluyendo 'casos por estado y asesor' con esa evidencia: inconsistencia de evidencia. El SQL inspeccionado (LEFT JOIN active_assignment + COUNT(DISTINCT id_lead)) parece correcto, pero no esta verificado por prueba.",
+      "required_action": "Agregar prueba(s) de integracion que afirmen valores de get_casos_por_estado_y_asesor (varios estados x asesores, bucket sin asesor, asignacion inactiva+activa sin fan-out, estado desconocido preservado) y de cartera_activa por asesor en get_cartera_por_asesor; citar esas funciones exactas en REQ-B-13/REQ-B-14/TC-17 y corregir la evidencia de AC-12. Solo pruebas y documentacion; sin cambios funcionales salvo que la nueva prueba revele un defecto real."
+    },
+    {
+      "id": "F8",
+      "severity": "minor",
+      "file": "docs/H3_3_4_REQUIREMENTS_MATRIX.md",
+      "line": "89 (REQ-A-12); evidence/H3.3.4/developer/developer-02.json AC-3",
+      "summary": "REQ-A-12 'Indices y EXPLAIN' cita tests/integration/test_audit_state_view.py::test_support_index_exists_and_is_used_for_state_history_query, que pese a su nombre solo verifica existencia del indice en pg_indexes (sin EXPLAIN). La prueba EXPLAIN real es tests/integration/test_executive_dashboard_repository.py::test_explain_state_history_uses_support_index (citada en la seccion 11.6 y en docs/database/04_MIGRATIONS.md, no en la fila). developer-02.json AC-3 atribuye la 'aplicabilidad demostrada por EXPLAIN' a test_audit_state_view.py.",
+      "required_action": "Citar test_explain_state_history_uses_support_index en REQ-A-12 (y TC-19 si aplica) y corregir la atribucion en la evidencia Developer. Opcional: renombrar el test de existencia para que su nombre no afirme 'is_used'."
+    },
+    {
+      "id": "F2",
+      "severity": "minor",
+      "file": "docs/database/04_MIGRATIONS.md; docs/H3_3_4_REQUIREMENTS_MATRIX.md 11.6; scripts/sql/008_create_lead_state_history.sql:27-29",
+      "summary": "ACCEPTED FOLLOW-UP. Remediacion documental correcta: las cifras ~40x/~90x y Seq Scan->Index Scan a 100k filas quedan identificadas como comparacion forzada (enable_seqscan=off); ya no se afirma que PostgreSQL elige normalmente el indice; el EXPLAIN (ANALYZE, BUFFERS) real sin forzar a volumen representativo queda como follow-up explicito 'antes del cierre de la tarea'. Observacion informativa: el comentario del SQL 008 (lineas 27-29) sigue diciendo 'Justificado por EXPLAIN real ... ~40x' sin la calificacion (no modificable en esta ronda por restriccion de alcance). Relacion con AC-3 ('indices justificados por EXPLAIN real documentado', verification automated): un EXPLAIN forzado es un EXPLAIN real que documenta aplicabilidad y beneficio del camino de indice; no se considera contradiccion bloqueante en la etapa de review de software, consistente con review-01. developer-02 marca AC-3 'met': aceptable solo con este follow-up visible.",
+      "required_action": "Cerrar antes de DONE (a mas tardar en VERIFYING/cierre, idealmente en la proxima ronda Developer): adjuntar en evidencia la salida EXPLAIN (ANALYZE, BUFFERS) sin enable_seqscan forzado de la consulta de historial/agregacion de estados a volumen representativo (p.ej. scripts/benchmark_executive_dashboard.py a >=20k leads), indicando si el planificador elige el indice. Si no lo elige, re-documentar la justificacion del indice."
+    },
+    {
+      "id": "F3",
+      "severity": "minor",
+      "file": "tests/unit/test_executive_dashboard_service.py; tests/unit/test_executive_dashboard_render.py",
+      "line": "n/a",
+      "summary": "ACCEPTED FOLLOW-UP. Seccion 13 de la matriz identifica que test_executive_dashboard_service.py requiere PostgreSQL. Verificado localmente sin Postgres: 11 fallos DatabaseConfigurationError = 9 de test_executive_dashboard_service.py + 2 de test_executive_dashboard_render.py (test_nav_link_is_hidden_for_other_roles, test_hiding_the_link_is_not_the_access_control, que hacen GET /leads) no mencionados en la identificacion. Las filas de la matriz siguen citandolos como tests/unit sin anotacion. No afecta CI (Postgres disponible; 722 passed) ni constituye evidencia falsa: organizacion tecnica.",
+      "required_action": "Completar la identificacion (incluir los 2 tests de render) y anotar en las filas que citan esos tests que requieren PostgreSQL. Follow-up de codigo (repositorio dueño del snapshot) sigue aceptado como no bloqueante."
+    },
+    {
+      "id": "F4",
+      "severity": "info",
+      "file": "docs/H3_3_4_REQUIREMENTS_MATRIX.md 12.10 punto 9; tests/unit/test_h3_3_4_timeline_presentation.py:132-150",
+      "summary": "CLOSED (para esta etapa). Existen y pasan localmente test_cutover_settings_default_has_no_fake_date (None), test_cutover_settings_parses_valid_iso_date y test_cutover_settings_rejects_invalid_or_timezone_values. Verificacion del valor efectivo en AWS DEV agregada al checklist humano; ninguna fecha inventada en docs (la fecha 2026-09-20 solo aparece como dato de prueba).",
+      "required_action": "Ninguna en esta ronda. Verificacion humana del valor en DEV permanece pendiente (postflight/smoke)."
+    },
+    {
+      "id": "F5",
+      "severity": "info",
+      "file": "docs/H3_3_4_REQUIREMENTS_MATRIX.md 12.7.1",
+      "line": "626-642",
+      "summary": "ACCEPTED (riesgo documentado). REPEATABLE READ READ ONLY ~5-7 s por render documentado con relacion a latencia, conexion del pool y retencion de xmin/autovacuum; riesgo no declarado resuelto.",
+      "required_action": "Ninguna; preservar en el cierre."
+    },
+    {
+      "id": "F6",
+      "severity": "info",
+      "file": "docs/H3_3_4_REQUIREMENTS_MATRIX.md 12.7 y 13",
+      "line": "604-617, 733-735",
+      "summary": "ACCEPTED FOLLOW-UP (riesgo A, no bloqueante DEV). Preservado: 5,28-6,80 s a 20.000 leads/12 asesores, 18 sentencias constantes sin N+1, parsing regexp de leads.comentarios como costo dominante, follow-up de normalizacion/read model 'no resuelto'; 'El rendimiento no se declara resuelto'.",
+      "required_action": "Ninguna en esta ronda; preservar explicitamente en el cierre de la tarea."
+    }
+  ],
+  "checks": [
+    {
+      "name": "session_independence",
+      "result": "PASS",
+      "note": "Reviewer runtime=claude session=claude-202609191015-reviewer-r2, distinta de claude-202609181245-reviewer (review-01) y de todas las sesiones Developer (deepseek-*)."
+    },
+    {
+      "name": "exact_sha_reviewed",
+      "result": "PASS",
+      "note": "gh pr view 55: headRefOid=5262f1ccea99320be562a2dd33725edfd904c85b, OPEN, MERGEABLE. Worktree read-only .harness-worktrees/H3.3.4-reviewer-5262f1c creado con worktree.py. reviewed_tree=2e6aebad232b19ee4cecad254708f8883929dc49."
+    },
+    {
+      "name": "ci_green_exact_sha",
+      "result": "PASS",
+      "note": "Run 35345911854 headSha exacto 5262f1c; 5/5 jobs success; 722 passed; cobertura 88.87%; pip-audit y bandit limpios; gate de matriz ejecutado en CI (7/7 PASSED)."
+    },
+    {
+      "name": "remediation_scope",
+      "result": "PASS",
+      "note": "git log 5ffb2a2..5262f1c = exactamente b3130f1 (docs: matriz + 04_MIGRATIONS) y 5262f1c (test: gate). git diff --stat: solo docs/H3_3_4_REQUIREMENTS_MATRIX.md, docs/database/04_MIGRATIONS.md, tests/unit/test_h3_3_4_requirements_matrix_gate.py. Cero cambios en app/, scripts/ (incl. SQL 005-008), requirements/, deployment/, .github/, Dockerfile. GitPython==3.1.60 en requirements/runtime.lock. Sin cambios RBAC/PII ni de definiciones metricas (secciones 1 y 6 de la matriz identicas)."
+    },
+    {
+      "name": "f1_reference_inventory",
+      "result": "PASS",
+      "note": "Inventario independiente (script propio, no el gate): 130 referencias con prefijo + 38 abreviadas '::x' resuelven a def existentes; 0 referencias a los 9 archivos planificados salvo mencion historica narrativa en seccion 13; 67 filas preservadas; ninguna fila paso de prueba a '—'."
+    },
+    {
+      "name": "f1_semantic_sampling",
+      "result": "FAIL",
+      "note": "Muestra leida: cartera_activa_excludes_closed_states, estancamiento_counts_only_no_recent_movement, tiempo_primera_gestion_excludes_assignment, funnel_excludes_pre_cutover_leads, tiempo_asignacion_media, evolucion_granularity_and_santiago_timezone, antiguedad_buckets, nav_link_is_hidden_for_other_roles, no_dashboard_query_runs_on_rejection, rollback_revokes_select_and_drops_view_and_index: correspondencia correcta con su fila. Discrepancias: REQ-B-14 y REQ-B-13 (F7, major), REQ-A-12 (F8, minor)."
+    },
+    {
+      "name": "matrix_gate_quality",
+      "result": "FAIL",
+      "note": "Gate verifica rutas con prefijo, def para '::name' con prefijo, ausencia de H3.3.5, AC-1..AC-18, 67 IDs exactos (conjunto, no solo conteo) y AC por fila. Bypass reproducido: referencias sin prefijo y '::name' abreviados no se validan; la matriz original de F1 pasa 7/7 quitando un prefijo. Ver F1."
+    },
+    {
+      "name": "traceability_gate",
+      "result": "FAIL",
+      "note": "Solicitud -> 67 REQ -> AC-1..AC-18 -> implementacion completo; cero H3.3.5; definiciones humanas preservadas; AC humanos pendientes (AC-5/6/7/9 y parte humana de AC-4/10/18) claramente marcados; 008 declarada 'No aplicada en AWS RDS DEV'; smoke DEV no declarado realizado; rendimiento no declarado resuelto. Falla en el eslabon pruebas para REQ-B-13/REQ-B-14 (F7)."
+    },
+    {
+      "name": "local_safe_gates",
+      "result": "PASS",
+      "note": "En worktree 5262f1c: gate de matriz 7/7 PASS; test_h3_3_4_timeline_presentation.py, test_h3_3_4_migration_scripts.py, test_executive_dashboard_{access,presentation,filters}.py PASS; ruff y black sobre el gate PASS; validate_repo.py PASS. 11 fallos locales exclusivamente DatabaseConfigurationError (sin Postgres local) en test_executive_dashboard_service.py (9) y test_executive_dashboard_render.py (2), verdes en CI. Ningun skip/xfail agregado; ningun codigo modificado."
+    },
+    {
+      "name": "no_mutation_no_aws",
+      "result": "PASS",
+      "note": "Reviewer sin cambios de producto, docs ni tests; sin AWS/RDS; migracion 008 no aplicada; sin merge, approve.py, deployment ni candidate."
+    }
+  ],
+  "risks": [
+    "F1 abierto: el gate de trazabilidad puede pasar en verde con referencias inexistentes sin prefijo o abreviadas; no protege contra la reincidencia exacta del defecto original.",
+    "F7: la matriz estado x asesor (REQ-B-14/AC-12) y la cartera activa por asesor (REQ-B-13) no tienen prueba que verifique valores; AC-12 declarado 'met' sin respaldo completo.",
+    "F2: EXPLAIN (ANALYZE, BUFFERS) sin forzar a volumen representativo pendiente antes de DONE; comentario del SQL 008 aun sin calificar las cifras forzadas.",
+    "F6: rendimiento 5,28-6,80 s a 20.000 leads (regexp de notas) riesgo A no bloqueante DEV; follow-up normalizacion/read model no resuelto.",
+    "F5: transaccion REPEATABLE READ READ ONLY ~5-7 s por render (pool/xmin/autovacuum).",
+    "Migracion 008 (clase D) NO aplicada en AWS RDS DEV; AC-5/AC-6/AC-7 pendientes de Human Gate/postflight; smoke humano AC-9/AC-18 (incluido 403 real) e inspeccion visual pendientes; valor de LEAD_STATE_HISTORY_CUTOVER en DEV pendiente de verificacion humana."
+  ]
+}

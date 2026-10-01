@@ -1,0 +1,320 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "H3.3.5",
+  "created_at": "2026-09-21T20:58:52Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609212057-reviewer-app-candidate-r2",
+  "release_sha": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+  "reviewed_tree": "8c81c7a58fbcf844d7e324e22532902b9b75c39d",
+  "release_tree": "8c81c7a58fbcf844d7e324e22532902b9b75c39d",
+  "pr_number": 57,
+  "result": "PASS",
+  "decision": "APPROVED",
+  "cause": null,
+  "candidate_evidence": "evidence/H3.3.5/deployment/candidate-02.json",
+  "supersedes_review": "evidence/H3.3.5/reviewer/candidate_review-01.json",
+  "review_scope": "Revision independiente del rework de artefacto candidate-02 (candidate_rework_round=1): cierre de CR-D7-01, reutilizacion sin cambios de los artefactos verificados en candidate-01, estado del environment, ausencia de escrituras AWS nuevas, validez de la ruta de transiciones D7 fase B contra workflow.yaml/guards.py y evaluacion de la brecha de enforcement de rollback_permitted.",
+  "reviewer_session_note": "Sesion claude-202609212057-reviewer-app-candidate-r2, distinta del Developer (deepseek-202609211610-developer-rework1), de los Deployers (claude-202609211957-deployer-app-candidate, claude-202609212042-deployer-app-candidate-r2) y de las revisiones previas (claude-202609212020-reviewer-app-candidate). Sin modo mantenimiento.",
+  "identity_chain": {
+    "release_sha": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+    "release_tree": "8c81c7a58fbcf844d7e324e22532902b9b75c39d",
+    "ci_main_run": 35629691243,
+    "publish_run": 35648173483,
+    "images": {
+      "app": "sha256:f2ba920eeaf45a671e644347abb8d83fdf82ef34b8097d66c9723e6d14677b76",
+      "caddy": "sha256:efbce63c9a0f4cc738873a584f9e57eb73e358abc4883e401dcdbc2bec0c27fc"
+    },
+    "bundle_sha256": "f7e661411bbaacaf456a95405fd0e787136ac6cb04eb790fd78039d7938731f1",
+    "bundle_size_bytes": 4815,
+    "s3_key": "tpi-backoffice/dev-releases/h3-3-5-asesores-cartera-78bf33b-domainlocked-r1/f7e661411bbaacaf456a95405fd0e787136ac6cb04eb790fd78039d7938731f1.zip",
+    "s3_checksum_sha256_b64": "9+ZhQRu6rK9FapVAX9DnhxNqxssE63kP14A515OHMfE=",
+    "application_version": "h3-3-5-asesores-cartera-78bf33b-domainlocked-r1",
+    "lkg": "h3-3-4-historial-dashboard-3051a62-domainlocked-r1"
+  },
+  "checks": [
+    {
+      "name": "state_and_task",
+      "result": "PASS",
+      "note": "init.ps1 --runtime claude PASS; state.json CANDIDATE_REVIEW / H3.3.5 / rol reviewer; candidate_rework_round=1; refs.candidate_evidence = candidate-02.json; refs.candidate_review_evidence = candidate_review-01.json (REJECTED artifact, CR-D7-01)."
+    },
+    {
+      "name": "candidate_02_supersedes_candidate_01",
+      "result": "PASS",
+      "note": "candidate-02.supersedes_candidate apunta a candidate-01 / candidate_review-01 / CR-D7-01; candidate-01 sigue presente (sin sobrescribir, SHA256 F98FCF66...3DEE). Comparacion campo a campo: release_sha, release_tree, reviewed_tree, account_id, region, environment, publish_run, images, bundle, s3, application_version y smoke_plan IDENTICOS; lkg, environment_observed y deployment_plan difieren solo en notas y en la precondicion D7 de rollback anadida; rollback_plan reemplazado (d7_rollback_risk -> formal_conditions/d7_*)."
+    },
+    {
+      "name": "artifacts_not_rebuilt_or_modified",
+      "result": "PASS",
+      "note": "aws-audit.jsonl: unicas mutaciones de H3.3.5 = s3api put-object (20:07:32Z) y create-application-version (20:07:57Z), ambas de candidate-01. Sesion de candidate-02 (20:42Z-20:45Z): solo lecturas en modo prepare. S3 LastModified 20:07:32Z y AV DateCreated 20:07:57Z sin cambio; gh run list: unico publish para 78bf33b (35648173483)."
+    },
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git fetch: origin/main = 78bf33b; git rev-parse 78bf33b^{tree} = 8c81c7a5 = review-02.reviewed_tree = merge-01.release_tree = candidate-02.release_tree."
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "origin/main tras fetch = 78bf33bcb946fc442a8e5488cdf0d2f89fd190c2."
+    },
+    {
+      "name": "ci_main_green_on_release_sha",
+      "result": "PASS",
+      "note": "gh run view 35629691243: push/main, headSha 78bf33b, attempt 1, completed/success."
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "gh run view 35648173483: workflow_dispatch/main, headSha 78bf33b, attempt 1, completed/success; unico run de publish para el SHA."
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "aws_guard ecr describe-images (candidate_read): tpi-dev-app f2ba920e...7b76 y tpi-dev-caddy efbce63c...27fc ACTIVE con tag = release SHA completo."
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "Log de 35648173483 (paso fail-closed): 'tpi-dev-app: CRITICAL=0 HIGH=0' y 'tpi-dev-caddy: CRITICAL=0 HIGH=0'."
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "Zip local .harness-release/78bf33b/...-r1.zip: SHA256 f7e661411bba...31f1, 4815 bytes, identico al reconstruido independientemente en candidate_review-01; no reconstruido ni resubido en el rework."
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "Bundle byte-identico al verificado en candidate_review-01 (compose unico, imagenes por digest, sin build:, sin genialabs.cl)."
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "candidate-02 no contiene AUTH_USERS_JSON, usuarios con credenciales, hashes ni contrasenas; solo nombres de cuenta y advisor_id truncados ya presentes en candidate-01; AUTH_USERS_JSON como referencia ${VAR:?}."
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "aws_guard s3api head-object --checksum-mode ENABLED: ContentLength 4815, ChecksumSHA256 9+ZhQRu6rK9FapVAX9DnhxNqxssE63kP14A515OHMfE=, FULL_OBJECT, LastModified 2026-09-21T20:07:32Z."
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "describe-application-versions: label exacto, UNPROCESSED, SourceBundle = bucket/key verificados, DateCreated 20:07:57Z (no recreada)."
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "78bf33b -> CI 35629691243 -> publish 35648173483 -> digests app/caddy (tag = release) -> bundle f7e66141 -> S3 key content-addressed + checksum 9+ZhQRu6 -> AV SourceBundle."
+    },
+    {
+      "name": "environment_unchanged_running_lkg",
+      "result": "PASS",
+      "note": "describe-environments (candidate_read, ~20:57Z): VersionLabel h3-3-4-historial-dashboard-3051a62-domainlocked-r1, Ready/Green/Ok, AbortableOperationInProgress false, DateUpdated 2026-09-21T00:39:15Z (sin cambio)."
+    },
+    {
+      "name": "no_new_aws_writes_after_candidate_01",
+      "result": "PASS",
+      "note": "aws-audit.jsonl: ninguna entrada con mutation != null posterior a 20:07:57Z; sin update-environment, restart-app-server, option-settings, RDS ni secretos."
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "LKG = VersionLabel observada en el environment Ready/Green/Ok."
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "AV LKG UNPROCESSED; head-object de su bundle: 4815 bytes, ChecksumSHA256 vL6TWIXcUNJ5zRnF8N32lkSbKdcwXC5VBtwKWvqZFtA=."
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "tpi-dev-app a7881bad... y tpi-dev-caddy 9da2be7a... ACTIVE, tag 3051a627."
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "Unico update-environment --version-label a la AV aprobada; sin option-settings, template, plataforma ni tier."
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "Deploy y rollback con la forma aceptada por aws_guard v_update_environment (solo --environment-name/--version-label); acciones humanas (identidades, refresh) fuera del Harness."
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS"
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": "Ningun comando del Harness toca IAM, DNS, secretos, RDS o migraciones; restart-app-server y --option-settings solo como acciones humanas documentadas."
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS"
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS"
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "note": "Condicion 6 de politica y d7 combinadas con AND; failure_class functional/observability -> escalate."
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "Un unico update-environment al LKG nombrado; max_attempts 1; rollback fallido -> BLOCKED_HUMAN."
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "Smoke tecnico, reverificacion tras refresh y smoke humano AC-17 con ambas cuentas."
+    },
+    {
+      "name": "d7_forward_cutover_order_fail_closed",
+      "result": "PASS",
+      "note": "Sin cambios respecto de candidate_review-01; ahora ademas precondicion explicita de que el gate aprueba formal_conditions y d7_phase_classification."
+    },
+    {
+      "name": "d7_phase_A_only_from_deploy_failed_with_prior_human_confirmation",
+      "result": "PASS",
+      "note": "phase_A demonstrable_only_if_all: confirmacion humana en el Human Gate de identidades ausentes + estado DEPLOY_FAILED (deploy_succeeded nunca registrado) + sin indicio de paso 5 iniciado. Precheck fase A exige d7_gate_identities_absent_confirmation_ref."
+    },
+    {
+      "name": "d7_verify_failed_or_unknown_is_phase_B",
+      "result": "PASS",
+      "note": "phase_B applies_when_any: VERIFY_FAILED siempre; humano informo paso 5/6; fase A no demostrable. default_when_unknown = B."
+    },
+    {
+      "name": "d7_phase_B_no_automatic_rollback_escalate_first",
+      "result": "PASS",
+      "note": "rules: prohibido start_rollback automatico; desde VERIFY_FAILED failure evidence d7_rollback_blocked=true + escalate -> BLOCKED_HUMAN."
+    },
+    {
+      "name": "d7_phase_B_required_evidence_complete",
+      "result": "PASS",
+      "note": "d7_post_identity_sequence + d7_precheck_required_fields cubren los 7 puntos: (1) retiro humano de ambas identidades (d7_identities_removed_ref); (2) preservacion de demas usuarios (d7_other_users_preserved_attested); (3) refresh humano sobre la label H3.3.5 por RestartAppServer o UpdateEnvironment con la misma label, runbook seccion 6 (d7_refresh_ref/mechanism/target_version_label); (4) verificacion read-only del Deployer Ready/Green/Ok (d7_postrefresh_verification_ref/observed); (5) sigue ejecutandose H3.3.5 (observed.version_label + d7_no_update_between_step3_and_precheck); (6) login negativo de ambas cuentas (d7_negative_login_advisor1/2 = rejected); (7) aprobacion humana explicita (d7_human_rollback_approval_ref)."
+    },
+    {
+      "name": "d7_missing_evidence_stops_without_rollback",
+      "result": "PASS",
+      "note": "d7_stop_rules y d7_precheck_required_fields.note: cualquier punto faltante o no verificable -> STOP/BLOCKED_HUMAN sin start_rollback; environment degradado que impide refresh/verificacion -> STOP sin rollback."
+    },
+    {
+      "name": "d7_lkg_rollback_never_used_as_refresh",
+      "result": "PASS",
+      "note": "Paso 2 y stop_rules: refresh solo con la label H3.3.5; refresh con la label LKG = violacion D7 -> STOP, no cuenta como rollback ni refresh."
+    },
+    {
+      "name": "d7_no_secret_exposure",
+      "result": "PASS",
+      "note": "Atestaciones humanas no sensibles; prohibido registrar AUTH_USERS_JSON, usuarios con credenciales, hashes o contrasenas; el Deployer nunca lee el secreto."
+    },
+    {
+      "name": "d7_workflow_path_valid",
+      "result": "PASS",
+      "note": "Validado contra harness/workflow.yaml y scripts/harness/guards.py: verify_failed (VERIFYING->VERIFY_FAILED, guard verification_failed: result FAIL + failure_class clasificada); escalate_verify_failure (VERIFY_FAILED->BLOCKED_HUMAN, guard failure_recorded: failure.state == VERIFY_FAILED); resolve_to_verifying (BLOCKED_HUMAN->VERIFYING, guard resolution_target:VERIFYING, creada por approve.py; sin effects, no limpia refs approval/candidate_evidence; usada realmente en H3.3.1 y H3.3.2); verify_failed de nuevo; rollback_after_verify_failure (VERIFY_FAILED->ROLLING_BACK, guard rollback_permitted: precheck, rollback_attempted=false, approval vigente, LKG = aprobado, update_accepted_prior, failure_class infrastructure en verificacion y precheck, LKG utilizable, sin option settings). Ciclos repetidos VERIFYING<->BLOCKED_HUMAN no estan limitados por contador; rollback_attempted solo cambia en start_rollback. Modos AWS: Deployer read en VERIFYING/VERIFY_FAILED (paso 3 read-only posible), rollback solo en ROLLING_BACK; BLOCKED_HUMAN sin acceso AWS de agentes. evidence.schema.json no fija additionalProperties=false para rollback: los campos d7_* son admisibles."
+    },
+    {
+      "name": "d7_rollback_after_identities_fail_closed",
+      "result": "PASS",
+      "note": "CR-D7-01 cerrado; ver findings.CR-D7-01."
+    }
+  ],
+  "cr_d7_01_evaluation": {
+    "status": "resolved",
+    "summary": "candidate-02 reemplaza d7_rollback_risk por un plan fail-closed: formal_conditions = ALL(7 condiciones de politica) AND d7_advisor_identities_safe_for_lkg; fase A solo en DEPLOY_FAILED con confirmacion humana previa del gate; VERIFY_FAILED o desconocido = fase B; fase B sin rollback automatico, escalate primero, secuencia humana 1-6 con evidencia no sensible y aprobacion explicita; refresh sobre H3.3.5, nunca con la label LKG; faltante -> STOP/BLOCKED_HUMAN. Cubre los cuatro puntos exigidos por candidate_review-01 (refresh tras retirar, verificacion observable, condicion D7 explicita, excepcion pre-paso-5).",
+    "transition_path_phase_B": "VERIFYING -verify_failed-> VERIFY_FAILED -escalate-> BLOCKED_HUMAN -human_resolve(resolve_to_verifying)-> VERIFYING -verify_failed-> VERIFY_FAILED -[precheck D7 valido]-> start_rollback -> ROLLING_BACK -rollback_finished-> BLOCKED_HUMAN. Ruta valida; el plan la recorre dos veces (pasos 1-2 y luego 4+6) antes del precheck.",
+    "residual_semantics": "En fase B el precheck debe seguir demostrando la condicion de politica 'environment_degraded_inconsistent_or_not_expected_state' aunque el paso 3 exija Ready/Green/Ok sobre H3.3.5. Si el refresh restablecio el estado esperado, el rollback no procede (resultado correcto: H3.3.5 con RBAC por cartera sigue corriendo). Si el environment esta degradado y no puede refrescarse/verificarse, no hay rollback y decide el humano. En ambos casos D7 se preserva a costa de disponibilidad DEV, lo cual es la eleccion fail-closed correcta."
+  },
+  "enforcement_gap": {
+    "status": "non_blocking_future_improvement",
+    "facts": [
+      "guards.g_rollback_permitted no lee rollback_plan.formal_conditions ni exige campos d7_* en el precheck.",
+      "guards.g_approval_valid exige set(approval.rollback_authorization.conditions) == las 7 condiciones de harness/policies.yaml; la autorizacion maquina no puede contener la condicion D7.",
+      "agents/deployer/PROMPT.md paso 7 y skill rollback-version-only enumeran solo las 7 condiciones; no remiten a condiciones especificas del rollback_plan del candidate.",
+      "Consecuencia: desde el primer VERIFY_FAILED un Deployer podria escribir un precheck infrastructure y ejecutar start_rollback sin evidencia D7 sin que ningun guard lo detenga."
+    ],
+    "assessment": "La proteccion procedimental es suficiente para esta ejecucion bajo las politicas vigentes: (a) el Human Gate queda ligado por SHA256 a candidate-02 (g_approval_valid: candidate_evidence.sha256), cuyo rollback_plan declara la condicion D7 como parte obligatoria de la autorizacion condicionada; un rollback sin ella seria una violacion del instrumento aprobado, no una autorizacion valida, por lo que el gate no queda invalidado; (b) el precheck se construye desde candidate-02 (to_version debe igualar cand.lkg), donde D7 esta junto al LKG; (c) el mismo modelo de confianza ya rige condiciones autodeclaradas por el Deployer (not_purely_functional_defect, environment degradado); (d) el Deployer solo corre en Claude Code con hooks y auditoria de transiciones/aws-audit; (e) el Harness no permite a un Reviewer ni Deployer agregar enforcement: exige mantenimiento humano del Harness. No se inventa enforcement tecnico inexistente.",
+    "operational_caveat_for_human_gate": "El humano debe saber, al aprobar, que la autorizacion de rollback registrada por approve.py solo contiene las 7 condiciones de politica y que D7 vive en candidate-02; ante cualquier VERIFY_FAILED, la sesion del Deployer debe instruirse explicitamente a aplicar candidate-02.rollback_plan.d7_phase_classification (fase B)."
+  },
+  "findings": [
+    {
+      "id": "CR-D7-01",
+      "severity": "info",
+      "file": "evidence/H3.3.5/deployment/candidate-02.json",
+      "summary": "RESUELTO. El rollback_plan de candidate-02 es fail-closed respecto de D7 (ver cr_d7_01_evaluation y checks d7_*).",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "CR-D7-02",
+      "severity": "minor",
+      "file": "docs/H3_3_5_DEV_RUNBOOK.md",
+      "summary": "Sigue abierto como mejora documental no bloqueante: el runbook del release no incorpora el procedimiento de rollback D7 posterior a configurar identidades.",
+      "required_action": "Incorporar en tarea posterior o al cierre; no bloquea este candidate (el plan aprobado es candidate-02)."
+    },
+    {
+      "id": "CR-D7-03",
+      "severity": "minor",
+      "file": "scripts/harness/guards.py",
+      "summary": "Brecha de enforcement no bloqueante: rollback_permitted, la rollback_authorization de la aprobacion (igualdad exacta con las 7 condiciones de policies.yaml) y el PROMPT/skill del Deployer no verifican ni mencionan condiciones D7 especificas del candidate.",
+      "required_action": "Mantenimiento del Harness (humano, TPI_HARNESS_MAINTENANCE=1): hacer que rollback_permitted exija los campos de rollback_plan.formal_conditions/d7_precheck_required_fields cuando el candidate declare condiciones adicionales, y que el Deployer PROMPT paso 7 remita al rollback_plan del candidate aprobado. Hasta entonces: instruir explicitamente al Deployer ante VERIFY_FAILED."
+    },
+    {
+      "id": "CR-INFO-04",
+      "severity": "info",
+      "file": "evidence/H3.3.5/deployment/candidate-02.json",
+      "summary": "La confirmacion humana de fase A (identidades ausentes antes del cutover) debe quedar registrada en la aprobacion o no sera demostrable; si no se registra, cualquier fallo cae en fase B (fail-closed).",
+      "required_action": "Humano: registrar la confirmacion al aprobar el gate."
+    },
+    {
+      "id": "CR-INFO-05",
+      "severity": "info",
+      "file": "scripts/harness/approve.py",
+      "summary": "La lectura de approve.py fue denegada por el guard para el Reviewer; las resoluciones se validaron via workflow.yaml, guards.g_resolution_target y el uso real de resolve_to_verifying en H3.3.1/H3.3.2. Si approve.py no admitiera algun destino, la ruta queda detenida en BLOCKED_HUMAN (fail-closed).",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "CR-INFO-06",
+      "severity": "info",
+      "file": "tasks/current.yaml",
+      "summary": "AC-17 y AC-18 permanecen pending_human; esta revision no los marca cumplidos ni declara cierre tecnico.",
+      "required_action": "Mantener."
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "id": "AC-17",
+      "status": "pending_human",
+      "note": "Smoke autenticado tras el cutover D7."
+    },
+    {
+      "id": "AC-18",
+      "status": "pending_human",
+      "note": "No evaluado como cumplido por esta revision."
+    }
+  ],
+  "safety": {
+    "aws_writes": false,
+    "update_environment": false,
+    "restart_app_server": false,
+    "option_settings": false,
+    "rds_access": false,
+    "seed_reexecuted": false,
+    "secrets_accessed": false,
+    "auth_users_json_read_or_modified": false,
+    "identities_created": false,
+    "code_runbook_or_artifacts_modified": false,
+    "approve_py_executed": false,
+    "human_gate_approved_by_agent": false,
+    "maintenance_mode": false,
+    "aws_reads": "sts get-caller-identity x1; elasticbeanstalk describe-environments x1, describe-application-versions x2; s3api head-object x2; ecr describe-images x4 (aws_guard, modo candidate_read).",
+    "guard_denials": "3 comandos denegados por el guard (lectura de approve.py; git merge-base por patron de merge; listado de transitions.jsonl H3.3.1/H3.3.2 interpretado como posible escritura); no se ejecutaron ni se buscaron rodeos."
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "H3.3.1",
+  "created_at": "2026-09-15T16:33:08Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "dev-session-1",
+  "head_sha": "11f540b86b907f302b41e72d968f95b597fe9449",
+  "branch": "harness/H3.3.1-rbac-pii-asignacion",
+  "pr_number": 50,
+  "change_class": "A",
+  "tests": {
+    "command": "pytest tests/unit tests/security -v",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "pytest tests/unit/test_h3_3_1_rbac_pii_assignment.py (CEO/CTO receive full PII in board and detail)"
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "pytest tests/unit/test_h3_3_1_rbac_pii_assignment.py (Restricted roles receive server-side masked PII)"
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "pytest tests/unit/test_h3_3_1_rbac_pii_assignment.py (Manual assignment control rendered for admin/executive)"
+    },
+    {
+      "id": "AC-4",
+      "status": "pending_verification",
+      "evidence": "Repository assign_lead method enforces single active assignment, updates lead state to asignado, and writes append-only auditoria; pending authenticated smoke test in DEV"
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "docs/H3_3_CRM_LITE_WEB_UX.md and docs/PROJECT_STATUS.md updated without obsolete versions/acceptance items"
+    }
+  ],
+  "files_changed": [
+    "app/services/solicitud_service.py",
+    "app/web/routes/leads.py",
+    "docs/H3_3_CRM_LITE_WEB_UX.md",
+    "docs/PROJECT_STATUS.md",
+    "tests/unit/test_h3_3_1_rbac_pii_assignment.py"
+  ],
+  "assumptions": [
+    "PostgreSQL RDS in DEV contains pre-applied migrations 005/006 for tpi.asignaciones and tpi.auditoria",
+    "Authenticated smoke test will verify manual assignment and PII display in AWS DEV environment"
+  ],
+  "migrations_included": false
+}

@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "H3.3.7",
+  "created_at": "2026-10-01T16:02:05Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610011558-deployer-supa93fbf",
+  "verification_scope": "final",
+  "verification_scope_note": "Verificacion final tras aceptacion humana (acceptance-01) y clasificacion humana de 'hash'. Estado, cadena de identidad, smoke y conteos re-observados; sin escrituras AWS ni redeploy.",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "6f0f5bb1e934742cd8e8572d4a401f8bf29ab1c7",
+  "deployed_commit": "6f0f5bb1e934742cd8e8572d4a401f8bf29ab1c7",
+  "application_version": "h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "PASS",
+  "failure_class": null,
+  "final_state": {
+    "version_label": "h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-01T14:47:51Z",
+    "stable": true
+  },
+  "events": {
+    "levels_observed": [
+      "INFO"
+    ],
+    "errors": 0,
+    "rollback_events": 0,
+    "unexpected_version_change": false,
+    "result": "PASS",
+    "summary": "describe-events (20): solo INFO; update completado 14:47:50Z, health Info->Ok; sin eventos posteriores."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests del bundle (deployment-01)",
+    "s3_key": "tpi-backoffice/dev-releases/h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1/efa590b9e0daef786ce1f4b69ea8026c1a160b39d8dac06999d1c79b7f82d8aa.zip",
+    "s3_checksum_sha256_b64": "76WQueDa73hs4fS2nqgCbBoWCznY2sBpmdHHm3+C2Ko=",
+    "bundle_sha256": "efa590b9e0daef786ce1f4b69ea8026c1a160b39d8dac06999d1c79b7f82d8aa",
+    "note": "Re-observado en VERIFYING final: VersionLabel exacta, AV SourceBundle = key, ChecksumSHA256 y ContentLength 4815 iguales a candidate-01."
+  },
+  "smoke_client": "Python urllib, TLS por defecto, sin seguir redirects, sin credenciales ni cookies",
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "observed": "200; HTML incluye theme.js, data-theme y control de tema"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "static_theme_js",
+      "result": "PASS",
+      "observed": "200; sha256 a816cd4b6d8b = blob git 6f0f5bb (2748 B)"
+    },
+    {
+      "name": "css_dark_theme_rules",
+      "result": "PASS",
+      "observed": "76 ocurrencias de [data-theme=\"dark\"]"
+    },
+    {
+      "name": "login_page_theme_bootstrap",
+      "result": "PASS",
+      "observed": "login referencia theme.js, data-theme y toggle"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login (AC-6)"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "observed": "ninguna respuesta redirige a genialabs.cl"
+    },
+    {
+      "name": "runtime_identity_chain",
+      "result": "PASS",
+      "observed": "cadena completa re-observada"
+    }
+  ],
+  "logs": {
+    "method": "aws_guard logs filter-log-events, solo conteos (--query length(events))",
+    "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+    "window": "desde 2026-10-01T14:46:00Z",
+    "pattern_counts": {
+      "ERROR": 0,
+      "Traceback": 0,
+      "Authorization": 0,
+      "Bearer": 0,
+      "password": 0,
+      "cookie": 0,
+      "raw_payload": 0,
+      "secret": 0,
+      "token": 0,
+      "hash": 1
+    },
+    "result": "PASS_WITH_HUMAN_CLASSIFICATION"
+  },
+  "pii_log_scan": {
+    "matches": 0,
+    "raw_pattern_hits": {
+      "Authorization": 0,
+      "Bearer": 0,
+      "password": 0,
+      "cookie": 0,
+      "raw_payload": 0,
+      "secret": 0,
+      "token": 0,
+      "hash": 1
+    },
+    "strong_matches": 0,
+    "weak_matches": {
+      "hash": 1
+    },
+    "classification_required": true,
+    "false_positives": [
+      {
+        "pattern": "hash",
+        "count": 1,
+        "classified_by": "human",
+        "classification": "FALSE_POSITIVE",
+        "source": "log informativo de Caddy",
+        "logger": "tls",
+        "message": "updated and stored ACME renewal information",
+        "triggering_field": "cert_hash",
+        "rationale": "cert_hash es la huella del certificado TLS mantenido por Caddy/ACME; no es credencial ni PII (clasificacion humana, evidence/H3.3.7/reviewer-support/human-hash-classification-01.json).",
+        "inspected_by_deployer": false,
+        "classification_evidence": "evidence/H3.3.7/reviewer-support/human-hash-classification-01.json"
+      }
+    ],
+    "patterns": [
+      "Authorization",
+      "Bearer",
+      "raw_payload",
+      "password",
+      "hash",
+      "cookie",
+      "secret",
+      "token"
+    ],
+    "note": "Conteos re-observados identicos (hash=1, resto 0) en la misma ventana; unica coincidencia debil clasificada por el humano."
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "both",
+      "evidence": "aceptacion humana: evidence/H3.3.7/approvals/acceptance-01.json (approve.py accept)"
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "both",
+      "evidence": "aceptacion humana: evidence/H3.3.7/approvals/acceptance-01.json (approve.py accept)"
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "method": "both",
+      "evidence": "aceptacion humana: evidence/H3.3.7/approvals/acceptance-01.json (approve.py accept)"
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "method": "automated",
+      "evidence": "tests del release (review-01, CI main 36645354294); theme.js servido = blob del release con localStorage"
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "method": "automated",
+      "evidence": "tests del release (review-01, CI main 36645354294); theme.js servido = blob del release"
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "method": "automated",
+      "evidence": "tests del release; smoke /leads 307 -> /login; sin cambios de backend"
+    }
+  ],
+  "rollback_executed": false,
+  "safety": {
+    "rds_access": false,
+    "secrets_accessed": false,
+    "credentials_used": false,
+    "aws_writes_this_stage": [],
+    "approve_py_executed": false,
+    "functional_code_modified": false,
+    "redeploy": false
+  }
+}

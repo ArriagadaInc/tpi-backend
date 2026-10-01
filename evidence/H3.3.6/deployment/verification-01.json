@@ -1,0 +1,264 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "H3.3.6",
+  "created_at": "2026-09-23T15:27:33Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609231517-deployer-sup63927f",
+  "verification_scope": "postdeploy_technical_pending_human",
+  "verification_scope_note": "Postflight tecnico post-cutover (identidad de runtime, eventos, smoke no autenticado, conteos de logs). No incluye la aceptacion humana: AC-1,2,5,6,7,11,12,13,15 (both) y AC-18 (human) quedan pending_human hasta approve.py accept. No habilita 'verified' por si sola.",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "5f5b3d37bf122f1d4438583b973fd03763aecebe",
+  "deployed_commit": "5f5b3d37bf122f1d4438583b973fd03763aecebe",
+  "application_version": "h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "PASS",
+  "failure_class": null,
+  "final_state": {
+    "version_label": "h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-09-23T15:20:47Z",
+    "observed_at": "2026-09-23T15:21:34Z"
+  },
+  "events": {
+    "levels_observed": [
+      "INFO"
+    ],
+    "errors": 0,
+    "warnings": 0,
+    "result": "PASS",
+    "summary": "Solo eventos INFO del cutover (update starting -> completed successfully 15:20:47Z)."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "source": "evidence/H3.3.6/deployment/deployment-01.json",
+    "note": "AV SourceBundle = key aprobada; S3 ChecksumSHA256 j70lJqbj... ; bundle local 8fbd2526... referencia app 0c20c5d7 (x2) y caddy cd1adaf8."
+  },
+  "smoke_client": "Python urllib, TLS por defecto, sin seguir redirects, sin credenciales ni cookies",
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "observed": "200 application/json"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "observed": "200 text/css"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "leads_board_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "export_requires_auth_get",
+      "result": "PASS",
+      "observed": "307 -> /login; sin Content-Type XLSX"
+    },
+    {
+      "name": "export_requires_auth_query",
+      "result": "PASS",
+      "observed": "GET /leads/export.xlsx?estado=nuevo&page=2 -> 307 -> /login; sin contenido"
+    },
+    {
+      "name": "export_post_anonymous",
+      "result": "PASS",
+      "observed": "405 application/json (metodo no permitido); sin archivo ni datos"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "observed": "ninguna Location con genialabs"
+    }
+  ],
+  "logs": {
+    "method": "aws_guard logs filter-log-events --query length(events) desde PowerShell (solo conteos; sin volcar lineas)",
+    "log_group": "eb-current-app/stdouterr.log (tpi-backoffice-dev-green)",
+    "window": "desde 2026-09-23T15:19:00Z (1790176740000), incluye el smoke anonimo",
+    "total_events": 46,
+    "pattern_counts": {
+      "ERROR": 0,
+      "Exception": 0,
+      "Traceback": 0,
+      "CRITICAL": 0,
+      "WARNING": 0,
+      "AccessDenied": 0,
+      "Authorization": 0,
+      "Bearer": 0,
+      "raw_payload": 0,
+      "password": 0,
+      "hash": 0,
+      "cookie": 0,
+      "500": 0,
+      "401": 0,
+      "403": 0
+    },
+    "expected_markers": {
+      "Uvicorn": 2,
+      "export": 6,
+      "xlsx": 6,
+      "note": "Uvicorn=2: arranque de los servicios api y backoffice tras el cutover. export/xlsx=6: lineas de acceso de los requests anonimos del smoke a /leads/export.xlsx (conteo; no se leyeron lineas)."
+    },
+    "eb_engine_ERROR": 0,
+    "result": "PASS"
+  },
+  "pii_log_scan": {
+    "matches": 0,
+    "result": "PASS",
+    "patterns": [
+      "Authorization",
+      "Bearer",
+      "raw_payload",
+      "password",
+      "hash",
+      "cookie"
+    ],
+    "note": "Solo conteos. La verificacion de ausencia de PII tras exportaciones autenticadas reales es parte de AC-18 (humano)."
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Automatizado: review-02 APPROVED + CI main 35871225497. Humano: boton solo visible para CEO/CTO en DEV."
+    },
+    {
+      "id": "AC-2",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Automatizado: review-02 + CI. Anonimo verificado en smoke (307 -> /login). Humano: descarga CEO/CTO y 403 advisor en DEV."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 APPROVED sobre tree 82da9205 = release; CI main 35871225497 success (861 passed)."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 + CI main 35871225497."
+    },
+    {
+      "id": "AC-5",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Automatizado: review-02 + CI. Humano: columnas del archivo real."
+    },
+    {
+      "id": "AC-6",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Automatizado: review-02 + CI. Humano: ausencia de campos prohibidos en archivo real."
+    },
+    {
+      "id": "AC-7",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Automatizado: review-02 (inspeccion XLSX) + CI. Humano: abre en Excel/LibreOffice, tipos y formatos."
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 + CI main 35871225497."
+    },
+    {
+      "id": "AC-9",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 + CI main 35871225497."
+    },
+    {
+      "id": "AC-10",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 + CI main 35871225497."
+    },
+    {
+      "id": "AC-11",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Automatizado: review-02 + CI. Humano: headers y nombre de archivo en descarga real."
+    },
+    {
+      "id": "AC-12",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Automatizado: review-02 + CI. Humano: evento de auditoria seguro en DEV."
+    },
+    {
+      "id": "AC-13",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Automatizado: review-02 + CI. Anonimo sin archivo verificado en smoke. Humano: advisor 403 sin fuga."
+    },
+    {
+      "id": "AC-14",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 + CI main 35871225497."
+    },
+    {
+      "id": "AC-15",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Automatizado: review-02 + CI. Humano: regresion CEO/CTO/advisor en DEV."
+    },
+    {
+      "id": "AC-16",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 + CI main 35871225497 (861 passed)."
+    },
+    {
+      "id": "AC-17",
+      "status": "met",
+      "method": "automated",
+      "evidence": "CI main 35871225497: cobertura 89.32% (>= 85)."
+    },
+    {
+      "id": "AC-18",
+      "status": "pending_human",
+      "method": "human",
+      "evidence": "Smoke humano autenticado en AWS DEV pendiente."
+    }
+  ],
+  "rollback_executed": false,
+  "safety": {
+    "rds_access": false,
+    "secrets_accessed": false,
+    "credentials_used": false,
+    "aws_writes_this_stage": [],
+    "approve_py_executed": false
+  },
+  "next_step": "Humano: smoke autenticado AC-18 (y componente humano de AC-1,2,5,6,7,11,12,13,15) en AWS DEV; luego en su terminal: python scripts/harness/approve.py accept --decision accept --criteria AC-1,AC-2,AC-5,AC-6,AC-7,AC-11,AC-12,AC-13,AC-15,AC-18. Despues, sesion Deployer: evidencia final de verificacion y transicion verified."
+}

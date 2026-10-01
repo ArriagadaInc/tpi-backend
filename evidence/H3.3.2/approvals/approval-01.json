@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "approval",
+  "task_id": "H3.3.2",
+  "created_at": "2026-09-16T15:31:04Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "approved_commit": "fec33e7951f862c95b2436b09b969e5ef1915769",
+  "app_digest": "sha256:96c611b6aecbb50e936621f5d9e8a2f31a5c1c7387e2fdb94409cc2adb3520a3",
+  "caddy_digest": "sha256:bbf22901b5c210888cbdea83b53459772d44a7e7299a1c8a9d75b01910b3be1c",
+  "bundle_sha256": "ddc5abe2047b624b5a5a1a8aa0615048b54291077bd0d1ffaff7c4fc9e273800",
+  "s3_key": "tpi-backoffice/dev-releases/h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1/ddc5abe2047b624b5a5a1a8aa0615048b54291077bd0d1ffaff7c4fc9e273800.zip",
+  "application_version": "h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "lkg_version_label": "h3-3-1-rbac-pii-4aac143-domainlocked-r1",
+  "candidate_evidence": {
+    "path": "evidence/H3.3.2/deployment/candidate-01.json",
+    "sha256": "82db4292dc88379a2f6c123dc6bb1a038422204ffeb831d39012d46c042446de"
+  },
+  "rollback_authorization": {
+    "scope": "single_version_only_rollback_to_named_lkg",
+    "max_attempts": 1,
+    "lkg_version_label": "h3-3-1-rbac-pii-4aac143-domainlocked-r1",
+    "conditions": [
+      "update_environment_accepted",
+      "environment_degraded_inconsistent_or_not_expected_state",
+      "lkg_application_version_usable",
+      "lkg_images_present_in_ecr",
+      "no_option_settings_required",
+      "not_purely_functional_defect",
+      "no_previous_rollback_attempt"
+    ]
+  },
+  "decision": "approved"
+}

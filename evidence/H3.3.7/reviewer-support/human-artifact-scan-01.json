@@ -1,0 +1,39 @@
+{
+  "kind": "human_assisted_artifact_pattern_scan",
+  "recorded_at": "2026-10-01T14:28:21.873252+00:00",
+  "performed_by": "Alvaro Arriagada",
+  "provenance": "Resultado ejecutado por el humano en PowerShell y comunicado en la conversacion; hashes revalidados al registrar.",
+  "release_sha": "6f0f5bb1e934742cd8e8572d4a401f8bf29ab1c7",
+  "bundle_sha256": "efa590b9e0daef786ce1f4b69ea8026c1a160b39d8dac06999d1c79b7f82d8aa",
+  "results": [
+    {
+      "artifact": "evidence\\H3.3.7\\deployment\\candidate-01.json",
+      "sha256": "061c47e2cefba3a090eefe87f73ea8b700174e81661dbee2e4da97241c16e5f6",
+      "pattern_counts": {
+        "aws_access_key": 0,
+        "private_key": 0,
+        "argon2_hash": 0,
+        "presigned_signature": 0,
+        "credential_in_url": 0,
+        "literal_sensitive_assignment": 0
+      }
+    },
+    {
+      "artifact": "docker-compose.yml",
+      "sha256": "478f97944543e7a87fd417331f40e9acc7243f1d336e20ddca48d57f50174d3a",
+      "pattern_counts": {
+        "aws_access_key": 0,
+        "private_key": 0,
+        "argon2_hash": 0,
+        "presigned_signature": 0,
+        "credential_in_url": 0,
+        "literal_sensitive_assignment": 0
+      }
+    }
+  ],
+  "total_matches": 0,
+  "result": "NO_PATTERN_MATCHES",
+  "limitations": "Scan por patrones sobre candidate JSON y compose; no prueba ausencia universal de secretos ni cubre evidencia futura.",
+  "candidate_approved": false,
+  "deployment_approved": false
+}

@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "H3.3.6",
+  "created_at": "2026-09-23T13:06:35Z",
+  "role": "developer",
+  "runtime": "deepseek",
+  "session_id": "deepseek-202609231213-developer-sup89f3f9",
+  "head_sha": "a1e622855b25cafdf0afe63a89c3cedcd8de6403",
+  "branch": "harness/H3.3.6-xlsx-export",
+  "pr_number": 58,
+  "pr_url": "https://github.com/ArriagadaInc/tpi-backend/pull/58",
+  "change_class": "A",
+  "baseline": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+  "commits": [
+    "59fd9be feat(H3.3.6): executive XLSX export for CEO/CTO with allowlist and PII-safe audit (deepseek)",
+    "5b8bd8f fix(H3.3.6): tz-aware export dates, complete web test fakes, AC-8 on phones (claude)",
+    "a1e6228 fix(H3.3.6): address review findings F1-F4 (temp cleanup, illegal chars, tests)"
+  ],
+  "tests": {
+    "command": "CI Tests job (pytest tests/ --cov=app --cov-fail-under=85, PostgreSQL de servicio) run 35864130756 sobre a1e6228: 861 passed, 0 failed, coverage 89.30% (>=85%). Local: 48 tests unit H3.3.6 PASS (builder, service, web, requirements matrix gate).",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "pytest_coverage": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "ci_run": {
+    "run_id": 35864130756,
+    "conclusion": "success",
+    "head_sha": "a1e622855b25cafdf0afe63a89c3cedcd8de6403",
+    "jobs": {
+      "Docker Build": "PASS",
+      "Lint & Format": "PASS",
+      "Release Tooling Validation": "PASS",
+      "Security Audit": "PASS",
+      "Tests": "PASS"
+    },
+    "coverage_total": "89.30%"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "pending_verification",
+      "evidence": "test_ceo_and_cto_see_export_button, test_non_superuser_roles_do_not_see_button; smoke humano AC-18"
+    },
+    {
+      "id": "AC-2",
+      "status": "pending_verification",
+      "evidence": "test_ceo_and_cto_authorized_download, test_non_superuser_gets_403, test_anonymous_redirects_to_login; integracion test_ceo_export_and_advisor_403; smoke humano AC-18"
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "export_leads_xlsx reutiliza normalizacion/predicados del listado; test_filters_forwarded_to_repository; integracion test_export_respects_combined_filters (CI PASS)"
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "integracion test_export_ignores_pagination_and_contains_all_rows (CI PASS)"
+    },
+    {
+      "id": "AC-5",
+      "status": "pending_verification",
+      "evidence": "allowlist EXPORT_COLUMNS = docs/H3_3_6_EXPORT_COLUMNS.md; test_headers_match_allowlist_exactly + matrix gate; revision Reviewer"
+    },
+    {
+      "id": "AC-6",
+      "status": "pending_verification",
+      "evidence": "test_allowlist_drops_extra_row_keys; sin reflexion ni columnas dinamicas; inspeccion real del XLSX por Reviewer"
+    },
+    {
+      "id": "AC-7",
+      "status": "pending_verification",
+      "evidence": "builder tests (hoja unica, freeze, autofiltro, anchos, CLP, fechas nativas incl. aware->America/Santiago, texto con ceros); apertura Excel/LibreOffice en smoke humano"
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "evidence": "test_formula_trigger_prefixes_neutralized, test_no_formula_cells, test_sanitize_cell_text_removes_illegal_characters, test_control_characters_removed_before_cell_assignment (F2 corregido)"
+    },
+    {
+      "id": "AC-9",
+      "status": "met",
+      "evidence": "test_empty_result_headers_only; integracion test_empty_export_returns_valid_file (CI PASS)"
+    },
+    {
+      "id": "AC-10",
+      "status": "met",
+      "evidence": "EXPORT_MAX_ROWS=10000; test_limit_exceeded_aborts_before_fetch, test_limit_exact_is_allowed_and_exports (F3 corregido), web test_limit_exceeded_clear_message (413)"
+    },
+    {
+      "id": "AC-11",
+      "status": "pending_verification",
+      "evidence": "test_failure_during_generation_leaves_no_temp_files (F1 corregido: mkdtemp privado + rmtree en finally, sin temporal residual); test_response_security_headers_and_filename (MIME, attachment, no-store, nosniff); smoke humano"
+    },
+    {
+      "id": "AC-12",
+      "status": "pending_verification",
+      "evidence": "record_xlsx_export_event (exportacion_xlsx, actor/rol, filtros sanitizados, search booleano, rows, formato); test_audit_event_sanitized_without_search_text + integracion; request/correlation id no aplica"
+    },
+    {
+      "id": "AC-13",
+      "status": "pending_verification",
+      "evidence": "test_non_superuser_rejected_before_any_repository_access (0 llamadas para 6 roles), test_generation_failure_returns_clear_error_without_pii (500 controlado sin PII, F4); revision de logs en smoke"
+    },
+    {
+      "id": "AC-14",
+      "status": "met",
+      "evidence": "integracion test_export_does_not_mutate_leads (CI PASS); unica escritura INSERT append-only en tpi.auditoria"
+    },
+    {
+      "id": "AC-15",
+      "status": "pending_verification",
+      "evidence": "suite CI 861 passed (regresion listado/detalle/dashboard/asignacion/advisor); smoke humano"
+    },
+    {
+      "id": "AC-16",
+      "status": "met",
+      "evidence": "autorizacion por rol y anonimo, filtros, paginacion, allowlist, tipos, Unicode, ceros, nulos, 4 prefijos + caracteres de control, auditoria, vacio, limite exacto y excedido, fallo+cleanup, headers/nombre, regresion advisor (GAP previo de F3 cerrado)"
+    },
+    {
+      "id": "AC-17",
+      "status": "met",
+      "evidence": "CI run 35864130756: cobertura 89.30% (>=85%)"
+    },
+    {
+      "id": "AC-18",
+      "status": "pending_verification",
+      "evidence": "smoke humano autenticado en AWS DEV tras deploy"
+    }
+  ],
+  "files_changed": [
+    "app/services/xlsx_export.py",
+    "app/web/routes/leads.py",
+    "docs/H3_3_6_EXPORT_COLUMNS.md",
+    "docs/H3_3_6_REQUIREMENTS_MATRIX.md",
+    "tests/unit/test_h3_3_6_export_service.py",
+    "tests/unit/test_h3_3_6_export_web.py",
+    "tests/unit/test_h3_3_6_xlsx_export_builder.py"
+  ],
+  "assumptions": [
+    "Rework 2/3 corrigiendo hallazgos del reviewer review-01: F1 (temporal openpyxl), F2 (caracteres de control ilegales), F3 (tests de limite exacto y fallo-con-cleanup), F4 (fallo de auditoria con pagina clara sin PII).",
+    "F1: openpyxl serializa cada hoja en un temporal openpyxl.* (openpyxl/worksheet/_writer.py create_temporary_file) y solo lo borra en el camino feliz. La correccion redirige tempfile.tempdir a un directorio privado mkdtemp y elimina el directorio con shutil.rmtree en finally; sobre error se limpian los frames del traceback y gc.collect() cierra el handle del temporal abierto (Windows no borra archivos abiertos).",
+    "F2: sanitize_cell_text elimina caracteres ilegales Excel/XML (ILLEGAL_CHARACTERS_RE: \\x00-\\x08, \\x0b-\\x0c, \\x0e-\\x1f) antes de la neutralizacion de formula, evitando IllegalCharacterError (500) y fuga del valor en el mensaje de excepcion. F5 (\\t/\\r como prefijos) evaluado y descartado: la tarea exige solo =, +, -, @.",
+    "F4: la ruta captura cualquier Exception de generacion/auditoria y devuelve 500 controlado con pagina clara sin PII (no se registra traceback).",
+    "No hay cambio de dependencias ni de esquema (clase A). openpyxl 3.1.5 + et_xmlfile 2.0.0 siguen siendo la unica dependencia agregada; sin migraciones, grants, env vars ni infraestructura. Sin acceso AWS.",
+    "Sesion DeepSeek distinta de las sesiones previas (developer sup8cc576 / closure / reviewer). El Reviewer debe usar una sesion distinta."
+  ],
+  "migrations_included": false
+}

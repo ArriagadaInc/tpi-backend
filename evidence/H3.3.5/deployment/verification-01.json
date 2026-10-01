@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "H3.3.5",
+  "created_at": "2026-09-21T19:50:32Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609211950-deployer-seed-postflight",
+  "verification_scope": "data_postflight_seed_dev",
+  "verification_scope_note": "Postflight DB read-only del seed DEV (D3, AC-19). NO es la verificacion post-deploy: no hubo deploy. Se registra con kind=verification porque evidence.py no define un kind de postflight de datos; la verificacion post-deploy de VERIFYING sera una evidencia posterior independiente.",
+  "state_at_record": "PREPARING_DEPLOYMENT",
+  "approved_commit": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+  "approved_commit_basis": "release_sha de evidence/H3.3.5/deployment/merge-01.json; data candidate aprobado por el humano en evidence/H3.3.5/approvals/resolution-01.json (solo seed DEV; NO aprueba el application candidate).",
+  "deployed_commit": null,
+  "deployed_commit_note": "Sin despliegue: el runtime DEV no fue mutado en esta etapa.",
+  "result": "PASS",
+  "failure_class": null,
+  "observation_source": {
+    "db_rows": "operador_humano",
+    "note": "El Deployer no puede consultar RDS (rds en aws.global_deny_services; credenciales DB son secretos). Los valores de filas provienen del postflight read-only ejecutado por el operador humano y reportado en la sesion; el Deployer verifico mecanicamente state/task, release y checksum.",
+    "raw_output_file": null,
+    "raw_output_sha256": null
+  },
+  "state_task_check": {
+    "init": "init.ps1 --runtime claude: PASS",
+    "state": "PREPARING_DEPLOYMENT",
+    "task_id": "H3.3.5",
+    "active_role": "deployer",
+    "last_transition": "resolve_to_preparing (human_resolve, BLOCKED_HUMAN -> PREPARING_DEPLOYMENT) 2026-09-21T19:20:07Z",
+    "resolution_evidence": "evidence/H3.3.5/approvals/resolution-01.json"
+  },
+  "release": {
+    "release_sha": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+    "release_tree": "8c81c7a58fbcf844d7e324e22532902b9b75c39d",
+    "origin_main_after_fetch": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+    "matches_merge_evidence": true,
+    "operator_reported_release": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2"
+  },
+  "seed": {
+    "path": "scripts/sql/dev/seed_asesores_desarrollo.sql",
+    "blob_at_release": "6cb185d2056b53dd2773c1a4557ecf871ea65a66",
+    "sha256_recomputed_by_deployer": "39eb846533c15b560847eb00de3ad0f5c3e5e3d08f7ebc5c1c34d6631122ea51",
+    "sha256_method": "git show <sha>:scripts/sql/dev/seed_asesores_desarrollo.sql | Get-FileHash SHA256, en 78bf33b y en b4b5ba0 (identicos)",
+    "sha256_merge_evidence": "39eb846533c15b560847eb00de3ad0f5c3e5e3d08f7ebc5c1c34d6631122ea51",
+    "sha256_operator_reported": "39eb846533c15b560847eb00de3ad0f5c3e5e3d08f7ebc5c1c34d6631122ea51",
+    "all_equal": true,
+    "no_later_changes_on_main": true,
+    "executed_by": "operador_humano (fuera del Harness)"
+  },
+  "postflight_query": "SELECT id_asesor, nombre, rol, estado_disponibilidad FROM tpi.asesores WHERE lower(nombre) IN ('asesor desarrollo 1', 'asesor desarrollo 2') ORDER BY nombre;",
+  "advisors": [
+    {
+      "nombre": "Asesor Desarrollo 1",
+      "id_asesor": "01d1ab9a-0088-4568-9353-797efe95c5fd",
+      "rol": "asesor",
+      "estado_disponibilidad": "activo",
+      "rows_for_name": 1
+    },
+    {
+      "nombre": "Asesor Desarrollo 2",
+      "id_asesor": "17c5bfe7-964c-4cee-b0fe-9a543174e6f7",
+      "rol": "asesor",
+      "estado_disponibilidad": "activo",
+      "rows_for_name": 1
+    }
+  ],
+  "checks": [
+    {
+      "name": "state_and_task",
+      "result": "PASS",
+      "observed": "PREPARING_DEPLOYMENT / H3.3.5 / deployer"
+    },
+    {
+      "name": "release_sha_matches",
+      "result": "PASS",
+      "observed": "operador = merge-01.release_sha = origin/main = 78bf33b"
+    },
+    {
+      "name": "seed_sha256_matches",
+      "result": "PASS",
+      "observed": "recalculado = merge-01 = operador = 39eb8465...ea51"
+    },
+    {
+      "name": "advisor_1_exists_unique",
+      "result": "PASS",
+      "observed": "1 fila"
+    },
+    {
+      "name": "advisor_2_exists_unique",
+      "result": "PASS",
+      "observed": "1 fila"
+    },
+    {
+      "name": "uuids_well_formed_and_distinct",
+      "result": "PASS",
+      "observed": "2 UUID v4 distintos"
+    },
+    {
+      "name": "rol_asesor_both",
+      "result": "PASS"
+    },
+    {
+      "name": "estado_activo_both",
+      "result": "PASS"
+    },
+    {
+      "name": "no_duplicates_or_incompatible_rows",
+      "result": "PASS",
+      "observed": "consulta final del operador sin duplicados; UNIQUE lower(nombre) + autoverificacion lower(btrim(nombre)) del seed en la misma transaccion"
+    },
+    {
+      "name": "auth_users_json_not_modified_by_harness",
+      "result": "PASS",
+      "observed": "no leido ni modificado por el Harness; 0 invocaciones AWS; el operador no reporto cambios (D7: solo tras deploy RBAC)"
+    },
+    {
+      "name": "deployer_no_rds_write",
+      "result": "PASS"
+    },
+    {
+      "name": "no_secrets_accessed",
+      "result": "PASS"
+    },
+    {
+      "name": "no_candidate_or_deploy_actions",
+      "result": "PASS",
+      "observed": "sin ECR, bundle, S3, Application Version, update-environment"
+    }
+  ],
+  "smoke": [
+    {
+      "name": "not_applicable_data_postflight_only",
+      "result": "PASS",
+      "note": "Sin smoke HTTP: no hubo deploy. El smoke autenticado (AC-17) va despues del cutover D7."
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "both",
+      "evidence": "fila unica Asesor Desarrollo 1, asesor/activo; tests automatizados del seed en CI 78bf33b"
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "both",
+      "evidence": "fila unica Asesor Desarrollo 2, asesor/activo; tests automatizados del seed en CI 78bf33b"
+    },
+    {
+      "id": "AC-18",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "preflight D5 PASS segun resolution-01; no se reporto una segunda ejecucion del seed en DEV (idempotencia cubierta por tests automatizados)"
+    },
+    {
+      "id": "AC-19",
+      "status": "met",
+      "method": "human",
+      "evidence": "postflight read-only del operador: existencia y unicidad de ambos asesores, sin PII ni secretos; el Deployer no escribio en RDS"
+    }
+  ],
+  "pii_log_scan": {
+    "matches": 0,
+    "note": "La evidencia solo registra UUID, nombre ficticio de desarrollo, rol y estado; sin email, RUT, telefono, contrasenas ni hashes."
+  },
+  "incidents": [
+    {
+      "id": "OBS-1",
+      "severity": "info",
+      "summary": "Error transitorio del parser de DBeaver al ejecutar el archivo como script fragmentado; la transaccion abortada quedo cerrada.",
+      "impact": "Ninguno segun el operador: la consulta final confirmo que no hay duplicados y que el estado es consistente. El DO block del seed es atomico y se autoverifica antes del COMMIT.",
+      "required_action": "Ninguna para el postflight. Recomendacion: en ejecuciones futuras usar psql (\\i) como indica el runbook, no el modo fragmentado de DBeaver."
+    }
+  ],
+  "known_gaps_not_verifiable_by_agent": [
+    "El Deployer no puede consultar RDS: filas, UUID, rol y estado descansan en el reporte del operador humano (sin archivo de salida ni sha256, a diferencia de H3.3.4 migration-01).",
+    "La consulta del runbook normaliza con lower(nombre) y no con btrim; los duplicados con espacios quedan cubiertos por la autoverificacion lower(btrim(nombre)) del seed dentro de su transaccion.",
+    "El valor vivo de AUTH_USERS_JSON no es observable por el Deployer (prohibido); su no modificacion se registra desde el lado del Harness y del reporte del operador."
+  ],
+  "safety": {
+    "rds_write_by_deployer": false,
+    "rds_access_by_deployer": false,
+    "secrets_accessed": false,
+    "auth_users_json_read": false,
+    "auth_users_json_modified_by_harness": false,
+    "aws_guard_invocations": 0,
+    "mcp_aws_tools_used": 0,
+    "ecr_publish": false,
+    "bundle_built": false,
+    "s3_upload": false,
+    "application_version_created": false,
+    "environment_mutated": false,
+    "state_transition": false,
+    "approve_py_executed": false
+  },
+  "next_step": "Human/Deployer: preparar el application candidate en PREPARING_DEPLOYMENT (sesion separada) con su propio Human Gate (WAITING_HUMAN_APPROVAL). Esta evidencia no aprueba el application candidate ni habilita AUTH_USERS_JSON (D7)."
+}

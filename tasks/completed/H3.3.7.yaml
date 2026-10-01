@@ -1,0 +1,89 @@
+schema_version: 1
+task:
+  id: H3.3.7
+  title: Tema claro y oscuro para CRM Lite
+  objective: 'Ofrecer en el CRM Lite (backoffice web) un control pequeno y visible en la barra superior
+    para alternar entre tema claro y tema oscuro, con tema claro por defecto, tema oscuro coherente en
+    navegacion, fondo, tarjetas, formularios, inputs, tablas, dashboard y vista de detalle, y persistencia
+    de la preferencia exclusivamente en el navegador. Baseline: origin/main@b6df6d749c74ee072e19028bbd50cee3d0cb8e81
+    tree fe79a65614b11e8dc38fa096315ff7fb0856c3c3 (2026-09-29).'
+  source:
+    type: story
+    ref: 'Solicitud humana 2026-09-29: H3.3.7 Tema claro y oscuro para CRM Lite (reemplaza la propuesta
+      H3.3.7 Limpiar filtros); AC-1..AC-6; destino exclusivamente AWS DEV.'
+  change_class: A
+  deploy_required: true
+  requires_human_acceptance: true
+  acceptance_criteria:
+  - id: AC-1
+    description: La interfaz dispone de un control visible para alternar entre tema claro y tema oscuro.
+    verification: both
+  - id: AC-2
+    description: El tema oscuro aplica de forma coherente a navegacion, fondo, tarjetas, formularios,
+      tablas, dashboard y vista de detalle, manteniendo contraste y legibilidad.
+    verification: both
+  - id: AC-3
+    description: El tema claro conserva la apariencia funcional actual sin regresiones visuales relevantes.
+    verification: both
+  - id: AC-4
+    description: La preferencia seleccionada persiste en el navegador despues de recargar o navegar entre
+      paginas.
+    verification: automated
+  - id: AC-5
+    description: Si no existe una preferencia guardada, la aplicacion inicia en tema claro.
+    verification: automated
+  - id: AC-6
+    description: El cambio no modifica autenticacion, RBAC, PII, datos, reglas de negocio ni APIs.
+    verification: automated
+  constraints:
+  - No cambios de esquema ni migraciones
+  - No nuevas dependencias
+  - No cambios de AWS o infraestructura (el despliegue habitual de la aplicacion a DEV por el pipeline
+    existente esta permitido; no autoriza modificar infraestructura, permisos ni configuracion AWS)
+  - No cambios de RBAC o PII
+  - Persistencia exclusivamente client-side
+  - 'Implementacion exclusivamente cliente: variables CSS, atributo data-theme="light|dark" y localStorage;
+    sin configuracion de usuario en BD ni cambios de backend. Usar los archivos y convenciones reales
+    del proyecto (app/web/templates/base.html, app/web/static/js/app.js y app/web/static/css/app.css son
+    referencias orientativas).'
+  - Guardar unicamente los valores light o dark. Sin preferencia, o con un valor invalido, iniciar en
+    claro.
+  - Si localStorage no esta disponible, la aplicacion sigue funcional y permite alternar el tema durante
+    la pagina actual.
+  - El control funciona con teclado, tiene nombre accesible y refleja el estado seleccionado.
+  - Aplicar la preferencia guardada lo antes posible para evitar un destello innecesario del tema claro.
+  - Tema oscuro con fondo muy oscuro, tarjetas oscuras y texto claro.
+  - Destino del despliegue exclusivamente AWS DEV.
+  - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; si origin/main
+    avanzo, registrar el nuevo tip legitimo antes de trabajar. No desarrollar desde ramas o worktrees
+    antiguos.'
+  - Tarea unica H3.3.7; no mezclar otras tareas del backlog ni limpieza de worktrees.
+  - Las pruebas automatizadas aportan evidencia tecnica de AC-1..AC-3 pero no sustituyen la revision visual
+    humana; no se infiere aceptacion humana.
+  dependencies:
+  - H3.3.6
+  risk:
+    level: low
+    notes: Cambio de presentacion client-side; riesgo principal regresion visual del tema claro y contraste
+      insuficiente en tema oscuro.
+  scope:
+    paths:
+    - app/web/templates/**
+    - app/web/static/**
+    - tests/**
+    - docs/H3_3_7_*
+  status: closed
+closure:
+  closed_at: '2026-10-01T16:10:56Z'
+  final_state: DONE
+  evidence_dir: evidence/H3.3.7
+  release:
+    release_sha: 6f0f5bb1e934742cd8e8572d4a401f8bf29ab1c7
+    pr_number: 60
+    application_version: h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1
+    bundle_sha256: efa590b9e0daef786ce1f4b69ea8026c1a160b39d8dac06999d1c79b7f82d8aa
+    lkg: h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1
+    deployment: success
+    deployed_commit: 6f0f5bb1e934742cd8e8572d4a401f8bf29ab1c7
+    verification: PASS
+  rework_rounds: 0

@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "kind": "acceptance",
+  "task_id": "H3.3.4",
+  "created_at": "2026-09-21T12:44:18Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "decision": "accepted",
+  "criteria": [
+    {
+      "id": "AC-5",
+      "status": "accepted"
+    },
+    {
+      "id": "AC-6",
+      "status": "accepted"
+    },
+    {
+      "id": "AC-7",
+      "status": "accepted"
+    },
+    {
+      "id": "AC-9",
+      "status": "accepted"
+    },
+    {
+      "id": "AC-18",
+      "status": "accepted"
+    }
+  ],
+  "notes": "Aceptacion humana consolidada H3.3.4. AC-5: migration candidate 008 revisado y aprobado antes de ejecutar. AC-6: migracion 008 aplicada una sola vez con preflight y postflight PASS, privilegios minimos y rollback=false. AC-7: application candidate-02 aprobado independientemente antes del despliegue. AC-9: historial completo de cambios de estado, integracion cronologica e inmutabilidad PASS en smoke autenticado. AC-18: dashboard ejecutivo, metricas, filtros, cobertura/funnel honesto, acceso 403 y responsive PASS. Sin exposicion de PII. Known issues documentales y de rendimiento quedan como follow-up no bloqueante."
+}

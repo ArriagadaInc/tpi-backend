@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "H3.3.2",
+  "created_at": "2026-09-16T14:37:24Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609161600-deployer",
+  "pr_number": 53,
+  "reviewed_sha": "f99ab7805ad5732a3c17677c6d24120be50c0f90",
+  "reviewed_tree": "6ad2f8f5f2269be0a551ce15f247f643de0497af",
+  "release_sha": "fec33e7951f862c95b2436b09b969e5ef1915769",
+  "release_tree": "6ad2f8f5f2269be0a551ce15f247f643de0497af",
+  "main_parent_sha": "4aac143a396934186342bab5ec97b3df5e53085c",
+  "method": "squash",
+  "match_head_commit_used": true,
+  "tree_verification": "git rev-parse fec33e7951f862c95b2436b09b969e5ef1915769^{tree} == reviewed_tree (6ad2f8f5f2269be0a551ce15f247f643de0497af)",
+  "gh_pr_merge_command": "gh pr merge 53 --squash --match-head-commit f99ab7805ad5732a3c17677c6d24120be50c0f90",
+  "merged_at": "2026-09-16T14:35:59Z"
+}

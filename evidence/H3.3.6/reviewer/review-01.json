@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "H3.3.6",
+  "created_at": "2026-09-23T12:10:52Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609230214-reviewer-sup89c2aa",
+  "reviewed_sha": "5b8bd8f82ab1df552dad2712ba626c8c23f6e86a",
+  "reviewed_tree": "f3558c71705659e0d4cd80fcf384d6d5166bb80c",
+  "pr_number": 58,
+  "branch": "harness/H3.3.6-xlsx-export",
+  "base_sha": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+  "developer_evidence": "evidence/H3.3.6/developer/developer-01.json",
+  "review_scope": "Revision REVIEWING de H3.3.6 (PR #58) en el SHA exacto 5b8bd8f via worktree .harness-worktrees/H3.3.6-reviewer-5b8bd8f. 2 commits sobre la baseline 78bf33b (origin/main no avanzo), 14 archivos, todos dentro de task.scope.paths. Revisados: autorizacion, reutilizacion del contrato de filtros, allowlist, PII, formula injection, generacion efimera, auditoria, dependencias y tests. Inspeccion real del XLSX generado por build_xlsx_workbook con filas sinteticas (sin datos reales). openpyxl 3.1.5 instalado solo en un directorio temporal fuera del repo para la inspeccion. Sin acceso AWS/RDS, sin modificar codigo.",
+  "ci": {
+    "run_id": 35809001758,
+    "conclusion": "success",
+    "head_sha": "5b8bd8f82ab1df552dad2712ba626c8c23f6e86a",
+    "workflow": "CI - Linting, Tests & Security",
+    "event": "pull_request",
+    "jobs_green": 5,
+    "jobs_total": 5,
+    "runs_for_sha": 1,
+    "verification": "gh pr checks 58 (5/5 pass); gh run list --commit <sha>"
+  },
+  "decision": "REJECTED",
+  "cause": null,
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "major",
+      "file": "app/services/xlsx_export.py",
+      "line": "669-671 (build_xlsx_workbook: workbook.save(buffer))",
+      "summary": "La generacion NO es sin temporal: openpyxl (modo normal y write_only) serializa cada hoja en un archivo temporal openpyxl.* creado con NamedTemporaryFile(delete=False) en TMPDIR (openpyxl/worksheet/_writer.py create_temporary_file) y solo lo borra en el camino feliz (writer.cleanup() tras archive.write). Ante una excepcion durante la escritura el temporal queda en disco hasta el atexit del proceso (en un worker uvicorn de larga vida, indefinidamente) y puede contener XML de la hoja con PII. build_xlsx_workbook no tiene try/finally de limpieza. La evidencia del Developer y docs/H3_3_6_REQUIREMENTS_MATRIX.md (fila F7: 'BytesIO, sin archivo temporal') afirman algo falso.",
+      "failure_scenario": "Reproducido: tempfile.tempdir -> directorio aislado; build_xlsx_workbook con exito -> directorio vacio; con WorksheetWriter.write_rows parcheado para lanzar RuntimeError despues de escribir filas -> queda 'openpyxl.jn0lk89e' residual. Incumple AC-11 ('temporal eliminado siempre, incluso ante error') y la constraint F7 ('si se usa un temporal, eliminarlo en finally incluso ante error'). Ademas, los tests web fallan localmente en un worktree limpio con FileNotFoundError '.pytest-tmp\\openpyxl.*', lo que confirma la escritura a disco.",
+      "required_action": "Garantizar que ningun temporal sobreviva a un error: p. ej. generar dentro de un tempfile.TemporaryDirectory privado por solicitud (dir dedicado para openpyxl, eliminado en finally) o usar una biblioteca/modo verdaderamente en memoria (p. ej. XlsxWriter in_memory, respetando la regla de UNA sola biblioteca). Agregar test de 'fallo durante generacion con cleanup' (AC-16) que fuerce una excepcion a mitad de la escritura y verifique que no queda ningun archivo. Corregir la matriz de requisitos y la evidencia para describir el mecanismo real."
+    },
+    {
+      "id": "F2",
+      "severity": "major",
+      "file": "app/services/xlsx_export.py",
+      "line": "582-594 (sanitize_cell_text) / 666 (cell.value = ...); app/web/routes/leads.py 781 (except (ValueError, TypeError))",
+      "summary": "Un caracter de control (\\x01-\\x08, \\x0b-\\x0c, \\x0e-\\x1f) en cualquier campo de texto exportado hace que openpyxl lance IllegalCharacterError (subclase de Exception, no de ValueError) al asignar la celda; la ruta solo captura ValueError/TypeError, por lo que la exportacion completa termina en 500 sin mensaje claro, y el mensaje de la excepcion incluye el valor completo de la celda (PII) que el servidor registra en el traceback. La ingesta publica no elimina esos caracteres (SolicitudData.normalize_comments solo colapsa whitespace; nombre_completo solo rechaza \\x00).",
+      "failure_scenario": "Reproducido: build_xlsx_workbook([{'comentarios': 'hola\\x01 VALOR_SINTETICO'}]) -> IllegalCharacterError('hola\\x01 VALOR_SINTETICO cannot be used in worksheets.'), isinstance ValueError/TypeError = False. Un solo lead publico con '\\u0001' en comentarios (o nombre) bloquea toda exportacion CEO/CTO que lo incluya (500) y filtra su PII en logs. Incumple F10/AC-9 (mensajes claros ante error, sin 500), AC-13/AC-18 (logs sin PII) y el requisito de pruebas de Unicode de AC-16.",
+      "required_action": "Neutralizar caracteres ilegales para XML/Excel en sanitize_cell_text (p. ej. eliminarlos o reemplazarlos con openpyxl.cell.cell.ILLEGAL_CHARACTERS_RE) antes de asignar la celda, manteniendo la neutralizacion de formula; manejar en la ruta cualquier fallo de generacion con una respuesta clara sin 500 y sin registrar valores de celdas. Agregar tests con caracteres de control en campos de texto (builder y ruta)."
+    },
+    {
+      "id": "F3",
+      "severity": "major",
+      "file": "tests/unit/test_h3_3_6_export_service.py",
+      "line": "99-108 (solo test de limite excedido)",
+      "summary": "AC-16 exige pruebas de 'limite exacto y excedido' y de 'fallo durante generacion con cleanup'. Solo existe el caso EXPORT_MAX_ROWS + 1; no hay test para total == EXPORT_MAX_ROWS (debe exportar) ni para fallo de generacion con cleanup. El propio Developer lo declaro como GAP en developer-01.json.",
+      "failure_scenario": "Un cambio del operador de comparacion (> por >=) en export_leads_xlsx pasaria la suite y rechazaria exportaciones legitimas en el limite exacto; la regresion del cleanup (F1) tampoco seria detectada.",
+      "required_action": "Agregar test de limite exacto (count == EXPORT_MAX_ROWS -> exporta, se llama a get_crm_solicitudes_export y se registra auditoria) y el test de fallo con cleanup indicado en F1."
+    },
+    {
+      "id": "F4",
+      "severity": "minor",
+      "file": "app/services/solicitud_service.py",
+      "line": "412-434 (export_leads_xlsx)",
+      "summary": "Si record_xlsx_export_event falla (BD), la excepcion no es ValueError/TypeError y termina en 500 generico; aceptable como fail-closed (no se entrega archivo sin auditoria), pero no hay mensaje claro ni test del camino.",
+      "failure_scenario": "Fallo transitorio de INSERT en tpi.auditoria -> 500 sin pagina de error de exportacion.",
+      "required_action": "Opcional: capturar fallos de generacion/auditoria en la ruta con el mismo _export_error_html (sin PII) y cubrirlo con un test."
+    },
+    {
+      "id": "F5",
+      "severity": "info",
+      "file": "app/services/xlsx_export.py",
+      "line": "522 (_FORMULA_TRIGGER_PREFIXES)",
+      "summary": "La neutralizacion cubre los cuatro prefijos exigidos (=, +, -, @) y deja un apostrofo visible como parte del valor (p. ej. telefonos '+569...'), coherente con la decision documentada. OWASP recomienda ademas tab (\\t) y retorno de carro (\\r) como prefijos; no es requisito de la tarea.",
+      "failure_scenario": "Sin impacto verificado en Excel/LibreOffice con celdas tipo texto 's'; informativo.",
+      "required_action": "Ninguna obligatoria; considerar \\t y \\r al corregir F2."
+    }
+  ],
+  "checks": [
+    {
+      "name": "preconditions_state_task_pr_head_base",
+      "result": "PASS",
+      "note": "state READY_FOR_REVIEW -> REVIEWING con sesion claude-202609230214-reviewer-sup89c2aa (distinta de deepseek-202609230033-developer-sup8cc576 y claude-202609222300-developer-h3-3-6-closure). PR #58 OPEN, head 5b8bd8f (= evidencia Developer), base main, MERGEABLE; origin/main = baseline 78bf33b."
+    },
+    {
+      "name": "ci_green_exact_sha",
+      "result": "PASS",
+      "note": "run 35809001758 success, 5/5 jobs (Docker Build, Lint & Format, Release Tooling Validation, Security Audit, Tests); unico run para el SHA; Developer reporta 856 passed, cobertura 89.24%."
+    },
+    {
+      "name": "scope_and_dependencies",
+      "result": "PASS",
+      "note": "14 archivos dentro de scope.paths; sin archivos del Harness, migraciones, esquema, grants ni env vars nuevas. Diff de dependencias limitado a openpyxl 3.1.5 (pyproject) + openpyxl==3.1.5 y et_xmlfile==2.0.0 (runtime.lock); dev.lock hereda via -r runtime.lock."
+    },
+    {
+      "name": "authorization_server_side",
+      "result": "PASS",
+      "note": "Ruta /leads/export.xlsx declarada antes de /leads/{lead_id}; anonimo -> 307 /login (patron canonico del modulo); no superuser -> 403 antes de construir servicio/consulta; el servicio repite can_view_full_pii (is_superuser) antes de cualquier acceso al repositorio. Boton condicionado a can_export_xlsx. app/auth/** sin cambios."
+    },
+    {
+      "name": "filter_contract_reuse",
+      "result": "PASS",
+      "note": "Export parsea los mismos parametros que _resolve_board_data y aplica la misma normalizacion que get_crm_bandeja (_normalize_crm_date, _normalize_crm_state_for_filter); count y fetch usan _build_crm_query_filters y el mismo SELECT/FROM compartido (_CRM_BOARD_SELECT/_CRM_BOARD_FROM) y el mismo ORDER BY con desempate created_at DESC, id_lead DESC; sin LIMIT/OFFSET. Superusers no tienen portfolio scope, coherente con el listado."
+    },
+    {
+      "name": "allowlist_and_pii",
+      "result": "PASS",
+      "note": "EXPORT_COLUMNS explicito de 14 campos, coincide con docs/H3_3_6_EXPORT_COLUMNS.md; builder solo lee row.get(column.field). Inspeccion real: fila sintetica con raw_payload y password_hash extra -> no aparecen en el paquete XLSX."
+    },
+    {
+      "name": "xlsx_real_inspection",
+      "result": "PASS",
+      "note": "Paquete con solo docProps, theme, sheet1, styles, rels, workbook, Content_Types: sin vbaProject, externalLinks, drawings, media ni comments; sin etiquetas <f>. Hoja unica 'Leads'; pane frozen ySplit=1 A2; autoFilter A1:N2; UUID/RUT sintetico con cero inicial como texto '@'; saldo numerico 'n' con '#,##0'; created_at TIMESTAMPTZ 2026-09-01T03:30Z -> fecha nativa 'd' 2026-08-31 23:30 (America/Santiago) 'dd/mm/yyyy'; nulos como celda vacia; =, +, -, @ neutralizados con apostrofo."
+    },
+    {
+      "name": "ephemeral_generation",
+      "result": "FAIL",
+      "note": "Ver F1: temporal openpyxl.* residual tras fallo de escritura."
+    },
+    {
+      "name": "robustness_illegal_characters",
+      "result": "FAIL",
+      "note": "Ver F2: IllegalCharacterError no manejado, 500 y PII en mensaje de excepcion."
+    },
+    {
+      "name": "response_headers",
+      "result": "PASS",
+      "note": "MIME application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; Content-Disposition attachment con nombre generado por servidor leads_export_<UTC YYYYmmdd_HHMMSS>.xlsx; Cache-Control no-store; X-Content-Type-Options nosniff; error 413 con mensaje claro para limite excedido (valores enteros, sin datos de usuario)."
+    },
+    {
+      "name": "audit_event",
+      "result": "PASS",
+      "note": "INSERT append-only en tpi.auditoria (accion exportacion_xlsx, tabla_afectada tpi.leads, id_usuario/id_persona/id_lead NULL) con detalle {actor_subject, role, row_count, format, filters}; search reducido a search_applied booleano; sin migracion ni grant nuevo (clase A). Solo tras generacion exitosa."
+    },
+    {
+      "name": "tests_ac16",
+      "result": "FAIL",
+      "note": "Ver F3: faltan limite exacto y fallo con cleanup. Tests locales: requirements_matrix_gate y builder PASS; tests web fallan localmente solo por .pytest-tmp inexistente en el worktree (ambiental; CI Linux PASS); integracion skip sin BD local (CI PASS)."
+    }
+  ],
+  "risks": [
+    "REJECTED: F1 (temporal openpyxl no eliminado ante error, AC-11), F2 (caracteres de control -> 500 con PII en logs) y F3 (tests AC-16 faltantes) deben corregirse antes de aprobar.",
+    "El diseno general (autorizacion, reutilizacion de filtros, allowlist, auditoria sin PII, headers) es correcto y no requiere rediseno.",
+    "No revisar de nuevo sin CI verde en el nuevo SHA y con los tests de cleanup, limite exacto y caracteres de control."
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "kind": "deployment",
+  "task_id": "H3.3.3",
+  "created_at": "2026-09-17T04:03:17Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609170055-deployer",
+  "approved_commit": "c5e738c21ba202d9c664652412e6820628b18e3c",
+  "deployed_commit": "c5e738c21ba202d9c664652412e6820628b18e3c",
+  "application_version": "h3-3-3-historial-web-ux-c5e738c-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "update_accepted": true,
+  "result": "success",
+  "final_state": {
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "version_label": "h3-3-3-historial-web-ux-c5e738c-domainlocked-r1"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "identity_chain_detail": {
+    "environment_version_label": "h3-3-3-historial-web-ux-c5e738c-domainlocked-r1",
+    "approved_version_label": "h3-3-3-historial-web-ux-c5e738c-domainlocked-r1",
+    "application_version_source_bundle_key": "tpi-backoffice/dev-releases/h3-3-3-historial-web-ux-c5e738c-domainlocked-r1/6b6450b53df7e54a1d80ab637819d2f7dbc059e9435cd59221b549cfda949695.zip",
+    "approved_s3_key": "tpi-backoffice/dev-releases/h3-3-3-historial-web-ux-c5e738c-domainlocked-r1/6b6450b53df7e54a1d80ab637819d2f7dbc059e9435cd59221b549cfda949695.zip",
+    "s3_head_object_checksum_sha256": "a2RQtT335UodgKtjeBnS99vAWelDXNWSIbVJz9qUlpU=",
+    "approved_checksum_sha256": "a2RQtT335UodgKtjeBnS99vAWelDXNWSIbVJz9qUlpU=",
+    "bundle_sha256": "6b6450b53df7e54a1d80ab637819d2f7dbc059e9435cd59221b549cfda949695",
+    "app_digest_approved": "sha256:9333994ef8a1bae1b4bff1b95bdaba24b3a4004b9f10ba6524f0ca326948e523",
+    "caddy_digest_approved": "sha256:27e8c5dc8a1facb85eae506383a3c380a838b61c96d7ec2dd9c63acce9384ee4",
+    "note": "Postflight tras convergencia: describe-application-versions confirma SourceBundle identico; s3api head-object confirma ChecksumSHA256 identico; ecr describe-images confirma ambos digests aprobados ACTIVE con lastRecordedPullTime actualizado al momento del cutover (00:58:59 -03:00 / 2026-09-17T03:58:59Z), evidenciando que las instancias efectivamente extrajeron esas imagenes exactas."
+  },
+  "aws_calls": {
+    "preflight": [
+      "sts get-caller-identity (Account=821656895812)",
+      "elasticbeanstalk describe-environments (pre-cutover: VersionLabel=h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1 LKG, Ready/Green/Ok, AbortableOperationInProgress=false)",
+      "elasticbeanstalk describe-application-versions (candidato h3-3-3-historial-web-ux-c5e738c-domainlocked-r1: UNPROCESSED, SourceBundle exacto)",
+      "s3api head-object (bundle candidato: ChecksumSHA256=a2RQtT335UodgKtjeBnS99vAWelDXNWSIbVJz9qUlpU=)",
+      "ecr describe-images (tpi-dev-app digest candidato sha256:9333994e... ACTIVE tag c5e738c...)",
+      "ecr describe-images (tpi-dev-caddy digest candidato sha256:27e8c5dc... ACTIVE tag c5e738c...)",
+      "elasticbeanstalk describe-application-versions (LKG h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1: usable)",
+      "ecr describe-images (tpi-dev-app digest LKG sha256:96c611b6... ACTIVE)",
+      "ecr describe-images (tpi-dev-caddy digest LKG sha256:bbf22901... ACTIVE)",
+      "codepipeline get-pipeline-state (tpi-backoffice-dev-promotion: Promote inboundTransitionState.enabled=false, sin cambios)"
+    ],
+    "cutover": [
+      "elasticbeanstalk update-environment --environment-name tpi-backoffice-dev-green --version-label h3-3-3-historial-web-ux-c5e738c-domainlocked-r1 (unico intento, sin --option-settings)"
+    ],
+    "observability": [
+      "elasticbeanstalk describe-environments (polling cada 30s hasta Ready/Green/Ok)",
+      "elasticbeanstalk describe-events --max-records 20 (RequestId 562136dd-a19f-49f5-b99b-0a4e430d0c0c, solo INFO, sin AccessDenied/abort)"
+    ],
+    "postflight": [
+      "elasticbeanstalk describe-application-versions (candidato, SourceBundle sin cambios tras convergencia)",
+      "s3api head-object (checksum sin cambios tras convergencia)",
+      "ecr describe-images (ambos digests aprobados ACTIVE, lastRecordedPullTime actualizado por el cutover)"
+    ]
+  },
+  "events_summary": [
+    "2026-09-17T03:58:47Z Environment update is starting.",
+    "2026-09-17T03:58:52Z Deploying new version to instance(s).",
+    "2026-09-17T03:59:08Z Environment health has transitioned from Ok to Info. Application update in progress on 1 instance.",
+    "2026-09-17T03:59:34Z Instance deployment completed successfully.",
+    "2026-09-17T03:59:40Z New application version was deployed to running EC2 instances.",
+    "2026-09-17T03:59:40Z Environment update completed successfully."
+  ],
+  "started_at": "2026-09-17T03:58:47Z",
+  "finished_at": "2026-09-17T04:00:44Z",
+  "warnings": [],
+  "failure_class": null,
+  "rollback_executed": false,
+  "rollback_justification": "No aplica: cutover exitoso en un unico intento, environment convergio a Ready/Green/Ok con VersionLabel aprobada exacta; sin degradacion, inconsistencia ni evento AccessDenied/abort en describe-events desde el cutover.",
+  "notes": "Cutover version-only unico intento (change_class D, migracion 007 ya aplicada y verificada por postflight en migration-01.json, ajena a esta sesion). No se modificaron option settings, IAM, DNS, RDS, Secrets Manager ni codigo. AUTH_USERS_JSON no fue leido ni modificado. No se creo ni reconstruyó ningun candidate ni Application Version nueva; se uso exclusivamente el AV ya congelada y aprobada. Smoke funcional autenticado (AC-3/AC-4/AC-8) queda reservado a la sesion VERIFYING; en esta sesion no se declaran esos AC como cumplidos."
+}

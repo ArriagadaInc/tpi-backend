@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "kind": "candidate",
+  "task_id": "H3.3.1",
+  "created_at": "2026-09-15T20:05:09Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609151950-deployer",
+  "release_sha": "4aac143a396934186342bab5ec97b3df5e53085c",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "environment": "tpi-backoffice-dev-green",
+  "publish_run": {
+    "run_id": 35016424368,
+    "conclusion": "success",
+    "head_sha": "4aac143a396934186342bab5ec97b3df5e53085c",
+    "note": "5/5 jobs PASS (Authorize source revision, Security Audit, Docker Build, Tests, Lint & Format, Publish immutable images and release bundle) via gh run watch 35016424368; job 'Fail closed on high or critical ECR findings' succeeded, confirming scan critical=0, high=0."
+  },
+  "images": {
+    "app": {
+      "repository": "tpi-dev-app",
+      "digest": "sha256:363eb2663a08c523593946f9cc2eea6d823b00c1b659b4654d7d8b575a91761b",
+      "scan": {
+        "critical": 0,
+        "high": 0
+      }
+    },
+    "caddy": {
+      "repository": "tpi-dev-caddy",
+      "digest": "sha256:429ef8f3f0d8ff7cce1dd26b1dd1c5a582c165a81cf2abc24a87f75dd7bd530d",
+      "scan": {
+        "critical": 0,
+        "high": 0
+      }
+    }
+  },
+  "bundle": {
+    "sha256": "e49628affe9279b80764a12ec5b724f60e5b89eb5b8c72bb6d519c9a99e8f72c",
+    "artifact_type": "domain-locked",
+    "reproducible": true
+  },
+  "s3": {
+    "bucket": "elasticbeanstalk-us-east-2-821656895812",
+    "key": "tpi-backoffice/dev-releases/h3-3-1-rbac-pii-4aac143-domainlocked-r1/e49628affe9279b80764a12ec5b724f60e5b89eb5b8c72bb6d519c9a99e8f72c.zip",
+    "checksum_sha256": "5JYor/6SebgHZKEuxbck9g5bietbjHK7bVGcmpno9yw=",
+    "version_id": null
+  },
+  "application_version": {
+    "label": "h3-3-1-rbac-pii-4aac143-domainlocked-r1",
+    "status": "UNPROCESSED"
+  },
+  "environment_observed": {
+    "version_label": "h3-3-crm-web-43101be-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok"
+  },
+  "lkg": {
+    "version_label": "h3-3-crm-web-43101be-domainlocked-r1",
+    "status": "UNPROCESSED",
+    "images": [
+      {
+        "repository": "tpi-dev-app",
+        "digest": "sha256:79737222a5901871857f59143c8dc696879b2e88aa740eb7304225ffa4cd9631",
+        "present": true
+      },
+      {
+        "repository": "tpi-dev-caddy",
+        "digest": "sha256:30ace9145a21209f41799d345f4d6f641f0b882478fede76d0e19a575656aaaf",
+        "present": true
+      }
+    ],
+    "option_settings_required": false
+  },
+  "smoke_plan": [
+    {
+      "name": "public_https",
+      "method": "GET",
+      "url": "https://dev.tupensioninteligente.cl/",
+      "expect_status": 200
+    },
+    {
+      "name": "backoffice_login",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/login",
+      "expect_status": 200
+    },
+    {
+      "name": "api_catalogs",
+      "method": "GET",
+      "url": "https://dev.tupensioninteligente.cl/api/v1/catalogs",
+      "expect_status": 200
+    },
+    {
+      "name": "static_css",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/static/css/app.css",
+      "expect_status": 200
+    },
+    {
+      "name": "leads_requires_auth",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/leads",
+      "expect": "redirect a /login o 401/403"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "check": "ninguna respuesta redirige a genialabs.cl"
+    },
+    {
+      "name": "AC-1_ceo_cto_full_pii",
+      "method": "human",
+      "expect": "CEO/CTO ven PII completa en bandeja y detalle autenticados"
+    },
+    {
+      "name": "AC-2_restricted_roles_masked_pii",
+      "method": "human",
+      "expect": "roles restringidos ven PII enmascarada y HTML servido no contiene PII completa"
+    },
+    {
+      "name": "AC-3_assignment_control_visible",
+      "method": "human",
+      "expect": "control de asignacion manual visible solo para roles autorizados"
+    },
+    {
+      "name": "AC-4_assign_lead_persists",
+      "method": "human",
+      "expect": "asignar lead sin asignacion activa cambia estado, persiste en tpi.asignaciones, registra tpi.auditoria, una sola asignacion activa"
+    }
+  ],
+  "deployment_plan": {
+    "commands": [
+      "python scripts/harness/aws_guard.py elasticbeanstalk update-environment --environment-name tpi-backoffice-dev-green --version-label h3-3-1-rbac-pii-4aac143-domainlocked-r1"
+    ]
+  },
+  "rollback_plan": {
+    "version_label": "h3-3-crm-web-43101be-domainlocked-r1"
+  }
+}

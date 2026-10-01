@@ -1,0 +1,322 @@
+{
+  "report_type": "tpi_db_migration_report",
+  "report_version": 1,
+  "task_id": "H3.3.4",
+  "migration": "008_create_lead_state_history",
+  "operation_path": "manual_human_operator_outside_harness_fast_path",
+  "human_approval": "APRUEBO MIGRATION CANDIDATE H3.3.4",
+  "human_approval_cites": {
+    "release_sha": "c99b260ffc32aae0ab8fe80585e6243aa1be5665",
+    "forward_sha256": "2e2b8c9d46fd72f2696b3bbb06c194b5e795097d13167228d0400e381ed9ee06",
+    "rollback_sha256": "326078eed3d29f85106d088038bb694c64711f64e932dc2f584e61b954931838"
+  },
+  "result": "PASS",
+  "failure_reason": null,
+  "applied_once": true,
+  "timestamps_utc": {
+    "started_at": "2026-09-20T16:24:47Z",
+    "preflight_at": "2026-09-20T16:27:29Z",
+    "application_at": "2026-09-20T16:28:51Z",
+    "postflight_at": "2026-09-20T16:28:57Z",
+    "finished_at": "2026-09-20T16:30:02Z",
+    "note": "started/finished y preflight_at provienen del operator-summary y del propio output; application_at y postflight_at son la mtime de sus archivos de salida (resolucion de segundos, consistente con la cronologia)."
+  },
+  "target": {
+    "account_id": "821656895812",
+    "region": "us-east-2",
+    "aws_profile": "tpi-dev",
+    "rds_instance": "tpi-postgres-dev",
+    "database": "tpi",
+    "admin_role": "tpi_admin",
+    "server_version": "17.9",
+    "source": "migration-candidate-01.json target + operator-summary.json + preflight-output.txt (el agente no tiene acceso RDS: rds en aws.global_deny_services; ninguna de estas identidades fue reverificada por el agente contra AWS)"
+  },
+  "candidate": {
+    "release_sha": "c99b260ffc32aae0ab8fe80585e6243aa1be5665",
+    "release_tree": "bf18968fad3d9555d29b0262b4e1eafe80e4ffce",
+    "release_sha_on_origin_main": true,
+    "dir": ".harness-release/H3.3.4/migration-candidate-01/",
+    "sha256sums_verified_by_deployer": true,
+    "forward": {
+      "path": "scripts/sql/008_create_lead_state_history.sql",
+      "sha256": "2e2b8c9d46fd72f2696b3bbb06c194b5e795097d13167228d0400e381ed9ee06",
+      "size_bytes": 5507,
+      "source": "git show release_sha:path (identico byte a byte al candidate congelado)"
+    },
+    "rollback": {
+      "path": "scripts/sql/008_drop_lead_state_history.sql",
+      "sha256": "326078eed3d29f85106d088038bb694c64711f64e932dc2f584e61b954931838",
+      "size_bytes": 1095,
+      "source": "git show release_sha:path (identico byte a byte al candidate congelado)"
+    },
+    "preflight_sql_sha256": "77eca18b2d24c41a2ad3a91f27148de21f89c8ec8a808d218b0a943e56f55957",
+    "postflight_sql_sha256": "e949ee3073ad0dca8d54959916cadc6749818fd39eb747fd10f93dfda03005db",
+    "candidate_json_sha256": "c8fb792e860d34dfb0c68464e3e875a12bcfa88cbc3d48981c97cef830806ecd"
+  },
+  "preflight": {
+    "effective_user": "tpi_admin",
+    "session_user": "tpi_admin",
+    "database_name": "tpi",
+    "server_version": "17.9",
+    "transaction_read_only": true,
+    "tpi_app_exists": true,
+    "schema_exists": true,
+    "tpi_app_schema_usage": true,
+    "auditoria_exists": true,
+    "auditoria_required_columns_present": true,
+    "auditoria_detalle_is_json": true,
+    "view_absent": true,
+    "index_absent": true,
+    "auditoria_tpi_app_privileges": {
+      "insert": true,
+      "select": false,
+      "update": false,
+      "delete": false
+    },
+    "migrations_005_006_007_present": true,
+    "auditoria_rows_exact": 2,
+    "auditoria_total_size": "32 kB",
+    "long_running_transactions": 0,
+    "preflight_pass": true,
+    "preflight_decision": "APLICAR-008",
+    "note": "preflight_pass y view_absent/index_absent evaluados antes del forward; decision APLICAR-008."
+  },
+  "application": {
+    "executed_file": "scripts/sql/008_create_lead_state_history.sql",
+    "executed_sha256": "2e2b8c9d46fd72f2696b3bbb06c194b5e795097d13167228d0400e381ed9ee06",
+    "invocations": 1,
+    "retried": false,
+    "single_transaction": true,
+    "psql_command_tags": [
+      "BEGIN",
+      "DO",
+      "CREATE INDEX",
+      "CREATE VIEW",
+      "REVOKE",
+      "GRANT",
+      "DO",
+      "COMMIT"
+    ],
+    "committed": true,
+    "errors": 0,
+    "already_applied": false,
+    "evidence_basis": "forward-output.txt contiene exactamente una secuencia BEGIN..COMMIT sin ERROR/ROLLBACK y operator-summary.json declara forward_executed=true, applied_once=true. El agente no puede observar RDS: la unicidad de la ejecucion descansa en esa declaracion del operador humano mas la ausencia de una segunda salida."
+  },
+  "postflight": {
+    "result": "PASS",
+    "postflight_pass": true,
+    "checks": [
+      {
+        "name": "view_exists",
+        "result": "PASS",
+        "observed": "v"
+      },
+      {
+        "name": "owner_tpi_admin",
+        "result": "PASS",
+        "observed": "tpi_admin"
+      },
+      {
+        "name": "security_barrier_true",
+        "result": "PASS",
+        "observed": true
+      },
+      {
+        "name": "columns_exact_in_order",
+        "result": "PASS",
+        "observed": [
+          "id_auditoria",
+          "id_lead",
+          "fecha_hora",
+          "actor_subject",
+          "estado_anterior",
+          "estado_nuevo"
+        ]
+      },
+      {
+        "name": "no_raw_json_or_pii_columns",
+        "result": "PASS",
+        "observed": "detalle, id_persona, id_usuario, ip_origen, accion, tabla_afectada ausentes de la proyeccion"
+      },
+      {
+        "name": "public_no_privileges",
+        "result": "PASS",
+        "observed": []
+      },
+      {
+        "name": "acl_only_owner_and_tpi_app",
+        "result": "PASS",
+        "observed": [
+          "tpi_admin",
+          "tpi_app"
+        ]
+      },
+      {
+        "name": "tpi_app_view_only_select",
+        "result": "PASS",
+        "observed": [
+          "SELECT"
+        ]
+      },
+      {
+        "name": "tpi_app_view_no_insert_update_delete_truncate_references_trigger",
+        "result": "PASS",
+        "observed": {
+          "insert": false,
+          "update": false,
+          "delete": false,
+          "truncate": false,
+          "references": false,
+          "trigger": false
+        }
+      },
+      {
+        "name": "tpi_app_schema_usage",
+        "result": "PASS",
+        "observed": true
+      },
+      {
+        "name": "tpi_app_auditoria_no_select_update_delete",
+        "result": "PASS",
+        "observed": {
+          "insert": true,
+          "select": false,
+          "update": false,
+          "delete": false
+        },
+        "note": "INSERT concedido desde 006 (append-only); SELECT/UPDATE/DELETE sobre tpi.auditoria siguen denegados."
+      },
+      {
+        "name": "index_exact_columns",
+        "result": "PASS",
+        "observed": "CREATE INDEX auditoria_state_history_idx ON tpi.auditoria USING btree (accion, tabla_afectada, id_lead, fecha_hora)"
+      },
+      {
+        "name": "view_count_equals_filtered_auditoria",
+        "result": "PASS",
+        "observed": {
+          "view": 0,
+          "filtered_auditoria": 0
+        }
+      },
+      {
+        "name": "migrations_005_006_007_unchanged",
+        "result": "PASS",
+        "observed": {
+          "v007_viewdef_md5_before": "0baf390355421f3ddccebc68c6589aa5",
+          "v007_viewdef_md5_after": "0baf390355421f3ddccebc68c6589aa5",
+          "idx005_present": true,
+          "p006_grants_intact": true
+        }
+      },
+      {
+        "name": "postflight_pass_aggregate",
+        "result": "PASS",
+        "observed": true
+      }
+    ],
+    "raw": {
+      "view": "tpi.v_historial_estado_lead",
+      "relkind": "v",
+      "owner": "tpi_admin",
+      "reloptions": "{security_barrier=true}",
+      "columns": [
+        "id_auditoria",
+        "id_lead",
+        "fecha_hora",
+        "actor_subject",
+        "estado_anterior",
+        "estado_nuevo"
+      ],
+      "public_privileges": [],
+      "acl_grantees": [
+        "tpi_admin",
+        "tpi_app"
+      ],
+      "tpi_app_view_privileges": [
+        "SELECT"
+      ],
+      "tpi_app_auditoria_privileges": {
+        "insert": true,
+        "select": false,
+        "update": false,
+        "delete": false
+      },
+      "index": {
+        "name": "auditoria_state_history_idx",
+        "def": "CREATE INDEX auditoria_state_history_idx ON tpi.auditoria USING btree (accion, tabla_afectada, id_lead, fecha_hora)"
+      },
+      "viewdef_md5": "cc4cce8533ae898e2e910776c978e90f"
+    },
+    "data": {
+      "view_row_count": 0,
+      "filtered_auditoria_count": 0,
+      "note": "cero eventos cambio_estado_lead en DEV: la 008 recien se aplica; sin backfill inventado (cobertura desde el cutover)"
+    }
+  },
+  "explain_normal": {
+    "performed": true,
+    "enable_seqscan_off_used": false,
+    "queries": [
+      "timeline de un lead (subconsulta id_lead + ORDER BY fecha_hora)",
+      "agregacion diaria date_trunc('day', fecha_hora) con COUNT(DISTINCT id_lead)"
+    ],
+    "plans": [
+      "Seq Scan on tpi.auditoria",
+      "Seq Scan on tpi.auditoria"
+    ],
+    "execution_time_ms": [
+      0.095,
+      0.091
+    ],
+    "auditoria_rows": 2,
+    "state_change_events": 0,
+    "interpretation": "Seq Scan es el plan razonable al volumen actual de DEV (2 filas en auditoria y cero eventos cambio_estado_lead; una sola pagina): el planificador correctamente no usa el indice. No es un fallo de la migracion ni evidencia de un indice inutil.",
+    "f2_status": "ABIERTO (no bloqueante): benchmark/EXPLAIN a volumen representativo y read model siguen como follow-up de rendimiento (F2/F6)."
+  },
+  "artifacts": {
+    "dir": ".harness-release/H3.3.4/migration-execution-01/",
+    "files": {
+      "preflight-output.txt": "29bfe24604c4914f6c2b2204aab81fc4ac002d9656a3fe8d837358221c23de93",
+      "forward-output.txt": "101e2338c2ec3f5fc3c1a72e1c7d05c488a0018a6427f35eec8dc1ed8ea06b9a",
+      "postflight-output.txt": "0abd50a6c6ccb3e88dd5e795789b56ebba454220a8080f1f7a2c79e2cc893f49",
+      "explain-normal.sql": "11cfb56c463adda894b46896f5e3cd3f333534174573ea3875d2b8f8fbb9080c",
+      "explain-normal-output.txt": "3d3f35cdc92b9338e98ed369e20c2eb438bfc7952a3d012c1ece9b63e355ab9f",
+      "operator-summary.json": "699280e1922dff11cf09ad9bf655c7fee931196fa30ed4a6565bcd76cd6b3d65"
+    }
+  },
+  "safety": {
+    "rollback_executed": false,
+    "application_deployed": false,
+    "application_candidate_prepared_before_this_report": false,
+    "migrations_005_006_executed": false,
+    "migrations_005_006_007_unchanged": true,
+    "security_groups_modified": false,
+    "aws_resources_modified_by_agent": false,
+    "credentials_exposed": false,
+    "credential_scan": "0 coincidencias en 13 archivos de .harness-release/H3.3.4 (patrones de contrasenas, tokens, claves AWS, URLs con usuario:clave y URLs prefirmadas; salidas UTF-16 decodificadas antes del escaneo)",
+    "harness_state_modified_by_operator": false
+  },
+  "cleanup": {
+    "tunnel_closed": true,
+    "tunnel_closed_basis": "Verificado por el Deployer a las 2026-09-20T16:35Z en la maquina local: el puerto local de tunel (15432) no esta en LISTEN y no hay procesos session-manager-plugin/ssm/psql; el unico listener en 5432 es un postgres local ajeno al tunel. operator-summary.json no incluye este campo."
+  },
+  "known_gaps_not_verifiable_by_agent": [
+    "Identidad del puente SSM (instancia EB, version del plugin, pg_isready) no se registro en operator-summary.json; no se inventa.",
+    "El agente no puede reconsultar RDS: la evidencia es la salida psql del operador y su sha256."
+  ],
+  "follow_ups_preserved": [
+    "F1",
+    "F11",
+    "F2",
+    "F4",
+    "F5",
+    "F6",
+    "AC-9/AC-18"
+  ],
+  "next_step": "Preparar el application candidate (AC-7 es un Human Gate independiente; esta evidencia no lo satisface).",
+  "recorded_by": {
+    "role": "deployer",
+    "runtime": "claude"
+  }
+}

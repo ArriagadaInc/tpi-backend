@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "kind": "failure",
+  "task_id": "H3.3.7",
+  "created_at": "2026-09-30T00:49:10Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609300037-deployer-sup0e9bd7",
+  "action": "staging_precheck_s3_key_absence",
+  "resource": "s3api list-objects-v2 --bucket elasticbeanstalk-us-east-2-821656895812 --prefix tpi-backoffice/dev-releases/h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1/ via python scripts/harness/aws_guard.py",
+  "principal": "tpi-dev (perfil local AWS)",
+  "error": "AWS GUARD: DENIED - 's3api list-objects-v2' no permitido en PREPARING_DEPLOYMENT para deployer (modo prepare). No ejecutado (aws-audit.jsonl executed=false). La lectura la eligio el Deployer fuera de la allowlist; la skill elastic-beanstalk-version-only documenta s3api head-object. Segun CLAUDE.md/AGENTS.md un DENIED es definitivo: sin rodeos, STOP y reporte.",
+  "state": "PREPARING_DEPLOYMENT",
+  "access_denied": false,
+  "progress_before_stop": {
+    "preflight": "PASS: sts cuenta 821656895812; tpi-backoffice-dev-green Ready/Green/Ok VersionLabel h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1 (LKG); AV LKG UNPROCESSED con SourceBundle intacto (ChecksumSHA256 j70lJqbj..., 4815 bytes); digests LKG app sha256:0c20c5d7... y caddy sha256:cd1adaf8... ACTIVE en ECR; CodePipeline Promote deshabilitado.",
+    "release": "origin/main = 6f0f5bb1e934742cd8e8572d4a401f8bf29ab1c7, tree f514a0e7658feba8c04bac980052bf982e497262 == reviewed_tree.",
+    "publish_run": {
+      "run_id": 36651430697,
+      "url": "https://github.com/ArriagadaInc/tpi-backend/actions/runs/36651430697",
+      "head_sha": "6f0f5bb1e934742cd8e8572d4a401f8bf29ab1c7",
+      "attempt": 1,
+      "conclusion": "success",
+      "scan": "tpi-dev-app CRITICAL=0 HIGH=0; tpi-dev-caddy CRITICAL=0 HIGH=0"
+    },
+    "images": {
+      "app": "tpi-dev-app@sha256:841595e4758a36536133bf9a5c2089893de71fcef877e742d2bbf9c9a14f3c42 (ACTIVE, tag 6f0f5bb)",
+      "caddy": "tpi-dev-caddy@sha256:92d49b1199de6d201db48f351581be0da65ef2c544ac42e118c6eeeb5d06b40f (ACTIVE, tag 6f0f5bb)"
+    },
+    "bundle": {
+      "label": "h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1",
+      "path": ".harness-release/6f0f5bb/h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1.zip",
+      "sha256": "efa590b9e0daef786ce1f4b69ea8026c1a160b39d8dac06999d1c79b7f82d8aa",
+      "checksum_sha256_b64": "76WQueDa73hs4fS2nqgCbBoWCznY2sBpmdHHm3+C2Ko=",
+      "size_bytes": 4815,
+      "reproducible": true,
+      "note": "Construido local desde git archive del release (blobs template cbdfd846 / builder 6cee0d10 identicos al LKG); segunda construccion check-* con sha256 identico."
+    },
+    "application_version_label_absent": true,
+    "s3_put_object": "no ejecutado",
+    "create_application_version": "no ejecutado"
+  },
+  "recommendation": "Sin residuos salvo imagenes ECR inmutables tag 6f0f5bb (inertes) y artefactos locales en .harness-release/6f0f5bb. No es AccessDenied ni defecto del release. Si el humano resuelve --to PREPARING_DEPLOYMENT, la siguiente sesion puede reutilizar publish run 36651430697 (no redispatch) y el bundle efa590b9..., usando solo s3api head-object (allowlist) y put-object --if-none-match '*' para garantizar ausencia de la key.",
+  "residues": [
+    "ECR tpi-dev-app/tpi-dev-caddy tag 6f0f5bb1e934742cd8e8572d4a401f8bf29ab1c7 (inmutables, inertes)"
+  ],
+  "safety": {
+    "aws_writes": [],
+    "github_writes": [
+      "gh workflow run publish-dev-ecr-images.yml --ref main -f source_sha=6f0f5bb1e934742cd8e8572d4a401f8bf29ab1c7 (1 dispatch)"
+    ],
+    "environment_mutated": false,
+    "secrets_accessed": false,
+    "code_or_dependencies_modified": false
+  }
+}

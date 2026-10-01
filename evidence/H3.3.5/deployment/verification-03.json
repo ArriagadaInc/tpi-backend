@@ -1,0 +1,568 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "H3.3.5",
+  "created_at": "2026-09-22T16:32:02Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609221620-deployer-verify-final",
+  "verification_scope": "final_verification_close",
+  "verification_scope_note": "Verificacion final read-only que integra evidencia tecnica (verification-01 postflight de datos, deployment-01 cutover, verification-02 reverificacion post-refresh), smoke humano autenticado y aceptacion canonica acceptance-01 (approve.py accept). No sobrescribe verification-01 ni verification-02.",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+  "deployed_commit": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+  "application_version": "h3-3-5-asesores-cartera-78bf33b-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "PASS",
+  "failure_class": null,
+  "state_task_check": {
+    "init": "init.ps1 --runtime claude: PASS",
+    "state": "VERIFYING",
+    "task_id": "H3.3.5",
+    "active_role": "deployer",
+    "allowed_events": [
+      "verified",
+      "verify_failed"
+    ],
+    "origin_main_after_fetch": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+    "rework_round": 1,
+    "rollback_attempted": false
+  },
+  "acceptance_check": {
+    "path": "evidence/H3.3.5/approvals/acceptance-01.json",
+    "sha256": "769f8bbf6b3f514783fbd7396342b7b55a97dcc9065da2b907dee965a436af13",
+    "kind": "acceptance",
+    "created_by": "scripts/harness/approve.py",
+    "interactive": true,
+    "role": "human",
+    "task_id": "H3.3.5",
+    "decision": "accepted",
+    "created_at": "2026-09-22T16:18:07Z",
+    "state_ref": "harness/state.json refs.acceptance = evidence/H3.3.5/approvals/acceptance-01.json",
+    "criteria_accepted": [
+      "AC-1",
+      "AC-2",
+      "AC-3",
+      "AC-4",
+      "AC-5",
+      "AC-6",
+      "AC-7",
+      "AC-9",
+      "AC-10",
+      "AC-11",
+      "AC-12",
+      "AC-13",
+      "AC-14",
+      "AC-15",
+      "AC-16",
+      "AC-17",
+      "AC-18",
+      "AC-19"
+    ],
+    "required_human_or_both": [
+      "AC-1",
+      "AC-2",
+      "AC-3",
+      "AC-4",
+      "AC-5",
+      "AC-6",
+      "AC-7",
+      "AC-9",
+      "AC-10",
+      "AC-11",
+      "AC-12",
+      "AC-13",
+      "AC-14",
+      "AC-15",
+      "AC-16",
+      "AC-17",
+      "AC-18",
+      "AC-19"
+    ],
+    "required_subset_of_accepted": true,
+    "automated_criteria_in_acceptance": [],
+    "automated_substitution": false,
+    "unique_acceptance_file_for_task": true,
+    "result": "PASS"
+  },
+  "human_smoke_report_non_sensitive": {
+    "source": "reporte humano en la sesion + acceptance-01.notes",
+    "after_d7_complete": true,
+    "d7_order": "1-2 seed+postflight (verification-01, 2026-09-21T19:50Z) -> 3 cutover (deployment-01, 21:54:52Z-21:55:41Z) -> 4 Ready/Green/Ok -> 5 identidades (humano) -> 6 RestartAppServer 2026-09-22T15:47:06Z-15:48:27Z -> 7 reverificacion (verification-02, 16:06Z) -> 8 smoke autenticado humano -> acceptance-01 16:18:07Z",
+    "results": {
+      "both_advisors_login": "PASS",
+      "each_advisor_only_own_portfolio": "PASS",
+      "own_lead_open_and_modify": "PASS",
+      "cross_advisor_lead": "404",
+      "unassigned_lead": "404",
+      "dashboard_advisor": "403",
+      "no_assignment_or_dashboard_controls": "PASS",
+      "ceo_cto_global_pii_dashboard_assignment": "PASS",
+      "preexisting_advisor_without_advisor_id": "no existe (D4 cubierto por pruebas automatizadas AC-21)",
+      "credentials_hashes_cookies_pii_exposed": false
+    },
+    "inspected_by_deployer": false
+  },
+  "final_state": {
+    "version_label": "h3-3-5-asesores-cartera-78bf33b-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-09-22T15:47:22.541000+00:00",
+    "observations": [
+      {
+        "observed_at": "2026-09-22T16:21:19Z",
+        "version_label": "h3-3-5-asesores-cartera-78bf33b-domainlocked-r1",
+        "status": "Ready",
+        "health": "Green",
+        "health_status": "Ok",
+        "abortable": false,
+        "date_updated": "2026-09-22T15:47:22.541Z"
+      },
+      {
+        "observed_at": "2026-09-22T16:30:14Z",
+        "version_label": "h3-3-5-asesores-cartera-78bf33b-domainlocked-r1",
+        "status": "Ready",
+        "health": "Green",
+        "health_status": "Ok",
+        "abortable": false,
+        "date_updated": "2026-09-22T15:47:22.541Z"
+      }
+    ],
+    "stable": true,
+    "unchanged_since_verification_02": true
+  },
+  "events": {
+    "window": "desde el refresh 2026-09-22T15:47:06Z hasta 2026-09-22T16:30:14Z",
+    "levels_observed": [
+      "INFO"
+    ],
+    "errors": 0,
+    "warnings": 0,
+    "rollback_events": 0,
+    "unexpected_version_change": false,
+    "last_event": "2026-09-22T15:48:27.523Z health Info -> Ok (sin eventos nuevos durante ni despues del smoke humano)",
+    "result": "PASS"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "release 78bf33b -> VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> bundle sha256 -> compose digests -> ECR tag = release SHA",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-3-5-asesores-cartera-78bf33b-domainlocked-r1/f7e661411bbaacaf456a95405fd0e787136ac6cb04eb790fd78039d7938731f1.zip",
+    "s3_checksum_sha256_b64": "9+ZhQRu6rK9FapVAX9DnhxNqxssE63kP14A515OHMfE=",
+    "s3_checksum_type": "FULL_OBJECT",
+    "s3_content_length": 4815,
+    "s3_last_modified": "2026-09-21T20:07:32Z",
+    "local_bundle_sha256_recomputed": "f7e661411bbaacaf456a95405fd0e787136ac6cb04eb790fd78039d7938731f1",
+    "local_bundle_sha256_b64_equals_s3": true,
+    "bundle_compose_digests": {
+      "tpi-dev-app": "sha256:f2ba920eeaf45a671e644347abb8d83fdf82ef34b8097d66c9723e6d14677b76",
+      "tpi-dev-caddy": "sha256:efbce63c9a0f4cc738873a584f9e57eb73e358abc4883e401dcdbc2bec0c27fc"
+    },
+    "ecr_images": {
+      "tpi-dev-app": {
+        "digest": "sha256:f2ba920eeaf45a671e644347abb8d83fdf82ef34b8097d66c9723e6d14677b76",
+        "status": "ACTIVE",
+        "tag": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2"
+      },
+      "tpi-dev-caddy": {
+        "digest": "sha256:efbce63c9a0f4cc738873a584f9e57eb73e358abc4883e401dcdbc2bec0c27fc",
+        "status": "ACTIVE",
+        "tag": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2"
+      }
+    },
+    "digests_equal_approval_01": true,
+    "release_sha_exact": true
+  },
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "leads_board_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "dashboard_anonymous_403",
+      "result": "PASS",
+      "observed": "403"
+    },
+    {
+      "name": "lead_detail_anonymous_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login (UUID nulo; sin revelar existencia)"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "observed": "ninguna Location con genialabs"
+    },
+    {
+      "name": "runtime_reverify_final",
+      "result": "PASS",
+      "observed": "Ready/Green/Ok + VersionLabel H3.3.5 en dos observaciones (16:21:19Z, 16:30:14Z)"
+    },
+    {
+      "name": "authenticated_smoke_human_ac17",
+      "result": "PASS",
+      "observed": "reporte humano + acceptance-01 (approve.py accept, AC-17 accepted)"
+    }
+  ],
+  "smoke_client": "Python urllib, TLS por defecto, sin seguir redirects, sin credenciales ni cookies",
+  "logs": {
+    "method": "aws_guard logs filter-log-events --query length(events) (solo conteos; sin volcar lineas)",
+    "log_group": "eb-current-app/stdouterr.log (tpi-backoffice-dev-green)",
+    "window_since_refresh": "2026-09-22T15:47:06Z (1790092026000) -> 2026-09-22T16:30Z; incluye el smoke humano (~16:06Z-16:18Z)",
+    "total_events_since_refresh": 196,
+    "pattern_counts_since_refresh": {
+      "ERROR": 0,
+      "Exception": 0,
+      "Traceback": 0,
+      "CRITICAL": 0,
+      "WARNING": 0,
+      "AccessDenied": 0,
+      "ValidationError": 0,
+      "JSONDecodeError": 0,
+      "Authorization": 0,
+      "Bearer": 0,
+      "raw_payload": 0,
+      "password": 0,
+      "hash": 0,
+      "cookie": 0,
+      "advisor": 0,
+      "500": 0
+    },
+    "startup_markers_since_refresh": {
+      "Uvicorn": 1,
+      "note": "un unico arranque (restart humano); sin reinicios por crash"
+    },
+    "numeric_token_counts_since_refresh": {
+      "502": 1,
+      "503": 2,
+      "401": 1,
+      "403": 10,
+      "404": 15,
+      "per_window": {
+        "15:47-15:50": {
+          "502": 0,
+          "503": 0,
+          "401": 0
+        },
+        "15:50-16:06": {
+          "502": 0,
+          "503": 1,
+          "401": 0
+        },
+        "16:06-16:19 (smoke humano)": {
+          "502": 0,
+          "503": 0,
+          "401": 1
+        },
+        "16:19-16:30": {
+          "502": 1,
+          "503": 1
+        }
+      },
+      "noise_baseline_random_3digit_tokens": {
+        "117": 1,
+        "238": 5,
+        "349": 3,
+        "461": 0,
+        "572": 1,
+        "683": 3,
+        "794": 2,
+        "815": 1,
+        "926": 1,
+        "037": 1
+      },
+      "interpretation": "El formato de log de la release (%(asctime)s, app/runtime.py y app/api/logging.py) incluye milisegundos como token de 3 digitos; tokens aleatorios de control aparecen 0-5 veces en la misma ventana. Los conteos 502/503/401 (1-2) estan dentro de ese ruido y no se correlacionan con ERROR/Exception/Traceback (0), eventos EB (solo INFO), health (Ok estable) ni unexpected-quit (0). 403/404 incluyen ademas los 403/404 esperados del smoke (dashboard advisor/anonimo, lead ajeno/no asignado). No se leyeron lineas para desambiguar (prohibido). Sin evidencia de fallos auth inesperados ni 5xx.",
+      "result": "PASS"
+    },
+    "eb_engine_ERROR_since_refresh": 0,
+    "unexpected_quit_since_refresh": 0,
+    "result": "PASS"
+  },
+  "pii_log_scan": {
+    "matches": 0,
+    "result": "PASS",
+    "patterns": [
+      "Authorization",
+      "Bearer",
+      "raw_payload",
+      "password",
+      "hash",
+      "cookie"
+    ],
+    "window": "desde refresh 2026-09-22T15:47:06Z, incluye smoke humano",
+    "note": "Solo conteos. No se imprimio contenido de logs. Esta evidencia no contiene credenciales, hashes, cookies, contenido del secreto de identidades ni PII (solo UUID de asesores DEV ficticios ya registrados en verification-01)."
+  },
+  "guard_denials": [
+    {
+      "tool": "aws_guard",
+      "reason": "log group fuera del environment DEV",
+      "context": "Git Bash (MSYS) convirtio el argumento /aws/elasticbeanstalk/... en C:/Program Files/Git/aws/...; 11 invocaciones rechazadas antes de ejecutar",
+      "effect": "no ejecutado; sin llamadas AWS",
+      "follow_up": "Se uso el mismo comando canonico desde PowerShell (forma usada en verification-02)."
+    },
+    {
+      "tool": "Bash (TPI HARNESS GUARD)",
+      "reason": "comando shell que podria modificar archivos protegidos del Harness",
+      "context": "bucle Bash con export MSYS_NO_PATHCONV y filter-pattern de frase entre comillas para conteos de status HTTP",
+      "effect": "no ejecutado",
+      "follow_up": "No se rodeo ni se repitieron variantes; se usaron conteos de un solo termino por ventana de tiempo con el comando canonico."
+    }
+  ],
+  "aws_audit_summary": {
+    "session_operations": 70,
+    "session_modes": {
+      "read": 70
+    },
+    "writes_this_session": 0,
+    "note": "evidence/H3.3.5/aws-audit.jsonl: todas las invocaciones de esta sesion son mode=read."
+  },
+  "d7": {
+    "rollback_policy": "phase_b_only",
+    "phase_a_enabled": false,
+    "all_steps_complete": true,
+    "steps": {
+      "1_2_seed_and_postflight": "verification-01 PASS",
+      "3_cutover": "deployment-01 success",
+      "4_ready_green_ok": "deployment-01 final_state",
+      "5_identities": "humano (reportado, no inspeccionado por el Deployer)",
+      "6_refresh": "RestartAppServer humano, observado en eventos EB",
+      "7_reverify": "verification-02 PASS + esta evidencia",
+      "8_authenticated_smoke": "humano PASS, acceptance-01"
+    }
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "both",
+      "evidence": "verification-01 (fila unica Asesor Desarrollo 1, asesor/activo); tests seed CI 35629691243; acceptance-01"
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "both",
+      "evidence": "verification-01 (fila unica Asesor Desarrollo 2, asesor/activo); tests seed CI 35629691243; acceptance-01"
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "method": "both",
+      "evidence": "tests/unit/test_h3_3_5_advisor_auth.py (advisor_id); identidad configurada por humano; login y cartera propia en smoke humano; acceptance-01"
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "method": "both",
+      "evidence": "tests/unit/test_h3_3_5_advisor_auth.py (advisor_id); identidad configurada por humano; login y cartera propia en smoke humano; acceptance-01"
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "method": "both",
+      "evidence": "test_h3_3_5_seed_sql.py::test_seed_has_no_secrets_passwords_or_hashes + validate_repo; evidencias H3.3.5 sin credenciales/hashes; pii_log_scan 0; acceptance-01"
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "method": "both",
+      "evidence": "test_h3_3_5_advisor_portfolio.py (aislamiento A1); smoke humano advisor1 solo cartera propia; acceptance-01"
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "method": "both",
+      "evidence": "test_h3_3_5_advisor_portfolio.py (aislamiento A2); smoke humano advisor2 solo cartera propia; acceptance-01"
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "method": "automated",
+      "evidence": "test_h3_3_5_advisor_portfolio.py (busqueda/filtros/orden/conteo/paginacion/board server-side); CI 35625445269 (PR) y 35629691243 (release 78bf33b) success; review-02 sonda independiente"
+    },
+    {
+      "id": "AC-9",
+      "status": "met",
+      "method": "both",
+      "evidence": "test_h3_3_5_advisor_portfolio.py + test_h3_3_5_advisor_http.py (404); smoke humano lead ajeno y no asignado 404; acceptance-01"
+    },
+    {
+      "id": "AC-10",
+      "status": "met",
+      "method": "both",
+      "evidence": "test_h3_3_5_advisor_http.py (status/comments ajeno/no asignado 404 sin escritura; cleanup 403); review-02 sonda; acceptance-01"
+    },
+    {
+      "id": "AC-11",
+      "status": "met",
+      "method": "both",
+      "evidence": "test_h3_3_5_advisor_http.py (POST propio 303); smoke humano abrir y modificar lead propio; acceptance-01"
+    },
+    {
+      "id": "AC-12",
+      "status": "met",
+      "method": "both",
+      "evidence": "test_h3_3_5_advisor_http.py::test_advisor_cleanup_and_assign_are_403; smoke humano sin controles de asignacion; acceptance-01"
+    },
+    {
+      "id": "AC-13",
+      "status": "met",
+      "method": "both",
+      "evidence": "tests advisor_http/advisor_web (403); smoke tecnico anonimo 403; smoke humano advisors 403; acceptance-01"
+    },
+    {
+      "id": "AC-14",
+      "status": "met",
+      "method": "both",
+      "evidence": "test_h3_3_5_advisor_web.py::test_advisor_navigation_hides_dashboard_link; smoke humano sin Dashboard; acceptance-01"
+    },
+    {
+      "id": "AC-15",
+      "status": "met",
+      "method": "both",
+      "evidence": "tests CEO/CTO global (portfolio/http); smoke humano CEO/CTO sin regresion; acceptance-01"
+    },
+    {
+      "id": "AC-16",
+      "status": "met",
+      "method": "both",
+      "evidence": "tests PII contextual y 404 sin revelar existencia; pii_log_scan 0 (refresh + smoke); smoke humano sin exposicion; acceptance-01"
+    },
+    {
+      "id": "AC-17",
+      "status": "met",
+      "method": "human",
+      "evidence": "smoke humano autenticado posterior al orden D7 completo (pasos 1-7 evidenciados en verification-01, deployment-01, verification-02); acceptance-01"
+    },
+    {
+      "id": "AC-18",
+      "status": "met",
+      "method": "both",
+      "evidence": "preflight D5 PASS (resolution-01); seed checksum 39eb8465...ea51 igual release/merge-01/operador; estado final unico y estable (verification-01); tests/integration/test_h3_3_5_seed.py (idempotente, adopta UUID, aborta incompatible, no toca otros asesores) en CI; acceptance-01"
+    },
+    {
+      "id": "AC-19",
+      "status": "met",
+      "method": "human",
+      "evidence": "verification-01 postflight read-only (existencia y unicidad, sin PII/secretos, Deployer sin escritura RDS); acceptance-01"
+    },
+    {
+      "id": "AC-20",
+      "status": "met",
+      "method": "automated",
+      "evidence": "CI 35629691243 success sobre release 78bf33b; cobertura 89.24% >= 85% (merge-01)"
+    },
+    {
+      "id": "AC-21",
+      "status": "met",
+      "method": "automated",
+      "evidence": "resolve_advisor_identity fail-closed; tests/unit/test_h3_3_5_advisor_auth.py + test_h3_3_5_advisor_portfolio.py (advisor invalido/inactivo vacio, dashboard 403) en CI 35629691243"
+    }
+  ],
+  "criteria_summary": {
+    "total": 21,
+    "met": 21,
+    "missing": 0,
+    "pending_human": 0,
+    "not_met": 0
+  },
+  "blockers_open": [],
+  "non_blocking_followups": [
+    {
+      "id": "CR-D7-02",
+      "severity": "minor",
+      "summary": "Runbook H3.3.5 no incorpora el procedimiento de rollback D7 posterior a identidades; mejora documental futura."
+    },
+    {
+      "id": "CR-D7-03",
+      "severity": "minor",
+      "summary": "Enforcement de condiciones D7 del candidate en rollback_permitted/PROMPT Deployer; requiere mantenimiento humano del Harness."
+    },
+    {
+      "id": "R2-M1",
+      "severity": "minor",
+      "summary": "Advisories GitPython 3.1.59 en runtime.lock (preexistente, transitiva); decision humana separada."
+    },
+    {
+      "id": "OBS-1",
+      "severity": "info",
+      "summary": "Usar psql (\\i) y no DBeaver fragmentado para futuros seeds."
+    }
+  ],
+  "source_evidence": {
+    "developer": "evidence/H3.3.5/developer/developer-02.json",
+    "review": "evidence/H3.3.5/reviewer/review-02.json",
+    "merge": "evidence/H3.3.5/deployment/merge-01.json",
+    "resolution": "evidence/H3.3.5/approvals/resolution-01.json",
+    "data_postflight": {
+      "path": "evidence/H3.3.5/deployment/verification-01.json",
+      "sha256": "3c553e90c397246f98934c35d84d1f543ced4ab0a4d415ed4159b5fb5fa26d2b"
+    },
+    "candidate": {
+      "path": "evidence/H3.3.5/deployment/candidate-02.json",
+      "sha256": "abff1106aa36f0e626f35a1b5ecbd3e2311844942e06723dfcda35b5020af9b9"
+    },
+    "candidate_review": "evidence/H3.3.5/reviewer/candidate_review-02.json",
+    "approval": "evidence/H3.3.5/approvals/approval-01.json",
+    "deployment": "evidence/H3.3.5/deployment/deployment-01.json",
+    "post_refresh_verification": {
+      "path": "evidence/H3.3.5/deployment/verification-02.json",
+      "sha256": "15666a3f1f5a5b7ff1a61ffc17855808b922b3a596c0cb7ce672f68c575951fe"
+    },
+    "acceptance": {
+      "path": "evidence/H3.3.5/approvals/acceptance-01.json",
+      "sha256": "769f8bbf6b3f514783fbd7396342b7b55a97dcc9065da2b907dee965a436af13"
+    }
+  },
+  "rollback_policy": "phase_b_only",
+  "rollback_executed": false,
+  "safety": {
+    "secrets_manager_read": false,
+    "identity_payload_read": false,
+    "advisor_credentials_used": false,
+    "restart_app_server_by_deployer": false,
+    "update_environment": false,
+    "rds_access": false,
+    "identities_modified": false,
+    "rollback": false,
+    "code_modified": false,
+    "previous_evidence_modified": false,
+    "approve_py_executed": false,
+    "aws_writes": []
+  },
+  "next_step": "Transicion canonica verified (VERIFYING -> DONE). Sin cierre administrativo manual."
+}

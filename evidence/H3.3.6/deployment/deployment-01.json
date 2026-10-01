@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "kind": "deployment",
+  "task_id": "H3.3.6",
+  "created_at": "2026-09-23T15:22:56Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609231517-deployer-sup63927f",
+  "approved_commit": "5f5b3d37bf122f1d4438583b973fd03763aecebe",
+  "deployed_commit": "5f5b3d37bf122f1d4438583b973fd03763aecebe",
+  "application_version": "h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "update_accepted": true,
+  "result": "success",
+  "started_at": "2026-09-23T15:19:47Z",
+  "finished_at": "2026-09-23T15:20:47Z",
+  "failure_class": null,
+  "previous_version_label": "h3-3-5-asesores-cartera-78bf33b-domainlocked-r1",
+  "final_state": {
+    "version_label": "h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-09-23T15:20:47Z",
+    "observed_at": "2026-09-23T15:21:34Z",
+    "observation_note": "Observado Ready/Green/Ok con VersionLabel exacta a las 15:21:18Z y re-observado a las 15:21:34Z."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1/8fbd2526a6e311bdcfb0c2f72cdd20a7ba9f6a056de04562957214946332cb32.zip",
+    "s3_checksum_sha256_b64": "j70lJqbjEb3PsML3LN0gp7qfagVt4EVilXIUlGMyyzI=",
+    "s3_content_length": 4815,
+    "bundle_sha256": "8fbd2526a6e311bdcfb0c2f72cdd20a7ba9f6a056de04562957214946332cb32",
+    "bundle_compose_digests": {
+      "tpi-dev-app": "sha256:0c20c5d7dc0f3a4a651d8dd0b48583950540daff10a1205171fb8e009da51896",
+      "tpi-dev-caddy": "sha256:cd1adaf811f8b1583d0da21d773d999e82c2dda35e62cb3744ff6d19393b158c"
+    },
+    "digests_equal_approval_01": true,
+    "ecr_images_active": true,
+    "note": "AV SourceBundle y head-object re-observados post-cutover; bundle local sha256 = aprobado (no reconstruido); compose referencia app x2 y caddy x1 por digest."
+  },
+  "preflight": {
+    "at": "2026-09-23T15:18Z",
+    "result": "PASS",
+    "checks": [
+      "init PASS (DEPLOYING, rol deployer)",
+      "sha256 de candidate-01.json = 8bd97007... = approval-01.candidate_evidence.sha256; approval-01 decision approved",
+      "candidate_review-01 decision APPROVED",
+      "origin/main = release SHA 5f5b3d3; tree 82da9205 = reviewed_tree",
+      "sts account 821656895812; region us-east-2 forzada por aws_guard",
+      "environment en LKG h3-3-5-asesores-cartera-78bf33b-domainlocked-r1, Ready/Green/Ok, AbortableOperationInProgress false, DateUpdated 2026-09-22T15:47:22Z (sin cambio)",
+      "AV candidata UNPROCESSED, SourceBundle = key aprobada",
+      "S3 candidata ChecksumSHA256 j70lJqbj... 4815 B",
+      "ECR candidata app 0c20c5d7 / caddy cd1adaf8 ACTIVE",
+      "LKG: AV UNPROCESSED; digests app f2ba920e / caddy efbce63c ACTIVE",
+      "CodePipeline Promote deshabilitado"
+    ],
+    "guard_note": "Una lectura describe-application-versions con dos labels en una llamada fue rechazada por el parser de aws_guard antes de ejecutarse (posicional extra); se repitio con un label por llamada. Sin efecto en AWS. Un comando compuesto heredoc+evidence.py fue rechazado por el hook guard; se separo en Write del input + evidence.py."
+  },
+  "cutover": {
+    "mechanism": "aws_guard update-environment version-label only",
+    "executed_by": "deployer",
+    "updates_applied": 1,
+    "retries": 0,
+    "option_settings": false,
+    "restart_app_server": false,
+    "rollback_executed": false,
+    "convergence": "exitosa en ~55 s (start 15:19:52Z, completed 15:20:47Z)"
+  },
+  "events": {
+    "levels_observed": [
+      "INFO"
+    ],
+    "errors": 0,
+    "warnings": 0,
+    "failed_deployments": 0,
+    "configuration_change_event": false,
+    "result": "PASS",
+    "summary": "Environment update is starting -> Deploying new version -> Instance deployment completed successfully -> New application version deployed -> Environment update completed successfully."
+  },
+  "logs": {
+    "result": "not_executed",
+    "note": "Conteos de logs/PII diferidos a VERIFYING (aws-observability)."
+  },
+  "smoke_technical": {
+    "result": "not_executed",
+    "note": "Smoke en VERIFYING."
+  },
+  "inputs": {
+    "candidate_evidence": "evidence/H3.3.6/deployment/candidate-01.json",
+    "candidate_evidence_sha256": "8bd970072d24a037ed432fab13abd99a318592cf8e6d1036c3635ccfdfe12f7f",
+    "candidate_review_evidence": "evidence/H3.3.6/reviewer/candidate_review-01.json",
+    "approval_evidence": "evidence/H3.3.6/approvals/approval-01.json",
+    "release_sha": "5f5b3d37bf122f1d4438583b973fd03763aecebe",
+    "lkg_version_label": "h3-3-5-asesores-cartera-78bf33b-domainlocked-r1"
+  },
+  "safety": {
+    "rds_access": false,
+    "secrets_accessed": false,
+    "identities_created": false,
+    "option_settings": false,
+    "restart_app_server": false,
+    "retries": 0,
+    "rollback": false,
+    "aws_writes": [
+      "elasticbeanstalk update-environment (version-label unicamente, 1 vez)"
+    ]
+  },
+  "warnings": [
+    "AC-18 sigue pending_human (smoke autenticado humano en VERIFYING)."
+  ]
+}

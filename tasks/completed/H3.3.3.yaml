@@ -1,0 +1,237 @@
+schema_version: 1
+task:
+  id: H3.3.3
+  title: Historial operativo y navegacion Web UX
+  objective: 'Restaurar "Volver al sitio" en la Web UX FastAPI/Jinja2 y mostrar en la ficha del lead la
+    trazabilidad de asignaciones ya almacenada en tpi.auditoria, corrigiendo las dos regresiones del CRM
+    Lite detectadas durante el smoke humano de H3.3.2 (ver evidence/H3.3.2/deployment/verification-02.json,
+    known_issues KI-CRMLITE-VOLVER-AL-SITIO y KI-CRMLITE-TRAZABILIDAD-ASIGNACION). Decision de arquitectura
+    aprobada: read model SQL sanitizado (vista, no tabla) sobre tpi.auditoria; no duplicar estado_anterior/estado_nuevo
+    en tpi.asignaciones. Clase de cambio D: la migracion 007 (siguiente numero libre, confirmado inspeccionando
+    todo el historial git, no solo el arbol actual) crea una trusted view y concede SELECT a tpi_app sobre
+    un objeto nuevo; por eso su aplicacion en AWS DEV requiere Human Gate explicito y no existe ningun
+    fast path del Harness que la aplique o despliegue automaticamente (change_class D queda fuera de harness_deployable_classes:
+    [A,B]; tras el merge, la transicion merged_non_fast_path lleva a BLOCKED_HUMAN de forma obligatoria).
+
+
+    Se definen dos artefactos y dos aprobaciones humanas distintas, que nunca se sustituyen entre si.
+    (A) migration candidate: congelado antes de tocar AWS RDS DEV; consiste en el commit SHA exacto de
+    main, la ruta exacta del forward 007, el SHA-256 del forward, la ruta exacta del rollback 007, el
+    SHA-256 del rollback, el SQL ya revisado por el Reviewer independiente, preflight DB y evidencia del
+    estado anterior, y la aprobacion humana explicita para aplicar exactamente esos bytes; se aplica manualmente
+    una sola vez y se cierra con postflight de esquema y privilegios. (B) application candidate: se prepara
+    unicamente despues de que la migracion quedo aplicada y su postflight fue verificado; sigue el pipeline
+    normal PREPARING_DEPLOYMENT -> CANDIDATE_REVIEW -> WAITING_HUMAN_APPROVAL -> DEPLOYING para el codigo
+    de aplicacion, con su propia aprobacion humana en WAITING_HUMAN_APPROVAL; esa aprobacion del application
+    candidate no puede usarse retroactivamente como aprobacion del migration candidate, y viceversa.
+
+
+    Secuencia obligatoria: (1) desarrollo local de codigo/SQL/pruebas (Developer, DEVELOPING); (2) revision
+    independiente del codigo y del SQL por un Reviewer en sesion distinta (REVIEWING/REVIEW_APPROVED);
+    (3) merge a main; (4) merged_non_fast_path hacia BLOCKED_HUMAN (checkpoint obligatorio, sin excepcion
+    por ser clase D); (5) congelar el migration candidate desde el SHA exacto de main (forward 007 + su
+    SHA-256, rollback 007 + su SHA-256); (6) preflight DB y evidencia del estado anterior; (7) aprobacion
+    humana explicita del migration candidate; (8) aplicar la migracion una sola vez en AWS RDS DEV, fuera
+    del fast path del Harness (no existe mecanismo automatizado de migraciones en AWS; ver backlog DB-PATH-MECHANISM);
+    (9) postflight de esquema y privilegios (AC-6); (10) resolver BLOCKED_HUMAN hacia PREPARING_DEPLOYMENT,
+    unicamente si el postflight de la migracion paso; (11) preparar y revisar el application candidate
+    (CANDIDATE_REVIEW); (12) aprobacion humana del application candidate en WAITING_HUMAN_APPROVAL, independiente
+    y no sustituta de la aprobacion del migration candidate; (13) deploy version-only del application
+    candidate (DEPLOYING); (14) smoke funcional en DEV (AC-8). Si la migracion o su postflight fallan,
+    el Harness permanece en BLOCKED_HUMAN y no se prepara ni se despliega el application candidate; cualquier
+    rollback de la vista se evalua conforme a aws-failure-analysis y rollback_authorization del Harness,
+    nunca automatico ni por eliminacion directa de la vista o de evidencia.
+
+
+    La vista (migracion 007) debe: proyectar unicamente accion=''asignacion_lead'' AND tabla_afectada=''tpi.asignaciones'';
+    exponer solo id_auditoria, id_lead, fecha_hora, actor_subject, id_asesor, estado_anterior, estado_nuevo
+    (sin JSON crudo, id_persona, id_usuario, ip_origen ni otros eventos); usar security_barrier si la
+    version PostgreSQL y el estandar del repo lo permiten; ser propiedad del rol de migracion/administracion
+    ya establecido (no crear uno nuevo); REVOKE ALL ... FROM PUBLIC; GRANT SELECT unicamente a tpi_app;
+    mantener sin cambios SELECT=false/UPDATE=false/DELETE=false de tpi_app sobre tpi.auditoria; incluir
+    preflight/postflight de privilegios. id_asesor es UUID, no numerico. Estrategia unica y obligatoria:
+    validar el valor del detalle JSON con CASE y una expresion regular canonica de UUID case-insensitive
+    (patron xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx con digitos hexadecimales, ocho-cuatro-cuatro-cuatro-doce
+    caracteres) antes de castear a uuid; si el valor no matchea el patron, la vista proyecta NULL en id_asesor
+    para esa fila y continua mostrando el resto de filas sin lanzar excepcion; no se usa la alternativa
+    de proyectar texto con JOIN defensivo (se descarta explicitamente para no fragmentar la estrategia);
+    incluir una prueba especifica con detalle JSON invalido/malformado (incluyendo un id_asesor no-UUID)
+    que demuestre que el resto de las filas sigue siendo consultable y que la fila afectada expone id_asesor
+    NULL sin error. Incluir rollback explicito (REVOKE SELECT, DROP VIEW), probado o validado en un entorno
+    de integracion antes de aplicarse en DEV, y ejecutarse transaccionalmente cuando corresponda.
+
+
+    El repositorio/servicio debe: crear una consulta parametrizada por id_lead que lea la vista y una
+    con tpi.asesores para el nombre del asesor, orden estable fecha_hora DESC, id_auditoria DESC; nunca
+    leer tpi.auditoria directamente desde la aplicacion; no crear estado paralelo; mantener intacta la
+    transaccion actual que escribe asignacion y auditoria. actor_subject sigue siendo la identidad historica
+    estable; si existe una resolucion segura desde la configuracion de autenticacion ya cargada por la
+    app, mostrar display_name conservando actor_subject como fallback, sin consultar ni registrar password_hash
+    y sin volcar usuarios/secretos/AUTH_USERS_JSON en logs, tests, evidencia o salida; si la resolucion
+    segura exige ampliar demasiado el alcance, mostrar actor_subject y documentar la limitacion (no improvisar
+    otra tabla). En la seccion existente "Seguimiento y Notas Internas" construir una sola linea de tiempo
+    cronologica que fusione: (A) evento automatico e inmutable (fecha/hora America/Santiago, actor, asesor,
+    estado anterior->nuevo, badge "Automatico", sin controles de edicion/eliminacion) y (B) nota humana
+    (comportamiento actual, distinguida visualmente); con estado vacio coherente cuando no haya notas
+    ni eventos. La asignacion del smoke de H3.3.2 debe proyectarse automaticamente tras aplicar la vista
+    en DEV, sin backfill.
+
+
+    El despliegue de la aplicacion (version-only EB) no debe ocurrir antes de que la vista exista en DEV
+    y su contrato (columnas, filtro, privilegios) haya sido verificado por postflight; si la migracion
+    falla, no se despliega la aplicacion; si la aplicacion falla despues del despliegue, no se elimina
+    automaticamente la vista ni evidencia asociada, y cualquier rollback se evalua conforme al Harness
+    (aws-failure-analysis, rollback_authorization), nunca de forma automatica. "Volver al sitio": reutilizar
+    get_public_site_url(), conectar la configuracion a FastAPI/Jinja2, mostrar el enlace solo a usuario
+    autenticado y con URL aprobada, href exacto a https://dev.tupensioninteligente.cl/ en DEV, sin transferir
+    cookies/tokens/credenciales/query params/fragments, fail-closed ante URL ausente o invalida, y nunca
+    en login ni superficies publicas. Documentar: esquema fisico y matriz de privilegios, DEVELOPMENT_GUIDE
+    y H3_3_CRM_LITE_WEB_UX, forward/rollback/verificacion, dejando explicito que la migracion 007 NO se
+    ha aplicado en AWS RDS DEV al cierre de la etapa de desarrollo, y que H3.3.2 permanece cerrada (esta
+    tarea corrige regresiones detectadas en su smoke, no reabre ni modifica su evidencia).'
+  source:
+    type: story
+    ref: 'Known issues de H3.3.2: evidence/H3.3.2/deployment/verification-02.json (known_issues), evidence/H3.3.2/approvals/resolution-02.json;
+      decision de arquitectura y clasificacion change_class D aprobada por el humano 2026-09-16.'
+  change_class: D
+  deploy_required: true
+  requires_human_acceptance: true
+  acceptance_criteria:
+  - id: AC-1
+    description: La vista de solo lectura sobre tpi.auditoria (migracion 007) proyecta unicamente eventos
+      con accion=asignacion_lead y tabla_afectada=tpi.asignaciones, exponiendo solo id_auditoria, id_lead,
+      fecha_hora, actor_subject, id_asesor, estado_anterior, estado_nuevo (sin JSON crudo, id_persona,
+      id_usuario, ip_origen ni otros eventos). id_asesor se valida con CASE y una expresion regular canonica
+      de UUID case-insensitive antes del cast; un id_asesor no-UUID en el detalle JSON historico proyecta
+      NULL en esa fila sin lanzar excepcion ni inutilizar la vista, cubierto por una prueba especifica
+      con detalle JSON invalido/malformado.
+    verification: automated
+  - id: AC-2
+    description: El repositorio expone una consulta parametrizada por id_lead que lee unicamente la vista
+      (union con tpi.asesores para el nombre del asesor), con orden estable fecha_hora DESC, id_auditoria
+      DESC; ninguna ruta de la aplicacion lee tpi.auditoria directamente; sin estado paralelo y sin cambios
+      en la transaccion que escribe asignacion y auditoria.
+    verification: automated
+  - id: AC-3
+    description: La ficha de lead muestra una unica linea de tiempo cronologica que fusiona notas humanas
+      existentes con eventos automaticos de asignacion (fecha America/Santiago, actor, asesor, estado_anterior->estado_nuevo,
+      badge Automatico, sin edicion/eliminacion), con estado vacio coherente cuando no hay datos, sin
+      regresion en las notas existentes ni en PII masking/RBAC/asignacion unica activa.
+    verification: both
+  - id: AC-4
+    description: '"Volver al sitio" reutiliza get_public_site_url(), se muestra solo a usuario autenticado
+      con URL aprobada (href exacto a https://dev.tupensioninteligente.cl/ en DEV, sin cookies/tokens/credenciales/query/fragments),
+      es fail-closed ante URL ausente o invalida, y no aparece en login ni superficies publicas.'
+    verification: both
+  - id: AC-5
+    description: El migration candidate (commit SHA exacto de main, ruta y SHA-256 exactos del forward
+      007, ruta y SHA-256 exactos del rollback 007, SQL ya revisado por el Reviewer independiente, preflight
+      DB y evidencia del estado anterior) cuenta con aprobacion humana explicita para aplicar exactamente
+      esos bytes antes de tocar AWS RDS DEV; la migracion se aplica una sola vez; esta aprobacion es especifica
+      del migration candidate y nunca se sustituye por la aprobacion del application candidate; ningun
+      fast path del Harness ejecuta la migracion (change_class D fuerza BLOCKED_HUMAN tras el merge).
+    verification: human
+  - id: AC-6
+    description: Postflight de privilegios tras aplicar la migracion confirma que PUBLIC no obtiene privilegios
+      sobre la vista, que unicamente tpi_app recibe SELECT sobre la vista, y que tpi_app continua sin
+      SELECT/UPDATE/DELETE directo sobre tpi.auditoria (sin cambios respecto al contrato vigente en 006).
+    verification: human
+  - id: AC-7
+    description: El application candidate solo se prepara (resolucion humana BLOCKED_HUMAN -> PREPARING_DEPLOYMENT)
+      despues de que la migracion 007 quedo aplicada y su postflight de esquema y privilegios (AC-6) fue
+      verificado; el pipeline PREPARING_DEPLOYMENT -> CANDIDATE_REVIEW -> WAITING_HUMAN_APPROVAL -> DEPLOYING
+      corresponde unicamente al codigo de aplicacion, con su propia aprobacion humana en WAITING_HUMAN_APPROVAL,
+      independiente de la aprobacion del migration candidate; si la migracion o su postflight fallan,
+      el Harness permanece en BLOCKED_HUMAN y no se prepara ni se despliega el application candidate.
+    verification: human
+  - id: AC-8
+    description: Smoke funcional en AWS DEV confirma que la asignacion del smoke humano de H3.3.2 se proyecta
+      automaticamente en la ficha sin backfill, y que la linea de tiempo y "Volver al sitio" se comportan
+      segun AC-3/AC-4 en el entorno real.
+    verification: human
+  - id: AC-9
+    description: El rollback de la vista (REVOKE SELECT, DROP VIEW) esta probado o validado en un entorno
+      de integracion antes de aplicarse en DEV; si la aplicacion falla despues del despliegue, no se elimina
+      automaticamente la vista ni evidencia asociada; cualquier rollback se evalua y clasifica conforme
+      al Harness (aws-failure-analysis, rollback_authorization) antes de ejecutarse.
+    verification: automated
+  constraints:
+  - 'change_class D: la migracion 007 y su aplicacion en AWS DEV no siguen ningun fast path; tras el merge
+    la transicion obligatoria es merged_non_fast_path hacia BLOCKED_HUMAN, sin excepcion.'
+  - En la etapa de desarrollo y revision de esta tarea no se aplica la migracion en AWS RDS DEV; su aplicacion
+    queda condicionada a la aprobacion humana explicita del migration candidate (AC-5) y ocurre en una
+    etapa posterior gestionada por Human Gate.
+  - No modificar AWS (EB, ECR, S3, CodePipeline) fuera de lo explicitamente gestionado por el Harness
+    en las etapas correspondientes.
+  - No modificar Secrets Manager.
+  - No reiniciar ni actualizar Elastic Beanstalk hasta que corresponda la etapa de despliegue con Human
+    Gate aprobado.
+  - No crear Application Versions hasta que corresponda la etapa de despliegue con Human Gate aprobado.
+  - No desplegar la aplicacion antes de que la vista exista en DEV y su contrato haya sido verificado
+    (AC-6, AC-7).
+  - Si la migracion 007 o su postflight de esquema y privilegios fallan, el Harness permanece en BLOCKED_HUMAN;
+    no se prepara ni se despliega el application candidate.
+  - Si la aplicacion falla despues del despliegue, no eliminar automaticamente la vista ni evidencia;
+    evaluar rollback conforme al Harness (aws-failure-analysis, rollback_authorization), nunca de forma
+    automatica ni por eliminacion directa.
+  - No leer AUTH_USERS_JSON ni volcar usuarios/secretos en logs, tests, evidencia o salida.
+  - No cerrar la tarea sin validacion y aprobacion posteriores (Reviewer independiente + gates del Harness
+    en cada etapa).
+  - No duplicar estado_anterior/estado_nuevo en tpi.asignaciones; el read model vive exclusivamente en
+    la vista de la migracion 007.
+  - La vista es propiedad del rol de migracion/administracion ya establecido; no crear un rol nuevo.
+  - PUBLIC no obtiene ningun privilegio sobre la vista (REVOKE ALL ... FROM PUBLIC obligatorio).
+  - Unicamente tpi_app recibe SELECT sobre la vista; ningun otro rol de aplicacion.
+  - tpi_app continua sin SELECT/UPDATE/DELETE directo sobre tpi.auditoria; la migracion 007 no amplia
+    esos privilegios.
+  - El rollback de la vista (REVOKE SELECT, DROP VIEW) debe estar probado o validado en integracion antes
+    de la aplicacion en DEV.
+  - No reejecutar migraciones 005/006.
+  - Mantener intacta la transaccion actual que escribe asignacion y auditoria.
+  - Nunca consultar ni registrar password_hash.
+  - 'No trabajar sobre una rama obsoleta ni hacer cherry-pick ciego: baseline = origin/main en fec33e7951f862c95b2436b09b969e5ef1915769
+    (HEAD de origin/main verificado en esta sesion).'
+  - No asumir el siguiente numero de migracion sin inspeccionar el historial completo (007 confirmado
+    libre en toda la historia git, no solo en el arbol actual).
+  - No reinterpretar ni modificar la evidencia cerrada de H3.3.2; los known issues se citan como origen,
+    no se reabren.
+  - 'id_asesor es UUID: la validacion antes del cast usa CASE con una expresion regular canonica de UUID
+    case-insensitive; un valor no-UUID proyecta NULL sin inutilizar la vista; no se usa la alternativa
+    de JOIN defensivo con id_asesor como texto (estrategia unica).'
+  - El migration candidate (commit SHA de main + forward 007 con su SHA-256 + rollback 007 con su SHA-256)
+    y el application candidate (PREPARING_DEPLOYMENT / CANDIDATE_REVIEW / WAITING_HUMAN_APPROVAL / DEPLOYING)
+    son artefactos y aprobaciones humanas distintos; la aprobacion de uno nunca sustituye ni se usa retroactivamente
+    como aprobacion del otro.
+  - 'Secuencia obligatoria: (1) desarrollo y pruebas; (2) revision independiente del Reviewer; (3) merge
+    a main; (4) merged_non_fast_path hacia BLOCKED_HUMAN; (5) congelar el migration candidate desde el
+    SHA exacto de main; (6) preflight DB y evidencia del estado anterior; (7) aprobacion humana del migration
+    candidate; (8) aplicar la migracion una sola vez; (9) postflight de esquema y privilegios; (10) resolver
+    a PREPARING_DEPLOYMENT; (11) preparar y revisar el application candidate; (12) aprobacion humana del
+    application candidate; (13) deploy version-only; (14) smoke funcional.'
+  dependencies:
+  - H3.3.2
+  risk:
+    level: high
+    notes: 'Cambio de esquema RDS (trusted view sobre tpi.auditoria) con grants nuevos hacia tpi_app y
+      cambios de UI (linea de tiempo, enlace de salida). Change_class D: sin fast path de deploy/migracion;
+      requiere dos aprobaciones humanas explicitas y no intercambiables: la del migration candidate (commit
+      SHA de main + forward/rollback 007 con sus SHA-256) antes de aplicar la migracion en AWS RDS DEV,
+      y la del application candidate en WAITING_HUMAN_APPROVAL antes del deploy version-only del codigo.
+      Riesgo principal: privilegios mal acotados sobre la vista o sobre tpi.auditoria, una fila historica
+      con id_asesor no-UUID que inutilice la vista si la validacion CASE/regex no se implementa correctamente,
+      y confundir la aprobacion del migration candidate con la del application candidate (o viceversa).'
+  status: closed
+closure:
+  closed_at: '2026-09-17T13:46:54Z'
+  final_state: DONE
+  evidence_dir: evidence/H3.3.3
+  release:
+    release_sha: c5e738c21ba202d9c664652412e6820628b18e3c
+    pr_number: 54
+    application_version: h3-3-3-historial-web-ux-c5e738c-domainlocked-r1
+    bundle_sha256: 6b6450b53df7e54a1d80ab637819d2f7dbc059e9435cd59221b549cfda949695
+    lkg: h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1
+    deployment: success
+    deployed_commit: c5e738c21ba202d9c664652412e6820628b18e3c
+    verification: PASS
+  rework_rounds: 0
