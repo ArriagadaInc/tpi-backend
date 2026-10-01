@@ -22,6 +22,10 @@ CANDIDATE_REVIEW: revision automatica del release candidate real antes del Human
 - `candidate-*.json`, `merge-*.json` y `review-*.json` aprobada presentes; `git fetch origin main`.
 
 ## 5. Comandos y herramientas
+- Usar los comandos AWS de esta seccion como plantillas exactas: sustituir los placeholders sin agregar opciones.
+- En `ecr describe-image-scan-findings` NO agregar `--max-results`, opciones de paginacion ni otras opciones ausentes de la plantilla. No optimizar la consulta por iniciativa propia.
+- Antes de cada llamada, cotejar servicio, operacion y opciones con la allowlist vigente. No ejecutar comandos de prueba para descubrir permisos.
+- Si una plantilla requiere una opcion no autorizada, informar la incompatibilidad antes de invocarla.
 - `git rev-parse <release_sha>^{tree}` == `reviewed_tree` de la revision.
 - `gh run view <publish_run_id> --json conclusion,headSha`.
 - Reconstruccion: `python -c` con `build_domain_locked_bundle(template=deployment/aws/docker-compose.domainlocked.yml, ...)`
