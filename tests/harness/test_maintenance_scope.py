@@ -887,7 +887,9 @@ def test_scope_commands_require_a_terminal(repo):
 
 
 # --- rutas MSYS (/c/...) en Windows ---------------------------------------------------------------
-windows_only = pytest.mark.skipif(os.name != "nt", reason="MSYS /c/... solo se convierte en Windows")
+windows_only = pytest.mark.skipif(
+    os.name != "nt", reason="MSYS /c/... solo se convierte en Windows"
+)
 
 
 def _msys(path: Path) -> str:
