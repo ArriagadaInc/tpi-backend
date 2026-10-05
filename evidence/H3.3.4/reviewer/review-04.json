@@ -1,0 +1,329 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "H3.3.4",
+  "created_at": "2026-09-20T15:09:37Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609201500-reviewer-r3-close",
+  "reviewed_sha": "1f4a1d963d6c9da2c1114cc6e9c24d24ebc0f314",
+  "reviewed_tree": "bf18968fad3d9555d29b0262b4e1eafe80e4ffce",
+  "pr_number": 55,
+  "pr_url": "https://github.com/ArriagadaInc/tpi-backend/pull/55",
+  "rework_round": 3,
+  "result": "FAIL",
+  "decision": "REJECTED",
+  "cause": "code",
+  "ci": {
+    "run_id": 35517138583,
+    "sha": "1f4a1d963d6c9da2c1114cc6e9c24d24ebc0f314",
+    "conclusion": "success",
+    "jobs": "5/5 success: Release Tooling Validation, Lint & Format, Tests, Docker Build, Security Audit",
+    "tests": "751 passed, 7 warnings in 76.99s; 0 skipped",
+    "coverage": "88.91% (>=85, TOTAL 4339 stmts / 481 miss)",
+    "pip_audit": "No known vulnerabilities found",
+    "bandit": "No issues identified. Total lines of code: 8829",
+    "note": "Verificado directamente con gh run view 35517138583 (headSha exacto 1f4a1d9, event=pull_request). Las 4 pruebas de tests/integration/test_executive_dashboard_per_advisor.py y las 32 del gate ejecutaron PASSED contra postgres real en CI. CI verde NO es suficiente: los hallazgos son defectos que el propio gate no detecta."
+  },
+  "references": {
+    "previous_reviews": [
+      "evidence/H3.3.4/reviewer/review-01.json",
+      "evidence/H3.3.4/reviewer/review-02.json",
+      "evidence/H3.3.4/reviewer/review-03.json"
+    ],
+    "developer_evidence": "evidence/H3.3.4/developer/developer-04.json",
+    "remediated_review": "evidence/H3.3.4/reviewer/review-03.json",
+    "matrix": "docs/H3_3_4_REQUIREMENTS_MATRIX.md",
+    "gate": "tests/unit/test_h3_3_4_requirements_matrix_gate.py",
+    "per_advisor_tests": "tests/integration/test_executive_dashboard_per_advisor.py"
+  },
+  "scope": {
+    "commits": [
+      "e1b0320 test(H3.3.4): reject malformed matrix test references",
+      "35c5ae9 test(H3.3.4): cover unknown advisor-state matrix cases",
+      "1f4a1d9 docs(H3.3.4): align final traceability references"
+    ],
+    "diff_93fd96a_1f4a1d9": "3 archivos, +547/-167: docs/H3_3_4_REQUIREMENTS_MATRIX.md, tests/integration/test_executive_dashboard_per_advisor.py, tests/unit/test_h3_3_4_requirements_matrix_gate.py",
+    "cero_app": true,
+    "cero_migraciones": true,
+    "cero_requirements": true,
+    "cero_rbac_pii": true,
+    "cero_cambios_metricos": true,
+    "cero_configuracion_infra": true,
+    "gitpython": "3.1.60 en requirements/runtime.lock; sin cambios en esta ronda (diff 93fd96a..1f4a1d9 no toca requirements/)",
+    "cero_aws_rds": "Ninguna operacion AWS/RDS ejecutada ni requerida. Migracion 008 sigue solo como codigo, no aplicada en DEV."
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "major",
+      "status": "OPEN MAJOR",
+      "file": "tests/unit/test_h3_3_4_requirements_matrix_gate.py",
+      "summary": "La gramatica canonica hace OPCIONAL el sufijo ::test_funcion (_CANONICAL_REF_RE: 'tests/(unit|integration)/test_X.py(?:::test_Y)?'). Para una referencia de archivo completo, _validate_canonical_ref solo comprueba path.exists(): no ejecuta validacion AST ni exige una sola funcion pytest colectable. Una fila con AC automatizado queda acreditada por un archivo sin funcion verificable.",
+      "reproduction": "Ataques del Reviewer ejecutados contra el validador real _validate() del propio gate, sobre copias mutadas de la matriz: (A) REQ-A-09 (AC-2, AC-3; migracion 008 y vista sanitizada) con su unica prueba sustituida por 'tests/unit/test_backoffice_public_site_link.py' (archivo real, semanticamente no relacionado, sin ::funcion) -> ACEPTADO. (A2) REQ-A-01 (AC-1, camino transaccional) con la misma sustitucion -> ACEPTADO. (B) REQ-B-13 conservando los archivos correctos pero eliminando ::test_funcion de sus 3 referencias -> ACEPTADO. (C) referencia valida + archivo real irrelevante sin ::funcion -> ACEPTADO. (D1) REQ-A-09 -> archivo de prueba VACIO (0 funciones colectables) creado al vuelo -> ACEPTADO. (D2) REQ-A-09 -> archivo con solo helpers y metodos de clase Test* (0 funciones colectables de nivel modulo) -> ACEPTADO.",
+      "impact": "El gate no distingue 'prueba existe' de 'archivo existe'. D1 demuestra que un archivo con cero pruebas colectables acredita una fila automatizada. No es hipotetico: la matriz ya contiene 19 referencias de archivo completo en 8 filas, y en 7 de ellas es la UNICA evidencia de prueba, incluyendo REQ-A-01 y REQ-A-02 (AC-1, update_lead_status transaccional), REQ-A-09 y REQ-A-10 (AC-2/AC-3/AC-8, migracion 008 y rollback), REQ-A-16, REQ-A-20, REQ-S-12 y TC-20.",
+      "exception_analysis": "No existe excepcion explicita, minima, justificada ni probada para la forma de archivo completo. La unica whitelist declarada (_NON_PYTEST_VERIFIED_REQS) cubre REQ-B-30 y REQ-S-13, que son filas SIN prueba. El docstring declara la forma de archivo como gramatica pero no la justifica ni la limita, y ninguna de las 22 pruebas adversariales la ataca.",
+      "required_action": "Para filas con AC automatizado, exigir referencia exacta 'tests/(unit|integration)/test_*.py::test_*' con validacion AST obligatoria. Si alguna fila necesita referencia de archivo completo, declararla como excepcion explicita, minima y justificada en una whitelist, y cubrirla con pruebas adversariales (incluido el caso de archivo sin funciones colectables)."
+    },
+    {
+      "id": "F11",
+      "severity": "major",
+      "status": "OPEN MAJOR",
+      "file": "docs/H3_3_4_REQUIREMENTS_MATRIX.md",
+      "summary": "Reduccion artificial de trazabilidad en AC-9. El commit 1f4a1d9 retiro REQ-A-01, REQ-A-02, REQ-A-03, REQ-A-18, REQ-A-19 y REQ-A-24 de la seccion 6 [AC-9], dejandola en solo REQ-A-16, REQ-A-20 y REQ-S-12. Las seis filas retiradas siguen declarando en su propia columna 'Smoke humano' el texto 'Si (AC-9)' o 'Smoke autenticado (AC-9)'.",
+      "reproduction": "Cruce independiente columna 'Smoke humano' (indice 6) contra la seccion 6: 27 contradicciones, de las cuales 6 corresponden exactamente a los REQ retirados de AC-9 en esta ronda. El gate no las detecta porque _section6_map solo se cruza contra la columna 'AC' (indice 3) y nunca contra la columna 'Smoke humano'.",
+      "impact": "El smoke humano en AWS DEV de Parte A deja de estar trazado en la seccion 6 para: auditoria de todo cambio general de estado (REQ-A-01), actor/fecha/estado anterior y nuevo (REQ-A-02), hora America/Santiago (REQ-A-03), badge Automatico (REQ-A-18), ausencia de edicion/eliminacion (REQ-A-19) y conservacion de asignaciones historicas 007 (REQ-A-24). La seccion 6 original coincidia exactamente con el conjunto de filas cuya columna Smoke declara AC-9, lo que indica que la seccion 6 era la representacion correcta y la columna AC la incompleta. La inconsistencia se resolvio en la direccion que pierde trazabilidad.",
+      "inconsistent_treatment": "El mismo patron existe en 21 filas de Parte B cuya columna Smoke declara '(AC-18)' sin figurar en la seccion 6 [AC-18] (REQ-B-01, B-02, B-05..B-09, B-11..B-21, B-23..B-25) y no fue corregido; ademas en AC-18 el cambio fue en direccion contraria (se AGREGO REQ-S-12). El criterio aplicado no es uniforme.",
+      "required_action": "Restituir en la seccion 6 [AC-9] los seis REQ retirados, o bien completar la columna AC de esas filas con AC-9, y extender el gate para cruzar tambien la columna 'Smoke humano' contra la seccion 6. No reducir el conjunto de origen de un AC humano para satisfacer un gate que solo lee la columna AC."
+    },
+    {
+      "id": "F9",
+      "severity": "minor",
+      "status": "CLOSED",
+      "file": "tests/integration/test_executive_dashboard_per_advisor.py",
+      "summary": "Corregido y verificado. test_casos_por_estado_y_asesor_exact_matrix_counts ahora cubre estado desconocido ('estado_desconocido_xyz') con conteo exacto por asesor, bucket 'Sin asesor' (celda (None, estado)), len(rows) == len(cells) (una fila por asesor x estado, sin fan-out), sum(cells.values()) == len(lead_ids) (cada lead exactamente una vez), asignacion inactiva+activa contada una sola vez, filtro por estado incluido el desconocido, expectativas manuales y llamada real a _REPO.get_casos_por_estado_y_asesor. TC-16 y TC-17 citan funciones reales con ruta completa y funcion exacta que verifican estados desconocidos y leads sin asesor. Las 4 pruebas ejecutaron PASSED contra PostgreSQL real en CI 35517138583 (skipped en local Windows por ausencia de PostgreSQL; CI es la autoridad).",
+      "required_action": "Ninguna. Mantener las assertions exactas y las citas de TC-16/TC-17."
+    },
+    {
+      "id": "F10",
+      "severity": "info",
+      "status": "INFO",
+      "summary": "Aclaracion correcta y factual. tests/security/ existe (9 archivos de prueba verificados en el worktree: test_app_image_supply_chain.py, test_codepipeline_safe_bootstrap.py, test_dev_domain_contract.py, test_eb_deployment_security.py, test_eb_preflight_security.py, test_notifications_security.py, test_public_api_security.py, test_security.py, test_simple_dev_auth_security.py). La matriz ya no afirma lo contrario. Queda fuera de la gramatica solo por la convencion de normalizar referencias a unit/integration, no por inexistencia. No se pierde cobertura de seguridad exigida. REQ-S-07/AC-7 permanece Human Gate.",
+      "required_action": "Ninguna. Informativo."
+    },
+    {
+      "id": "F7",
+      "severity": "info",
+      "status": "CLOSED",
+      "summary": "Permanece CLOSED. Pruebas de valores por asesor con assertions exactas (cartera total/activa, matriz estado x asesor, metricas operacionales) preservadas y reforzadas en esta ronda.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F8",
+      "severity": "info",
+      "status": "CLOSED",
+      "summary": "Permanece CLOSED. REQ-A-12 sigue distinguiendo existencia del indice (test_support_index_exists_and_is_used_for_state_history_query, pg_indexes) de aplicabilidad por EXPLAIN real (test_explain_state_history_uses_support_index). Atribucion a AC-3 preservada.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F2",
+      "severity": "minor",
+      "status": "ACCEPTED FOLLOW-UP",
+      "summary": "Sin cambios. EXPLAIN (ANALYZE, BUFFERS) real sin forzar enable_seqscan=off a volumen representativo sigue pendiente antes de DONE. Documentado en la matriz seccion 11.6 y en REQ-A-12.",
+      "required_action": "Ejecutar y documentar el EXPLAIN (ANALYZE, BUFFERS) real sin enable_seqscan=off a volumen representativo antes de DONE."
+    },
+    {
+      "id": "F3",
+      "severity": "minor",
+      "status": "ACCEPTED FOLLOW-UP",
+      "summary": "Documentado. Los 11 tests que requieren PostgreSQL estan enumerados en la seccion 13 de la matriz (9 de test_executive_dashboard_service.py + 2 de test_executive_dashboard_render.py). Todos verdes en CI Linux con servicio postgres.",
+      "required_action": "Ninguna en esta etapa; mantener la enumeracion actualizada."
+    },
+    {
+      "id": "F4",
+      "severity": "info",
+      "status": "PENDIENTE DEV",
+      "summary": "Validacion del setting de cutover automatizada; el valor efectivo de LEAD_STATE_HISTORY_CUTOVER en AWS DEV sigue pendiente de verificacion humana. Ninguna fecha inventada.",
+      "required_action": "Verificar el valor efectivo del cutover en AWS DEV en el checklist humano de la etapa Deployer/Verifying."
+    },
+    {
+      "id": "F5",
+      "severity": "info",
+      "status": "RISK ACCEPTED",
+      "summary": "Riesgo preservado sin declararse resuelto: transaccion REPEATABLE READ READ ONLY prolongada (~5-7 s por render) con efectos sobre pool, xmin y autovacuum.",
+      "required_action": "Ninguna. Riesgo aceptado y documentado, no declarado resuelto."
+    },
+    {
+      "id": "F6",
+      "severity": "info",
+      "status": "RISK ACCEPTED",
+      "summary": "Riesgo preservado: 5,28-6,80 s a 20.000 leads / 12 asesores, 18 consultas constantes sin N+1, parsing regexp sobre leads.comentarios como costo dominante. Clasificacion (A) no bloqueante.",
+      "required_action": "Ninguna. Riesgo preservado y documentado."
+    }
+  ],
+  "attacks_reproduced": {
+    "gate_suite": "32/32 PASSED localmente (python -m pytest tests/unit/test_h3_3_4_requirements_matrix_gate.py) y en CI 35517138583",
+    "independent_probes": "13 ataques del Reviewer ejecutados contra el validador real _validate() importado del gate",
+    "correctly_rejected": [
+      "integration/... junto a una valida -> referencia no canonica",
+      "unit/... junto a una valida -> referencia no canonica",
+      "./tests/... -> referencia no canonica",
+      "/tests/... -> referencia no canonica",
+      "tests/security/... -> referencia no canonica",
+      "tests/otro/... -> referencia no canonica",
+      "test_archivo.py sin prefijo -> referencia no canonica",
+      "::nombre desnudo -> referencia no canonica",
+      "ruta real + funcion inexistente -> funcion inexistente o no colectable",
+      "helper ::_make_lead -> referencia no canonica",
+      "nombre parcial de prueba existente -> funcion inexistente o no colectable",
+      "referencia fuera de code span -> referencia de prueba fuera de code span",
+      "invalida junto a dos validas -> referencia no canonica",
+      "patron exacto de la ronda 3 (quitar tests/) -> referencia no canonica",
+      "::TestClass::test_method -> referencia no canonica (clases/metodos no declarados en la gramatica)",
+      "archivo real + ::funcion solo en comentario/docstring/string -> funcion inexistente o no colectable",
+      "archivo inexistente sin ::funcion -> ruta de prueba inexistente",
+      "REQ-B-29 solo con el benchmark, sin prueba -> fila con AC automatizado sin referencia de prueba verificable",
+      "benchmark + token de prueba invalido en la misma celda -> referencia no canonica",
+      "ruta de app (app/services/*.py) como sustituto de prueba -> fila con AC automatizado sin referencia verificable",
+      "mutaciones REQ<->AC: quitar AC de una fila, agregar AC no presente en seccion 6, eliminar fila REQ, quitar REQ de seccion 6, sustituir ID manteniendo 67, duplicar fila, eliminar toda cobertura de un AC"
+    ],
+    "incorrectly_accepted": [
+      "A: fila automatizada con archivo real pero semanticamente no relacionado, sin ::funcion",
+      "A2: idem sobre REQ-A-01 (AC-1, camino transaccional)",
+      "B: archivos correctos con ::test_funcion eliminado",
+      "C: archivo real irrelevante junto a una referencia valida",
+      "D1: archivo de prueba VACIO (0 funciones colectables), sin ::funcion",
+      "D2: archivo con solo helpers y metodos de clase, sin ::funcion"
+    ]
+  },
+  "file_only_references": {
+    "total_refs_in_test_columns": 162,
+    "file_only_refs": 19,
+    "rows_whose_only_evidence_is_file_level": [
+      "REQ-A-01 (AC-1, AC-4) -> tests/integration/test_lead_state_history.py",
+      "REQ-A-02 (AC-1, AC-3, AC-4) -> tests/integration/test_lead_state_history.py",
+      "REQ-A-09 (AC-2, AC-3) -> tests/unit/test_h3_3_4_migration_scripts.py",
+      "REQ-A-10 (AC-2, AC-5, AC-6, AC-8) -> tests/unit/test_h3_3_4_migration_scripts.py",
+      "REQ-A-16 (AC-4, AC-9) -> tests/unit/test_h3_3_4_timeline_presentation.py; tests/unit/test_h3_3_3_timeline_presentation.py",
+      "REQ-A-20 (AC-4, AC-9) -> 3 archivos sin funcion",
+      "REQ-S-12 (AC-4..AC-10, AC-17, AC-18) -> 4 archivos sin funcion",
+      "TC-20 (AC-4, AC-9) -> 2 archivos sin funcion"
+    ],
+    "note": "Todos los archivos referenciados existen y hoy contienen funciones colectables (6, 6, 12, 7, 35, 5, 14, 5 y 10 respectivamente). El defecto no es el estado actual sino que el gate no lo verifica: vaciar cualquiera de esos archivos, o sustituirlo por otro archivo real irrelevante, sigue pasando el gate."
+  },
+  "benchmark_exclusion": {
+    "path": "scripts/benchmark_executive_dashboard.py",
+    "mechanism": "_is_test_like() lo ignora porque su basename no comienza con test_ y su ruta no coincide con el hint ^(\\.{0,2}/|/)?(tests|unit|integration)/. No es una whitelist de ruta exacta sino una heuristica general.",
+    "verified": "No permite ocultar tokens de prueba invalidos en la misma celda (ataque F2: benchmark + integration/test_ghost.py::test_ghost -> RECHAZADO). No sustituye la prueba automatizada requerida (ataque F1: celda solo con el benchmark -> RECHAZADO por 'fila con AC automatizado sin referencia de prueba verificable'). En la matriz real REQ-B-29 acompana el benchmark con 4 referencias validas a nivel de funcion.",
+    "residual": "La heuristica es mas amplia que la ruta factual: cualquier .py fuera de tests/unit|integration cuyo basename no empiece por test_ se ignora. No acredita cobertura por si solo, pero no es la excepcion minima y explicita que el protocolo pide."
+  },
+  "ast_validation": {
+    "utf_8_sig": "Correcto. _matrix_text() y _module_test_functions() usan encoding='utf-8-sig'. Verificado con un archivo de prueba con BOM: _module_test_functions devolvio {'test_bom_ok'} y la referencia fue aceptada.",
+    "collectable_only": "Solo ast.FunctionDef / ast.AsyncFunctionDef en tree.body (nivel modulo) con nombre que comienza por test_.",
+    "exact_name": "Si. Nombre parcial rechazado (ataque: ::test_single_lead sobre test_single_lead_metrics -> rechazado).",
+    "rejects_helpers": "Si (::_make_lead rechazado por gramatica).",
+    "rejects_comments_and_strings": "Si. Verificado con archivo cuyo unico 'test' esta en comentario, docstring y string.",
+    "rejects_partial_matches": "Si.",
+    "no_homonym_in_other_file": "Correcto: la validacion AST se hace sobre el archivo citado en la propia referencia.",
+    "no_classes_or_methods": "Correcto y declarado: ::TestClass::test_method rechazado por no canonico.",
+    "gap": "La validacion AST solo se ejecuta cuando la referencia incluye ::funcion. Ver F1."
+  },
+  "req_ac_consistency": {
+    "req_ids": "67 filas unicas y completas: REQ-A-01..24, REQ-B-01..30, REQ-S-01..13. Verificado.",
+    "tc_ids": "TC-1..TC-21 completos y unicos.",
+    "bidirectional_section6_vs_ac_column": "Consistente: seccion 6 [AC] == conjunto de filas que declaran ese AC en la columna AC, en ambos sentidos, para AC-1..AC-18. El gate detecta correctamente eliminacion, duplicacion, sustitucion manteniendo el total 67, y AC agregado o eliminado de una sola representacion.",
+    "gap": "El gate NO cruza la columna 'Smoke humano' contra la seccion 6. 27 contradicciones vivas. Ver F11."
+  },
+  "semantic_analysis_section6": [
+    {
+      "change": "AC-3: retiro REQ-A-10",
+      "req_semantics": "REQ-A-10 = migracion 008, forward/rollback versionados del read model. Su columna AC declara AC-2, AC-5, AC-6, AC-8.",
+      "ac_semantics": "AC-3 = la vista tpi.v_historial_estado_lead proyecta solo lo necesario, REVOKE ALL FROM PUBLIC, SELECT solo a tpi_app, ninguna ruta hace SELECT directo sobre tpi.auditoria, indices justificados por EXPLAIN real.",
+      "correct_decision": "La fila estaba bien y la seccion 6 estaba mal. Cambio CORRECTO.",
+      "justification": "AC-3 no exige la existencia ni el versionado del script de migracion; eso es AC-2/AC-8. Los cuatro pilares de AC-3 siguen cubiertos: vista sanitizada REQ-A-11, minimo privilegio REQ-A-13, PUBLIC sin permisos REQ-A-14, acceso indirecto REQ-A-15, indice/EXPLAIN REQ-A-12, mas REQ-A-02 y REQ-A-09. Cero reduccion de cobertura."
+    },
+    {
+      "change": "AC-9: retiro REQ-A-01, REQ-A-02, REQ-A-03, REQ-A-18, REQ-A-19, REQ-A-24",
+      "req_semantics": "Las seis filas declaran AC-1/AC-3/AC-4 en su columna AC, pero su columna 'Smoke humano' declara explicitamente 'Si (AC-9)' o 'Smoke autenticado (AC-9)'.",
+      "ac_semantics": "AC-9 = smoke humano en AWS DEV que confirma que la Parte A (linea de tiempo unificada con cambios generales de estado) funciona en el entorno real segun AC-4, sin regresion sobre H3.3.3.",
+      "correct_decision": "La seccion 6 estaba bien y la columna AC era la representacion incompleta. Cambio INCORRECTO.",
+      "justification": "La seccion 6 original coincidia exactamente con el conjunto de filas cuya columna Smoke declara AC-9. Al borrarlas de la seccion 6 se resolvio la inconsistencia en la direccion que pierde trazabilidad y se creo una contradiccion viva entre la seccion 6 y la columna Smoke de esas mismas seis filas. AC-9 ya no cubre en la seccion 6 el smoke de auditoria de cambios de estado, actor/fecha/estados, hora America/Santiago, badge Automatico, ausencia de edicion/eliminacion ni conservacion de asignaciones 007. Reduccion artificial de trazabilidad: MAJOR."
+    },
+    {
+      "change": "AC-18: agrego REQ-S-12",
+      "req_semantics": "REQ-S-12 = paridad completa H3.3/H3.3.3. Su columna AC declara 'AC-4..AC-10, AC-17, AC-18', es decir, si declara AC-18.",
+      "ac_semantics": "AC-18 = pruebas automatizadas para cero datos, limites temporales, filtros combinados, estados desconocidos, leads sin asesor y fan-out; rendimiento con volumen representativo; smoke humano completo en AWS DEV incluido el 403.",
+      "correct_decision": "La fila estaba bien y la seccion 6 estaba mal. Cambio CORRECTO (aumenta trazabilidad).",
+      "justification": "AC-18 conserva el smoke humano completo de Parte B via REQ-B-30 y las pruebas minimas via REQ-B-03, REQ-B-10, REQ-B-29 y REQ-S-13. Observacion: 21 filas de Parte B cuya columna Smoke declara '(AC-18)' siguen fuera de la seccion 6 [AC-18] sin correccion, lo que evidencia que el criterio aplicado entre AC-9 y AC-18 no es uniforme."
+    }
+  ],
+  "checks": [
+    {
+      "name": "session_independence",
+      "result": "PASS",
+      "note": "runtime=claude session=claude-202609201500-reviewer-r3-close; distinta de claude-202609181245-reviewer, claude-202609191015-reviewer-r2, claude-202609191905-reviewer-r3 y de todas las sesiones Developer (deepseek-*)."
+    },
+    {
+      "name": "init_and_start_review",
+      "result": "PASS",
+      "note": "init.ps1 --runtime claude PASS: READY_FOR_REVIEW, H3.3.4, rol reviewer, rework_round 3/3. start_review -> REVIEWING."
+    },
+    {
+      "name": "exact_sha_reviewed",
+      "result": "PASS",
+      "note": "gh pr view 55 OPEN MERGEABLE headRefOid=1f4a1d963d6c9da2c1114cc6e9c24d24ebc0f314. Worktree read-only .harness-worktrees/H3.3.4-reviewer-1f4a1d9 via worktree.py; reviewed_tree bf18968fad3d9555d29b0262b4e1eafe80e4ffce."
+    },
+    {
+      "name": "ci_green_on_exact_sha",
+      "result": "PASS",
+      "note": "gh run view 35517138583: headSha 1f4a1d9, conclusion success, 5/5 jobs (Release Tooling Validation, Lint & Format, Tests, Docker Build, Security Audit). 751 passed, 0 skipped, cobertura 88.91%. pip-audit 'No known vulnerabilities found'; bandit 'No issues identified.'"
+    },
+    {
+      "name": "scope_limited_to_three_files",
+      "result": "PASS",
+      "note": "diff 93fd96a..1f4a1d9 = 3 archivos (+547/-167): gate de matriz, pruebas por asesor, matriz de trazabilidad. Cero app/**, cero migraciones, cero requirements/**, cero RBAC/PII, cero cambios metricos, cero environments/deployment/.github. GitPython==3.1.60 sin cambios en esta ronda."
+    },
+    {
+      "name": "gate_suite_local",
+      "result": "PASS",
+      "note": "32/32 PASSED (python -m pytest tests/unit/test_h3_3_4_requirements_matrix_gate.py)."
+    },
+    {
+      "name": "validate_repo",
+      "result": "PASS",
+      "note": "python scripts/harness/validate_repo.py -> VALIDATE: PASS"
+    },
+    {
+      "name": "per_advisor_tests_f9",
+      "result": "PASS",
+      "note": "Local Windows: 4 skipped por ausencia de PostgreSQL. CI Linux (autoridad): las 4 funciones PASSED contra postgres real en el run 35517138583."
+    },
+    {
+      "name": "independent_adversarial_attacks",
+      "result": "FAIL",
+      "note": "19 ataques ejecutados contra el validador real _validate(): 13 correctamente rechazados, 6 ACEPTADOS indebidamente (archivo real no relacionado sin ::funcion sobre REQ-A-09 y REQ-A-01; ::test_funcion eliminado; archivo irrelevante junto a una valida; archivo VACIO con 0 funciones colectables; archivo solo con helpers y metodos de clase). Ver F1."
+    },
+    {
+      "name": "smoke_column_vs_section6",
+      "result": "FAIL",
+      "note": "27 contradicciones entre la columna 'Smoke humano' y la seccion 6; 6 de ellas introducidas en esta ronda al retirar REQ-A-01/02/03/18/19/24 de la seccion 6 [AC-9]. El gate no cruza esa columna. Ver F11."
+    },
+    {
+      "name": "no_aws_no_rds_no_mutation",
+      "result": "PASS",
+      "note": "Ninguna operacion AWS/RDS, sin approve.py, sin merge, sin despliegue, sin migracion, sin cambios de codigo/docs/tests. Evidencias review-01/02/03 no sobrescritas."
+    }
+  ],
+  "classification": {
+    "F1": "OPEN MAJOR",
+    "F2": "ACCEPTED FOLLOW-UP",
+    "F3": "ACCEPTED FOLLOW-UP",
+    "F4": "PENDIENTE DEV",
+    "F5": "RISK ACCEPTED",
+    "F6": "RISK ACCEPTED",
+    "F7": "CLOSED",
+    "F8": "CLOSED",
+    "F9": "CLOSED",
+    "F10": "INFO",
+    "F11": "OPEN MAJOR"
+  },
+  "approval_requirements": "Para aprobar debian estar cerrados F1, F7, F8 y F9. F7, F8 y F9 estan CLOSED. F1 permanece OPEN MAJOR y se suma F11 OPEN MAJOR. No se aprueba. La ronda 3/3 no obliga a aprobar.",
+  "human_pending": [
+    "AC-5: aprobacion humana del migration candidate (SQL 008 forward/rollback, preflight DB)",
+    "AC-6: postflight de privilegios tras aplicar la 008 en AWS DEV",
+    "AC-7: aprobacion humana independiente del application candidate",
+    "AC-9: smoke humano de Parte A en AWS DEV",
+    "AC-18: smoke humano completo de Parte B en AWS DEV incluido el 403 para roles no autorizados",
+    "F2: EXPLAIN (ANALYZE, BUFFERS) real sin forzar antes de DONE",
+    "F4: valor efectivo del cutover en AWS DEV"
+  ],
+  "risks": [
+    "F1 deja el gate de trazabilidad acreditando filas automatizadas con archivos sin prueba verificable, incluidas las filas del camino transaccional de Parte A y de la migracion 008.",
+    "F11 reduce la trazabilidad declarada del smoke humano de Parte A justo antes de las etapas donde ese smoke es la unica verificacion (AC-9)."
+  ],
+  "aws": {
+    "operations": "ninguna",
+    "rds": "ninguna",
+    "note": "Revision exclusivamente sobre Git, filesystem y CI. Migracion 008 no aplicada. Sin approve.py, merge, despliegue ni cambios de codigo/docs/tests."
+  }
+}

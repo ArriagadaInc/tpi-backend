@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "H3.3.3",
+  "created_at": "2026-09-17T03:48:50Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609171100-reviewer",
+  "reviewed_sha": "815971660b8c24d684eb79d229103b85fe4bedd0",
+  "reviewed_tree": "5744c0914da2a5da6063c6a7cd5e9d70d65e033e",
+  "release_sha": "c5e738c21ba202d9c664652412e6820628b18e3c",
+  "release_tree": "5744c0914da2a5da6063c6a7cd5e9d70d65e033e",
+  "pr_number": 54,
+  "decision": "APPROVED",
+  "cause": null,
+  "checks": [
+    {
+      "name": "independent_reviewer_session",
+      "result": "PASS",
+      "note": "session_id=claude-202609171100-reviewer, runtime=claude. Distinto de developer (deepseek-202609161614-developer), reviewer de codigo (claude-202609161645-reviewer), deployer merge (claude-202609162020-deployer) y deployer candidate (claude-202609170324-deployer). Ninguna evidencia previa de esta sesion existia antes de esta revision."
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "git fetch origin main; git rev-parse origin/main == c5e738c21ba202d9c664652412e6820628b18e3c (HEAD exacto de origin/main). git rev-list origin/main..c5e738c vacio confirma ancestria. gh pr view 54 --json headRefOid,mergeCommit,state confirma headRefOid=815971660b8c24d684eb79d229103b85fe4bedd0 (reviewed_sha), mergeCommit.oid=c5e738c21ba202d9c664652412e6820628b18e3c (release_sha), state=MERGED, baseRefName=main."
+    },
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse c5e738c21ba202d9c664652412e6820628b18e3c^{tree} == 5744c0914da2a5da6063c6a7cd5e9d70d65e033e, identico a reviewed_tree de review-01.json y a release_tree de merge-01.json. git show -s --format=%H %P %T confirma padre fec33e7951f862c95b2436b09b969e5ef1915769 == main_parent_sha declarado."
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "gh run view 35178174524 --json headSha,conclusion,jobs: headSha=c5e738c21ba202d9c664652412e6820628b18e3c (SHA exacto, no otro), conclusion=success, 6/6 jobs conclusion=success (Authorize source revision, Tests, Security Audit, Docker Build, Lint & Format, Publish immutable images and release bundle). Ningun job pending/skipped/neutral ni de otro SHA."
+    },
+    {
+      "name": "ecr_images_active_exact_tag_digest",
+      "result": "PASS",
+      "note": "aws_guard.py ecr describe-images: tpi-dev-app imageDigest=sha256:9333994ef8a1bae1b4bff1b95bdaba24b3a4004b9f10ba6524f0ca326948e523 -> imageTags=['c5e738c21ba202d9c664652412e6820628b18e3c'], imageStatus=ACTIVE. tpi-dev-caddy imageDigest=sha256:27e8c5dc8a1facb85eae506383a3c380a838b61c96d7ec2dd9c63acce9384ee4 -> imageTags=['c5e738c21ba202d9c664652412e6820628b18e3c'], imageStatus=ACTIVE. Coincide exactamente con candidate-01.json.images y con el release SHA declarado."
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "BLOQUEO DE HERRAMIENTA: aws_guard.py ecr describe-image-scan-findings solo permite --repository-name/--image-ids en su allowlist (v_ecr._only_options), pero la AWS CLI real exige --image-id (singular) para esa operacion; --image-ids es rechazado por la CLI y --image-id es rechazado por el guard (DENIED, opcion no permitida). Verificacion directa vía el wrapper autorizado es imposible con la version actual de aws_guard.py (defecto de la allowlist, no AccessDenied de AWS). Reportado como hallazgo de herramienta (ver findings), no se intento ningun rodeo (sin aws CLI directo, sin boto3). Verificacion equivalente obtenida del log crudo autoritativo del job CI exacto: gh run view --job 105064825956 --log del run 35178174524 (headSha=c5e738c21ba202d9c664652412e6820628b18e3c) muestra el paso 'Fail closed on high or critical ECR findings' ejecutando aws ecr describe-image-scan-findings --image-id imageTag=c5e738c21ba202d9c664652412e6820628b18e3c contra ambos repositorios e imprimiendo textualmente 'tpi-dev-app: CRITICAL=0 HIGH=0' y 'tpi-dev-caddy: CRITICAL=0 HIGH=0', con el job en success (fail-closed: el job aborta si CRITICAL!=0 o HIGH!=0). Confirma critical=0 y high=0 para ambos digests declarados, en el SHA/tag exacto."
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "Reconstruccion independiente en directorio temporal fuera del repo: git show c5e738c21ba202d9c664652412e6820628b18e3c:deployment/aws/docker-compose.domainlocked.yml y :deployment/build_eb_ecr_bundle.py extraidos del commit exacto (no working tree). Se invoco build_domain_locked_bundle(template=docker-compose.domainlocked.yml, app_image='821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-app@sha256:9333994ef8a1bae1b4bff1b95bdaba24b3a4004b9f10ba6524f0ca326948e523', caddy_image='821656895812.dkr.ecr.us-east-2.amazonaws.com/tpi-dev-caddy@sha256:27e8c5dc8a1facb85eae506383a3c380a838b61c96d7ec2dd9c63acce9384ee4', runtime_git_sha='c5e738c21ba202d9c664652412e6820628b18e3c'). sha256 del bundle reconstruido = 6b6450b53df7e54a1d80ab637819d2f7dbc059e9435cd59221b549cfda949695, identico byte a byte (por SHA-256) al bundle.sha256 declarado en candidate-01.json y al valor citado en la tarea."
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "Inspeccion del ZIP reconstruido: namelist()==['docker-compose.yml'] (unica entrada, sin .ebextensions ni Dockerrun.aws.json, sin option-settings ni cambios de infraestructura). Ambas referencias de imagen son por digest inmutable (@sha256:...), ninguna por tag mutable. Dominios: https://dev.tupensioninteligente.cl (public), https://backoffice.dev.tupensioninteligente.cl (backoffice) -- dominios DEV aprobados; build_domain_locked_bundle valida y falla si 'genialabs.cl' aparece en el compose (no aparece). runtime_git_sha en el manifiesto = c5e738c21ba202d9c664652412e6820628b18e3c, correcto. Variables sensibles (DATABASE_PASSWORD, AUTH_USERS_JSON, WEB_SESSION_SECRET, API_IDEMPOTENCY_HMAC_SECRET) aparecen unicamente como referencias ${VAR:?...} resueltas por el entorno EB en runtime, ningun valor de secreto esta embebido en el bundle. api/backoffice sin 'ports:' publicados; caddy es el unico punto de entrada publico (80/443)."
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "aws_guard.py s3api head-object --bucket elasticbeanstalk-us-east-2-821656895812 --key tpi-backoffice/dev-releases/h3-3-3-historial-web-ux-c5e738c-domainlocked-r1/6b6450b53df7e54a1d80ab637819d2f7dbc059e9435cd59221b549cfda949695.zip --checksum-mode ENABLED -> ChecksumSHA256=a2RQtT335UodgKtjeBnS99vAWelDXNWSIbVJz9qUlpU=, identico a candidate-01.json.s3.checksum_sha256. Bucket/key exactos, coinciden con application_version.SourceBundle."
+    },
+    {
+      "name": "application_version_exists_once_correct_source",
+      "result": "PASS",
+      "note": "aws_guard.py elasticbeanstalk describe-application-versions --version-labels h3-3-3-historial-web-ux-c5e738c-domainlocked-r1: una sola entrada, SourceBundle.S3Bucket/S3Key identicos al bundle staged, Status=UNPROCESSED (aceptable antes del cutover), DateCreated==DateUpdated (nunca actualizada). No es la version actualmente desplegada: describe-environments confirma VersionLabel del environment = h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1 (LKG), no el candidato. No se ejecuto ni se observo ningun UpdateEnvironment hacia el candidato en el audit log de esta tarea."
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "Cadena verificada de extremo a extremo por esta sesion: commit c5e738c (origin/main HEAD) -> tree 5744c091 (== reviewed_tree PR#54) -> digests ECR ACTIVE con tag exacto -> bundle SHA-256 6b6450b5 reconstruido de forma identica -> S3 key con checksum identico -> Application Version cuyo SourceBundle apunta exactamente a ese S3 key."
+    },
+    {
+      "name": "environment_ready_green_ok_preserves_lkg",
+      "result": "PASS",
+      "note": "aws_guard.py elasticbeanstalk describe-environments --environment-names tpi-backoffice-dev-green: Status=Ready, Health=Green, HealthStatus=Ok, VersionLabel=h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1 (LKG declarado, sin cambios)."
+    },
+    {
+      "name": "lkg_application_version_usable_and_digests_present",
+      "result": "PASS",
+      "note": "describe-application-versions --version-labels h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1: existe, SourceBundle presente. Ambos digests LKG confirmados ACTIVE en ECR: tpi-dev-app sha256:96c611b6... (tag fec33e7...), tpi-dev-caddy sha256:bbf22901... (tag fec33e7...). Sin riesgo de ECR lifecycle keep-20 en este momento."
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "Bundle reconstruido sin valores de secretos (solo referencias ${VAR:?...}). Evidencia leida (migration-01.json, candidate-01.json, merge-01.json, review-01.json, developer-01.json, resolution-01.json) sin AUTH_USERS_JSON, DATABASE_PASSWORD, WEB_SESSION_SECRET, API_IDEMPOTENCY_HMAC_SECRET, password_hash ni credenciales."
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "candidate-01.json.smoke_plan contiene 9 entradas: public_https, backoffice_login, api_catalogs, static_css, leads_requires_auth, no_legacy_domain_redirect (automatizables) y AC-8/AC-3/AC-4 (humanos, correctamente marcados method=human)."
+    },
+    {
+      "name": "deployment_plan_version_only_single_authorized_command",
+      "result": "PASS",
+      "note": "deployment_plan.commands contiene una unica invocacion: python scripts/harness/aws_guard.py elasticbeanstalk update-environment --environment-name tpi-backoffice-dev-green --version-label h3-3-3-historial-web-ux-c5e738c-domainlocked-r1. Sin --option-settings/--template-name/--platform-arn/--tier. Coincide con harness/policies.yaml aws.modes.cutover (@read + elasticbeanstalk update-environment), aplicable solo en DEPLOYING tras Human Gate; no ejecutado ni simulado como mutacion en esta revision."
+    },
+    {
+      "name": "rollback_plan_single_named_lkg",
+      "result": "PASS",
+      "note": "rollback_plan.version_label = h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1 (unico LKG nombrado), consistente con rollback_authorization (scope single_version_only_rollback_to_named_lkg, max_attempts=1) en harness/policies.yaml. Sin IAM/DNS/secrets/migraciones en el plan."
+    },
+    {
+      "name": "migration_evidence_pass_not_reused_as_application_approval",
+      "result": "PASS",
+      "note": "migration-01.json: result=PASS, applied_once=true, postflight.result=PASS con 15/15 checks PASS, safety.rollback_executed=false, safety.application_deployed=false, harness_state_expected_after=BLOCKED_HUMAN. resolution-01.json (unica aprobacion humana registrada para H3.3.3 hasta ahora) documenta explicitamente 'Migration candidate H3.3.3 aprobado previamente por el humano...' citando migration-01.json -- es la aprobacion del migration candidate (AC-5), no del application candidate (AC-7). No existe ningun archivo en evidence/H3.3.3/approvals/ que constituya una aprobacion del application candidate; esa aprobacion queda pendiente en WAITING_HUMAN_APPROVAL y debe referenciar explicitamente el application candidate H3.3.3, distinta e independiente de esta aprobacion de la migracion 007."
+    },
+    {
+      "name": "prior_review_approved_no_blocker_major_findings",
+      "result": "PASS",
+      "note": "review-01.json (REVIEWING, sesion claude-202609161645-reviewer, distinta de esta): decision=APPROVED, findings=[] (sin blocker/major), reviewed_sha/reviewed_tree identicos a los verificados aqui, CI run 35143655710 success con cobertura 86.49%."
+    },
+    {
+      "name": "no_deploy_no_mutation_performed_by_this_session",
+      "result": "PASS",
+      "note": "Todas las llamadas AWS de esta sesion quedaron registradas en evidence/H3.3.3/aws-audit.jsonl con mutation:null (candidate_read: sts, ecr describe-images, elasticbeanstalk describe-environments/describe-application-versions, s3api head-object). No se ejecuto update-environment, no se creo Application Version, no se subio nada a S3, no se ejecuto approve.py, no se modifico codigo/tests/docs ni RDS/Secrets Manager/IAM/DNS/security groups, no se reejecuto la migracion ni su rollback."
+    }
+  ],
+  "findings": [
+    {
+      "id": "H3.3.3-CR-01",
+      "severity": "info",
+      "summary": "aws_guard.py rechaza tanto --image-id (singular) como --image-ids (plural) para 'ecr describe-image-scan-findings', impidiendo la lectura directa de hallazgos de scan por el Reviewer a traves del wrapper autorizado.",
+      "required_action": "Corregir la allowlist de v_ecr en scripts/harness/aws_guard.py para 'ecr describe-image-scan-findings' de modo que acepte --image-id (el nombre real exigido por la AWS CLI para esa operacion), distinto de --image-ids usado por 'ecr describe-images'. No bloqueante para esta candidate_review: se obtuvo evidencia equivalente e independiente (CRITICAL=0 HIGH=0 para ambos repositorios en el SHA/tag exacto) leyendo el log crudo del job CI 'Fail closed on high or critical ECR findings' del run 35178174524 (job 105064825956), que ejecuta exactamente ese comando de AWS CLI contra los mismos digests."
+    }
+  ],
+  "reconstruction": {
+    "template_source": "git show c5e738c21ba202d9c664652412e6820628b18e3c:deployment/aws/docker-compose.domainlocked.yml (commit exacto, no working tree)",
+    "builder_source": "git show c5e738c21ba202d9c664652412e6820628b18e3c:deployment/build_eb_ecr_bundle.py (commit exacto, no working tree)",
+    "function_used": "build_domain_locked_bundle",
+    "reconstructed_bundle_sha256": "6b6450b53df7e54a1d80ab637819d2f7dbc059e9435cd59221b549cfda949695",
+    "matches_declared": true
+  },
+  "aws_reads": {
+    "mode": "candidate_read",
+    "operations": [
+      "sts get-caller-identity",
+      "ecr describe-images (tpi-dev-app, tpi-dev-caddy, digests candidato)",
+      "ecr describe-images (tpi-dev-app, tpi-dev-caddy, digests LKG)",
+      "elasticbeanstalk describe-environments (tpi-backoffice-dev-green)",
+      "elasticbeanstalk describe-application-versions (candidato)",
+      "elasticbeanstalk describe-application-versions (LKG)",
+      "s3api head-object (bundle candidato)"
+    ],
+    "all_read_only": true,
+    "no_mutations": true
+  }
+}

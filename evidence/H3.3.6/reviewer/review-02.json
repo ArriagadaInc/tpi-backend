@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "H3.3.6",
+  "created_at": "2026-09-23T13:59:29Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609231356-reviewer-sup8e9c19",
+  "reviewed_sha": "a1e622855b25cafdf0afe63a89c3cedcd8de6403",
+  "reviewed_tree": "82da92058cc958d794bd4d58dc733c8825d40efb",
+  "pr_number": 58,
+  "branch": "harness/H3.3.6-xlsx-export",
+  "base_sha": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+  "developer_evidence": "evidence/H3.3.6/developer/developer-02.json",
+  "previous_review": "evidence/H3.3.6/reviewer/review-01.json",
+  "review_scope": "Revision REVIEWING ronda 2 de H3.3.6 (PR #58) en el SHA exacto a1e6228 via worktree .harness-worktrees/H3.3.6-reviewer-a1e6228. Rework 5b8bd8f..a1e6228: 7 archivos (xlsx_export.py, routes/leads.py, 2 docs de matriz, 3 tests), sin cambios de dependencias, esquema, migraciones, grants, env vars ni Harness. Verificada la correccion de F1-F4 de review-01 y re-revisado el diff completo contra la baseline 78bf33b (origin/main no avanzo). openpyxl 3.1.5 + et_xmlfile 2.0.0 instalados solo en %TEMP% fuera del repo para tests e inspeccion con filas sinteticas. Sin AWS/RDS, sin modificar codigo.",
+  "ci": {
+    "run_id": 35864130756,
+    "conclusion": "success",
+    "head_sha": "a1e622855b25cafdf0afe63a89c3cedcd8de6403",
+    "workflow": "CI - Linting, Tests & Security",
+    "event": "pull_request",
+    "jobs_green": 5,
+    "jobs_total": 5,
+    "runs_for_sha": 1,
+    "verification": "gh pr checks 58 (5/5 pass); gh run list --commit <sha> (1 run, success)"
+  },
+  "decision": "APPROVED",
+  "cause": null,
+  "findings": [
+    {
+      "id": "R2-F1",
+      "severity": "minor",
+      "file": "app/services/xlsx_export.py",
+      "line": "170-206 (_TMPDIR_LOCK / _save_workbook_ephemerally)",
+      "summary": "La correccion de F1 redirige tempfile.tempdir, que es global del proceso; _TMPDIR_LOCK solo serializa exportaciones, no otros usuarios de tempfile en el mismo worker. Durante un save, cualquier otro hilo que cree un temporal lo ubica en el directorio privado tpi_xlsx_* y este se elimina con rmtree al terminar.",
+      "failure_scenario": "Reproducido con sonda sintetica: un hilo concurrente que llama tempfile.gettempdir() durante el save obtiene ...\\tpi_xlsx_<rand>, directorio inexistente tras el save. Hoy la app no usa tempfile fuera de este modulo (formularios urlencoded, sin uploads), por lo que no hay impacto actual ni fuga de PII (directorio mkdtemp 0700, borrado conservador).",
+      "required_action": "No bloqueante. En una tarea futura considerar pasar el directorio explicitamente (p. ej. parchear localmente create_temporary_file o usar un modo sin temporal) en lugar de mutar tempfile.tempdir global."
+    },
+    {
+      "id": "R2-F2",
+      "severity": "info",
+      "file": "app/services/xlsx_export.py",
+      "line": "_FORMULA_TRIGGER_PREFIXES",
+      "summary": "Se mantiene la decision documentada de neutralizar solo =, +, -, @ (requisito de la tarea); tab y CR como prefijos OWASP siguen fuera de alcance. Arrastre informativo de F5 de review-01.",
+      "failure_scenario": "Sin impacto verificado: celdas escritas como texto 's' sin etiquetas <f>.",
+      "required_action": "Ninguna."
+    }
+  ],
+  "checks": [
+    {
+      "name": "preconditions_state_task_pr_head_base",
+      "result": "PASS",
+      "note": "READY_FOR_REVIEW -> REVIEWING con sesion claude-202609231356-reviewer-sup8e9c19 (distinta de deepseek-202609231213-developer-sup89f3f9 y de las previas). PR #58 OPEN, head a1e6228 (= developer-02), base main, MERGEABLE/CLEAN; origin/main = baseline 78bf33b."
+    },
+    {
+      "name": "ci_green_exact_sha",
+      "result": "PASS",
+      "note": "run 35864130756 success, 5/5 jobs (Docker Build, Lint & Format, Release Tooling Validation, Security Audit, Tests); unico run para el SHA; Developer reporta 861 passed, cobertura 89.30%."
+    },
+    {
+      "name": "scope_and_dependencies",
+      "result": "PASS",
+      "note": "Diff total 14 archivos dentro de scope.paths; el rework no toca requirements/** ni pyproject.toml; dependencia agregada sigue siendo solo openpyxl 3.1.5 (+ et_xmlfile 2.0.0). Clase A sin migraciones/grants."
+    },
+    {
+      "name": "prev_F1_ephemeral_generation",
+      "result": "PASS",
+      "note": "Save dentro de mkdtemp privado con rmtree en finally, clear_frames + gc.collect ante error; test_failure_during_generation_leaves_no_temp_files fuerza fallo tras write_rows y verifica que no queda openpyxl.* (PASS local en Windows). Matriz F7 corregida para describir el mecanismo real. Ver R2-F1 (minor)."
+    },
+    {
+      "name": "prev_F2_illegal_characters",
+      "result": "PASS",
+      "note": "sanitize_cell_text elimina ILLEGAL_CHARACTERS_RE antes de neutralizar formulas ('=\\x01cmd' -> \"'=cmd\"); inspeccion real: nombre con \\x01 y comentarios con \\x1f generan XLSX valido sin caracteres ilegales. La ruta captura Exception con 500 controlado sin traceback ni valor de celda."
+    },
+    {
+      "name": "prev_F3_tests_ac16",
+      "result": "PASS",
+      "note": "Agregados test_limit_exact_is_allowed_and_exports (count == EXPORT_MAX_ROWS exporta y audita) y test de fallo con cleanup. 48 tests H3.3.6 unit PASS localmente (builder, service, web, matrix gate); integracion cubierta en CI."
+    },
+    {
+      "name": "prev_F4_audit_failure_path",
+      "result": "PASS",
+      "note": "Fallo de record_xlsx_export_event -> 500 con pagina clara, sin el texto de la excepcion (test_generation_failure_returns_clear_error_without_pii). Fail-closed: no se entrega archivo sin auditoria."
+    },
+    {
+      "name": "authorization_server_side",
+      "result": "PASS",
+      "note": "Sin cambios desde review-01: anonimo -> 307 /login; no superuser -> 403 antes de construir servicio/consulta; servicio repite can_view_full_pii. app/auth/** sin cambios."
+    },
+    {
+      "name": "xlsx_real_inspection",
+      "result": "PASS",
+      "note": "Paquete solo con docProps, theme, sheet1, styles, rels, workbook, Content_Types; sin vba/externalLinks/drawings/media/comments; sin etiquetas <f>; prefijos =, -, @ neutralizados; caracteres de control eliminados."
+    },
+    {
+      "name": "allowlist_pii_audit_headers",
+      "result": "PASS",
+      "note": "Sin cambios en EXPORT_COLUMNS, auditoria sanitizada ni headers (MIME XLSX, attachment con nombre de servidor, no-store, nosniff) respecto de lo aprobado en review-01."
+    }
+  ],
+  "risks": [
+    "R2-F1 (minor): mutacion global de tempfile.tempdir durante el save; sin impacto actual. Candidato a backlog.",
+    "AC-1, AC-2, AC-5, AC-6, AC-7, AC-11, AC-12, AC-13, AC-15 tienen componente humano; AC-18 requiere smoke autenticado en AWS DEV (requires_human_acceptance=true).",
+    "Exportacion masiva de PII (riesgo alto de la tarea): controles server-side verificados; el deploy sigue requiriendo Candidate Review y Human Gate."
+  ]
+}

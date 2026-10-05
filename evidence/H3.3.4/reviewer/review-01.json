@@ -1,0 +1,175 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "H3.3.4",
+  "created_at": "2026-09-18T12:03:24Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609181245-reviewer",
+  "reviewed_sha": "5ffb2a265eeb351b051778cd77126d063265a6bd",
+  "reviewed_tree": "d06305a29df3d19455ce3c49e2b41bbfcdac4694",
+  "pr_number": 55,
+  "ci": {
+    "run_id": 35339864274,
+    "sha": "5ffb2a265eeb351b051778cd77126d063265a6bd",
+    "conclusion": "success",
+    "note": "gh run view 35339864274 --json headSha,jobs: headSha coincide exactamente con reviewed_sha. 5/5 jobs SUCCESS (Release Tooling Validation, Lint & Format, Tests, Docker Build, Security Audit). Log crudo del job Tests: 'TOTAL ... 89%', 'Required test coverage of 85% reached. Total coverage: 88.87%', '715 passed, 7 warnings in 28.10s'. Log crudo del job Security Audit: pip-audit 'No known vulnerabilities found'; bandit 'No issues identified.' Discrepancia local (702 passed + 13 errores) vs CI (715 passed) reconciliada: los 13 errores locales son PermissionError [WinError 5] en cleanup de basetemp de pytest en Windows, confinados a archivos preexistentes no tocados por este PR (test_frozen_candidate_verification.py, test_domain_baseline_bundle.py, test_domain_locked_bundle.py, test_eb_candidate_promotion.py, test_promotion_data_artifact.py); ningun SKIPPED/XFAIL nuevo en el log de CI."
+  },
+  "decision": "REJECTED",
+  "cause": "docs",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "major",
+      "file": "docs/H3_3_4_REQUIREMENTS_MATRIX.md",
+      "line": "109-137 (REQ-B-01..REQ-B-30, seccion 4)",
+      "summary": "La matriz de trazabilidad obligatoria (gate de la seccion 3) cita en su columna 'Prueba automatizada', para la practica totalidad de los requisitos REQ-B-01..REQ-B-30 (Parte B), archivos de test que NO existen en el repositorio: test_executive_dashboard.py, test_executive_dashboard_asesor.py, test_executive_dashboard_estancados.py, test_executive_dashboard_funnel.py, test_executive_dashboard_kpis.py, test_executive_dashboard_perf.py, test_executive_dashboard_pii.py, test_executive_dashboard_series.py, test_executive_dashboard_tiempos.py (9 de 10 nombres de archivo citados no existen; unicamente test_executive_dashboard_filters.py es real). Verificado por listado directo de tests/unit/ y tests/integration/ en el worktree del SHA revisado: los archivos reales son test_executive_dashboard_{access,filters,presentation,render,service}.py (unit) y test_executive_dashboard_{full,repository}.py (integration). Estos archivos reales SI cubren sustantivamente AC-11..AC-18 (confirmado por lectura directa, independiente, linea por linea, de las suites reales), y evidence/H3.3.4/developer/developer-01.json cita correctamente los archivos reales en su seccion acceptance_criteria -- pero la matriz (documento obligatorio segun el backlog de la tarea, creado antes de implementar y nunca resincronizado con la implementacion real en su seccion 4) quedo desactualizada. Tal como esta redactada, para cualquier auditor que siga la matriz literalmente (que es exactamente el metodo exigido por el gate de trazabilidad de esta revision), ~26 de 30 filas REQ-B apuntan a una prueba automatizada inexistente, lo que constituye 'requisito sin prueba... aplicable' en el propio documento de trazabilidad, aunque la sustancia (prueba real equivalente) si exista bajo un nombre distinto.",
+      "required_action": "Developer debe corregir docs/H3_3_4_REQUIREMENTS_MATRIX.md seccion 4 (REQ-B-01 a REQ-B-30) para citar los archivos y funciones de test reales y consolidados (test_executive_dashboard_access.py, test_executive_dashboard_filters.py, test_executive_dashboard_presentation.py, test_executive_dashboard_render.py, test_executive_dashboard_service.py, test_executive_dashboard_full.py, test_executive_dashboard_repository.py), de forma consistente con las secciones 11.7/12.8 del mismo documento y con evidence/H3.3.4/developer/developer-01.json. No requiere cambios de codigo funcional ni nueva cobertura; es una correccion de exactitud documental en un artefacto de gobernanza obligatorio."
+    },
+    {
+      "id": "F2",
+      "severity": "minor",
+      "file": "scripts/sql/008_create_lead_state_history.sql",
+      "line": "25-30",
+      "summary": "La justificacion del indice de apoyo (comentario SQL y matriz seccion 11.6) afirma mejoras de ~40x latencia / ~90x buffers a volumen realista, pero la unica prueba automatizada que ejercita el EXPLAIN lo hace forzando SET LOCAL enable_seqscan = off (la tabla de integracion es demasiado pequena para que el planificador elija el indice de forma natural). No se identifico, dentro del codigo/tests revisados, un EXPLAIN ANALYZE real (sin forzar) a volumen representativo que respalde independientemente la cifra citada; podria existir en el benchmark o en evidencia separada no incluida en el diff de codigo.",
+      "required_action": "No bloqueante para esta ronda de revision de software. Antes del cierre de la tarea, adjuntar o referenciar el EXPLAIN ANALYZE real a volumen representativo (por ejemplo, salida de scripts/benchmark_executive_dashboard.py) para que la afirmacion sea reproducible de forma independiente y no solo declarada."
+    },
+    {
+      "id": "F3",
+      "severity": "minor",
+      "file": "tests/unit/test_executive_dashboard_service.py",
+      "line": "n/a (multiple tests)",
+      "summary": "Estos tests estan etiquetados 'unit' pero requieren una conexion PostgreSQL real, porque ExecutiveDashboardService.build_executive_dashboard invoca directamente dashboard_read_snapshot() (app/repositories/executive_dashboard_repository.py:64) en lugar de delegar la adquisicion de snapshot/conexion a traves del repositorio inyectable; inyectar un repositorio falso no hace estos tests independientes de base de datos. Confirmado localmente: pytest tests/unit/ -q sin Postgres disponible produce 11 fallos, todos DatabaseConfigurationError en estos archivos; en CI (con Postgres) los 715 tests pasan.",
+      "required_action": "No bloqueante. Follow-up sugerido: que el repositorio (real o falso) posea la adquisicion del snapshot, para que la etiqueta 'unit' sea fiel y la suite unitaria pueda ejecutarse sin infraestructura."
+    },
+    {
+      "id": "F4",
+      "severity": "info",
+      "file": "app/config/settings.py",
+      "line": "159-161",
+      "summary": "LEAD_STATE_HISTORY_CUTOVER debe configurarse en AWS DEV con la fecha exacta de aplicacion de la migracion 008. El codigo falla de forma segura (funnel/primera-gestion se reportan como no disponibles) si la variable esta ausente, pero ningun mecanismo automatizado verifica que el VALOR configurado sea correcto una vez desplegado.",
+      "required_action": "Agregar verificacion explicita del valor de LEAD_STATE_HISTORY_CUTOVER al checklist de postflight/smoke (junto a AC-6/AC-9), no como gate automatizado de esta PR."
+    },
+    {
+      "id": "F5",
+      "severity": "info",
+      "file": "app/repositories/executive_dashboard_repository.py",
+      "line": "64-105",
+      "summary": "dashboard_read_snapshot() mantiene una unica transaccion REPEATABLE READ READ ONLY con SAVEPOINT por consulta durante todo el render (~5.28-6.80s medido a 20.000 leads/12 asesores), ocupando una conexion del pool por ese tiempo. Riesgo bajo hoy (acceso exclusivo ceo/cto, baja concurrencia esperada) pero con presion potencial sobre el pool/autovacuum si el volumen o la frecuencia de uso crecen.",
+      "required_action": "Ninguna accion requerida para esta tarea (riesgo documentado, no bloqueante). Seguimiento operacional si el volumen real crece."
+    },
+    {
+      "id": "F6",
+      "severity": "info",
+      "file": "app/repositories/executive_dashboard_repository.py",
+      "line": "get_tiempo_primera_gestion / get_metricas_operacionales_por_asesor / get_estancados_por_antiguedad",
+      "summary": "El parsing regexp de notas en leads.comentarios es el costo dominante del benchmark (~1.3s cada una de las tres consultas mas lentas, sobre una latencia total de 5.28-6.80s a 20.000 leads/12 asesores, 18 sentencias constantes, sin N+1). Ya documentado en el cuerpo del PR como riesgo no resuelto con posible normalizacion/read model futuro.",
+      "required_action": "Clasificado (A) riesgo documentado no bloqueante para DEV, ver 'risks'. Preservar explicitamente este follow-up en el cierre de la tarea; no descartarlo silenciosamente."
+    }
+  ],
+  "checks": [
+    {
+      "name": "session_independence",
+      "result": "PASS",
+      "note": "Developer: runtime=deepseek, session_id=deepseek-202609181130-developer (harness/state.json.last_transition). Reviewer: runtime=claude, session_id=claude-202609181245-reviewer. Sesiones y runtimes distintos; guard reviewer_session_independent satisfecho."
+    },
+    {
+      "name": "developer_evidence_read",
+      "result": "PASS",
+      "note": "evidence/H3.3.4/developer/developer-01.json leido integramente: head_sha=5ffb2a265eeb351b051778cd77126d063265a6bd, pr_number=55, baseline=c5e738c21ba202d9c664652412e6820628b18e3c coinciden con el estado real del PR."
+    },
+    {
+      "name": "exact_sha_reviewed",
+      "result": "PASS",
+      "note": "worktree.py create --ref 5ffb2a265eeb351b051778cd77126d063265a6bd (.harness-worktrees/H3.3.4-reviewer-5ffb2a2). gh pr view 55 --json headRefOid confirma el mismo SHA como HEAD real del PR #55. mergeStateStatus=CLEAN, mergeable=MERGEABLE."
+    },
+    {
+      "name": "baseline_correct",
+      "result": "PASS",
+      "note": "git rev-list c5e738c21ba202d9c664652412e6820628b18e3c..5ffb2a265eeb351b051778cd77126d063265a6bd --count = 18, coincide con commits.total_commits=18 de developer-01.json. Rango valido (baseline es ancestro del head revisado)."
+    },
+    {
+      "name": "ci_green_exact_sha",
+      "result": "PASS",
+      "note": "CI run 35339864274: 5/5 jobs SUCCESS en el SHA exacto 5ffb2a2. Tests: 715 passed, cobertura 88.87% (>=85). Security Audit: pip-audit sin vulnerabilidades, bandit sin issues. Ver bloque 'ci'."
+    },
+    {
+      "name": "traceability_gate",
+      "result": "FAIL",
+      "note": "67 requirement IDs unicos confirmados (REQ-A-01..24, REQ-B-01..30, REQ-S-01..13), cobertura AC-1..AC-18 completa, sin diferimiento a H3.3.5, sin metricas ambiguas, definiciones humanas del 2026-09-17 preservadas verbatim, genero/estado civil ausentes en todo el documento. Sin embargo, la columna 'Prueba automatizada' de la seccion 4 (REQ-B-01..REQ-B-30) cita mayoritariamente archivos de test inexistentes (ver finding F1, severity=major). El gate de trazabilidad no se considera superado mientras ese hallazgo este abierto."
+    },
+    {
+      "name": "parte_a_transactional_audit",
+      "result": "PASS",
+      "note": "update_lead_status (app/repositories/solicitud_repository.py:878-965) usa SELECT ... FOR UPDATE, compara estado_anterior/estado_nuevo, no-op sin duplicar auditoria, UPDATE+INSERT en un unico commit, rollback completo si falla el INSERT de auditoria (test_audit_failure_rolls_back_state). Ruta generica rechaza 'asignado' en servicio y repositorio (defensa en profundidad). Prueba real de concurrencia con dos conexiones independientes y ThreadPoolExecutor+Barrier (test_lead_state_history.py::test_concurrent_updates_serialize_without_lost_update_or_duplicate_events) demuestra ausencia de condiciones de carrera y de eventos duplicados. Actor autenticado obligatorio verificado en la ruta (leads.py:602-604, CSRF validado antes)."
+    },
+    {
+      "name": "migration_008_review",
+      "result": "PASS",
+      "note": "git diff c5e738c..5ffb2a2 -- scripts/sql/ toca unicamente los dos archivos 008; git log --all --diff-filter=A --name-only -- 'scripts/sql/*.sql' confirma que 008 nunca existio en ninguna rama previa. Vista tpi.v_historial_estado_lead proyecta solo columnas minimas (sin JSON crudo, id_persona, id_usuario, ip_origen); security_barrier=true; REVOKE ALL FROM PUBLIC; GRANT SELECT solo a tpi_app; preflight/postflight con DO $$ ... RAISE EXCEPTION reales. Rollback (008_drop_lead_state_history.sql) idempotente (IF EXISTS), transaccional, no toca tpi.auditoria ni objetos 007 (test_008_does_not_modify_or_execute_005_006_007). Ver finding F2 (minor) sobre el EXPLAIN forzado del indice."
+    },
+    {
+      "name": "timeline_unification",
+      "result": "PASS",
+      "note": "app/web/presentation.py::build_timeline_items fusiona notas + eventos 007 + cambios 008 en America/Santiago (ZoneInfo), orden estable con desempate deterministico (event < state_change < note) probado explicitamente. Badge 'Automatico' solo en event/state_change, nunca en notas; sin controles de editar/eliminar. Sin backfill inventado: los cambios de estado solo existen desde el cutover real de tpi.auditoria; asignaciones 007 previas siguen visibles. Regresion H3.3.3 preservada (tests de asignacion sin cambios de comportamiento)."
+    },
+    {
+      "name": "parte_b_dashboard_contracts",
+      "result": "PASS",
+      "note": "current_snapshot y period_activity arquitectonicamente separados; 'lead ingresado' usa fecha_ingreso exclusivamente; 'cartera activa' = estado_lead NOT IN (cerrado, perdido, no_califica, duplicado) verificado literal; 'estancado'/'movimiento operativo' nunca usan updated_at; 'primera gestion' excluye asignacion automatica; ausencia de evento renderiza NULL/N-D (sin COALESCE a 0); estados desconocidos y leads sin asesor preservados (no filtrados); todo COUNT con riesgo de fan-out usa COUNT(DISTINCT id_lead) o proviene de subconsultas LATERAL pre-agregadas; porcentajes siempre incluyen numerador y denominador; funnel excluye leads pre-cutover de las tasas (nunca del conteo de estado actual); genero/estado civil ausentes en todo el codigo. Parser de notas usa regex fija parametrizada (sin interpolacion de input externo, sin riesgo de inyeccion SQL), zona America/Santiago explicita, texto libre no canonico ignorado. AC-18: las 6 categorias de prueba exigidas (cero datos, limites temporales, filtros combinados, estados desconocidos, sin asesor, fan-out) estan cubiertas por tests reales, aunque bajo nombres de archivo distintos a los citados en la matriz (ver F1)."
+    },
+    {
+      "name": "transactional_consistency_snapshot",
+      "result": "PASS",
+      "note": "dashboard_read_snapshot() (executive_dashboard_repository.py:64-104) usa una unica conexion pooled por render, IsolationLevel.REPEATABLE_READ + read_only=True, SAVEPOINT por consulta con ROLLBACK TO SAVEPOINT ante fallo parcial sin contaminar el resto de la transaccion. finally siempre revierte isolation/read_only y hace rollback; get_db_connection() siempre devuelve la conexion al pool (con fallback a close() si el rollback falla). app/web/routes/dashboard.py captura excepciones globales sin filtrar SQL/traceback (solo type(exc).__name__ + mensaje generico + 503). Riesgo de conexion prolongada (~5-7s) clasificado como minor/info (F5), no bloqueante dado el acceso exclusivo ceo/cto."
+    },
+    {
+      "name": "rbac_pii_security",
+      "result": "PASS",
+      "note": "require_executive_access() es la primera linea del handler (dashboard.py:223), ejecuta 403 antes de cualquier consulta; solo ceo/cto pasan; tests cubren ceo, cto, otro rol->403, anonimo->403, cero-queries-antes-del-403, rango invalido->400, ausencia de PII en placeholder. Filtros invalidos (UUID, granularidad) producen 400 via ValueError capturado, nunca 500. Fragmentos SQL dinamicos provienen de constantes fijas (psycopg.sql.SQL), nunca de input crudo. Nombre de asesor visible solo en el dataset ceo/cto; nunca RUT/telefono/correo. Masking de PII de la lista de leads (H3.3.x) no sufre regresion (comentario preexistente intacto)."
+    },
+    {
+      "name": "alerts_listing_parity",
+      "result": "PASS",
+      "note": "sin_asignar_predicate/estancado_predicate/ultimo_movimiento_expr definidos una unica vez en app/repositories/lead_activity_sql.py e importados tanto por executive_dashboard_repository.py como por solicitud_repository.py (listado de leads): fuente unica de verdad, sin logica duplicada divergente. dashboard.py::_alert_hrefs construye /leads?sin_asignar=1 y /leads?estancado=1 propagando los mismos filtros de dimension."
+    },
+    {
+      "name": "ux_accessibility",
+      "result": "PASS",
+      "note": "Verificacion automatizada/estatica PASS; inspeccion visual humana en AWS DEV explicitamente pendiente (no declarada satisfecha). Templates server-rendered (Jinja), sin <script> ni referencias CDN/http externas (grep confirmado). Cada grafico/serie tiene tabla equivalente con caption y scope. Estilos focus-visible presentes para todos los elementos interactivos nuevos. overflow-x:auto en contenedores de tabla (no scroll de pagina forzado). Enlaces 'Ver detalle' reales. Inspeccion visual humana final en AWS DEV NO declarada satisfecha: sigue pendiente."
+    },
+    {
+      "name": "performance_classification",
+      "result": "PASS",
+      "note": "Clasificado como riesgo (A) documentado no bloqueante para DEV, no como defecto. Benchmark (scripts/benchmark_executive_dashboard.py) metodologicamente solido, autocontenible, auto-limpiable, con EXPLAIN (ANALYZE, BUFFERS) real sobre los dos cuellos de botella identificados; no se re-ejecuto en esta revision por falta de una base PostgreSQL local con el esquema completo migrado (evaluacion por lectura de codigo, no reproduccion independiente del numero exacto). 18 sentencias constantes por render, sin N+1 (arquitectonicamente acotado, un metodo por metrica). Latencia 5.28-6.80s a 20.000 leads/12 asesores. Clasificacion: (A) riesgo documentado no bloqueante para DEV -- AC-18 solo exige validacion con volumen representativo, sin umbral definido; acceso exclusivo ceo/cto de baja frecuencia; la transaccion read-only del snapshot (ver transactional_consistency_snapshot) esta acotada a la misma ventana; existe un follow-up concreto y ya registrado en el cuerpo del PR (posible normalizacion de notas / read model futuro)."
+    },
+    {
+      "name": "gitpython_supply_chain",
+      "result": "PASS",
+      "note": "git show 5ffb2a265eeb351b051778cd77126d063265a6bd toca exclusivamente requirements/runtime.lock, una linea: GitPython 3.1.59 -> 3.1.60. gitdb 4.0.12 y smmap 5.0.3 sin cambios (confirmado en developer-01.json.assumptions y por inspeccion del diff). allow_lockfile_update=true en tasks/current.yaml es la autorizacion humana. Sin otras actualizaciones de dependencias oportunistas. Sin archivos temporales (.tmp-*, .pytest-tmp) en el diff del PR. CI (Security Audit) confirma pip-audit y bandit verdes en el SHA que incluye este commit; Docker Build PASS en el mismo SHA (imagen construida con GitPython 3.1.60)."
+    },
+    {
+      "name": "ci_tests_verification",
+      "result": "PASS",
+      "note": "Ver bloque 'ci': 715 passed, cobertura 88.87%, pip-audit y bandit limpios, headSha exacto. Discrepancia local/CI (702+13 vs 715) reconciliada: los 13 son fallos de limpieza de entorno Windows en archivos preexistentes no tocados por este PR, verdes en CI Linux."
+    },
+    {
+      "name": "local_safe_gates",
+      "result": "PASS",
+      "note": "Ejecutados en el worktree del SHA exacto: ruff check (All checks passed), black --check (168 files unchanged), mypy --ignore-missing-imports (Success, 68 files), bandit -r app (No issues identified), pip-audit --requirement requirements/runtime.lock (No known vulnerabilities found). pytest tests/unit/ -q sin Postgres local: 456 passed, 11 failed -- causa raiz confirmada como DatabaseConfigurationError por ausencia de Postgres local (no un fallo logico); CI (con Postgres) es la autoridad para estos tests y los pasa (incluidos en los 715). Ningun skip/xfail nuevo introducido; ninguna prueba debilitada."
+    },
+    {
+      "name": "no_secrets_no_aws_mutation",
+      "result": "PASS",
+      "note": "Ninguna lectura de AUTH_USERS_JSON, password_hash ni otros secretos en el diff ni en esta revision. Ninguna operacion de escritura AWS/RDS ejecutada por este Reviewer; migracion 008 confirmada NO aplicada en AWS DEV (developer-01.json.assumptions lo declara explicitamente); ningun approve.py, merge ni deployment ejecutado."
+    }
+  ],
+  "risks": [
+    "BLOQUEANTE DE ESTA RONDA: docs/H3_3_4_REQUIREMENTS_MATRIX.md seccion 4 (REQ-B-01..REQ-B-30) cita archivos de test inexistentes para casi toda la Parte B; aunque la cobertura real existe bajo nombres distintos (verificado independientemente), el artefacto de trazabilidad obligatorio no es fiel a la implementacion entregada. Correccion de documentacion, sin cambio de codigo funcional ni de cobertura.",
+    "Rendimiento del Dashboard Ejecutivo (5.28-6.80s a 20.000 leads/12 asesores, cuello de botella en parsing regexp de notas) clasificado riesgo (A) no bloqueante para DEV; debe permanecer visible como follow-up explicito (normalizacion de notas / read model futuro) en el cierre de la tarea, no descartarse silenciosamente.",
+    "Migracion 008 (change_class D) no aplicada aun en AWS RDS DEV; AC-5/AC-6/AC-7 siguen pendientes de Human Gate y postflight; ningun fast path del Harness debe aplicarla.",
+    "Smoke humano pendiente en AWS DEV para Parte A (AC-9) y Parte B (AC-18, incluido el 403 real para roles no autorizados) e inspeccion visual de accesibilidad/UX; no declarados satisfechos en esta revision.",
+    "LEAD_STATE_HISTORY_CUTOVER debe configurarse correctamente en AWS DEV; su ausencia falla de forma segura pero su exactitud no se verifica automaticamente -- agregar al checklist de postflight/smoke.",
+    "Sin evidencia independiente (fuera de un test con enable_seqscan forzado) del EXPLAIN ANALYZE real a volumen representativo que respalde la cifra de mejora citada para el indice de apoyo de la migracion 008; adjuntar antes del cierre de la tarea."
+  ]
+}

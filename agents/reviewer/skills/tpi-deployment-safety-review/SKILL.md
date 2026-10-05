@@ -12,7 +12,10 @@ CANDIDATE_REVIEW, sobre `deployment_plan` y `rollback_plan` del candidate.
 
 ## 2. Puede
 - Validar el plan contra `harness/policies.yaml` y el contrato.
-- Simular comandos con `python scripts/harness/aws_guard.py --dry-run ...` (evaluacion, sin ejecucion).
+- Verificar el plan por inspeccion de sus comandos, las politicas y el contrato; documentar las fuentes de cada check.
+- En CANDIDATE_REVIEW no invocar `update-environment`, tampoco con `--dry-run`: el modo candidate_read no lo permite.
+- Para `plan_commands_in_state_allowlist`, comprobar los permisos del Deployer en DEPLOYING y las condiciones de rollback correspondientes; no confundirlos con los permisos actuales del Reviewer.
+- Mantener todos los checks obligatorios. No marcar PASS si la inspeccion no permite demostrarlo; declarar que no se ejecuto dry-run.
 
 ## 3. No puede
 - Ejecutar comandos del plan ni modificarlo.

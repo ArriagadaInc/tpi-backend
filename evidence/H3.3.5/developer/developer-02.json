@@ -1,0 +1,229 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "H3.3.5",
+  "created_at": "2026-09-21T16:29:14Z",
+  "role": "developer",
+  "runtime": "deepseek",
+  "session_id": "deepseek-202609211610-developer-rework1",
+  "head_sha": "b4b5ba0f08a98164db5cb56b68bec2aabfa696a4",
+  "branch": "harness/H3.3.5-asesores-dev-cartera",
+  "pr_number": 57,
+  "pr_url": "https://github.com/ArriagadaInc/tpi-backend/pull/57",
+  "change_class": "D",
+  "baseline": "3051a6271e1626b40fe24a744abe097cab1ab0fe",
+  "remediated_review": "evidence/H3.3.5/reviewer/review-01.json",
+  "rework_round": 1,
+  "rework_commits": [
+    "b4b5ba0 fix(h3.3.5): remediate reviewer findings F1-F9"
+  ],
+  "tests": {
+    "command": "pytest tests/ --cov=app --cov-fail-under=85 --cov-report=term (local, PostgreSQL efimero); dirigidas: test_h3_3_5_advisor_portfolio/seed/http + advisor_auth",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "ci": "PASS"
+  },
+  "ci_run": {
+    "run_id": 35625445269,
+    "conclusion": "success",
+    "head_sha": "b4b5ba0f08a98164db5cb56b68bec2aabfa696a4",
+    "jobs": {
+      "Docker Build": "PASS",
+      "Lint & Format": "PASS",
+      "Release Tooling Validation": "PASS",
+      "Security Audit": "PASS",
+      "Tests": "PASS"
+    }
+  },
+  "findings_disposition": [
+    {
+      "id": "F1",
+      "severity": "blocker",
+      "disposition": "corregido",
+      "detail": "append_lead_comment: orden de parametros corregido (fragmento x2, id_lead, luego estado_asignacion/id_asesor). Prueba PostgreSQL real: test_h3_3_5_advisor_portfolio.py::test_advisor_mutations_ownership_and_rollback (propio True + nota escrita; ajeno/sin asignar False sin escritura)."
+    },
+    {
+      "id": "F2",
+      "severity": "blocker",
+      "disposition": "corregido",
+      "detail": "tests/integration/test_h3_3_5_advisor_portfolio.py ejercita SQL real: get_crm_solicitudes(portfolio_asesor_id), get_active_advisor_by_id, lead_active_assignment_belongs_to, update_lead_status/append_lead_comment con advisor_scope; aislamiento A1/A2, sin asignar, historica, conteos/paginacion, advisor invalido vacio, CEO/CTO global."
+    },
+    {
+      "id": "F3",
+      "severity": "blocker",
+      "disposition": "corregido",
+      "detail": "seed inserta rol='asesor' y estado_disponibilidad='activo' explicitos (DDL NOT NULL sin default); tests/integration/test_h3_3_5_seed.py ejecuta el seed real (crea, idempotente, adopta UUID, aborta incompatible sin escritura parcial, deja intactos otros asesores)."
+    },
+    {
+      "id": "F4",
+      "severity": "major",
+      "disposition": "corregido",
+      "detail": "tests/integration/test_h3_3_5_advisor_http.py (rutas reales + repositorio real): POST status/comments propio 303, ajeno/no asignado 404 sin escritura, cleanup/assign 403, dashboard 403, CEO/CTO no-regresion."
+    },
+    {
+      "id": "F5",
+      "severity": "major",
+      "disposition": "corregido",
+      "detail": "runbook seccion 6 nombra RestartAppServer/UpdateEnvironment (ejecutadas por el humano, no el Harness), cita docs.aws.amazon.com/elasticbeanstalk/latest/dg/AWSHowTo.secrets.env-vars.html y el consumo via variable de entorno del bundle."
+    },
+    {
+      "id": "F6",
+      "severity": "minor",
+      "disposition": "corregido",
+      "detail": "la cobertura advisor (PII/masking y aislamiento) queda cubierta por las pruebas PostgreSQL/HTTP nuevas (F2/F4), no por un loop retirado."
+    },
+    {
+      "id": "F7",
+      "severity": "minor",
+      "disposition": "corregido",
+      "detail": "seed usa lower(btrim(nombre)) e IS DISTINCT FROM (NULL-safe); BEGIN/validaciones en una transaccion con rollback ante fallo (sin efectos parciales)."
+    },
+    {
+      "id": "F8",
+      "severity": "minor",
+      "disposition": "corregido",
+      "detail": "runbook seccion 0/1 referencia la fuente canonica del endpoint RDS (tpi-postgres-dev / DATABASE_HOST) y anade el Human Gate del data candidate."
+    },
+    {
+      "id": "F9",
+      "severity": "minor",
+      "disposition": "corregido",
+      "detail": "warning de advisor_id malformado incluye subject (no secreto); test caplog en test_h3_3_5_advisor_auth.py verifica que el valor crudo/hash/secreto no se registran."
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "pending_verification",
+      "evidence": "seed probado en PostgreSQL real (tests/integration/test_h3_3_5_seed.py); ejecucion en AWS DEV + postflight es humano/Deployer"
+    },
+    {
+      "id": "AC-2",
+      "status": "pending_verification",
+      "evidence": "idem AC-1 para Asesor Desarrollo 2"
+    },
+    {
+      "id": "AC-3",
+      "status": "pending_verification",
+      "evidence": "advisor_id parseado (tests/unit/test_h3_3_5_advisor_auth.py); configuracion de identidad asesor.desarrollo1 en AUTH_USERS_JSON es humana"
+    },
+    {
+      "id": "AC-4",
+      "status": "pending_verification",
+      "evidence": "idem AC-3 para asesor.desarrollo2"
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "validate_repo.py PASS + tests/unit/test_h3_3_5_seed_sql.py::test_seed_has_no_secrets_passwords_or_hashes"
+    },
+    {
+      "id": "AC-6",
+      "status": "pending_verification",
+      "evidence": "aislamiento de cartera + PII probados en PostgreSQL real (test_h3_3_5_advisor_portfolio.py); smoke con Asesor Desarrollo 1 requiere seed+identidad (humano)"
+    },
+    {
+      "id": "AC-7",
+      "status": "pending_verification",
+      "evidence": "idem AC-6 para Asesor Desarrollo 2"
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "evidence": "tests/integration/test_h3_3_5_advisor_portfolio.py (busqueda/filtros/orden/conteo/paginacion server-side con portfolio_asesor_id)"
+    },
+    {
+      "id": "AC-9",
+      "status": "met",
+      "evidence": "tests/integration/test_h3_3_5_advisor_portfolio.py (detalle ajeno/sin asignar/historico -> 404) + test_h3_3_5_advisor_http.py"
+    },
+    {
+      "id": "AC-10",
+      "status": "met",
+      "evidence": "tests/integration/test_h3_3_5_advisor_portfolio.py + test_h3_3_5_advisor_http.py (status/comments ajenos/sin asignar sin escritura; cleanup 403)"
+    },
+    {
+      "id": "AC-11",
+      "status": "met",
+      "evidence": "tests/integration/test_h3_3_5_advisor_portfolio.py + test_h3_3_5_advisor_http.py (status/comment propios permitidos)"
+    },
+    {
+      "id": "AC-12",
+      "status": "met",
+      "evidence": "tests/integration/test_h3_3_5_advisor_http.py::test_advisor_cleanup_and_assign_are_403"
+    },
+    {
+      "id": "AC-13",
+      "status": "met",
+      "evidence": "tests/integration/test_h3_3_5_advisor_http.py + tests/unit/test_h3_3_5_advisor_web.py (dashboard 403 advisor valido/invalido)"
+    },
+    {
+      "id": "AC-14",
+      "status": "met",
+      "evidence": "tests/unit/test_h3_3_5_advisor_web.py::test_advisor_navigation_hides_dashboard_link"
+    },
+    {
+      "id": "AC-15",
+      "status": "met",
+      "evidence": "tests/integration/test_h3_3_5_advisor_portfolio.py (CEO/CTO global) + test_h3_3_5_advisor_http.py (CEO mutacion+dashboard)"
+    },
+    {
+      "id": "AC-16",
+      "status": "met",
+      "evidence": "tests/integration/test_h3_3_5_advisor_portfolio.py + test_h3_3_5_advisor_http.py (sin PII ajena; 404 sin revelar existencia)"
+    },
+    {
+      "id": "AC-17",
+      "status": "pending_verification",
+      "evidence": "smoke AWS DEV autenticado (humano, post-cutover D7) en docs/H3_3_5_DEV_RUNBOOK.md seccion 7"
+    },
+    {
+      "id": "AC-18",
+      "status": "pending_verification",
+      "evidence": "seed idempotente probado en PostgreSQL + preflight humano (docs/H3_3_5_DEV_RUNBOOK.md secciones 1-3)"
+    },
+    {
+      "id": "AC-19",
+      "status": "pending_verification",
+      "evidence": "postflight DB read-only del Deployer (docs/H3_3_5_DEV_RUNBOOK.md seccion 4)"
+    },
+    {
+      "id": "AC-20",
+      "status": "met",
+      "evidence": "cobertura 89.27% (>=85%) en pytest tests/ --cov=app --cov-fail-under=85; CI Tests verde"
+    },
+    {
+      "id": "AC-21",
+      "status": "met",
+      "evidence": "resolve_advisor_identity fail-closed + tests/unit/test_h3_3_5_advisor_auth.py + tests/integration/test_h3_3_5_advisor_portfolio.py (advisor invalido/inactivo vacio)"
+    }
+  ],
+  "files_changed": [
+    "app/auth/simple_dev.py",
+    "app/repositories/solicitud_repository.py",
+    "scripts/sql/dev/seed_asesores_desarrollo.sql",
+    "docs/H3_3_5_DEV_RUNBOOK.md",
+    "docs/H3_3_5_REQUIREMENTS_MATRIX.md",
+    "tests/unit/test_h3_3_5_advisor_auth.py",
+    "tests/unit/test_h3_3_5_seed_sql.py",
+    "tests/integration/test_h3_3_5_advisor_portfolio.py",
+    "tests/integration/test_h3_3_5_seed.py",
+    "tests/integration/test_h3_3_5_advisor_http.py"
+  ],
+  "assumptions": [
+    "Suite completa local: 803 passed, 3 failed ambientales pre-existentes (test_frozen_candidate_verification.py requiere /bin/bash; pasan en CI Linux) y 1 fallo de test estatico del seed corregido; cobertura 89.27% (>=85). CI Linux (run 35625445269): 5/5 jobs success.",
+    "El seed se prepara y se prueba contra PostgreSQL efimero pero NO se ejecuta en AWS DEV (lo aplica el operador humano tras el preflight D5; el Deployer solo postflight read-only).",
+    "migrations_included=false: el seed es un artefacto de datos DEV-only bajo scripts/sql/dev/, no una migracion numerada.",
+    "AUTH_USERS_JSON se lee una vez en SimpleDevAuth.__init__ y queda cacheado; el refresh es humano via RestartAppServer/UpdateEnvironment (fuente: docs AWS Elastic Beanstalk).",
+    "advisor_id se resuelve server-side contra tpi.asesores (rol=asesor, estado_disponibilidad=activo); nunca por username/display_name.",
+    "Sin acceso AWS/RDS/Secrets Manager; sin contrasenas/hashes generados ni registrados."
+  ],
+  "migrations_included": false
+}

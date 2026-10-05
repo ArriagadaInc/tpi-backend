@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -60,7 +61,7 @@ def test_init_cli_subprocess_does_not_modify_filesystem_or_git(tmp_harness_repo:
     before_hashes, before_status = _snapshot(tmp_harness_repo)
     env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
     result = subprocess.run(  # noqa: S603
-        ["python", "scripts/harness/init.py", "--runtime", "claude", "--json"],  # noqa: S607
+        [sys.executable, "scripts/harness/init.py", "--runtime", "claude", "--json"],
         cwd=tmp_harness_repo,
         capture_output=True,
         text=True,

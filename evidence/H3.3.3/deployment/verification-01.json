@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "H3.3.3",
+  "created_at": "2026-09-17T13:34:37Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609171326-deployer",
+  "approved_commit": "c5e738c21ba202d9c664652412e6820628b18e3c",
+  "deployed_commit": "c5e738c21ba202d9c664652412e6820628b18e3c",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "PASS",
+  "postflight_identity_chain": {
+    "account_id_matches": true,
+    "region_matches": true,
+    "environment_status": "Ready",
+    "environment_health": "Green",
+    "environment_health_status": "Ok",
+    "update_in_progress": false,
+    "version_label_exact": "h3-3-3-historial-web-ux-c5e738c-domainlocked-r1",
+    "version_label_matches_approved": true,
+    "application_version_source_bundle_key": "tpi-backoffice/dev-releases/h3-3-3-historial-web-ux-c5e738c-domainlocked-r1/6b6450b53df7e54a1d80ab637819d2f7dbc059e9435cd59221b549cfda949695.zip",
+    "application_version_source_bundle_matches_approved": true,
+    "s3_checksum_sha256": "a2RQtT335UodgKtjeBnS99vAWelDXNWSIbVJz9qUlpU=",
+    "s3_checksum_matches_approved": true,
+    "ecr_app_digest": "sha256:9333994ef8a1bae1b4bff1b95bdaba24b3a4004b9f10ba6524f0ca326948e523",
+    "ecr_app_status": "ACTIVE",
+    "ecr_app_tag_matches_release_sha": true,
+    "ecr_caddy_digest": "sha256:27e8c5dc8a1facb85eae506383a3c380a838b61c96d7ec2dd9c63acce9384ee4",
+    "ecr_caddy_status": "ACTIVE",
+    "ecr_caddy_tag_matches_release_sha": true,
+    "eb_events_since_cutover_start": "2026-09-17T03:58:00Z",
+    "eb_events_since_cutover_count": 7,
+    "eb_events_since_cutover_severity": "INFO_only_no_failures_no_access_denied_no_unexpected_rollback",
+    "note": "Postflight ejecutado de forma independiente en esta sesion (claude-202609171326-deployer) via scripts/harness/aws_guard.py en modo read; reconfirma sin discrepancias la cadena de identidad ya verificada por las dos sesiones VERIFYING previas (claude-202609170115-deployer y claude-202609171237-deployer)."
+  },
+  "smoke": [
+    {
+      "name": "account_region_expected",
+      "result": "PASS"
+    },
+    {
+      "name": "environment_ready_green_ok",
+      "result": "PASS"
+    },
+    {
+      "name": "version_label_exact_match",
+      "result": "PASS"
+    },
+    {
+      "name": "no_update_in_progress",
+      "result": "PASS"
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS"
+    },
+    {
+      "name": "s3_checksum_matches",
+      "result": "PASS"
+    },
+    {
+      "name": "ecr_digest_app_active_matches",
+      "result": "PASS"
+    },
+    {
+      "name": "ecr_digest_caddy_active_matches",
+      "result": "PASS"
+    },
+    {
+      "name": "eb_events_since_cutover_no_failures",
+      "result": "PASS"
+    },
+    {
+      "name": "public_https",
+      "result": "PASS"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS"
+    },
+    {
+      "name": "leads_requires_auth_redirect_to_login",
+      "result": "PASS"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS"
+    },
+    {
+      "name": "login_page_no_volver_al_sitio",
+      "result": "PASS"
+    },
+    {
+      "name": "log_scan_no_error_exception_critical",
+      "result": "PASS"
+    },
+    {
+      "name": "log_scan_no_password_authorization_token",
+      "result": "PASS"
+    },
+    {
+      "name": "log_scan_no_access_denied",
+      "result": "PASS"
+    },
+    {
+      "name": "smoke_humano_autenticado_AC3_AC4_AC8",
+      "result": "PASS"
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "automated",
+      "evidence": "evidence/H3.3.3/developer/developer-01.json (tests/integration/test_audit_assignment_view.py); evidence/H3.3.3/reviewer/review-01.json check migration_007_sql_review/real_postgres_privilege_tests; evidence/H3.3.3/deployment/migration-01.json.postflight (columns_exact_in_order, id_asesor_type_uuid, view_full_scan_ok_with_malformed_history) 15/15 PASS"
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "automated",
+      "evidence": "evidence/H3.3.3/developer/developer-01.json (test_repository_orders_events_by_fecha_hora_then_id_auditoria_desc); evidence/H3.3.3/reviewer/review-01.json check repository_contract/repository_left_join"
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "method": "both",
+      "evidence": "automatizado: developer-01.json (test_h3_3_3_timeline_presentation.py, test_web_app.py::test_detail_timeline_*) + review-01.json check timeline_presentation_security; humano: evidence/H3.3.3/approvals/acceptance-01.json decision=accepted criteria AC-3=accepted"
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "method": "both",
+      "evidence": "automatizado: developer-01.json (test_backoffice_public_site_link.py, test_detail_renders_volver_al_sitio_*) + review-01.json check volver_al_sitio; humano: evidence/H3.3.3/approvals/acceptance-01.json decision=accepted criteria AC-4=accepted; verificacion tecnica adicional en esta sesion: login sin 'Volver al sitio', sin redirect a dominio legacy"
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "method": "human",
+      "evidence": "evidence/H3.3.3/approvals/resolution-01.json (BLOCKED_HUMAN -> PREPARING_DEPLOYMENT citando migration-01.json PASS/applied_once=true); evidence/H3.3.3/deployment/migration-01.json (forward sha256 5d7b39fd..., rollback sha256 f02d3467..., commit_on_origin_main=true)"
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "method": "human",
+      "evidence": "evidence/H3.3.3/deployment/migration-01.json.postflight 15/15 PASS: public_no_privileges=[], acl_only_owner_and_tpi_app=[tpi_admin,tpi_app], tpi_app_view_only_select=[SELECT], tpi_app_auditoria_no_select_update_delete={select:false,update:false,delete:false}"
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "method": "human",
+      "evidence": "secuencia verificada: resolution-01.json resuelve BLOCKED_HUMAN->PREPARING_DEPLOYMENT solo despues de migration-01.json PASS; evidence/H3.3.3/approvals/approval-01.json es la aprobacion humana independiente del application candidate en WAITING_HUMAN_APPROVAL->DEPLOYING, distinta y no sustituta de resolution-01.json"
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "method": "both",
+      "evidence": "automatizado/tecnico: deployment-01.json + postflight de esta sesion (identidad de runtime PASS); humano: evidence/H3.3.3/approvals/acceptance-01.json decision=accepted criteria AC-8=accepted, notes confirma proyeccion automatica sin backfill de la asignacion del smoke de H3.3.2"
+    },
+    {
+      "id": "AC-9",
+      "status": "met",
+      "method": "automated",
+      "evidence": "evidence/H3.3.3/developer/developer-01.json (test_view_rollback_revokes_and_drops_view, rollback probado en PostgreSQL de integracion); scripts/sql/007_drop_audit_assignment_view.sql revisado en review-01.json check migration_007_sql_review; no ejecutado en DEV (no requerido, sin fallo)"
+    }
+  ],
+  "pii_log_scan": {
+    "matches": 0,
+    "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+    "window_start": "2026-09-17T03:58:00Z",
+    "total_events_in_window": 288,
+    "error_exception_critical_matches": 0,
+    "password_authorization_token_matches": 0,
+    "access_denied_matches": 0
+  },
+  "failure_class": null,
+  "rollback_executed": false,
+  "known_issues": [
+    {
+      "id": "KI-H3.3.3-LEAD-STATE-TIMELINE-GAP",
+      "severity": "non_blocking",
+      "summary": "Los cambios generales de estado del lead (mas alla de la asignacion) no aparecen aun en la linea de tiempo con fecha, actor, estado_anterior y estado_nuevo.",
+      "scope_note": "H3.3.3 cubre formalmente eventos de asignacion (accion=asignacion_lead) segun AC-1/AC-3; no cubre todas las transiciones de estado del lead. Detectado y documentado explicitamente por el humano en el smoke autenticado (evidence/H3.3.3/approvals/acceptance-01.json.notes).",
+      "disposition": "No bloquea el cierre de H3.3.3 (los AC-1..AC-9 formales estan completos y aceptados). Debe originar la tarea H3.3.4. No debe reinterpretarse como ya cubierto por H3.3.3."
+    }
+  ],
+  "harness_debt": [
+    {
+      "id": "HARNESS-DEBT-TRACEABILITY-REQUEST-TO-AC",
+      "summary": "Falta trazabilidad obligatoria solicitud original -> objetivo -> AC -> implementacion -> pruebas -> smoke.",
+      "recommendation": "El Reviewer debe bloquear requisitos originales que no tengan AC asociado explicito."
+    },
+    {
+      "id": "HARNESS-DEBT-ECR-SCAN-ALLOWLIST",
+      "summary": "aws_guard.py rechaza tanto --image-id como --image-ids para 'ecr describe-image-scan-findings', impidiendo la lectura directa de hallazgos de scan por el wrapper autorizado.",
+      "recommendation": "Corregir la allowlist de v_ecr en scripts/harness/aws_guard.py para aceptar --image-id (nombre real exigido por la AWS CLI para esa operacion).",
+      "reference": "evidence/H3.3.3/reviewer/candidate_review-01.json finding H3.3.3-CR-01"
+    },
+    {
+      "id": "HARNESS-DEBT-DB-PATH-MECHANISM",
+      "summary": "No existe mecanismo automatizado de migraciones en AWS RDS DEV; la aplicacion de la migracion 007 se realizo manualmente por el operador humano fuera del fast path del Harness.",
+      "recommendation": "Automatizar el mecanismo DB-PATH-MECHANISM de forma que el humano apruebe y un agente ejecute, con preflight/postflight equivalentes a los ya demostrados en migration-01.json."
+    }
+  ],
+  "follow_up_required": [
+    "Registrar tarea H3.3.4 para cubrir la linea de tiempo de cambios generales de estado del lead (no solo asignacion).",
+    "Registrar mejora del Harness: trazabilidad obligatoria solicitud->objetivo->AC->implementacion->pruebas->smoke, con bloqueo del Reviewer ante requisitos sin AC.",
+    "Registrar mejora del Harness: correccion de la allowlist de aws_guard.py para 'ecr describe-image-scan-findings' (--image-id).",
+    "Registrar mejora del Harness: automatizacion DB-PATH-MECHANISM (aprobacion humana + ejecucion por agente)."
+  ],
+  "mutations_performed": false,
+  "notes": "Sesion VERIFYING final (claude-202609171326-deployer), independiente de todas las sesiones previas de H3.3.3. Releyo directamente AGENTS.md, harness/state.json, tasks/current.yaml y toda la evidencia (developer-01.json, review-01.json, migration-01.json, merge-01.json, candidate-01.json, candidate_review-01.json, approval-01.json, deployment-01.json, acceptance-01.json, resolution-01.json) y las sesiones tecnicas previas de VERIFYING (claude-202609170115-deployer, claude-202609171237-deployer). Ejecuto un postflight final independiente de solo lectura (cuenta/region, environment Ready/Green/Ok, VersionLabel exacto, sin update en curso, AV SourceBundle, S3 checksum, digests ECR ACTIVE, eventos EB sin fallos desde el cutover) y repitio el smoke tecnico no autenticado esencial mas la revision de logs (conteos, sin volcar lineas): 288 eventos totales en la ventana, 0 ERROR/Traceback/Exception/CRITICAL, 0 password/Authorization/token, 0 AccessDenied. Confirmo directamente en evidence/H3.3.3/approvals/acceptance-01.json: decision=accepted, criterios exactos AC-3/AC-4/AC-8=accepted, notas describen smoke humano autenticado PASS y la brecha adicional de cambios generales de estado del lead. No se ejecuto approve.py. No se modifico codigo, RDS, Secrets Manager, IAM, DNS, security groups ni artefactos. No se desplego, reinicio ni ejecuto rollback. No se implemento H3.3.4 ni las mejoras del Harness en esta sesion; quedan registradas como known_issues/harness_debt/follow_up_required no bloqueantes."
+}

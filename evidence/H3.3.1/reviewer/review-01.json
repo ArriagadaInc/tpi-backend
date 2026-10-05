@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "H3.3.1",
+  "created_at": "2026-09-15T16:43:54Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609151700-reviewer",
+  "reviewed_sha": "11f540b86b907f302b41e72d968f95b597fe9449",
+  "reviewed_tree": "fe3211e99c0c54f5cf0c3b24949d1e4f34c62d56",
+  "pr_number": 50,
+  "ci": {
+    "run_id": null,
+    "sha": "11f540b86b907f302b41e72d968f95b597fe9449",
+    "conclusion": "not_applicable",
+    "note": "Los checks verdes sobre 11f540b corresponden a main (PR #51), no al cambio H3.3.1; no existe PR ni commit con el cambio, por lo que no hay CI del trabajo entregado."
+  },
+  "decision": "REJECTED",
+  "findings": [
+    {
+      "id": "RV-H3.3.1-01",
+      "severity": "blocker",
+      "file": "evidence/H3.3.1/developer/developer-01.json",
+      "summary": "head_sha 11f540b es el commit base de main (PR #51). Los cambios estan sin commitear en .harness-worktrees/H3.3.1-developer-11f540b (4 archivos modificados + test untracked) y la rama harness/H3.3.1-rbac-pii-asignacion no existe en origin. No hay SHA exacto que contenga el trabajo.",
+      "required_action": "Commitear los cambios en la rama harness/H3.3.1-rbac-pii-asignacion, hacer push y registrar head_sha = commit que contiene el cambio."
+    },
+    {
+      "id": "RV-H3.3.1-02",
+      "severity": "blocker",
+      "file": "evidence/H3.3.1/developer/developer-01.json",
+      "summary": "pr_number 50 es el issue ArriagadaInc/tpi-backend#50, no un Pull Request (gh pr view 50: 'Could not resolve to a PullRequest'). No hay PR hacia main ni CI del cambio.",
+      "required_action": "Abrir PR harness/H3.3.1-rbac-pii-asignacion -> main que referencie el issue #50, esperar CI verde en el head SHA y registrar el numero real de PR."
+    },
+    {
+      "id": "RV-H3.3.1-03",
+      "severity": "major",
+      "file": "app/web/routes/leads.py",
+      "summary": "El masking por rol depende de should_mask_web_pii (is_production or WEB_MASK_PII). En board se pasa masked=mask_pii y en detalle se usa get_solicitud_detalle() sin masking cuando el flag es falso: roles restringidos reciben PII completa en entornos no productivos (incluido DEV) si WEB_MASK_PII=false. Viola el invariante pii_full_only_roles [ceo, cto] y AC-2 (fail-open).",
+      "required_action": "Hacer el masking por rol incondicional server-side (solo can_view_full_pii desenmascara), independiente del flag de entorno, y agregar tests con WEB_MASK_PII=false para roles restringidos en board y detalle (HTML sin rut/email/telefono)."
+    },
+    {
+      "id": "RV-H3.3.1-04",
+      "severity": "major",
+      "file": "evidence/H3.3.1/developer/developer-01.json",
+      "summary": "Gates incompletos: se ejecuto 'pytest tests/unit tests/security' sin --cov-fail-under=85, sin docker build ni docker compose config; runtime 'other'. No hay evidencia del gate de cobertura exigido por harness/project-profile.yaml.",
+      "required_action": "Correr todos los quality_gates.commands del project-profile en el SHA commiteado y registrarlos (incluida cobertura >= 85%)."
+    },
+    {
+      "id": "RV-H3.3.1-05",
+      "severity": "major",
+      "file": "docs/H3_3_CRM_LITE_WEB_UX.md",
+      "summary": "La documentacion declara la deuda H3.3.1 como 'completados' y reemplaza 'Human UX Acceptance' por 'Verification & Gates -> PASS', aunque AC-4 esta pending_verification y la tarea requiere aceptacion humana autenticada. Afirma como hecho algo no verificado; ademas el rollback 'h3-3-crm-web-28cf009-r1' no tiene fuente de evidencia citada.",
+      "required_action": "No declarar completado ni PASS lo que requiere smoke/aceptacion humana; marcar H3.3.1 como pendiente de verificacion y citar evidencia verificable para labels de release/rollback o eliminarlos."
+    },
+    {
+      "id": "RV-H3.3.1-06",
+      "severity": "minor",
+      "file": "tests/unit/test_h3_3_1_rbac_pii_assignment.py",
+      "summary": "El docstring declara cobertura de AC-4 pero no hay test de assign_lead (una asignacion activa, estado asignado, auditoria). El test HTML del board para advisor solo verifica rut, no email/telefono.",
+      "required_action": "Agregar tests de comportamiento para la ruta de asignacion (CSRF, rol no autorizado 403, doble asignacion) y ampliar aserciones de PII en HTML del board."
+    }
+  ],
+  "checks": [
+    {
+      "name": "developer_evidence_read",
+      "result": "PASS"
+    },
+    {
+      "name": "head_sha_contains_change",
+      "result": "FAIL"
+    },
+    {
+      "name": "pr_exists",
+      "result": "FAIL"
+    },
+    {
+      "name": "ci_green_on_exact_sha",
+      "result": "FAIL"
+    },
+    {
+      "name": "diff_review_app",
+      "result": "FAIL"
+    },
+    {
+      "name": "quality_gates_complete",
+      "result": "FAIL"
+    },
+    {
+      "name": "no_migrations",
+      "result": "PASS"
+    },
+    {
+      "name": "no_aws_iam_changes",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "Tests no ejecutados por el Reviewer: sin commit revisable; se ejecutaran sobre el SHA del PR en la siguiente ronda",
+    "PII: masking fail-open dependiente de flag de entorno",
+    "Documentacion afirma aceptacion no verificada"
+  ]
+}

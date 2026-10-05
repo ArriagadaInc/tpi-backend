@@ -1,0 +1,201 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "H3.3.5",
+  "created_at": "2026-09-21T16:59:43Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609211640-reviewer-h3-3-5-rework1",
+  "reviewed_sha": "b4b5ba0f08a98164db5cb56b68bec2aabfa696a4",
+  "reviewed_tree": "8c81c7a58fbcf844d7e324e22532902b9b75c39d",
+  "pr_number": 57,
+  "branch": "harness/H3.3.5-asesores-dev-cartera",
+  "base_sha": "3051a6271e1626b40fe24a744abe097cab1ab0fe",
+  "previous_reviewed_sha": "56254e36e810c5491a1921e516dc0439756846dc",
+  "rework_round": 1,
+  "previous_review": "evidence/H3.3.5/reviewer/review-01.json",
+  "developer_evidence": "evidence/H3.3.5/developer/developer-02.json",
+  "review_scope": "Re-revision del rework 1/3 de H3.3.5 sobre el SHA exacto b4b5ba0 (2 commits sobre la baseline; 21 archivos, todos dentro de scope; diff del rework 56254e3..b4b5ba0 = 10 archivos). Sin cambios en harness/, agents/, environments/, tasks/, evidence/, scripts/harness/, .github/, deployment/, lockfiles ni pyproject. No se ejecuto el seed contra AWS/RDS ni se accedio a AWS, Secrets Manager o secretos; no se modifico codigo. Todas las pruebas de DB se ejecutaron contra PostgreSQL 15 efimero local (Docker, autenticacion trust sin credenciales) recreado limpio con scripts/init_test_database.py (DDL versionado) y ya eliminado. Worktree Reviewer: .harness-worktrees/H3.3.5-reviewer-b4b5ba0.",
+  "ci": {
+    "run_id": 35625445269,
+    "conclusion": "success",
+    "head_sha": "b4b5ba0f08a98164db5cb56b68bec2aabfa696a4",
+    "workflow": "CI - Linting, Tests & Security",
+    "event": "pull_request",
+    "jobs_green": 5,
+    "jobs_total": 5,
+    "runs_for_sha": 1,
+    "tests_job": "807 passed, 0 skipped; cobertura 89.24% (>=85)",
+    "new_tests_executed_in_ci": "test_h3_3_5_advisor_portfolio (4), test_h3_3_5_advisor_http (5), test_h3_3_5_seed (4): PASSED, ninguno skipped",
+    "verification": "gh pr view 57 (headRefOid == b4b5ba0); gh run list --commit <sha>; gh run view 35625445269 (headSha correcto, 5/5 success); log del job Tests"
+  },
+  "decision": "APPROVED",
+  "cause": null,
+  "findings": [
+    {
+      "id": "R2-M1",
+      "severity": "minor",
+      "file": "requirements/runtime.lock",
+      "summary": "pip-audit ejecutado hoy contra requirements/runtime.lock reporta 3 advisories sobre GitPython 3.1.59 (PYSEC-2026-3982/3983/3984, fix 3.1.60), dependencia transitiva no importada por app/. El job Security Audit del SHA (16:25Z) paso 'No known vulnerabilities found'; los advisories son posteriores. La PR no modifica lockfiles y la tarea prohibe actualizarlos (allow_lockfile_update=false); la baseline y main tienen el mismo lock.",
+      "required_action": "Ninguna en H3.3.5. Deuda transversal: decision humana/Harness separada para actualizar el lock. Riesgo: un Security Audit posterior (p. ej. post-merge o en el release) podria fallar por este motivo ajeno a H3.3.5; el Deployer debe clasificarlo como preexistente si ocurre."
+    },
+    {
+      "id": "R2-M2",
+      "severity": "minor",
+      "file": "tests/integration/test_h3_3_5_advisor_portfolio.py",
+      "summary": "La prueba de mutaciones afirma el retorno False para lead ajeno/sin asignar y que no hay auditoria, pero no relee tpi.leads.comentarios para comprobar que no cambio, ni cubre asignacion historica en mutaciones ni filtros (busqueda/sin_asignar/estancado) con scope. Cobertura representativa suficiente: el retorno proviene de RETURNING del mismo UPDATE con ownership.",
+      "required_action": "Opcional. Reproducido en sonda independiente: comentarios del lead ajeno/sin asignar/historico permanece 'ORIGINAL'; advisor 2 sobre lead de advisor 1 -> False sin escritura; y busqueda/sin_asignar/estancado con scope no filtran leads ajenos."
+    },
+    {
+      "id": "O1",
+      "severity": "info",
+      "file": "scripts/sql/dev/seed_asesores_desarrollo.sql",
+      "summary": "El nombre de base esperada es sobreescribible por la GUC de sesion tpi.seed_expected_database (usada solo por el test); el valor por defecto sigue siendo 'tpi' y con el default el seed aborta en otra base (verificado). BEGIN precede a las validaciones dentro de la misma transaccion: cualquier fallo revierte todo y no hay efecto externo. El rol tpi_app ya no se rechaza por nombre sino por falta de privilegio INSERT (verificado con un rol SELECT-only: aborta sin escritura).",
+      "required_action": "Ninguna. Sugerencia opcional: el runbook podria indicar explicitamente no fijar tpi.seed_expected_database al ejecutar en AWS DEV."
+    },
+    {
+      "id": "O2",
+      "severity": "info",
+      "file": "tests/integration/test_frozen_candidate_verification.py; tests/harness",
+      "summary": "Fallos ambientales ya clasificados, no causados por H3.3.5: (a) 3 tests de test_frozen_candidate_verification.py fallan en Windows ('/bin/bash: ...: No such file or directory' por rutas con backslashes); pasan en CI Linux (Tests 807/0) y fallan identico en la baseline; la PR no toca scripts/release ni ese test. (b) tests/harness dependen del state.json vivo copiado por conftest: observado 130 passed / 4 failed en REVIEWING (test_init_cli_subprocess_does_not_modify_filesystem_or_git, test_init_works_in_idle_without_task, test_c_cold_start_briefing_idle, test_e_transition_denies_human_event_without_human_flag); la PR no modifica el Harness (0 archivos protegidos) y validate_repo.py PASS.",
+      "required_action": "Ninguna en H3.3.5."
+    },
+    {
+      "id": "O3",
+      "severity": "info",
+      "file": "app/pages/2_solicitudes_registradas.py",
+      "summary": "Observacion previa (review-01 O2) sin cambios: la pagina Streamlit legacy llama get_crm_bandeja sin usuario (sin scope, enmascarada). La app desplegada (FastAPI /leads) si esta scopeada. Confirmar que Streamlit no se expone en DEV.",
+      "required_action": "Ninguna en H3.3.5."
+    }
+  ],
+  "prior_findings_disposition": [
+    {
+      "id": "F1",
+      "severity": "blocker",
+      "verdict": "RESUELTO",
+      "verification": "Inspeccion directa: params=[fragmento, fragmento, id_lead] + [estado_asignacion, id_asesor] coincide con los placeholders (fragmento, fragmento, id_lead, estado, id_asesor). PostgreSQL real: propio True con nota persistida y acumulacion ('ORIGINAL\\n\\nN1\\n\\nN2'); ajeno, sin asignar, asignacion historica/inactiva, advisor 2 sobre lead de advisor 1 e id inexistente -> False sin escritura ni error SQL; sin scope (CEO/CTO) True sin regresion. HTTP: propio 303, ajeno/sin asignar 404."
+    },
+    {
+      "id": "F2",
+      "severity": "blocker",
+      "verdict": "RESUELTO",
+      "verification": "tests/integration/test_h3_3_5_advisor_portfolio.py usa get_db_connection real y SolicitudRepository/SolicitudService reales (sin fakes); cubre get_crm_solicitudes(portfolio_asesor_id) con Advisor 1/2, sin asignar, asignacion inactiva/historica, conteos y paginacion, get_active_advisor_by_id (activo/inactivo/rol distinto/inexistente), lead_active_assignment_belongs_to, update_lead_status y append_lead_comment con scope, advisor invalido/inactivo -> vacio, CEO/CTO global. 4/4 PASSED local y en CI (sin skips: el skip solo aplica si no hay DB y CI provee el servicio postgres:15 + init_test_database.py)."
+    },
+    {
+      "id": "F3",
+      "severity": "blocker",
+      "verdict": "RESUELTO",
+      "verification": "El seed inserta rol='asesor' y estado_disponibilidad='activo' explicitos; el DDL versionado los declara NOT NULL sin default. Ejecutado via psql contra el DDL versionado: crea exactamente 2; 2a ejecucion adopta sin duplicar y con UUID identicos; registro compatible preexistente adopta UUID (con espacios/mayusculas via btrim/lower); incompatible aborta; A2 incompatible con A1 ausente aborta y A1 NO queda creado (rollback completo); ambiguo ('X' y 'X ') aborta; rol SELECT-only aborta; base distinta de 'tpi' aborta con el default; otros asesores intactos; 0 filas en tpi.asignaciones; sin GRANT. rol/estado NOT NULL hacen la comparacion IS DISTINCT FROM segura."
+    },
+    {
+      "id": "F4",
+      "severity": "major",
+      "verdict": "RESUELTO",
+      "verification": "tests/integration/test_h3_3_5_advisor_http.py usa rutas reales (create_web_app, POST status/comments/cleanup/assign, GET dashboard) con repositorio real: propio 303 y estado persistido, ajeno/sin asignar 404 y estado 'nuevo' intacto, cleanup 403, assign 403, dashboard 403 (advisor valido e invalido), advisor invalido sin acceso al detalle (404), CEO mutacion 303 + dashboard 200. 5/5 PASSED local y CI."
+    },
+    {
+      "id": "F5",
+      "severity": "major",
+      "verdict": "RESUELTO",
+      "verification": "Runbook seccion 6 nombra RestartAppServer/UpdateEnvironment como operaciones humanas fuera del Harness, cita la documentacion oficial de AWS, confirma el consumo via variable de entorno del bundle, y exige Ready/Green/Ok, reverificacion del VersionLabel exacto y luego smoke. Human Gate preservado; no se ejecuta nada."
+    },
+    {
+      "id": "F6",
+      "severity": "minor",
+      "verdict": "RESUELTO",
+      "verification": "Cobertura advisor (PII/aislamiento/HTTP) equivalente o superior via pruebas PostgreSQL/HTTP nuevas."
+    },
+    {
+      "id": "F7",
+      "severity": "minor",
+      "verdict": "RESUELTO",
+      "verification": "lower(btrim(nombre)) e IS DISTINCT FROM; validaciones dentro de una unica transaccion con rollback total."
+    },
+    {
+      "id": "F8",
+      "severity": "minor",
+      "verdict": "RESUELTO",
+      "verification": "Runbook: instancia tpi-postgres-dev (docs/AWS_RDS_CONNECTION.md), hostname desde DATABASE_HOST/inventario RDS read-only, base/esquema/puerto, BLOCKER si no es canonico; agrega Human Gate del data candidate."
+    },
+    {
+      "id": "F9",
+      "severity": "minor",
+      "verdict": "RESUELTO",
+      "verification": "El warning incluye subject (campo tecnico de configuracion, no secreto/PII) y no el advisor_id crudo; test con caplog verifica que ni el valor crudo ni el hash/argon2/credenciales aparecen."
+    }
+  ],
+  "checks": [
+    {
+      "name": "preconditions_state_task_pr_head_base",
+      "result": "PASS",
+      "note": "state READY_FOR_REVIEW -> REVIEWING, task H3.3.5, rework 1/3, PR #57 head == b4b5ba0 (evidencia Developer), base 3051a62; 21 archivos dentro de scope; 0 archivos protegidos; validate_repo PASS; start_review con sesion claude-202609211640-reviewer-h3-3-5-rework1 (distinta del Developer y de la ronda anterior)."
+    },
+    {
+      "name": "ci_green_exact_sha",
+      "result": "PASS",
+      "note": "run 35625445269, headSha b4b5ba0, 5/5 success, unico run para el SHA; Tests: 807 passed, 0 skipped, cobertura 89.24%."
+    },
+    {
+      "name": "targeted_postgres_http_seed_auth_tests",
+      "result": "PASS",
+      "note": "54 passed, 0 skipped: advisor_portfolio, advisor_http, seed (integration) + advisor_auth, seed_sql, advisor_service, advisor_web (unit), contra PostgreSQL 15 efimero y con app importada desde el worktree del SHA."
+    },
+    {
+      "name": "full_suite_and_coverage",
+      "result": "PASS",
+      "note": "pytest tests/ --ignore=tests/harness contra DB limpia: 804 passed, 3 failed (solo los 3 ambientales /bin/bash de Windows), 0 skipped; cobertura 89.29% (>=85). Una primera corrida con 11 fallos fue causada por mi propia sonda (borre tpi.asesores sembrada por init) y se repitio con DB limpia."
+    },
+    {
+      "name": "quality_gates_ci_exact",
+      "result": "PASS",
+      "note": "ruff check app/ tests/ scripts/ deployment/ OK; black --check 177 archivos sin cambios; mypy app/ --ignore-missing-imports OK (68 archivos); bandit medium+ sin hallazgos. (Ruff/black sobre '.' fallan en scripts raiz preexistentes fuera del alcance de CI.)"
+    },
+    {
+      "name": "pip_audit",
+      "result": "PASS",
+      "note": "CI del SHA: sin vulnerabilidades. Ejecucion local posterior: 3 advisories GitPython 3.1.59 (transitivo, lock sin cambios en la PR): ver R2-M1."
+    },
+    {
+      "name": "seed_real_postgres_psql",
+      "result": "PASS",
+      "note": "9 escenarios via psql contra el DDL versionado (ver F3). Sin secretos, sin endpoints privados nuevos, sin escritura a asignaciones ni grants; UUID solo via NOTICE."
+    },
+    {
+      "name": "f1_append_lead_comment_direct_inspection",
+      "result": "PASS",
+      "note": "Orden de parametros == orden de placeholders; el predicado de ownership esta en el mismo UPDATE; sin lectura previa ni TOCTOU; consulta parametrizada; commit tras fetchone."
+    },
+    {
+      "name": "regression_security",
+      "result": "PASS",
+      "note": "fail-closed (advisor sin/invalido/inactivo -> vacio sin consulta, detalle 404, mutaciones denegadas), PII contextual, 404 de leads ajenos, 403 dashboard/asignacion/cleanup, CEO/CTO sin regresion, consultas parametrizadas, sin cambios de alcance ni de lockfiles."
+    },
+    {
+      "name": "secrets_pii_scan",
+      "result": "PASS",
+      "note": "Diff baseline..head sin hashes, contrasenas, credenciales, endpoints RDS ni comandos AWS de mutacion; RUTs de fixtures sinteticos (30111111-1, etc.); logs sin advisor_id crudo."
+    },
+    {
+      "name": "harness_and_env_failures_recorded",
+      "result": "PASS",
+      "note": "Ver O2: bash/Windows (3) y tests/harness dependientes de state.json vivo (4) clasificados como preexistentes/ambientales."
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-5, AC-8..AC-16, AC-20, AC-21",
+      "status": "cubiertos con pruebas ejecutadas en PostgreSQL real/HTTP y CI"
+    },
+    {
+      "id": "AC-1..AC-4, AC-6, AC-7, AC-17..AC-19",
+      "status": "pendientes por diseno de verificacion humana/Deployer: seed en AWS DEV por el operador humano tras data candidate + Human Gate, identidades en AUTH_USERS_JSON, postflight read-only y smoke autenticado; el mecanismo esta probado en PostgreSQL real"
+    }
+  ],
+  "risks": [
+    "APPROVED. El siguiente rol autorizado es Deployer (start_merge). H3.3.5 requiere aun: data candidate + Human Gate independiente antes de que el operador humano ejecute el seed; el Deployer solo hace postflight read-only; cutover D7: datos -> app con RBAC -> Ready/Green/Ok -> identidades -> RestartAppServer/UpdateEnvironment humano -> reverificar salud y release -> smoke.",
+    "R2-M1: advisories nuevos de GitPython 3.1.59 en runtime.lock (ajenos a la PR); un Security Audit posterior podria fallar por causa preexistente.",
+    "Streamlit legacy sin scope (O3) no debe exponerse en DEV.",
+    "No fijar tpi.seed_expected_database al ejecutar el seed en AWS DEV (O1).",
+    "Sesion Reviewer: claude-202609211640-reviewer-h3-3-5-rework1. Worktrees Reviewer de rondas previas aun registrados en state (-56254e3, -3051a62, -2909242) y el nuevo -b4b5ba0; PostgreSQL efimero tpi-rev-h335-r2-pg eliminado."
+  ]
+}

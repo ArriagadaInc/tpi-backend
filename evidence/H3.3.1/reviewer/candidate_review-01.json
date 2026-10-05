@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "H3.3.1",
+  "created_at": "2026-09-15T20:14:27Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609152013-reviewer",
+  "release_sha": "4aac143a396934186342bab5ec97b3df5e53085c",
+  "reviewed_tree": "b6eab9ce3ef8153d77c3ae73be9ebf45fb0cfef2",
+  "release_tree": "b6eab9ce3ef8153d77c3ae73be9ebf45fb0cfef2",
+  "decision": "APPROVED",
+  "cause": null,
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse 4aac143a...^{tree} == git rev-parse 838f5db...^{tree} == b6eab9ce3ef8153d77c3ae73be9ebf45fb0cfef2, coincide con reviewed_tree de review-02.json y release_tree de merge-01.json."
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "git log origin/main -1 tras git fetch origin main muestra 4aac143 como tip; gh pr view 52 confirma state=MERGED, mergeCommit.oid=4aac143a396934186342bab5ec97b3df5e53085c, baseRefName=main."
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "gh run view 35016424368: headSha=4aac143a..., conclusion=success, 7/7 jobs success incluyendo 'Fail closed on high or critical ECR findings' y 'Build and validate release bundle'."
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "aws_guard ecr describe-images confirma ambos digests (app sha256:363eb266..., caddy sha256:429ef8f3...) ACTIVE, tag unico = release SHA exacto. describe-repositories (para leer la policy IMMUTABLE del repo) no esta en el allowlist candidate_read del Harness (harness/policies.yaml aws.modes.candidate_read); invariante de repo establecida fuera de esta revision."
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "candidate-01.json declara critical=0/high=0 para ambas imagenes; corroborado por el job dedicado 'Fail closed on high or critical ECR findings' (success) del publish run 35016424368. Lectura directa aws_guard ecr describe-image-scan-findings quedo bloqueada: el guard (v_ecr en scripts/harness/aws_guard.py:319) solo permite la opcion --image-ids para este comando, pero la AWS CLI real exige --image-id (singular) para describe-image-scan-findings; el propio SKILL.md (tpi-release-readiness paso 5) documenta --image-id, en contradiccion con el guard. Se reporta como defecto de tooling del Harness (no del candidate); no se intentaron rodeos tras 2 variantes fallidas, conforme a la regla de bloqueo GUARD DENIED."
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "Reconstruccion local con deployment/build_eb_ecr_bundle.py::build_domain_locked_bundle (template deployment/aws/docker-compose.domainlocked.yml, mismos digests y runtime_git_sha=4aac143a...) produjo bundle_sha256=e49628affe9279b80764a12ec5b724f60e5b89eb5b8c72bb6d519c9a99e8f72c, identico al declarado en candidate-01.json."
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "build_domain_locked_bundle valida internamente ausencia de 'genialabs.cl', ausencia de directivas build:, y una unica entrada docker-compose.yml; la construccion local no lanzo excepcion."
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "aws_guard s3api head-object sobre la key content-addressed del candidate devuelve ChecksumSHA256=5JYor/6SebgHZKEuxbck9g5bietbjHK7bVGcmpno9yw=, igual a candidate-01.json.s3.checksum_sha256 (== base64 de e49628af...)."
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "aws_guard elasticbeanstalk describe-application-versions --version-labels h3-3-1-rbac-pii-4aac143-domainlocked-r1 devuelve SourceBundle.S3Key identico a la key declarada; Status=UNPROCESSED coherente con application_version.process=false del contrato."
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "commit 4aac143a -> tree b6eab9ce -> digests app 363eb266../caddy 429ef8f3.. -> bundle e49628af.. -> s3 key content-addressed -> AV h3-3-1-rbac-pii-4aac143-domainlocked-r1 -> SourceBundle verificados end-to-end, sin saltos ni sustituciones."
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "aws_guard elasticbeanstalk describe-environments sobre tpi-backoffice-dev-green muestra VersionLabel=h3-3-crm-web-43101be-domainlocked-r1, Status=Ready, Health=Green, HealthStatus=Ok, identico a candidate-01.json.environment_observed y .lkg."
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "describe-application-versions para h3-3-crm-web-43101be-domainlocked-r1 devuelve Status=UNPROCESSED (utilizable)."
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "aws_guard ecr describe-images confirma ambos digests del LKG (app sha256:797372.., caddy sha256:30ace9..) ACTIVE en ECR; mitiga el riesgo ECR-LIFECYCLE-KEEP-20."
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "el bundle reconstruido solo contiene docker-compose.yml con referencias por digest; candidate-01.json y esta revision no contienen secretos ni URLs prefirmadas."
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "candidate-01.json.smoke_plan cubre AC-1..AC-4 (human) y 6 checks automatizables (public_https, backoffice_login, api_catalogs, static_css, leads_requires_auth, no_legacy_domain_redirect)."
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "deployment_plan.commands es un unico 'aws_guard.py elasticbeanstalk update-environment --environment-name tpi-backoffice-dev-green --version-label <candidate>'; sin --option-settings/--template-name/--platform-arn/--tier."
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "el comando planificado coincide con harness/policies.yaml aws.modes.cutover para el estado DEPLOYING (deployer); no se ejecuto (solo revisado)."
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "note": "un unico comando de cutover declarado, sin bucles de reintento."
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "rollback_plan.version_label == lkg.version_label == h3-3-crm-web-43101be-domainlocked-r1; rollback_authorization (policies.yaml) limita a 1 intento y exige LKG nombrado, no por timestamp."
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": "deployment_plan y rollback_plan no referencian IAM, Route53, secretos ni migraciones; solo version-label sobre el environment DEV existente."
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "note": "toda salida AWS leida en esta revision paso por aws_guard.py, que redacta segun policies.yaml; no se imprimieron secretos."
+    },
+    {
+      "name": "environment_not_mutated",
+      "result": "PASS",
+      "note": "describe-environments confirma que tpi-backoffice-dev-green sigue en VersionLabel=h3-3-crm-web-43101be-domainlocked-r1 (LKG), no en el candidate; ninguna operacion de esta revision fue update-environment (candidate_read es solo lectura)."
+    }
+  ],
+  "findings": [],
+  "risks": [
+    "AC-4 (persistencia/auditoria de asignacion) permanece pending_verification; requiere smoke autenticado humano en AWS DEV durante VERIFYING/requires_human_acceptance, ya contemplado por el Harness.",
+    "Defecto de tooling detectado (no bloqueante para este candidate): scripts/harness/aws_guard.py v_ecr solo acepta '--image-ids' para 'ecr describe-image-scan-findings', pero la AWS CLI real exige '--image-id'; agents/reviewer/skills/tpi-release-readiness/SKILL.md documenta '--image-id'. Recomendado para mantenimiento humano del Harness (fuera del alcance del Reviewer: no se modifico scripts/harness/)."
+  ]
+}

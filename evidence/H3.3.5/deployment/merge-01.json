@@ -1,0 +1,307 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "H3.3.5",
+  "created_at": "2026-09-21T17:10:04Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609211710-deployer-merge-pr57",
+  "pr_number": 57,
+  "pr_url": "https://github.com/ArriagadaInc/tpi-backend/pull/57",
+  "pr_title": "H3.3.5 Asesores DEV y cartera propia (RBAC advisor por cartera + seed DEV)",
+  "pr_author": "ArriagadaInc",
+  "pr_state_after_merge": "MERGED",
+  "reviewed_sha": "b4b5ba0f08a98164db5cb56b68bec2aabfa696a4",
+  "reviewed_tree": "8c81c7a58fbcf844d7e324e22532902b9b75c39d",
+  "base_sha_original": "3051a6271e1626b40fe24a744abe097cab1ab0fe",
+  "release_sha": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+  "release_tree": "8c81c7a58fbcf844d7e324e22532902b9b75c39d",
+  "main_parent_sha": "3051a6271e1626b40fe24a744abe097cab1ab0fe",
+  "main_before_merge": "3051a6271e1626b40fe24a744abe097cab1ab0fe",
+  "main_after_merge": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+  "method": "squash",
+  "match_head_commit_used": true,
+  "result": "PASS",
+  "change_class": "D",
+  "deploy_required": true,
+  "fast_path": false,
+  "merged_at": "2026-09-21T17:04:47Z",
+  "merged_by": "ArriagadaInc",
+  "release_commit_author": "Alvaro Arriagada",
+  "release_commit_committer": "GitHub",
+  "release_commit_subject": "H3.3.5 Asesores DEV y cartera propia (RBAC advisor por cartera + seed DEV) (#57)",
+  "gh_pr_merge_command": "gh pr merge 57 --squash --match-head-commit b4b5ba0f08a98164db5cb56b68bec2aabfa696a4",
+  "merge_strategy": "Squash merge server-side via gh anclado al HEAD aprobado con --match-head-commit; sin --delete-branch (la rama harness/H3.3.5-asesores-dev-cartera sigue checkouteada en .harness-worktrees/H3.3.5-developer-3051a62); sin --admin, sin auto-merge, sin rebase, sin force-push, sin cambios de codigo.",
+  "tree_equivalence": {
+    "reviewed_tree": "8c81c7a58fbcf844d7e324e22532902b9b75c39d",
+    "release_tree": "8c81c7a58fbcf844d7e324e22532902b9b75c39d",
+    "equal": true,
+    "verification": "git rev-parse b4b5ba0^{tree} == git rev-parse 78bf33b^{tree} == review-02.reviewed_tree; git diff --stat b4b5ba0 78bf33b vacio (exit 0)."
+  },
+  "branch": "harness/H3.3.5-asesores-dev-cartera",
+  "remote_branch_deleted": false,
+  "remote_branch_head_after_merge": "b4b5ba0f08a98164db5cb56b68bec2aabfa696a4",
+  "scope": {
+    "files_changed": 21,
+    "all_within_task_scope": true,
+    "protected_or_forbidden_paths_changed": 0,
+    "checked_forbidden": "harness/, agents/, environments/, tasks/, evidence/, scripts/harness/, .github/, deployment/, docs/cicd/, requirements/, pyproject.toml, *.lock, AGENTS.md, CLAUDE.md, .claude/, .mcp.json",
+    "files": [
+      "app/auth/models.py",
+      "app/auth/simple_dev.py",
+      "app/repositories/solicitud_repository.py",
+      "app/services/solicitud_service.py",
+      "app/web/dependencies.py",
+      "app/web/routes/auth.py",
+      "app/web/routes/leads.py",
+      "docs/H3_3_5_DEV_RUNBOOK.md",
+      "docs/H3_3_5_REQUIREMENTS_MATRIX.md",
+      "scripts/sql/dev/seed_asesores_desarrollo.sql",
+      "tests/integration/test_h3_3_5_advisor_http.py",
+      "tests/integration/test_h3_3_5_advisor_portfolio.py",
+      "tests/integration/test_h3_3_5_seed.py",
+      "tests/unit/test_h3_3_1_rbac_pii_assignment.py",
+      "tests/unit/test_h3_3_5_advisor_auth.py",
+      "tests/unit/test_h3_3_5_advisor_service.py",
+      "tests/unit/test_h3_3_5_advisor_web.py",
+      "tests/unit/test_h3_3_5_seed_sql.py",
+      "tests/unit/test_solicitud_assignment_service.py",
+      "tests/unit/test_web_app.py",
+      "tests/unit/test_web_helpers.py"
+    ]
+  },
+  "data_candidate_reference": {
+    "seed_path": "scripts/sql/dev/seed_asesores_desarrollo.sql",
+    "seed_sha256_at_release": "39eb846533c15b560847eb00de3ad0f5c3e5e3d08f7ebc5c1c34d6631122ea51",
+    "sha256_method": "git show b4b5ba0:scripts/sql/dev/seed_asesores_desarrollo.sql | sha256sum (blob identico en 78bf33b por igualdad de arbol)",
+    "runbook": "docs/H3_3_5_DEV_RUNBOOK.md",
+    "seed_executed": false,
+    "note": "Referencia informativa para el Human Gate; el checksum debe ser re-verificado por el operador humano antes de ejecutar."
+  },
+  "references": {
+    "developer_evidence": "evidence/H3.3.5/developer/developer-02.json",
+    "review_evidence": "evidence/H3.3.5/reviewer/review-02.json",
+    "previous_review": "evidence/H3.3.5/reviewer/review-01.json",
+    "reviewer_session": "claude-202609211640-reviewer-h3-3-5-rework1",
+    "developer_session": "deepseek-202609211610-developer-rework1"
+  },
+  "ci_pr": {
+    "run_id": 35625445269,
+    "url": "https://github.com/ArriagadaInc/tpi-backend/actions/runs/35625445269",
+    "workflow": "CI - Linting, Tests & Security",
+    "event": "pull_request",
+    "sha": "b4b5ba0f08a98164db5cb56b68bec2aabfa696a4",
+    "conclusion": "success",
+    "jobs": "5/5 success: Docker Build, Lint & Format, Release Tooling Validation, Security Audit, Tests",
+    "tests": "807 passed, 0 skipped",
+    "coverage": "89.24% (>=85)",
+    "runs_for_sha": 1
+  },
+  "ci_main": {
+    "run_id": 35629691243,
+    "url": "https://github.com/ArriagadaInc/tpi-backend/actions/runs/35629691243",
+    "workflow": "CI - Linting, Tests & Security",
+    "event": "push",
+    "branch": "main",
+    "sha": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+    "conclusion": "success",
+    "created_at": "2026-09-21T17:04:49Z",
+    "completed_at": "2026-09-21T17:08:19Z",
+    "jobs": "5/5 success: Tests, Security Audit, Lint & Format, Release Tooling Validation, Docker Build",
+    "tests": "807 passed, 7 warnings",
+    "coverage": "89.24% (>=85), TOTAL 4444 sentencias / 478 no cubiertas",
+    "security_audit": "PASS: pip-audit 'No known vulnerabilities found'; bandit sin issues",
+    "docker_build": "PASS",
+    "release_tooling_validation": "PASS (Artifact verification passed)",
+    "lint_format": "PASS",
+    "runs_for_sha": 1,
+    "regression_vs_ci_pr": "ninguna: mismos 807 tests y misma cobertura 89.24%"
+  },
+  "r2_m1_disposition": {
+    "finding": "R2-M1 (review-02): advisories GitPython reportados por pip-audit local del Reviewer",
+    "blocking": false,
+    "conditions": {
+      "pr_changed_dependencies_or_lockfiles": false,
+      "main_ci_security_audit": "success (No known vulnerabilities found)",
+      "vulnerability_introduced_by_diff": false
+    },
+    "observation": "requirements/runtime.lock pinnea GitPython==3.1.60 (version con el fix) en 3051a62, b4b5ba0 y 78bf33b (sin cambios; ultimo cambio del lock en c99b260). La mencion de 3.1.59 en R2-M1 no coincide con el lock versionado; se atribuye a un entorno local del Reviewer. No se modificaron dependencias en esta sesion."
+  },
+  "checks": [
+    {
+      "name": "init_state_role",
+      "result": "PASS",
+      "note": "init.ps1 --runtime claude: PASS, state REVIEW_APPROVED, task H3.3.5, active_role deployer, allowed_events [start_merge]."
+    },
+    {
+      "name": "session_new_and_distinct",
+      "result": "PASS",
+      "note": "claude-202609211710-deployer-merge-pr57, distinta de las sesiones Developer (deepseek-*) y Reviewer (claude-202609211600-reviewer-h3-3-5, claude-202609211640-reviewer-h3-3-5-rework1)."
+    },
+    {
+      "name": "start_merge",
+      "result": "PASS",
+      "note": "transition.py start_merge -> MERGING a 2026-09-21T17:04:30Z; state=MERGING verificado antes del merge."
+    },
+    {
+      "name": "pr_open_clean_mergeable_head_exact",
+      "result": "PASS",
+      "note": "Verificado antes y despues de start_merge: OPEN, MERGEABLE, CLEAN, isDraft=false, headRefOid=b4b5ba0, baseRefOid=3051a62=origin/main."
+    },
+    {
+      "name": "head_tree_exact",
+      "result": "PASS",
+      "note": "git ls-remote rama = b4b5ba0; git rev-parse b4b5ba0^{tree} = 8c81c7a5 = review-02.reviewed_tree."
+    },
+    {
+      "name": "no_later_commits",
+      "result": "PASS",
+      "note": "PR con 2 commits (56254e3, b4b5ba0); ultimo commit 16:24:39Z y updatedAt 16:24:50Z, anteriores a review-02 (16:59:43Z); 0 reviews GitHub nuevas; rama remota sin avance."
+    },
+    {
+      "name": "review_02_approved",
+      "result": "PASS",
+      "note": "decision APPROVED, reviewed_sha/tree/pr coinciden; sin blocker/major; R2-M1/R2-M2 minor, O1-O3 info."
+    },
+    {
+      "name": "ci_pr_green_exact_sha",
+      "result": "PASS",
+      "note": "run 35625445269 unico para b4b5ba0, completed/success, 5/5; gh pr checks 57 5 pass."
+    },
+    {
+      "name": "scope_21_files",
+      "result": "PASS",
+      "note": "21 archivos, todos bajo app/auth, app/web, app/repositories, app/services, tests, scripts/sql/dev, docs/H3_3_5_*; 0 en rutas prohibidas."
+    },
+    {
+      "name": "validate_repo",
+      "result": "PASS",
+      "note": "python scripts/harness/validate_repo.py -> VALIDATE: PASS."
+    },
+    {
+      "name": "merge_squash_match_head",
+      "result": "PASS",
+      "note": "gh pr merge 57 --squash --match-head-commit b4b5ba0 exit 0."
+    },
+    {
+      "name": "release_on_origin_main",
+      "result": "PASS",
+      "note": "git fetch: 3051a62..78bf33b main; origin/main = 78bf33b = mergeCommit del PR."
+    },
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "8c81c7a58fbcf844d7e324e22532902b9b75c39d en ambos; diff vacio."
+    },
+    {
+      "name": "main_linear_single_parent",
+      "result": "PASS",
+      "note": "78bf33b tiene un unico parent 3051a62."
+    },
+    {
+      "name": "ci_main_green_on_release_sha",
+      "result": "PASS",
+      "note": "run 35629691243 push/main headSha 78bf33b completed/success 5/5; 807 passed; 89.24%; pip-audit sin vulnerabilidades."
+    },
+    {
+      "name": "no_cloud_no_rds_no_secrets",
+      "result": "PASS",
+      "note": "0 invocaciones de aws_guard, 0 herramientas MCP AWS, sin conexion a RDS, sin lectura de secretos ni AUTH_USERS_JSON."
+    },
+    {
+      "name": "seed_not_executed",
+      "result": "PASS",
+      "note": "El seed no se ejecuto; el Deployer no escribe en RDS (D3)."
+    },
+    {
+      "name": "no_candidates_no_deploy",
+      "result": "PASS",
+      "note": "Sin gh workflow run, sin bundle, sin application version, sin update-environment, sin RestartAppServer, sin smoke."
+    },
+    {
+      "name": "no_approve_py",
+      "result": "PASS",
+      "note": "approve.py no ejecutado."
+    }
+  ],
+  "cloud_access": {
+    "operations": 0,
+    "rds_access": false,
+    "secrets_access": false,
+    "aws_guard_invocations": 0
+  },
+  "release_scope": {
+    "seed_executed": false,
+    "identities_created": false,
+    "auth_users_json_modified": false,
+    "application_candidate_prepared": false,
+    "deployment_executed": false,
+    "environment_mutated": false,
+    "rollback_executed": false
+  },
+  "worktrees": {
+    "cleanup_performed": false,
+    "note": "Registrados sin limpieza; no bloquean el merge. La rama del worktree Developer se conserva (sin --delete-branch).",
+    "h3_3_5": [
+      {
+        "path": ".harness-worktrees/H3.3.5-developer-3051a62",
+        "role": "developer",
+        "head": "b4b5ba0",
+        "branch": "harness/H3.3.5-asesores-dev-cartera"
+      },
+      {
+        "path": ".harness-worktrees/H3.3.5-reviewer-56254e3",
+        "role": "reviewer",
+        "head": "56254e3",
+        "branch": null
+      },
+      {
+        "path": ".harness-worktrees/H3.3.5-reviewer-3051a62",
+        "role": "reviewer",
+        "head": "3051a62",
+        "branch": null
+      },
+      {
+        "path": ".harness-worktrees/H3.3.5-reviewer-2909242",
+        "role": "reviewer",
+        "head": "2909242",
+        "branch": null
+      },
+      {
+        "path": ".harness-worktrees/H3.3.5-reviewer-b4b5ba0",
+        "role": "reviewer",
+        "head": "b4b5ba0",
+        "branch": null
+      }
+    ],
+    "other_known": [
+      ".harness-worktrees/H3.3.1-developer-11f540b",
+      ".harness-worktrees/H3.3.1-reviewer-838f5db",
+      ".harness-worktrees/H3.3.4-developer-c5e738c",
+      ".harness-worktrees/H3.3.4-developer-c99b260",
+      ".harness-worktrees/H3.3.4-reviewer-19725b4",
+      ".harness-worktrees/H3.3.4-reviewer-5ffb2a2",
+      ".tmp-h3-3-control-plane",
+      ".tmp-h3-3-domain",
+      ".tmp-h3-3-pr14-cutover",
+      ".tmp-h3-3-supply-chain"
+    ]
+  },
+  "blocked_human_reason": "Pendiente aprobacion humana independiente del candidato de datos DEV antes de ejecutar el seed de Asesor Desarrollo 1 y Asesor Desarrollo 2",
+  "blocked_human_conditions": [
+    "El seed todavia NO se ejecuto.",
+    "El Deployer no puede escribir en AWS RDS (D3).",
+    "El operador humano ejecutara el seed en su propia terminal.",
+    "Antes se revisara el SQL scripts/sql/dev/seed_asesores_desarrollo.sql y su checksum SHA256 (referencia 39eb8465...ea51 en el release 78bf33b).",
+    "Se realizara el preflight AWS/DB D5 (STS, cuenta 821656895812, region us-east-2, environment tpi-backoffice-dev-green, endpoint/base, usuario de base, salud) segun docs/H3_3_5_DEV_RUNBOOK.md.",
+    "Si el seed falla: STOP con evidencia y NO se despliega la aplicacion.",
+    "Despues del seed el Deployer hara unicamente postflight DB read-only.",
+    "Esta aprobacion NO aprueba el application candidate; este requiere su propio Human Gate (WAITING_HUMAN_APPROVAL)."
+  ],
+  "human_pending": [
+    "Human Gate del data candidate DEV (seed Asesor Desarrollo 1/2)",
+    "Ejecucion humana del seed tras preflight D5",
+    "Resolucion humana de BLOCKED_HUMAN (change_class D, sin fast path)"
+  ],
+  "scope_of_session": "Solo preflight, start_merge, merge squash de PR #57 anclado al HEAD revisado, verificacion de main y arbol, CI de main y transicion merged_non_fast_path. Sin seed, sin AWS/RDS/Secrets, sin candidates, sin despliegue, sin approve.py."
+}

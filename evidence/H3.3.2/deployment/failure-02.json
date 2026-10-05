@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "failure",
+  "task_id": "H3.3.2",
+  "created_at": "2026-09-16T15:56:36Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609161547-deployer",
+  "action": "acceptance_criteria_review",
+  "resource": "task H3.3.2 acceptance criteria AC-1, AC-2, AC-3..AC-7 (funcional, both), AC-8 sobre environment tpi-backoffice-dev-green, version h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1",
+  "principal": "deployer (claude-202609161547-deployer), sin credenciales de aplicacion ni acceso a AUTH_USERS_JSON",
+  "error": "AC-1, AC-2 y AC-8 (verification=human) y la porcion funcional de AC-3..AC-7 (verification=both) no pueden declararse cumplidos: diego.operaciones y alvaro.operaciones aun no tienen configurados los roles ceo/cto en AUTH_USERS_JSON (secreto clase E, fuera del alcance de Developer/Reviewer/Deployer) y no se ha ejecutado el smoke autenticado humano. Ver evidence/H3.3.2/deployment/verification-01.json (result=FAIL, todos los AC en pending_human). No hay decision humana de rechazo: es una precondicion operativa aun no ejecutada, no un defecto de codigo.",
+  "state": "VERIFY_FAILED",
+  "recommendation": "No es degradacion de infraestructura: environment Ready/Green/Ok en la version aprobada exacta (identity chain 4/4 verificada), sin eventos de error/abort/AccessDenied desde el cutover, smoke no autenticado 6/6 PASS, pii_log_scan sin matches. No corresponde start_rollback: no se cumple 'environment_degraded_inconsistent_or_not_expected_state' ni 'not_purely_functional_defect' de rollback_authorization.conditions (approval-01.json); es un defecto puramente funcional/operativo (identidad DEV pendiente), y segun CONTEXT.md del Deployer y el contrato v2 seccion 9 no se endurece el deploy ni se dispara rollback automatico. Escalar a BLOCKED_HUMAN: el humano debe (a) ejecutar la configuracion de identidad clase E en AUTH_USERS_JSON siguiendo docs/H3_3_2_SUPERUSUARIOS_CEO_CTO.md seccion 'Identidades DEV (accion pendiente para rol autorizado)', (b) realizar el smoke autenticado humano AC-8 con diego.operaciones/alvaro.operaciones, y (c) registrar la decision con approve.py accept/reject; solo entonces una sesion Verifier/Deployer nueva puede reintentar 'verified'.",
+  "residues": [],
+  "access_denied": false
+}

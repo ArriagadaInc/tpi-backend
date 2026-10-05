@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "H3.3.4",
+  "created_at": "2026-09-21T13:31:03Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609211323-deployer-verify",
+  "approved_commit": "3051a6271e1626b40fe24a744abe097cab1ab0fe",
+  "deployed_commit": "3051a6271e1626b40fe24a744abe097cab1ab0fe",
+  "application_version": "h3-3-4-historial-dashboard-3051a62-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "PASS",
+  "failure_class": null,
+  "postflight_identity_chain": {
+    "source": "evidence/H3.3.4/deployment/deployment-02.json (final_state, runtime_identity, runtime_identity_detail)",
+    "environment_status": "Ready",
+    "environment_health": "Green",
+    "environment_health_status": "Ok",
+    "update_in_progress": false,
+    "version_label_exact": "h3-3-4-historial-dashboard-3051a62-domainlocked-r1",
+    "version_label_matches_approved": true,
+    "source_bundle_matches_approved": true,
+    "s3_checksum_matches_approved": true,
+    "bundle_digests_match": true,
+    "note": "Cadena de identidad heredada de deployment-02; esta sesion no ejecuto nuevas llamadas AWS."
+  },
+  "smoke": [
+    {
+      "name": "technical_smoke_post_cutover",
+      "result": "PASS",
+      "source": "evidence/H3.3.4/deployment/deployment-02.json smoke_technical"
+    },
+    {
+      "name": "environment_ready_green_ok_exact_version_label",
+      "result": "PASS",
+      "source": "evidence/H3.3.4/deployment/deployment-02.json final_state"
+    },
+    {
+      "name": "runtime_identity_chain",
+      "result": "PASS",
+      "source": "evidence/H3.3.4/deployment/deployment-02.json runtime_identity"
+    },
+    {
+      "name": "eb_events_info_only_no_failures",
+      "result": "PASS",
+      "source": "evidence/H3.3.4/deployment/deployment-02.json events"
+    },
+    {
+      "name": "cutover_property_matches_plan",
+      "result": "PASS",
+      "source": "evidence/H3.3.4/deployment/deployment-02.json cutover.environment_property (2026-09-20)"
+    },
+    {
+      "name": "migration_008_not_reexecuted_no_rollback",
+      "result": "PASS",
+      "source": "evidence/H3.3.4/deployment/deployment-02.json migration_reference; evidence/H3.3.4/deployment/migration-01.json"
+    },
+    {
+      "name": "log_pii_and_credential_scan",
+      "result": "PASS",
+      "source": "pii_log_scan de esta evidencia; un unico evento con el nombre de cabecera revisado y clasificado por el humano como falso positivo benigno"
+    },
+    {
+      "name": "human_smoke_authenticated_AC9_partA_timeline",
+      "result": "PASS",
+      "source": "evidence/H3.3.4/approvals/acceptance-01.json criterio AC-9 accepted"
+    },
+    {
+      "name": "human_smoke_authenticated_AC18_partB_dashboard_rbac_403",
+      "result": "PASS",
+      "source": "evidence/H3.3.4/approvals/acceptance-01.json criterio AC-18 accepted"
+    }
+  ],
+  "pii_log_scan": {
+    "matches": 0,
+    "result": "PASS",
+    "raw_pattern_matches": {
+      "Authorization": 1
+    },
+    "sensitive_value_matches": 0,
+    "reviewed_by": "humano",
+    "human_review": {
+      "event_time_utc": "2026-09-21T04:39:48.305Z",
+      "events_reviewed": 1,
+      "bearer_shape": false,
+      "basic_shape": false,
+      "jwt_shape": false,
+      "authorization_value_candidate": false,
+      "explicitly_redacted": true,
+      "benign_context": true,
+      "classification": "false_positive_benign"
+    },
+    "false_positive_explanation": "El unico match del patron Authorization corresponde a un evento donde aparece solo el nombre de la cabecera, sin valor de credencial (no tiene forma Bearer, Basic ni JWT, no es candidato a valor de Authorization) y con el contenido explicitamente redactado, en contexto benigno. La revision humana lo clasifico como falso positivo benigno. No hay valores sensibles ni PII en logs.",
+    "note": "Conteos y clasificacion unicamente; sin extraccion del contenido del log. Detalle de la ventana y de los demas patrones segun el reporte del humano; esta sesion no repitio la lectura de logs."
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "automated",
+      "evidence": "evidence/H3.3.4/developer/developer-05.json (tests/integration/test_lead_state_history.py: FOR UPDATE, no-op sin duplicado, rollback completo, concurrencia real); evidence/H3.3.4/reviewer/review-06.json APPROVED"
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "automated",
+      "evidence": "developer-05.json (tests/unit/test_h3_3_4_migration_scripts.py: 008 libre en historial, no modifica 005/006/007); migration-01.json"
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "method": "automated",
+      "evidence": "developer-05.json (tests/integration/test_audit_state_view.py: vista de minimo privilegio, REVOKE PUBLIC); migration-01.json postflight PASS de privilegios"
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "method": "both",
+      "evidence": "automatizado: developer-05.json (tests/unit/test_h3_3_4_timeline_presentation.py); humano: acceptance-01.json AC-9 accepted (linea de tiempo unificada, integracion cronologica e inmutabilidad PASS en smoke autenticado)"
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "method": "human",
+      "evidence": "evidence/H3.3.4/approvals/acceptance-01.json AC-5 accepted (migration candidate 008 revisado y aprobado antes de ejecutar)"
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "method": "human",
+      "evidence": "acceptance-01.json AC-6 accepted (migracion 008 aplicada una sola vez, preflight/postflight PASS, privilegios minimos, rollback=false); evidence/H3.3.4/deployment/migration-01.json"
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "method": "human",
+      "evidence": "acceptance-01.json AC-7 accepted; secuencia resolution-05.json -> candidate-02.json -> candidate_review-02.json -> approval-01.json (aprobacion independiente del application candidate)"
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "method": "automated",
+      "evidence": "developer-05.json (tests/integration/test_audit_state_view.py: rollback REVOKE/DROP probado en integracion); no ejecutado en DEV (no requerido, sin fallo)"
+    },
+    {
+      "id": "AC-9",
+      "status": "met",
+      "method": "human",
+      "evidence": "acceptance-01.json AC-9 accepted (historial completo de cambios de estado, integracion cronologica e inmutabilidad PASS en smoke autenticado)"
+    },
+    {
+      "id": "AC-10",
+      "status": "met",
+      "method": "both",
+      "evidence": "automatizado: developer-05.json (tests/unit/test_executive_dashboard_access.py, 403 server-side); humano: acceptance-01.json AC-18 accepted (acceso 403 PASS en DEV)"
+    },
+    {
+      "id": "AC-11",
+      "status": "met",
+      "method": "automated",
+      "evidence": "developer-05.json (tests/integration/test_executive_dashboard_repository.py y test_executive_dashboard_full.py); review-06.json APPROVED"
+    },
+    {
+      "id": "AC-12",
+      "status": "met",
+      "method": "automated",
+      "evidence": "developer-05.json (tests/integration/test_executive_dashboard_per_advisor.py)"
+    },
+    {
+      "id": "AC-13",
+      "status": "met",
+      "method": "automated",
+      "evidence": "developer-05.json (tests/integration/test_executive_dashboard_repository.py: buckets, umbral default=5, movimiento operativo)"
+    },
+    {
+      "id": "AC-14",
+      "status": "met",
+      "method": "automated",
+      "evidence": "developer-05.json (tests/integration/test_executive_dashboard_repository.py: tiempo hasta asignacion y primera gestion, N/D si no existe)"
+    },
+    {
+      "id": "AC-15",
+      "status": "met",
+      "method": "automated",
+      "evidence": "developer-05.json (tests/integration/test_executive_dashboard_repository.py: embudo solo con transiciones observables, COUNT(DISTINCT id_lead)); acceptance-01.json AC-18 nota de cobertura/funnel honesto"
+    },
+    {
+      "id": "AC-16",
+      "status": "met",
+      "method": "automated",
+      "evidence": "developer-05.json (tests/unit/test_executive_dashboard_filters.py: solo categorias MVP, sin genero ni estado civil)"
+    },
+    {
+      "id": "AC-17",
+      "status": "met",
+      "method": "automated",
+      "evidence": "developer-05.json (tests/unit/test_executive_dashboard_access.py y test_h3_3_1_rbac_pii_assignment.py); acceptance-01.json notas: sin exposicion de PII"
+    },
+    {
+      "id": "AC-18",
+      "status": "met",
+      "method": "both",
+      "evidence": "automatizado: developer-05.json (tests/integration/test_executive_dashboard_full.py y per_advisor.py); humano: acceptance-01.json AC-18 accepted (dashboard, metricas, filtros, cobertura/funnel honesto, acceso 403, responsive; sin exposicion de PII)"
+    }
+  ],
+  "inputs": {
+    "deployment_evidence": "evidence/H3.3.4/deployment/deployment-02.json",
+    "acceptance": "evidence/H3.3.4/approvals/acceptance-01.json",
+    "developer_evidence": "evidence/H3.3.4/developer/developer-05.json",
+    "review_evidence": "evidence/H3.3.4/reviewer/review-06.json",
+    "approval": "evidence/H3.3.4/approvals/approval-01.json"
+  },
+  "acceptance_reference": "acceptance-01",
+  "rollback_executed": false,
+  "mutations_performed": false,
+  "known_issues": [
+    "Known issues documentales y de rendimiento declarados por el humano en acceptance-01.json (notes) quedan como follow-up no bloqueante; no se reinterpretan aqui.",
+    "deployment-01.json permanece como borrador superseded no conforme; evidence/ es ruta protegida y la limpieza queda a criterio del humano (no realizada en esta sesion).",
+    "DB-PATH-MECHANISM permanece como deuda no bloqueante, fuera del alcance de H3.3.4."
+  ],
+  "notes": "Verificacion final de H3.3.4. Se apoya en deployment-02.json (cutover, identidad de runtime, eventos, logs, smoke tecnico), acceptance-01.json (aceptacion humana AC-5, AC-6, AC-7, AC-9, AC-18 creada por approve.py) y la revision humana del unico evento del patron Authorization, clasificado falso positivo benigno. Esta sesion no ejecuto llamadas AWS, cambios de codigo, despliegue, acciones sobre RDS ni limpieza de evidencias superseded."
+}

@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "H3.3.2",
+  "created_at": "2026-09-16T14:16:46Z",
+  "role": "developer",
+  "runtime": "deepseek",
+  "session_id": "deepseek-202609161347-developer",
+  "head_sha": "f99ab7805ad5732a3c17677c6d24120be50c0f90",
+  "branch": "harness/H3.3.2-superusuarios-ceo-cto",
+  "pr_number": 53,
+  "change_class": "A",
+  "tests": {
+    "command": "CI (run 35106955650): pytest tests/ --cov=app --cov-report=xml --cov-fail-under=85; local: pytest tests/unit/test_rbac_superusers.py tests/unit/test_solicitud_assignment_service.py tests/unit/test_h3_3_1_rbac_pii_assignment.py tests/unit/test_web_helpers.py tests/unit/test_web_app.py -q",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "docker_compose_config": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "pending_verification",
+      "evidence": "Identidad diego.operaciones->ceo preparada para rol autorizado (clase E) en docs/H3_3_2_SUPERUSUARIOS_CEO_CTO.md; verificacion humana en DEV."
+    },
+    {
+      "id": "AC-2",
+      "status": "pending_verification",
+      "evidence": "Identidad alvaro.operaciones->cto preparada para rol autorizado (clase E); verificacion humana en DEV."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "tests/unit/test_h3_3_1_rbac_pii_assignment.py::test_ac1_ac2_pii_visibility_by_role y tests/unit/test_web_app.py::test_ceo_and_cto_can_view_full_pii"
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "tests/unit/test_rbac_superusers.py::test_service_capabilities_honor_superuser_superset y test_solicitud_assignment_service.py (ceo/cto can_assign_lead)"
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "tests/unit/test_rbac_superusers.py::test_web_capabilities_honor_superuser_superset y tests/unit/test_web_app.py::test_ceo_and_cto_can_execute_superuser_actions"
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "evidence": "tests/unit/test_h3_3_1_rbac_pii_assignment.py::test_ac2_pii_masked_even_with_web_mask_pii_false (sin regresion H3.3.1)"
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "evidence": "tests/integration/test_database_runtime.py (asignacion: estado asignado, tpi.asignaciones, una activa, tpi.auditoria) - flujo sin cambios"
+    },
+    {
+      "id": "AC-8",
+      "status": "pending_verification",
+      "evidence": "Smoke autenticado humano en AWS DEV con diego.operaciones (CEO) y alvaro.operaciones (CTO); depende de la accion de identidad (clase E)."
+    }
+  ],
+  "files_changed": [
+    "app/auth/models.py",
+    "app/services/solicitud_service.py",
+    "app/web/routes/leads.py",
+    "app/web/dependencies.py",
+    "tests/unit/test_rbac_superusers.py",
+    "tests/unit/test_solicitud_assignment_service.py",
+    "tests/unit/test_h3_3_1_rbac_pii_assignment.py",
+    "tests/unit/test_web_app.py",
+    "docs/H3_3_2_SUPERUSUARIOS_CEO_CTO.md",
+    "docs/DECISIONES_TECNICAS.md",
+    "docs/INDEX.md"
+  ],
+  "assumptions": [
+    "La nocion de superusuario (ceo/cto) se centraliza en SUPERUSER_ROLES/is_superuser para expresar el superset RBAC y evitar drift entre capas.",
+    "El superset incluye: PII completa, asignacion, escritura (estado/seguimiento) y cleanup; no reduce permisos de otros roles.",
+    "Esta regla aplica exclusivamente al backoffice TPI y no concede permisos AWS/IAM/Harness/deployment.",
+    "La configuracion de identidades DEV (diego.operaciones->ceo, alvaro.operaciones->cto) es clase E (secreto vivo AUTH_USERS_JSON), fuera del alcance del Developer; queda preparada y documentada sin secretos.",
+    "CI en Linux (run 35106955650) es la autoridad para cobertura (>=85%), pip-audit y docker build/compose; el sandbox Windows local deniega temp/named-pipes, lo que afecta pip-audit y fixtures tmp_path de tests de deployment preexistentes (todos verdes en CI)."
+  ],
+  "migrations_included": false
+}

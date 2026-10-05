@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "kind": "deployment",
+  "task_id": "H3.3.5",
+  "created_at": "2026-09-21T21:58:09Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609212150-deployer-cutover",
+  "approved_commit": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+  "deployed_commit": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+  "application_version": "h3-3-5-asesores-cartera-78bf33b-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "update_accepted": true,
+  "result": "success",
+  "started_at": "2026-09-21T21:54:52Z",
+  "finished_at": "2026-09-21T21:55:41Z",
+  "failure_class": null,
+  "request_id": "9411852c-2cd7-4d66-ae09-a7fd8ff0d834",
+  "previous_version_label": "h3-3-4-historial-dashboard-3051a62-domainlocked-r1",
+  "final_state": {
+    "version_label": "h3-3-5-asesores-cartera-78bf33b-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-09-21T21:55:41Z",
+    "observed_at": "2026-09-21T21:56:45Z",
+    "observation_note": "Dos observaciones consecutivas (21:56:15Z y 21:56:45Z) identicas: VersionLabel exacta aprobada, Ready/Green/Ok, sin operacion abortable."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-3-5-asesores-cartera-78bf33b-domainlocked-r1/f7e661411bbaacaf456a95405fd0e787136ac6cb04eb790fd78039d7938731f1.zip",
+    "s3_checksum_sha256_b64": "9+ZhQRu6rK9FapVAX9DnhxNqxssE63kP14A515OHMfE=",
+    "s3_content_length": 4815,
+    "s3_last_modified": "2026-09-21T20:07:32Z",
+    "bundle_sha256": "f7e661411bbaacaf456a95405fd0e787136ac6cb04eb790fd78039d7938731f1",
+    "bundle_compose_digests": {
+      "tpi-dev-app": "sha256:f2ba920eeaf45a671e644347abb8d83fdf82ef34b8097d66c9723e6d14677b76",
+      "tpi-dev-caddy": "sha256:efbce63c9a0f4cc738873a584f9e57eb73e358abc4883e401dcdbc2bec0c27fc"
+    },
+    "digests_equal_approval_01": true,
+    "ecr_images_active_tag_release_sha": true,
+    "note": "AV SourceBundle observada post-cutover = key aprobada; head-object y digests ECR verificados en el preflight inmediato de esta sesion (sin writes intermedios salvo el cutover)."
+  },
+  "preflight": {
+    "at": "2026-09-21T21:50Z",
+    "result": "PASS",
+    "checks": [
+      "init PASS (DEPLOYING, rol deployer)",
+      "sts account 821656895812; region us-east-2 forzada por aws_guard",
+      "environment en LKG h3-3-4-historial-dashboard-3051a62-domainlocked-r1, Ready/Green/Ok, AbortableOperationInProgress false, DateUpdated 2026-09-21T00:39:15Z (sin cambio)",
+      "AV candidata UNPROCESSED, SourceBundle = key aprobada, DateCreated 2026-09-21T20:07:57Z",
+      "S3 candidata ChecksumSHA256 9+ZhQRu6... 4815 B LastModified 20:07:32Z; bundle local sha256 f7e66141... (no reconstruido)",
+      "ECR app f2ba920e / caddy efbce63c ACTIVE tag = release SHA",
+      "LKG: AV UNPROCESSED, S3 vL6TWIXc... 4815 B, digests a7881bad / 9da2be7a ACTIVE",
+      "sha256 de candidate-02.json = abff1106... = approval-01.candidate_evidence.sha256",
+      "approval-01 decision approved, approved_commit/AV/environment/digests = candidate-02; no consumida (sin deployment previo ni mutation cutover en aws-audit.jsonl)",
+      "origin/main = release SHA; tree 8c81c7a5 = reviewed_tree",
+      "eventos EB: ultimo evento 2026-09-21T00:40:19Z (sin mutaciones AWS del environment desde candidate-02)",
+      "CodePipeline Promote deshabilitado"
+    ],
+    "guard_note": "Una lectura describe-application-versions con dos labels en una llamada fue rechazada por el parser de aws_guard antes de ejecutarse (posicional extra); se repitio con la forma canonica de un label por llamada. Sin efecto en AWS."
+  },
+  "cutover": {
+    "mechanism": "aws_guard update-environment version-label only",
+    "executed_by": "deployer",
+    "updates_applied": 1,
+    "retries": 0,
+    "option_settings": false,
+    "restart_app_server": false,
+    "rollback_executed": false,
+    "convergence": "exitosa en ~49 s (start 21:54:52Z, completed 21:55:41Z)"
+  },
+  "events": {
+    "levels_observed": [
+      "INFO"
+    ],
+    "errors": 0,
+    "warnings": 0,
+    "failed_deployments": 0,
+    "configuration_change_event": false,
+    "result": "PASS",
+    "summary": "Environment update is starting -> Deploying new version -> Instance deployment completed successfully -> New application version deployed -> Environment update completed successfully (RequestId 9411852c...)."
+  },
+  "logs": {
+    "result": "not_executed",
+    "note": "Conteos de logs/PII diferidos a VERIFYING (aws-observability); no se leyeron lineas de logs."
+  },
+  "smoke_technical": {
+    "result": "not_executed",
+    "note": "Por instruccion humana la sesion se detiene antes de smoke y de configurar identidades."
+  },
+  "d7": {
+    "identity_state": "unknown",
+    "rollback_policy": "phase_b_only",
+    "phase_a_enabled": false,
+    "decision_source": "Instruccion humana/orquestacion en esta sesion: estado de identidades advisor clasificado formalmente UNKNOWN; aplica exclusivamente candidate-02.rollback_plan fase B. La falta de confirmacion estructurada deshabilita la fase A pero no invalida el Human Gate approval-01 ligado a candidate-02.",
+    "rules": [
+      "Prohibido rollback automatico y start_rollback sin la secuencia d7_post_identity_sequence 1-6 evidenciada.",
+      "Ante fallo o estado inesperado: registrar y escalar a BLOCKED_HUMAN, sin reintentos."
+    ],
+    "identity_step5_enabled_by_this_transition": true
+  },
+  "inputs": {
+    "candidate_evidence": "evidence/H3.3.5/deployment/candidate-02.json",
+    "candidate_evidence_sha256": "abff1106aa36f0e626f35a1b5ecbd3e2311844942e06723dfcda35b5020af9b9",
+    "candidate_review_evidence": "evidence/H3.3.5/reviewer/candidate_review-02.json",
+    "approval_evidence": "evidence/H3.3.5/approvals/approval-01.json",
+    "release_sha": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+    "lkg_version_label": "h3-3-4-historial-dashboard-3051a62-domainlocked-r1"
+  },
+  "safety": {
+    "rds_access": false,
+    "secrets_accessed": false,
+    "auth_users_json_read_or_modified": false,
+    "identities_created": false,
+    "option_settings": false,
+    "restart_app_server": false,
+    "retries": 0,
+    "rollback": false,
+    "aws_writes": [
+      "elasticbeanstalk update-environment (version-label unicamente, 1 vez)"
+    ]
+  },
+  "warnings": [
+    "AC-17 y AC-18 siguen pending_human.",
+    "identity_state=unknown: cualquier rollback posterior requiere retirar identidades, refresh sobre H3.3.5, verificar salud/version, login negativo de ambas cuentas y aprobacion humana explicita."
+  ]
+}

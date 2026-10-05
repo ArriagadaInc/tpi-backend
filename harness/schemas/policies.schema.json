@@ -7,13 +7,59 @@
     "schema_version": {"const": 1},
     "harness": {
       "type": "object",
-      "required": ["max_rework_rounds", "max_candidate_artifact_rework", "progress_current_max_lines", "deploy_capable_runtimes", "deploy_states", "maintenance_allowlist"],
+      "required": ["max_rework_rounds", "max_candidate_artifact_rework", "progress_current_max_lines", "deploy_capable_runtimes", "deploy_states", "maintenance_allowlist", "maintenance_scope"],
       "properties": {
         "max_rework_rounds": {"type": "integer", "minimum": 1},
-        "maintenance_allowlist": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+        "maintenance_allowlist": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "maintenance_scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["env_var", "registry_dir", "worktrees_dir", "max_hours", "runtime_tools", "never_writable"],
+          "properties": {
+            "env_var": {"type": "string", "pattern": "^TPI_HARNESS_[A-Z0-9_]+$"},
+            "registry_dir": {"const": ".harness-runtime/maintenance"},
+            "worktrees_dir": {"const": ".harness-worktrees"},
+            "max_hours": {"type": "number", "exclusiveMinimum": 0, "maximum": 12},
+            "runtime_tools": {
+              "type": "array",
+              "uniqueItems": true,
+              "minItems": 6,
+              "maxItems": 6,
+              "items": {"enum": ["Read", "Glob", "Grep", "Write", "Edit", "Bash"]}
+            },
+            "never_writable": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {"type": "string"},
+              "allOf": [
+                {"contains": {"const": ".git"}},
+                {"contains": {"const": ".git/**"}},
+                {"contains": {"const": "**/.git"}},
+                {"contains": {"const": "**/.git/**"}},
+                {"contains": {"const": ".gitattributes"}},
+                {"contains": {"const": "**/.gitattributes"}},
+                {"contains": {"const": "pyproject.toml"}},
+                {"contains": {"const": "harness/state.json"}},
+                {"contains": {"const": "harness/workflow.yaml"}},
+                {"contains": {"const": "tasks/**"}},
+                {"contains": {"const": "evidence/**"}},
+                {"contains": {"const": "progress/**"}},
+                {"contains": {"const": ".harness-runtime/**"}},
+                {"contains": {"const": ".harness-worktrees/**"}},
+                {"contains": {"const": ".claude/**"}},
+                {"contains": {"const": ".mcp.json"}}
+              ]
+            }
+          }
+        }
       }
     },
-    "protected_paths": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "protected_paths": {
+      "type": "array",
+      "items": {"type": "string"},
+      "minItems": 1,
+      "allOf": [{"contains": {"const": ".harness-runtime/maintenance/**"}}]
+    },
     "roles": {
       "type": "object",
       "required": ["developer", "reviewer", "deployer"],

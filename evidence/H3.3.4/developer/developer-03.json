@@ -1,0 +1,211 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "H3.3.4",
+  "created_at": "2026-09-19T18:18:19Z",
+  "role": "developer",
+  "runtime": "deepseek",
+  "session_id": "deepseek-202609191739-developer-r2",
+  "head_sha": "93fd96ae480feaa1e896845f9bfbedc5add712a8",
+  "branch": "harness/H3.3.4-historial-estados-dashboard-ejecutivo",
+  "pr_number": 55,
+  "pr_url": "https://github.com/ArriagadaInc/tpi-backend/pull/55",
+  "change_class": "D",
+  "baseline": "c5e738c21ba202d9c664652412e6820628b18e3c",
+  "rework_round": 2,
+  "remediated_review": "evidence/H3.3.4/reviewer/review-02.json",
+  "rework_commits": [
+    "a00667b docs(H3.3.4): normalize test references in requirements matrix",
+    "526919b test(H3.3.4): harden requirements traceability gate",
+    "93fd96a test(H3.3.4): verify per-advisor dashboard metrics"
+  ],
+  "matrix_gate": "tests/unit/test_h3_3_4_requirements_matrix_gate.py",
+  "tests": {
+    "command": "CI run 35460433035 (Linux, Python 3.12): pytest tests/ --cov=app --cov-report=xml --cov-fail-under=85 -> 737 passed, 7 warnings in 58.98s, cobertura 88.85% (>=85). Local (Windows): 724 passed + 13 errores ambientales preexistentes (PermissionError WinError 5 en cleanup del basetemp tmp_path en archivos no tocados por este PR; verdes en CI Linux), cobertura 88.73% (>=85).",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "coverage": "PASS",
+    "docker_build": "PASS",
+    "release_tooling_validation": "PASS",
+    "validate_repo": "PASS",
+    "matrix_gate": "PASS",
+    "ci": "PASS"
+  },
+  "ci_run": {
+    "run_id": 35460433035,
+    "conclusion": "success",
+    "head_sha": "93fd96ae480feaa1e896845f9bfbedc5add712a8",
+    "jobs": {
+      "release_tooling_validation": "PASS",
+      "lint_format": "PASS",
+      "tests": "PASS",
+      "docker_build": "PASS",
+      "security_audit": "PASS"
+    },
+    "tests_summary": "737 passed, 7 warnings in 58.98s; cobertura 88.85% (>=85)",
+    "pip_audit": "No known vulnerabilities found",
+    "bandit": "No issues identified."
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "tests/integration/test_lead_state_history.py (update_lead_status transaccional SELECT ... FOR UPDATE, no-op sin evento duplicado, rollback completo, prueba real de concurrencia); tests/unit/test_solicitud_assignment_service.py"
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "tests/unit/test_h3_3_4_migration_scripts.py (008 libre en todo el historial, accion cambio_estado_lead, no modifica 005/006/007)"
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "tests/integration/test_audit_state_view.py::test_view_exposes_only_state_change_columns_and_filters_events, ::test_view_privileges_public_and_app_only, ::test_application_never_selects_auditoria_directly (vista sanitizada sin JSON crudo, REVOKE PUBLIC, GRANT solo tpi_app, sin SELECT directo sobre tpi.auditoria); existencia del indice de apoyo: tests/integration/test_audit_state_view.py::test_support_index_exists_and_is_used_for_state_history_query; aplicabilidad del indice demostrada por EXPLAIN real: tests/integration/test_executive_dashboard_repository.py::test_explain_state_history_uses_support_index (correccion de la atribucion de la ronda anterior: el EXPLAIN NO lo demuestra test_audit_state_view.py, que solo verifica existencia en pg_indexes)"
+    },
+    {
+      "id": "AC-4",
+      "status": "pending_verification",
+      "evidence": "tests/unit/test_h3_3_4_timeline_presentation.py y tests/unit/test_web_app.py::test_detail_timeline_* (automated); smoke humano en AWS DEV pendiente (AC-9)"
+    },
+    {
+      "id": "AC-5",
+      "status": "not_applicable",
+      "evidence": "Artefacto operativo del migration candidate (Deployer/Human Gate, change_class D); fuera del alcance del rol Developer"
+    },
+    {
+      "id": "AC-6",
+      "status": "not_applicable",
+      "evidence": "Postflight humano de privilegios en AWS DEV tras aplicar la 008; el mecanismo queda cubierto por tests/integration/test_audit_state_view.py"
+    },
+    {
+      "id": "AC-7",
+      "status": "not_applicable",
+      "evidence": "Secuencia operativa del application candidate (Deployer/Human Gate); fuera del alcance del rol Developer"
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "evidence": "tests/integration/test_audit_state_view.py (rollback de la vista REVOKE/DROP probado en PostgreSQL de integracion local)"
+    },
+    {
+      "id": "AC-9",
+      "status": "not_applicable",
+      "evidence": "Smoke funcional humano en AWS DEV (etapa Deployer/Verifying); fuera del alcance del rol Developer"
+    },
+    {
+      "id": "AC-10",
+      "status": "pending_verification",
+      "evidence": "tests/unit/test_executive_dashboard_access.py (403 real server-side para roles no autorizados y anonimo); smoke humano del 403 en DEV pendiente (AC-18)"
+    },
+    {
+      "id": "AC-11",
+      "status": "met",
+      "evidence": "tests/integration/test_executive_dashboard_repository.py y tests/integration/test_executive_dashboard_full.py (KPIs, fecha_ingreso documentada, evolucion diaria/semanal/mensual, filtros combinables)"
+    },
+    {
+      "id": "AC-12",
+      "status": "met",
+      "evidence": "tests/integration/test_executive_dashboard_per_advisor.py::test_cartera_por_asesor_exact_total_active_and_sin_asesor, ::test_cartera_por_asesor_fanout_safe_and_dimensional_filter (cartera total/activa por asesor con exclusion exacta y bucket Sin asesor), ::test_casos_por_estado_y_asesor_exact_matrix_counts (matriz estado x asesor con conteos exactos y sin fan-out), ::test_metricas_operacionales_por_asesor_stuck_assignment_and_first_management (resumen operativo por asesor con estancados/tiempos/N-D); nombre asesor solo CEO/CTO sin RUT/telefono/correo en test_advisor_rows_expose_no_pii_beyond_the_visible_name"
+    },
+    {
+      "id": "AC-13",
+      "status": "met",
+      "evidence": "tests/integration/test_executive_dashboard_repository.py (buckets 0-2/3-7/8-15/16-30/+30 dias corridos, umbral default=5 configurable, movimiento operativo real)"
+    },
+    {
+      "id": "AC-14",
+      "status": "met",
+      "evidence": "tests/integration/test_executive_dashboard_repository.py (tiempo hasta asignacion y primera gestion, N/D cuando no existe, excluye asignacion automatica)"
+    },
+    {
+      "id": "AC-15",
+      "status": "met",
+      "evidence": "tests/integration/test_executive_dashboard_repository.py y test_executive_dashboard_full.py (funnel solo transiciones observables, COUNT(DISTINCT id_lead), sin tasas inventadas pre-cutover)"
+    },
+    {
+      "id": "AC-16",
+      "status": "met",
+      "evidence": "tests/integration/test_executive_dashboard_repository.py y tests/unit/test_executive_dashboard_filters.py (solo categorias MVP; genero y estado civil ausentes)"
+    },
+    {
+      "id": "AC-17",
+      "status": "met",
+      "evidence": "tests/unit/test_executive_dashboard_access.py y tests/unit/test_h3_3_1_rbac_pii_assignment.py (cero PII de leads, metricas agregadas, estados vacios/error)"
+    },
+    {
+      "id": "AC-18",
+      "status": "pending_verification",
+      "evidence": "tests/integration/test_executive_dashboard_full.py, test_executive_dashboard_per_advisor.py y tests/unit/test_executive_dashboard_presentation.py (automated: cero datos, limites, filtros combinados, estados desconocidos, sin asesor, fan-out, valores por asesor); smoke humano Parte B en DEV pendiente"
+    }
+  ],
+  "files_changed": [
+    "docs/H3_3_4_REQUIREMENTS_MATRIX.md",
+    "tests/unit/test_h3_3_4_requirements_matrix_gate.py",
+    "tests/integration/test_executive_dashboard_per_advisor.py"
+  ],
+  "findings_disposition": [
+    {
+      "id": "F1",
+      "severity": "major",
+      "disposition": "corregido",
+      "detail": "Gramatica canonica de referencias en toda la matriz (ruta completa tests/unit/ o tests/integration/ y funcion exacta tras ::); sin referencias abreviadas ni sin prefijo. Gate endurecido: inspecciona la columna Prueba automatizada/Prueba prevista, rechaza referencias sin prefijo/abreviadas/no canonicas en todo el documento, valida existencia de ruta y funcion exacta, exige referencia verificable en filas con AC automatizados (whitelist minima documentada REQ-B-30/REQ-S-13) y verifica filas humanas contra AC exclusivamente humanos. 10 pruebas negativas sobre copias mutadas (incluido el patron de 5ffb2a2)."
+    },
+    {
+      "id": "F7",
+      "severity": "major",
+      "disposition": "corregido",
+      "detail": "Nuevas pruebas de integracion tests/integration/test_executive_dashboard_per_advisor.py con assertions exactas de get_cartera_por_asesor, get_casos_por_estado_y_asesor y get_metricas_operacionales_por_asesor. REQ-B-12/13/14 y AC-12 actualizados con las rutas exactas."
+    },
+    {
+      "id": "F8",
+      "severity": "minor",
+      "disposition": "corregido",
+      "detail": "REQ-A-12 distingue el test de existencia del indice (test_support_index_exists_and_is_used_for_state_history_query) del test de EXPLAIN real (test_explain_state_history_uses_support_index); atribucion de AC-3 corregida en esta evidencia."
+    },
+    {
+      "id": "F2",
+      "severity": "minor",
+      "disposition": "follow-up documentado",
+      "detail": "Aplicabilidad del indice 008 demostrada con enable_seqscan=off; EXPLAIN ANALYZE real sin forzar a volumen representativo pendiente de adjuntar antes del cierre de la tarea (no bloqueante)."
+    },
+    {
+      "id": "F3",
+      "severity": "minor",
+      "disposition": "follow-up documentado",
+      "detail": "11 tests requieren PostgreSQL: 9 de test_executive_dashboard_service.py + 2 de test_executive_dashboard_render.py (test_nav_link_is_hidden_for_other_roles, test_hiding_the_link_is_not_the_access_control); anotados en la matriz (seccion 13 y filas REQ-B-01/REQ-B-02)."
+    },
+    {
+      "id": "F4",
+      "severity": "info",
+      "disposition": "closed (esta etapa)",
+      "detail": "Pruebas del default sin fecha inventada, ISO valido e invalidos existen (test_h3_3_4_timeline_presentation.py); verificacion del valor efectivo en AWS DEV pendiente en checklist humano."
+    },
+    {
+      "id": "F5",
+      "severity": "info",
+      "disposition": "riesgo aceptado",
+      "detail": "Transaccion REPEATABLE READ prolongada (~5-7s) documentada con relacion a latencia, pool y vacuum; sin accion."
+    },
+    {
+      "id": "F6",
+      "severity": "info",
+      "disposition": "riesgo preservado",
+      "detail": "5,28-6,80 s a 20.000 leads/12 asesores, 18 consultas, parsing regexp de comentarios como causa principal; clasificacion (A) no bloqueante; follow-up normalizacion/read model no resuelto."
+    }
+  ],
+  "assumptions": [
+    "Remediacion de la ronda 2 de revision: F1 corregido (gramatica canonica + gate endurecido + 10 pruebas negativas), F7 corregido (pruebas de valores por asesor con assertions exactas), F8 corregido (atribucion del EXPLAIN y AC-3); F2-F6 tratados como follow-up/riesgo documentado; cero cambios funcionales.",
+    "Las evidencias anteriores developer-01.json y developer-02.json quedan supersedidas para esta ronda (no reescritas): la atribucion de AC-3 y AC-12 de developer-02.json era imprecisa y se corrige en developer-03.json.",
+    "No se modifico funcionalidad del dashboard, migraciones 005/006/007/008, requirements/**, GitPython, RBAC ni definiciones metricas.",
+    "Cero AWS/RDS: la migracion 008 sigue presente unicamente como codigo y NO fue aplicada en AWS DEV; sin approve.py, merge ni despliegue.",
+    "Suite local (Windows): 724 passed + 13 errores ambientales preexistentes (PermissionError WinError 5 en cleanup del basetemp tmp_path, archivos no tocados por este PR); CI Linux es la autoridad (737 passed, 0 errores).",
+    "AC humanos pendientes intactos: AC-5/AC-6 (migration candidate + postflight), AC-7 (application candidate), AC-9/AC-18 (smoke humano AWS DEV, incluido 403 para roles no autorizados)."
+  ],
+  "migrations_included": true
+}

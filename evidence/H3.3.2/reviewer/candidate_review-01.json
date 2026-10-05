@@ -1,0 +1,257 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "H3.3.2",
+  "created_at": "2026-09-16T15:26:46Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609161700-reviewer",
+  "release_sha": "fec33e7951f862c95b2436b09b969e5ef1915769",
+  "reviewed_tree": "6ad2f8f5f2269be0a551ce15f247f643de0497af",
+  "release_tree": "6ad2f8f5f2269be0a551ce15f247f643de0497af",
+  "pr_number": 53,
+  "publish_run": {
+    "run_id": 35111761176,
+    "conclusion": "success",
+    "head_sha": "fec33e7951f862c95b2436b09b969e5ef1915769",
+    "note": "gh run view 35111761176 --json jobs: 6/6 jobs SUCCESS. Raw log de 'Publish immutable images and release bundle' leido directamente: paso 'Build and push immutable images' produce 'digest: sha256:96c611b6...' (app) y 'digest: sha256:bbf22901...' (caddy), coincidentes byte a byte con candidate-01.json. Paso 'Fail closed on high or critical ECR findings' imprime literalmente 'tpi-dev-app: CRITICAL=0 HIGH=0' y 'tpi-dev-caddy: CRITICAL=0 HIGH=0' para el mismo IMAGE_TAG=release_sha, sin necesidad de exit>0. No se confio solo en el resumen del Deployer."
+  },
+  "images": {
+    "app": {
+      "repository": "tpi-dev-app",
+      "digest": "sha256:96c611b6aecbb50e936621f5d9e8a2f31a5c1c7387e2fdb94409cc2adb3520a3",
+      "status_observed": "ACTIVE",
+      "scan_critical": 0,
+      "scan_high": 0
+    },
+    "caddy": {
+      "repository": "tpi-dev-caddy",
+      "digest": "sha256:bbf22901b5c210888cbdea83b53459772d44a7e7299a1c8a9d75b01910b3be1c",
+      "status_observed": "ACTIVE",
+      "scan_critical": 0,
+      "scan_high": 0
+    }
+  },
+  "bundle": {
+    "declared_sha256": "ddc5abe2047b624b5a5a1a8aa0615048b54291077bd0d1ffaff7c4fc9e273800",
+    "reproduced_sha256": "ddc5abe2047b624b5a5a1a8aa0615048b54291077bd0d1ffaff7c4fc9e273800",
+    "reproduction_method": "build_domain_locked_bundle(template=deployment/aws/docker-compose.domainlocked.yml, app_image=...@sha256:96c611b6..., caddy_image=...@sha256:bbf22901..., runtime_git_sha=fec33e7951f862c95b2436b09b969e5ef1915769) ejecutado por el Reviewer en worktree existente .harness-worktrees/H3.3.2-reviewer-f99ab78 (HEAD=f99ab78, tree=release_tree). Match exacto.",
+    "compose_inspection": "Zip contiene unicamente docker-compose.yml; sin 'genialabs.cl'; sin directiva 'build:'; app digest referenciado exactamente 2 veces (api+backoffice) y caddy digest exactamente 1 vez, ambos por @sha256, ninguna tag mutable."
+  },
+  "s3": {
+    "bucket": "elasticbeanstalk-us-east-2-821656895812",
+    "key": "tpi-backoffice/dev-releases/h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1/ddc5abe2047b624b5a5a1a8aa0615048b54291077bd0d1ffaff7c4fc9e273800.zip",
+    "head_object_checksum_sha256_b64": "3cWr4gR7YktaWhqKoGFQSLVCkQd70NH/r/fE/J4nOAA=",
+    "checksum_matches_bundle_sha256": true,
+    "note": "head-object propio (candidate_read) confirma ChecksumSHA256 base64 == bundle_sha256 hex (ddc5abe2...) tras decodificar base64 a hex."
+  },
+  "application_version": {
+    "label": "h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1",
+    "status_observed": "UNPROCESSED",
+    "source_bundle_observed": {
+      "S3Bucket": "elasticbeanstalk-us-east-2-821656895812",
+      "S3Key": "tpi-backoffice/dev-releases/h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1/ddc5abe2047b624b5a5a1a8aa0615048b54291077bd0d1ffaff7c4fc9e273800.zip"
+    },
+    "matches_verified_s3_object": true
+  },
+  "environment_observed": {
+    "environment_name": "tpi-backoffice-dev-green",
+    "version_label": "h3-3-1-rbac-pii-4aac143-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "date_updated": "2026-09-15T20:40:58Z",
+    "note": "date_updated es anterior a la creacion del candidate (2026-09-16T15:05:17Z): el candidato no fue desplegado; el environment no tuvo ninguna actualizacion desde entonces."
+  },
+  "lkg": {
+    "version_label": "h3-3-1-rbac-pii-4aac143-domainlocked-r1",
+    "is_currently_live_and_healthy": true,
+    "application_version_status_observed": "UNPROCESSED",
+    "images_present_in_ecr": [
+      {
+        "repository": "tpi-dev-app",
+        "digest": "sha256:363eb2663a08c523593946f9cc2eea6d823b00c1b659b4654d7d8b575a91761b",
+        "status_observed": "ACTIVE"
+      },
+      {
+        "repository": "tpi-dev-caddy",
+        "digest": "sha256:429ef8f3f0d8ff7cce1dd26b1dd1c5a582c165a81cf2abc24a87f75dd7bd530d",
+        "status_observed": "ACTIVE"
+      }
+    ],
+    "is_exclusive_rollback_target": true
+  },
+  "cutover_rollback_ambiguity_check": {
+    "deployment_plan_target": "h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1",
+    "rollback_plan_target": "h3-3-1-rbac-pii-4aac143-domainlocked-r1",
+    "correct": true,
+    "note": "Verificado explicitamente: deployment_plan.commands apunta exclusivamente a la nueva Application Version de H3.3.2; rollback_plan.version_label apunta exclusivamente a la Application Version de H3.3.1 (LKG). No se encontro inversion ni ambiguedad en candidate-01.json ni en progress/current.md."
+  },
+  "codepipeline_parallel_promotion_check": {
+    "verified_by": "deployer",
+    "verification_scope": "Fuera del alcance AWS del Reviewer en CANDIDATE_REVIEW (aws.modes.candidate_read no incluye codepipeline get-pipeline-state; solo aws.modes.read en PREPARING_DEPLOYMENT lo permite al Deployer).",
+    "corroboration": "evidence/H3.3.2/aws-audit.jsonl registra la llamada real 'codepipeline get-pipeline-state --name tpi-backoffice-dev-promotion' con allowed=true, executed=true, exit_code=0, access_denied=false durante PREPARING_DEPLOYMENT, corroborando que la consulta se ejecuto exitosamente contra AWS real (aunque el Reviewer no puede ver el payload). El Reviewer no puede reejecutar esta consulta por politica de rol+estado."
+  },
+  "auth_users_json_check": {
+    "read_or_modified_by_pipeline": false,
+    "note": "grep de 'AUTH_USERS_JSON' en evidence/H3.3.2/** solo aparece en developer-01.json y review-01.json como declaracion narrativa de tratamiento correcto (no leido/impreso/modificado); ausente en merge-01.json y candidate-01.json. En el log crudo del workflow de publish, AUTH_USERS_JSON solo aparece como valor placeholder de CI '{\"users\":[]}' para validar docker compose config, no como secreto real de DEV."
+  },
+  "acceptance_criteria_pending_check": {
+    "AC-1": "pending_verification",
+    "AC-2": "pending_verification",
+    "AC-8": "pending_verification",
+    "note": "developer-01.json y candidate-01.json.smoke_plan mantienen AC-1/AC-2/AC-8 como pendientes de verificacion humana (clase E); no se fabrico ni acepto ningun resultado de smoke autenticado."
+  },
+  "decision": "APPROVED",
+  "cause": null,
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse fec33e79^{tree} == git rev-parse f99ab78^{tree} == 6ad2f8f5... (verificado localmente, no solo leido de merge-01.json)."
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "git fetch origin main + git log origin/main: fec33e7 es el commit tope de origin/main, padre 4aac143 (H3.3.1 LKG)."
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "gh run view 35111761176: headSha=release_sha, 6/6 jobs success."
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "ecr describe-images propio (candidate_read) confirma ambos digests ACTIVE, tag unico = release_sha (sin tags mutables adicionales); politica de inmutabilidad de repositorio no reverificable por Reviewer en este modo (describe-repositories fuera de candidate_read), asumida de infraestructura previa."
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "Confirmado leyendo el log crudo del job 'Publish immutable images and release bundle' (paso 'Fail closed on high or critical ECR findings'): 'tpi-dev-app: CRITICAL=0 HIGH=0' y 'tpi-dev-caddy: CRITICAL=0 HIGH=0'. Ver finding INFO-1 sobre limitacion de tooling para reverificacion directa via aws_guard.py."
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "Reconstruccion propia con build_domain_locked_bundle sobre el worktree del release_tree produce bundle_sha256=ddc5abe2047b624b5a5a1a8aa0615048b54291077bd0d1ffaff7c4fc9e273800, identico al declarado."
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "Zip con unico entry docker-compose.yml; sin 'build:'; sin 'genialabs.cl'; validate_bundle() interno paso sin errores."
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "head-object propio con checksum-mode ENABLED: ChecksumSHA256 base64 decodifica exactamente a ddc5abe2047b624b5a5a1a8aa0615048b54291077bd0d1ffaff7c4fc9e273800."
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "describe-application-versions propio confirma SourceBundle.S3Bucket/S3Key identicos al objeto S3 verificado."
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "reviewed_sha(f99ab78)->release_sha(fec33e7, squash, mismo tree)->digests(app/caddy)->bundle(ddc5abe2...)->S3 key->Application Version, verificado end-to-end de forma independiente en cada eslabon."
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "describe-environments propio: VersionLabel=h3-3-1-rbac-pii-4aac143-domainlocked-r1, Status=Ready, Health=Green, HealthStatus=Ok."
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "Es la version actualmente corriendo y sana; describe-application-versions confirma existencia (Status UNPROCESSED, consistente con --no-process usado para bundles domain-locked)."
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "ecr describe-images propio confirma ambos digests LKG (app 363eb266..., caddy 429ef8f3...) ACTIVE."
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "Compose reconstruido usa solo referencias ${VAR:?...} para AUTH_USERS_JSON/DATABASE_PASSWORD/WEB_SESSION_SECRET/API_IDEMPOTENCY_HMAC_SECRET, sin valores literales; evidence.py rechazaria material sensible via common.find_sensitive."
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "candidate-01.json.smoke_plan incluye 6 checks automatizables + AC-1..AC-8 explicitos con method=human donde corresponde."
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "deployment_plan.commands = una sola linea 'elasticbeanstalk update-environment --environment-name ... --version-label ...'; sin --option-settings/--template-name/--platform-arn/--tier."
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "aws.modes.cutover en harness/policies.yaml permite exactamente 'elasticbeanstalk update-environment' para DEPLOYING."
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "note": "Un solo comando declarado, sin bucles de reintento."
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "rollback_plan.version_label es un label unico y nombrado (h3-3-1-rbac-pii-4aac143-domainlocked-r1); state.json.rollback_attempted=false para esta tarea."
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": "Plan no referencia IAM, Route53, secretos ni migraciones."
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "note": "candidate-01.json y este registro solo contienen digests/hashes/labels estructurados, sin salida cruda de AWS."
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS",
+      "note": "Unico residuo posible en este punto es el objeto S3 + Application Version UNPROCESSED (no destructivo, no afecta el environment vivo); clasificado como residuo aceptable de fase PREPARING_DEPLOYMENT."
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "note": "rollback_authorization.conditions en policies.yaml exige 'environment_degraded_inconsistent_or_not_expected_state' y 'not_purely_functional_defect'; el plan no vincula resultados de smoke funcional a un rollback automatico."
+    },
+    {
+      "name": "cutover_target_is_h3_3_2_rollback_target_is_h3_3_1_lkg",
+      "result": "PASS",
+      "note": "Ver cutover_rollback_ambiguity_check arriba: no se detecto inversion del destino del cutover."
+    },
+    {
+      "name": "environment_not_deployed_remains_ready_green_ok",
+      "result": "PASS",
+      "note": "describe-environments propio confirma VersionLabel=LKG (no candidato), Status/Health/HealthStatus = Ready/Green/Ok, sin AbortableOperationInProgress."
+    },
+    {
+      "name": "auth_users_json_not_touched",
+      "result": "PASS",
+      "note": "Ver auth_users_json_check arriba."
+    },
+    {
+      "name": "ac1_ac2_ac8_remain_pending_not_fabricated",
+      "result": "PASS",
+      "note": "Ver acceptance_criteria_pending_check arriba."
+    }
+  ],
+  "findings": [
+    {
+      "id": "INFO-1",
+      "severity": "info",
+      "file": "scripts/harness/aws_guard.py",
+      "summary": "El validador de 'ecr describe-image-scan-findings' en aws_guard.py rechaza la unica opcion valida del AWS CLI para ese subcomando (--image-id) y permite en su lugar '--image-ids' (opcion inexistente para ese subcomando), por lo que la reverificacion directa de scan findings via aws_guard.py falla siempre con ParamValidationError (exit_code 252), tanto para el Deployer (ver evidence/H3.3.2/aws-audit.jsonl, dos intentos con exit_code 252) como para este Reviewer (reproducido de forma independiente con el mismo error).",
+      "required_action": "Mantenimiento del Harness (fuera de alcance de Developer/Reviewer/Deployer, requiere TPI_HARNESS_MAINTENANCE=1 humano): corregir el validador de aws_guard.py para aceptar '--image-id imageDigest=...' en 'ecr describe-image-scan-findings', preservando el resto de restricciones (prohibir imageTag). No bloquea esta aprobacion: el criterio de seguridad (CRITICAL=0, HIGH=0 para ambas imagenes) fue confirmado de forma independiente y directa leyendo el log crudo del job 'Publish immutable images and release bundle' del run 35111761176 (canal explicitamente autorizado por tpi-release-readiness: 'Consultar gh run view del publish ECR'), por lo que la propiedad de seguridad exigida por el contrato esta verificada por una fuente primaria igualmente autoritativa."
+    }
+  ],
+  "risks": [
+    "El defecto de tooling INFO-1 reduce la defensa en profundidad para futuros candidatos: mientras no se corrija, ningun Reviewer/Deployer podra reverificar scan findings ECR post-publish via aws_guard.py y debera depender exclusivamente del log crudo de CI del run de publish exacto.",
+    "AC-1, AC-2, AC-3 (parcial, ligada a AC-1/AC-2), AC-4..AC-7 (met por tests) y AC-8 dependen de una configuracion de identidad clase E (AUTH_USERS_JSON) aun no ejecutada por el rol autorizado; el candidato no debe considerarse funcionalmente aceptado hasta smoke humano autenticado post-deploy."
+  ]
+}

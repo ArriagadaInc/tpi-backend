@@ -1,0 +1,205 @@
+schema_version: 1
+task:
+  id: H3.3.6
+  title: Exportacion ejecutiva XLSX segura
+  objective: 'Permitir que exclusivamente CEO y CTO descarguen desde el listado /leads del backoffice
+    un archivo XLSX con todos los leads que cumplen los filtros activos, ignorando la paginacion visual,
+    mediante autorizacion server-side, una allowlist explicita y revisada de columnas, proteccion contra
+    filtracion de PII y formula injection, generacion efimera (sin persistencia) y un evento de auditoria
+    funcional sin PII. Valor de negocio - respaldo operacional bajo demanda, analisis ejecutivo fuera
+    del CRM, continuidad operacional CEO/CTO y avance visible antes de retomar H3.2. Baseline: origin/main@78bf33bcb946fc442a8e5488cdf0d2f89fd190c2
+    tree 8c81c7a58fbcf844d7e324e22532902b9b75c39d (= tasks/completed/H3.3.5.yaml closure.release.release_sha).'
+  source:
+    type: story
+    ref: 'Solicitud humana 2026-09-22 (Human/Orchestrator, sesion de planificacion en IDLE): H3.3.6 Exportacion
+      ejecutiva XLSX segura; requisitos F1-F10, seguridad, AC-1..AC-18, pruebas minimas y quality gates
+      del humano.'
+  change_class: A
+  deploy_required: true
+  requires_human_acceptance: true
+  allow_lockfile_update: true
+  acceptance_criteria:
+  - id: AC-1
+    description: El boton Exportar XLSX aparece unicamente para CEO y CTO; no se renderiza para advisor,
+      admin, operations, executive, tester ni usuarios anonimos (ni en HTML residual).
+    verification: both
+  - id: AC-2
+    description: CEO y CTO pueden descargar el archivo; todo otro rol autenticado recibe 403 real server-side
+      al invocar directamente el endpoint (cualquier metodo, querystring o formulario); anonimo conserva
+      el comportamiento canonico de autenticacion.
+    verification: both
+  - id: AC-3
+    description: La exportacion reutiliza exactamente el contrato server-side del listado (busqueda, estado,
+      asignacion, filtros operacionales, orden y demas filtros realmente existentes), sin implementacion
+      paralela de reglas; el orden es determinista.
+    verification: automated
+  - id: AC-4
+    description: El archivo contiene todos los resultados coincidentes y no solo la pagina actual; la
+      paginacion no altera el contenido exportado.
+    verification: automated
+  - id: AC-5
+    description: La allowlist de columnas coincide con la matriz de columnas revisada, basada en el view
+      model y los campos reales ya visibles para CEO/CTO (identificacion, fecha y estado, contacto, informacion
+      previsional/comercial ya visible, asignacion actual y asesor cuando exista).
+    verification: both
+  - id: AC-6
+    description: El archivo no contiene raw_payload, contrasenas ni password_hash, secretos, tokens, cookies
+      o datos de sesion, metadata interna no presentada por el CRM, campos de auditoria tecnica, PII de
+      otros dominios o tablas, columnas descubiertas dinamicamente ni ningun campo fuera de la allowlist.
+    verification: both
+  - id: AC-7
+    description: El XLSX es valido y abre en Microsoft Excel y LibreOffice; una unica hoja Leads; encabezados
+      humanos y estables; primera fila congelada; autofiltro; anchos razonables; fechas como celdas fecha;
+      montos numericos con formato CLP; UUID, RUT, telefonos y codigos con ceros iniciales como texto;
+      sin macros, vinculos externos, formulas, imagenes ni contenido activo.
+    verification: both
+  - id: AC-8
+    description: Todo valor de texto que comience con =, +, - o @ se neutraliza y no se ejecuta como formula,
+      manteniendo un valor visible seguro; la proteccion no altera fechas ni montos legitimos.
+    verification: automated
+  - id: AC-9
+    description: Resultado vacio genera un XLSX valido con encabezados y cero filas (o el comportamiento
+      vacio explicitamente aprobado en la matriz), sin error 500.
+    verification: automated
+  - id: AC-10
+    description: El limite maximo es una constante documentada; el limite exacto funciona y el exceso
+      aborta antes de generar el archivo con un mensaje claro para acotar filtros, sin truncamiento silencioso.
+    verification: automated
+  - id: AC-11
+    description: El archivo se genera de forma efimera (memoria/streaming o temporal eliminado siempre,
+      incluso ante error), no queda persistido en servidor, S3 ni RDS, y la respuesta incluye MIME XLSX
+      correcto, Content-Disposition seguro con nombre predecible fecha/hora, Cache-Control no-store y
+      X-Content-Type-Options nosniff.
+    verification: both
+  - id: AC-12
+    description: Cada exportacion exitosa registra un evento funcional de auditoria con actor/subject,
+      role, timestamp, filtros normalizados y sanitizados, cantidad de filas, formato XLSX y request/correlation
+      id si el sistema ya lo usa; sin contenido del archivo, nombres, RUT, telefonos, emails, contrasenas,
+      hashes, cookies, secretos ni filtros con PII sin sanitizar.
+    verification: both
+  - id: AC-13
+    description: Los intentos no autorizados se rechazan antes de ejecutar la consulta del conjunto o
+      construir el archivo, no generan archivo y no filtran informacion en respuesta, logs ni auditoria
+      (solo la senal segura vigente sin PII).
+    verification: both
+  - id: AC-14
+    description: La exportacion no altera datos, asignaciones, estados, notas ni registros de auditoria
+      preexistentes; su unica escritura es el nuevo evento de exportacion.
+    verification: automated
+  - id: AC-15
+    description: CEO/CTO conservan todas sus capacidades; los advisors mantienen su cartera aislada y
+      no obtienen capacidad de exportacion; regresion de listado, detalle, dashboard y asignacion sin
+      cambios.
+    verification: both
+  - id: AC-16
+    description: Las pruebas automatizadas cubren autorizacion (cada rol y anonimo), filtros combinados,
+      paginacion, allowlist, tipos de celda, Unicode, ceros iniciales, nulos, formula injection (cuatro
+      prefijos), auditoria, vacio, limite exacto y excedido, headers/nombre de archivo, fallo durante
+      generacion con cleanup y regresion advisor.
+    verification: automated
+  - id: AC-17
+    description: La cobertura total del proyecto se mantiene igual o superior al 85%.
+    verification: automated
+  - id: AC-18
+    description: Smoke humano en AWS DEV confirma descarga con CEO; descarga con CTO; 403 directo con
+      advisor; filtros reflejados correctamente; el archivo abre visualmente; tipos y formatos correctos;
+      ausencia de campos prohibidos; auditoria segura; logs sin PII ni secretos.
+    verification: human
+  constraints:
+  - 'Baseline: origin/main@78bf33bcb946fc442a8e5488cdf0d2f89fd190c2 tree 8c81c7a58fbcf844d7e324e22532902b9b75c39d
+    registrado al definir la tarea (2026-09-22); revalidar SHA y tree al activar y al iniciar DEVELOPING;
+    si origin/main avanzo, registrar el nuevo tip legitimo antes de trabajar. No desarrollar desde ramas
+    o worktrees antiguos (incluidos los de H3.3.5); sin cherry-pick ciego.'
+  - Tarea unica H3.3.6; no mezclar H3.3.7, H3.3.8, H3.2, CR-D7-02, CR-D7-03 ni limpieza de worktrees;
+    sin alcance diferido.
+  - 'change_class A (fast path version-only): sin migraciones, cambios de esquema, grants, escrituras
+    masivas ni infraestructura. Duda registrada: la unica escritura es un INSERT append-only en tpi.auditoria
+    via el grant existente de tpi_app (scripts/sql/006) con accion VARCHAR(100) sin CHECK en el contrato
+    versionado. Si el Developer o Reviewer encuentran que el evento requiere migracion, grant, vista o
+    constraint nueva, es BLOCKER: detenerse y escalar al humano; no reclasificar ni ampliar el alcance
+    dentro de esta tarea.'
+  - 'Gates separados: (1) Requirements Coverage Gate en DEVELOPING antes de tocar codigo funcional; (2)
+    ruff/black/mypy/bandit/pip-audit vigentes y suite completa con cobertura >= 85%; (3) revision especifica
+    de PII y de formula injection e inspeccion real del XLSX generado por el Reviewer; (4) CI obligatorio;
+    (5) Candidate Review y Human Gate antes del despliegue; (6) smoke AWS DEV autenticado humano (AC-18).'
+  - 'Como el Harness impide crear docs/ durante IDLE: al entrar en DEVELOPING y antes de cualquier cambio
+    funcional, el Developer crea docs/H3_3_6_REQUIREMENTS_MATRIX.md (requisito F1-F10/seguridad -> AC
+    -> componente previsto -> prueba automatizada -> smoke/evidencia) y docs/H3_3_6_EXPORT_COLUMNS.md
+    (matriz de columnas); ejecuta y registra el Requirements Coverage Gate y se detiene sin implementar
+    si falla. Todo requisito sin AC, implementacion prevista o mecanismo verificable es BLOCKER.'
+  - 'Matriz de columnas (F4): construida inspeccionando modelos, servicios, repositorios, templates y
+    esquema versionado reales (no asumir nombres); cada columna declara campo origen, encabezado humano,
+    tipo de celda y formato; agrupada en identificacion del lead, fecha y estado, contacto, informacion
+    previsional/comercial ya visible y asignacion actual/asesor. La serializacion usa solo esa allowlist
+    explicita; prohibido serializar objetos completos, usar reflexion o descubrir columnas dinamicamente.'
+  - 'Autorizacion (F2): verificacion server-side CEO/CTO mediante el helper vigente (is_superuser o equivalente
+    real) antes de ejecutar la consulta o construir el archivo; otros roles autenticados -> 403; anonimo
+    -> comportamiento canonico de autenticacion; ocultar el boton no cuenta como control. No modificar
+    app/auth/** ni los permisos de CEO/CTO u otros roles.'
+  - 'Filtros (F3): reutilizar el mismo parseo/normalizacion y la misma consulta del listado (repositorio/servicio
+    existente) sin paginacion; no inventar filtros ni duplicar reglas; orden determinista (desempate estable).'
+  - 'XLSX (F5, F6): una hoja Leads; nombre de hoja y encabezados constantes (nunca derivados de datos);
+    sin formulas escritas por la aplicacion; textos que comiencen con =, +, - o @ neutralizados o forzados
+    como texto; numeros y fechas escritos como tipos nativos y nunca neutralizados; nombre de archivo
+    generado por el servidor (sin rutas ni nombres controlados por el usuario).'
+  - 'Entrega (F7): generacion bajo demanda en memoria/streaming cuando la biblioteca lo permita; si se
+    usa un temporal, eliminarlo en finally incluso ante error; nunca S3, RDS ni archivos permanentes;
+    headers MIME XLSX, Content-Disposition attachment seguro, Cache-Control no-store y X-Content-Type-Options
+    nosniff; nunca incluir el contenido del archivo en logs ni evidencias.'
+  - 'Limite (F8): inspeccionar volumen actual, consulta y memoria de la biblioteca antes de fijarlo; constante
+    en codigo documentada en la matriz; conteo previo y aborto antes de generar si se excede; sin truncamiento
+    silencioso; no agregar variables de entorno nuevas salvo necesidad demostrada y revision explicita
+    del Reviewer.'
+  - 'Auditoria (F9): evento funcional de exportacion exitosa en el mecanismo de auditoria existente con
+    actor/subject, role, timestamp, filtros normalizados y sanitizados (sin texto libre de busqueda que
+    pueda contener PII salvo sanitizado), cantidad de filas y formato XLSX; intentos no autorizados ->
+    403 y la senal segura vigente sin PII. No modificar ni borrar registros de auditoria existentes.'
+  - 'UX (F10): boton integrado en el listado sin romper Actualizar/Limpiar; estado de descarga comprensible;
+    mensajes claros para cero resultados, exceso de limite y error; sin pagina intermedia; se mantienen
+    diseno y accesibilidad actuales.'
+  - 'Dependencias (allow_lockfile_update=true condicionado): origin/main no incluye biblioteca de escritura
+    XLSX (runtime.lock sin openpyxl ni xlsxwriter). Se autoriza agregar como maximo UNA biblioteca pura
+    Python de escritura XLSX mantenida (p. ej. openpyxl o XlsxWriter, elegida y justificada en la matriz),
+    version fijada, con sus dependencias transitivas minimas, pip-audit limpio y regeneracion de lockfiles
+    con el mecanismo vigente; ningun otro cambio de dependencias. El Reviewer verifica que el diff de
+    requirements/** y pyproject.toml se limita a esa biblioteca.'
+  - Nunca leer, imprimir ni modificar AUTH_USERS_JSON, contrasenas, hashes ni secretos; no crear identidades.
+  - 'Prohibido: migraciones o cambios de esquema; escrituras masivas en RDS; S3 para exportaciones; emails
+    o envios automaticos; exportacion programada; CSV, PDF, graficos o dashboards nuevos; cambios IAM,
+    DNS, networking o infraestructura; --option-settings; cambios en Harness, workflow, guards o policies;
+    produccion.'
+  - No reducir la cobertura minima (85%); no mezclar cambios no relacionados.
+  dependencies:
+  - H3.3.5
+  risk:
+    level: high
+    notes: Exportacion masiva de PII aunque no haya escritura de datos de negocio. Riesgos - IDOR o autorizacion
+      solo visual; divergencia entre filtros UI y exportacion; exportar objetos completos o raw_payload;
+      formula injection; uso excesivo de memoria; archivos temporales persistentes; auditoria que filtre
+      PII; dependencia XLSX vulnerable o con transitivas innecesarias; regresion CEO/CTO o de la cartera
+      aislada de advisors.
+  scope:
+    paths:
+    - app/web/**
+    - app/services/**
+    - app/repositories/**
+    - tests/**
+    - requirements/**
+    - pyproject.toml
+    - docs/H3_3_6_REQUIREMENTS_MATRIX.md
+    - docs/H3_3_6_EXPORT_COLUMNS.md
+  status: closed
+closure:
+  closed_at: '2026-09-23T19:52:19Z'
+  final_state: DONE
+  evidence_dir: evidence/H3.3.6
+  release:
+    release_sha: 5f5b3d37bf122f1d4438583b973fd03763aecebe
+    pr_number: 58
+    application_version: h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1
+    bundle_sha256: 8fbd2526a6e311bdcfb0c2f72cdd20a7ba9f6a056de04562957214946332cb32
+    lkg: h3-3-5-asesores-cartera-78bf33b-domainlocked-r1
+    deployment: success
+    deployed_commit: 5f5b3d37bf122f1d4438583b973fd03763aecebe
+    verification: PASS
+  rework_rounds: 1

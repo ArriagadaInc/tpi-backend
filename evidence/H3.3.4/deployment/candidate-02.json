@@ -1,0 +1,276 @@
+{
+  "schema_version": 1,
+  "kind": "candidate",
+  "task_id": "H3.3.4",
+  "created_at": "2026-09-20T21:48:43Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609201911-deployer-app-candidate-r2",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "environment": "tpi-backoffice-dev-green",
+  "lkg": {
+    "version_label": "h3-3-3-historial-web-ux-c5e738c-domainlocked-r1",
+    "status": "UNPROCESSED",
+    "images": [
+      {
+        "repository": "tpi-dev-app",
+        "digest": "sha256:9333994ef8a1bae1b4bff1b95bdaba24b3a4004b9f10ba6524f0ca326948e523",
+        "present": true
+      },
+      {
+        "repository": "tpi-dev-caddy",
+        "digest": "sha256:27e8c5dc8a1facb85eae506383a3c380a838b61c96d7ec2dd9c63acce9384ee4",
+        "present": true
+      }
+    ],
+    "option_settings_required": false,
+    "source_bundle": {
+      "bucket": "elasticbeanstalk-us-east-2-821656895812",
+      "key": "tpi-backoffice/dev-releases/h3-3-3-historial-web-ux-c5e738c-domainlocked-r1/6b6450b53df7e54a1d80ab637819d2f7dbc059e9435cd59221b549cfda949695.zip",
+      "checksum_sha256": "a2RQtT335UodgKtjeBnS99vAWelDXNWSIbVJz9qUlpU=",
+      "bundle_sha256": "6b6450b53df7e54a1d80ab637819d2f7dbc059e9435cd59221b549cfda949695"
+    },
+    "selected_by": "observacion de describe-environments en el preflight (no por timestamp ni por documento)",
+    "verified": "Re-verificado en esta sesion: AV existe UNPROCESSED; head-object del bundle ChecksumSHA256 a2RQtT33... coincide; ambos digests presentes en ECR (describe-images)."
+  },
+  "migration_reference": {
+    "task_id": "H3.3.4",
+    "migration": "008_create_lead_state_history",
+    "evidence": "evidence/H3.3.4/deployment/migration-01.json",
+    "evidence_staged_at": ".harness-release/H3.3.4/migration-execution-01/migration-01.json",
+    "evidence_staged_sha256": "e94c5720401f1454bf3c515d62d1117236c0314bf339c2660b2f127ed372b0c5",
+    "result": "PASS",
+    "applied_once": true,
+    "postflight_pass": true,
+    "rollback_executed": false,
+    "forward_sha256": "2e2b8c9d46fd72f2696b3bbb06c194b5e795097d13167228d0400e381ed9ee06",
+    "rollback_sha256": "326078eed3d29f85106d088038bb694c64711f64e932dc2f584e61b954931838",
+    "note": "Migracion 008 aplicada manualmente por el humano fuera del fast path, con aprobacion 'APRUEBO MIGRATION CANDIDATE H3.3.4'. La ruta evidence/H3.3.4/deployment/migration-01.json es protegida y requiere que la persista el humano; hasta entonces el informe esta staged en .harness-release con el sha256 indicado. Esta aprobacion NO sustituye el Human Gate (AC-7) del application candidate.",
+    "explain_normal": "Seq Scan al volumen actual de DEV (2 filas en auditoria, 0 eventos de cambio de estado): comportamiento razonable, no fallo de la migracion. F2/F6 (EXPLAIN a volumen representativo / read model) siguen abiertos como follow-up de rendimiento."
+  },
+  "smoke_plan": [
+    {
+      "name": "public_https",
+      "method": "GET",
+      "url": "https://dev.tupensioninteligente.cl/",
+      "expect_status": 200
+    },
+    {
+      "name": "backoffice_login",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/login",
+      "expect_status": 200
+    },
+    {
+      "name": "api_catalogs",
+      "method": "GET",
+      "url": "https://dev.tupensioninteligente.cl/api/v1/catalogs",
+      "expect_status": 200
+    },
+    {
+      "name": "static_css",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/static/css/app.css",
+      "expect_status": 200
+    },
+    {
+      "name": "leads_requires_auth",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/leads",
+      "expect": "redirect a /login o 401/403"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "check": "ninguna respuesta redirige a genialabs.cl"
+    },
+    {
+      "name": "AC-10_dashboard_anonymous_403",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/dashboard",
+      "expect_status": 403,
+      "expect": "403 real sin sesion (app/web/routes/dashboard.py::require_executive_access); cuerpo sin datos ni marcado de dashboard; nunca 200"
+    },
+    {
+      "name": "AC-10_dashboard_no_data_leak_anonymous",
+      "check": "el cuerpo del 403 no contiene KPI, RUT, nombres, telefono ni correo, ni SQL/consultas"
+    },
+    {
+      "name": "AC-10_dashboard_ceo_cto_access",
+      "method": "human",
+      "expect": "CEO y CTO abren /dashboard (200) y ven el enlace de navegacion 'Dashboard Ejecutivo'; los demas roles autenticados no ven el enlace"
+    },
+    {
+      "name": "AC-10_rbac_403_non_executive_roles",
+      "method": "human",
+      "expect": "cada rol autenticado que no es CEO/CTO recibe 403 real en /dashboard, sin datos (checklist matriz 12.10 item 2)"
+    },
+    {
+      "name": "AC-9/AC-18_human_smoke_dev",
+      "method": "human",
+      "expect": "smoke humano AC-9/AC-18 en DEV: historial integral (ficha de lead) y dashboard visual, pendientes hasta approve.py accept (follow-up preservado)"
+    },
+    {
+      "name": "AC-1..4_historial_integral",
+      "method": "human",
+      "expect": "cambiar el estado de un lead genera evento cambio_estado_lead (actor, fecha_hora America/Santiago, estado_anterior->estado_nuevo, badge Automatico solo para eventos del sistema) fusionado con notas y asignaciones en una linea de tiempo cronologica de orden estable, sin edicion ni eliminacion; un no-op de estado no duplica evento; estado vacio coherente en leads sin cambios posteriores al cutover"
+    },
+    {
+      "name": "AC-11..16_metricas_dashboard",
+      "method": "human",
+      "expect": "KPI (total, ingresados en el periodo por fecha_ingreso, casos por estado, asignados/sin asignar), evolucion diaria/semanal/mensual, resumen por asesor (cartera total y activa), estancados por buckets 0-2/3-7/8-15/16-30/+30, tiempo hasta asignacion y primera gestion (N/D si no existe), embudo con estados de cobertura honestos; totales coherentes con /leads"
+    },
+    {
+      "name": "AC-12_filtros",
+      "method": "human",
+      "expect": "filtros combinables (periodo, estado, asesor, AFP, origen, fuente actual) reproducibles por URL; rango invalido (desde>hasta) muestra mensaje y HTTP 400 sin ejecutar consultas; sin genero ni estado civil en ninguna parte"
+    },
+    {
+      "name": "AC-17_pii_dashboard",
+      "method": "human",
+      "expect": "ni la pagina ni el codigo fuente servido contienen RUT, nombre, telefono o correo de leads, ni RUT/telefono/correo de asesores; nombre de asesor visible solo para CEO/CTO"
+    },
+    {
+      "name": "regresion_H3.3.3",
+      "method": "human",
+      "expect": "sin regresion: ficha de lead con notas humanas y asignaciones automaticas (badge Automatico), 'Volver al sitio' solo autenticado con href exacto https://dev.tupensioninteligente.cl/ y ausente en login, RBAC/PII de H3.3.1-H3.3.2 intactos"
+    },
+    {
+      "name": "F4_cutover_effective_value",
+      "method": "human",
+      "expect": "con la propiedad de entorno LEAD_STATE_HISTORY_CUTOVER=2026-09-20 aplicada, la app desplegada usa esa fecha: /leads y /dashboard NO muestran el aviso de cobertura ausente y calculan embudo/tiempo a primera gestion solo con eventos desde 2026-09-20 (cobertura honesta antes de esa fecha). Si la propiedad NO se aplico: aviso de cobertura ausente y 'No disponible con cobertura suficiente' (falla segura; F4 sigue abierto)."
+    }
+  ],
+  "rollback_plan": {
+    "version_label": "h3-3-3-historial-web-ux-c5e738c-domainlocked-r1",
+    "commands": [
+      "python scripts/harness/aws_guard.py elasticbeanstalk update-environment --environment-name tpi-backoffice-dev-green --version-label h3-3-3-historial-web-ux-c5e738c-domainlocked-r1"
+    ],
+    "conditions": "Un unico rollback version-only, solo si: update aceptado; environment degradado/inconsistente; LKG utilizable; imagenes del LKG en ECR; sin option settings; no es un defecto puramente funcional; sin rollback previo (autorizacion condicionada del Human Gate).",
+    "database": "El rollback de aplicacion NO revierte la migracion 008. La vista tpi.v_historial_estado_lead y el indice auditoria_state_history_idx son aditivos y compatibles con el LKG (H3.3.3 no los consulta). El rollback SQL (008_drop_lead_state_history.sql, sha256 326078ee...) es una decision humana separada y nunca automatica.",
+    "lkg_bundle_intact": true
+  },
+  "follow_ups_preserved": {
+    "F1": "deuda documental no bloqueante (referencias de archivo sin funcion exacta en el gate de la matriz)",
+    "F11": "deuda documental no bloqueante (mapeo de smoke AC-9/AC-18 entre filas y seccion 6)",
+    "F2/F6": "EXPLAIN normal a volumen representativo y rendimiento/read model (5,28-6,80 s a 20.000 leads / 12 asesores)",
+    "F4": "valor efectivo de LEAD_STATE_HISTORY_CUTOVER en DEV (ver deployment_plan.lead_state_history_cutover)",
+    "F5": "snapshot REPEATABLE READ prolongado",
+    "AC-9/AC-18": "smoke humano en DEV (incluye RBAC/403 y dashboard visual)",
+    "AC-7": "Human Gate independiente del application candidate"
+  },
+  "release_sha": "3051a6271e1626b40fe24a744abe097cab1ab0fe",
+  "publish_run": {
+    "run_id": 35531516296,
+    "conclusion": "success",
+    "head_sha": "3051a6271e1626b40fe24a744abe097cab1ab0fe",
+    "workflow": "Publish immutable DEV images to ECR",
+    "event": "workflow_dispatch",
+    "url": "https://github.com/ArriagadaInc/tpi-backend/actions/runs/35531516296",
+    "note": "6/6 jobs success (Authorize source revision, Tests, Security Audit, Docker Build, Lint & Format, Publish immutable images and release bundle). Step 'Fail closed on high or critical ECR findings' = success; el log imprime 'tpi-dev-app: CRITICAL=0 HIGH=0' y 'tpi-dev-caddy: CRITICAL=0 HIGH=0'. Un solo dispatch, sin reintentos. ecr describe-image-scan-findings no es utilizable via aws_guard (la politica solo admite --image-ids, opcion que esa operacion de la CLI no acepta): la evidencia del scan es el step fail-closed del workflow y su log."
+  },
+  "images": {
+    "app": {
+      "repository": "tpi-dev-app",
+      "digest": "sha256:a7881bad7e7fd9c76e3fca7e4a6efa5d197bfceeb6623d0a41f6e3585ec6620d",
+      "scan": {
+        "critical": 0,
+        "high": 0
+      },
+      "tag": "3051a6271e1626b40fe24a744abe097cab1ab0fe",
+      "ecr_describe_images_present": true
+    },
+    "caddy": {
+      "repository": "tpi-dev-caddy",
+      "digest": "sha256:9da2be7ab7dd6edb2dfaaa55791209dc3f881c8946ae5b8570148750b8a52325",
+      "scan": {
+        "critical": 0,
+        "high": 0
+      },
+      "tag": "3051a6271e1626b40fe24a744abe097cab1ab0fe",
+      "ecr_describe_images_present": true
+    }
+  },
+  "bundle": {
+    "sha256": "bcbe935885dc50d279cd19c5f0ddf696449b29d7305c2e5506dc0a5afa9916d0",
+    "artifact_type": "domain-locked",
+    "reproducible": true,
+    "size_bytes": 4815,
+    "path": ".harness-release/h3-3-4-historial-dashboard-3051a62-domainlocked-r1.zip",
+    "note": "Construido con build_domain_locked_bundle desde una exportacion git archive del release_sha 3051a627 (blobs de deployment/aws/docker-compose.domainlocked.yml cbdfd846 y deployment/build_eb_ecr_bundle.py 6cee0d10 identicos a los del release), con los digests del manifest del run 35531516296 (no escritos a mano) y runtime_git_sha=release_sha. Segunda construccion independiente: mismo SHA256. Unica entrada docker-compose.yml; validate_bundle OK; sin genialabs.cl; sin placeholders; LEAD_STATE_HISTORY_CUTOVER solo en el servicio backoffice (linea '${LEAD_STATE_HISTORY_CUTOVER:-}'). El bundle embebido en el artifact del workflow (bundle_sha256 9a709a0e...) NO es el artefacto de release (no domain-locked). Es un bundle nuevo: distinto de candidate-01 (a9cb2362...). Incidente de proceso: una primera construccion desde el checkout de trabajo (cuyo deployment/ difiere del release y carece de la linea del cutover; sha b3182145..., 4749 B) fue detectada por tamano/diff, descartada y apartada antes de cualquier subida; nunca llego a S3."
+  },
+  "s3": {
+    "bucket": "elasticbeanstalk-us-east-2-821656895812",
+    "key": "tpi-backoffice/dev-releases/h3-3-4-historial-dashboard-3051a62-domainlocked-r1/bcbe935885dc50d279cd19c5f0ddf696449b29d7305c2e5506dc0a5afa9916d0.zip",
+    "checksum_sha256": "vL6TWIXcUNJ5zRnF8N32lkSbKdcwXC5VBtwKWvqZFtA=",
+    "version_id": null,
+    "content_length": 4815,
+    "if_none_match": "*"
+  },
+  "application_version": {
+    "label": "h3-3-4-historial-dashboard-3051a62-domainlocked-r1",
+    "status": "UNPROCESSED",
+    "created_at": "2026-09-20T21:46:16Z",
+    "flags": "--no-process --no-auto-create-application"
+  },
+  "environment_observed": {
+    "version_label": "h3-3-3-historial-web-ux-c5e738c-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "date_updated": "2026-09-17T03:59:40Z",
+    "note": "Observado en preflight y re-observado tras crear la AV: environment sin cambios (VersionLabel = LKG). Promote de CodePipeline deshabilitado (Source enabled, Promote disabled)."
+  },
+  "deployment_plan": {
+    "commands": [
+      "python scripts/harness/aws_guard.py elasticbeanstalk update-environment --environment-name tpi-backoffice-dev-green --version-label h3-3-4-historial-dashboard-3051a62-domainlocked-r1"
+    ],
+    "preconditions": [
+      "Human Gate (approve.py gate) aprobado para el release_sha exacto 3051a6271e1626b40fe24a744abe097cab1ab0fe y la AV citada.",
+      "Preflight inmediato antes del cutover: cuenta 821656895812, region us-east-2, environment Ready/Green/Ok con VersionLabel = LKG, sin update en curso, AV existe, digests del candidate y del LKG presentes en ECR.",
+      "Migracion 008 aplicada y postflight PASS (migration-01.json, applied_once=true); no se reejecuta.",
+      "Propiedad de entorno LEAD_STATE_HISTORY_CUTOVER=2026-09-20 aplicada al environment (ver environment_properties_required); prerrequisito humano, no ejecutable por el Deployer."
+    ],
+    "post_cutover": "esperar VersionLabel exacta + Ready/Green/Ok (describe-environments cada 30 s, maximo 30 min); verificar cadena VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests; smoke tecnico inmediato; luego smoke humano incluyendo F4.",
+    "option_settings_used": false,
+    "option_settings_in_harness_commands": false,
+    "environment_properties_required": [
+      {
+        "namespace": "aws:elasticbeanstalk:application:environment",
+        "option_name": "LEAD_STATE_HISTORY_CUTOVER",
+        "value": "2026-09-20",
+        "format": "ISO YYYY-MM-DD sin zona horaria (app/config/settings.py: lead_state_history_cutover: date | None)",
+        "source": "evidence/H3.3.4/approvals/resolution-05.json (autorizacion humana de incluir la propiedad; no autoriza update-environment ni despliegue)",
+        "consumed_by": "servicio backoffice del compose domain-locked via '${LEAD_STATE_HISTORY_CUTOVER:-}' (verificado en el bundle; ausente en api y caddy)",
+        "applied_by_harness": false,
+        "applied_at_candidate_time": false
+      }
+    ],
+    "environment_property_constraint": {
+      "conflict": "El Harness solo permite al Deployer 'update-environment --environment-name --version-label': aws_guard deniega --option-settings (policies.yaml global_deny_flags) y el guard candidate_valid exige que deployment_plan.commands no contenga --option-settings. Por eso la propiedad NO figura en 'commands' y este candidate NO la aplica: solo la declara como requisito del plan.",
+      "human_decision_required": "Antes o en el Human Gate: decidir como se aplica la propiedad en el environment (accion humana fuera del fast path, o ampliacion explicita de politica) y confirmarlo antes del cutover. Sin la propiedad el cutover version-only despliega sin fecha de corte (falla segura, F4 abierto).",
+      "sequencing_note": "Definir la propiedad en el environment es independiente de la version: el compose del LKG (h3-3-3) no referencia LEAD_STATE_HISTORY_CUTOVER, por lo que aplicarla antes del cutover es inocuo para el LKG y el bundle nuevo la consume al arrancar.",
+      "rollback_interaction": "El rollback version-only al LKG no revierte la propiedad (es configuracion del environment, no de la version); es inocua para el LKG. La condicion de rollback 'sin option settings' se refiere a que el rollback en si no las requiere."
+    },
+    "compose_consumption_verified": {
+      "with_property": "backoffice -> LEAD_STATE_HISTORY_CUTOVER: 2026-09-20 (interpolacion ${VAR:-} sobre el compose del bundle)",
+      "without_property": "backoffice -> cadena vacia -> Settings valida vacio como None (falla segura); tests/unit/test_domain_locked_bundle.py y test_h3_3_4_timeline_presentation.py: 9 passed sobre el arbol exacto del release",
+      "docker_compose_config": "no ejecutado: guard.py bloquea comandos que nombran variables secretas obligatorias del compose; la verificacion se hizo por interpolacion textual acotada a esta variable"
+    },
+    "lead_state_history_cutover": {
+      "requested_value": "2026-09-20",
+      "wired_in_bundle": true,
+      "environment_modified_by_this_candidate": false,
+      "supersedes": "candidate-01 (CAND-01: variable no cableada); ese candidate esta rechazado e inerte y no se reutiliza"
+    }
+  },
+  "blast_radius_and_residues": {
+    "scope": "Solo AWS DEV, environment tpi-backoffice-dev-green; cutover version-only. La propiedad de entorno LEAD_STATE_HISTORY_CUTOVER es un cambio de configuracion del environment que queda fuera de los comandos del Harness (accion humana).",
+    "stage_residues": "Objeto S3 content-addressed inmutable + Application Version UNPROCESSED nuevos; inertes hasta el cutover. Quedan ademas los artefactos de candidate-01 (inertes, no reutilizados); el Harness no puede borrar ninguno.",
+    "runtime": "Environment sin mutar durante PREPARING_DEPLOYMENT."
+  },
+  "supersedes_candidate": {
+    "evidence": "evidence/H3.3.4/deployment/candidate-01.json",
+    "reason": "rechazado por CAND-01 (candidate_review-01); no se reutiliza ninguno de sus artefactos (label, key S3, bundle a9cb2362..., digests a0a619fc.../6faea46e...)"
+  }
+}

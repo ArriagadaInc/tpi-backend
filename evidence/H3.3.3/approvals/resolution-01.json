@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "resolution",
+  "task_id": "H3.3.3",
+  "created_at": "2026-09-17T03:18:27Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "from_state": "BLOCKED_HUMAN",
+  "to_state": "PREPARING_DEPLOYMENT",
+  "reason": "Migration candidate H3.3.3 aprobado previamente por el humano y aplicado exactamente una vez en AWS RDS DEV. Forward SHA-256 5d7b39fd73b370a506c84b022919287c6b30584696d67d0caf2e0734a054bf52; rollback SHA-256 f02d3467134b2b0863e05f941475fb44b08a488af673c767f00c7b86e5208044. Preflight PASS y postflight 15/15 PASS; sin rollback ni deploy. Evidencia: evidence/H3.3.3/deployment/migration-01.json."
+}

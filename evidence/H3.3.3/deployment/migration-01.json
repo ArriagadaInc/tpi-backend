@@ -1,0 +1,290 @@
+{
+    "report_type":  "tpi_db_migration_report",
+    "report_version":  1,
+    "task_id":  "H3.3.3",
+    "migration":  "007_create_audit_assignment_view",
+    "operation_path":  "manual_human_operator_outside_harness_fast_path",
+    "human_approval":  "APRUEBO MIGRATION CANDIDATE H3.3.3",
+    "result":  "PASS",
+    "failure_reason":  null,
+    "timestamps_utc":  {
+                           "started_at":  "2026-09-17T03:13:35Z",
+                           "preflight_at":  "2026-09-17T03:13:59Z",
+                           "application_at":  "2026-09-17T03:14:03Z",
+                           "postflight_at":  "2026-09-17T03:14:06Z",
+                           "finished_at":  "2026-09-17T03:14:11Z"
+                       },
+    "target":  {
+                   "account_id":  "821656895812",
+                   "region":  "us-east-2",
+                   "aws_profile":  "tpi-dev",
+                   "rds_instance":  "tpi-postgres-dev",
+                   "database":  "tpi",
+                   "admin_role":  "tpi_admin",
+                   "caller_arn":  "arn:aws:iam::821656895812:user/Alvaro"
+               },
+    "rds":  {
+                "identifier":  "tpi-postgres-dev",
+                "status":  "available",
+                "engine":  "postgres",
+                "engine_version":  "17.9",
+                "db_name":  "tpi",
+                "master_username":  "tpi_admin",
+                "backup_retention_period":  1,
+                "latest_restorable_time":  "2026-09-17T03:10:26+00:00",
+                "publicly_accessible":  true,
+                "port":  5432
+            },
+    "bridge":  {
+                   "eb_environment":  "tpi-backoffice-dev-green",
+                   "resolved_by":  "tag elasticbeanstalk:environment-name + instance-state-name=running (unica)",
+                   "instance_id":  "i-0949112b7b5ac1e06",
+                   "ssm_ping_status":  "Online",
+                   "ssm_agent_version":  "3.3.4624.0",
+                   "mechanism":  "aws ssm start-session --document-name AWS-StartPortForwardingSessionToRemoteHost",
+                   "remote_port":  5432,
+                   "local_port":  15432,
+                   "session_manager_plugin_version":  "1.2.835.0",
+                   "security_groups_modified":  false,
+                   "pg_isready":  "accepting connections"
+               },
+    "candidate":  {
+                      "commit":  "c5e738c21ba202d9c664652412e6820628b18e3c",
+                      "commit_on_origin_main":  true,
+                      "forward":  {
+                                      "path":  "scripts/sql/007_create_audit_assignment_view.sql",
+                                      "git_blob":  "fbb900df5acc78f7cfd9bb090b7bbb5257bff532",
+                                      "sha256":  "5d7b39fd73b370a506c84b022919287c6b30584696d67d0caf2e0734a054bf52",
+                                      "size_bytes":  4971,
+                                      "source":  "git cat-file blob (commit aprobado, no working tree)"
+                                  },
+                      "rollback":  {
+                                       "path":  "scripts/sql/007_drop_audit_assignment_view.sql",
+                                       "git_blob":  "d3f861f5a1f2e59fa4d774b84774b65137e27bb9",
+                                       "sha256":  "f02d3467134b2b0863e05f941475fb44b08a488af673c767f00c7b86e5208044",
+                                       "size_bytes":  737,
+                                       "source":  "git cat-file blob (commit aprobado, no working tree)"
+                                   }
+                  },
+    "pg_client_image":  "postgres@sha256:67f41722b7a8cbdb868a44a4995c846eddfdc2973bccb291ce937dce88ad5675",
+    "preflight":  {
+                      "effective_user":  "tpi_admin",
+                      "session_user":  "tpi_admin",
+                      "database_name":  "tpi",
+                      "server_version":  "17.9",
+                      "transaction_read_only":  true,
+                      "tpi_app_exists":  true,
+                      "schema_exists":  true,
+                      "schema_usage":  true,
+                      "auditoria_exists":  true,
+                      "auditoria_required_columns_present":  true,
+                      "auditoria_detalle_is_json":  true,
+                      "view_absent":  true,
+                      "auditoria_select_denied":  true,
+                      "auditoria_update_denied":  true,
+                      "auditoria_delete_denied":  true,
+                      "preflight_pass":  true,
+                      "note":  "preflight_pass evalua todo salvo view_absent, que decide entre aplicar o verificar ALREADY_APPLIED"
+                  },
+    "applied_once":  true,
+    "application":  {
+                        "executed_file":  "scripts/sql/007_create_audit_assignment_view.sql",
+                        "executed_sha256":  "5d7b39fd73b370a506c84b022919287c6b30584696d67d0caf2e0734a054bf52",
+                        "in_container_sha256_verified":  true,
+                        "psql_on_error_stop":  true,
+                        "exit_code":  0,
+                        "invocations":  1,
+                        "retried":  false,
+                        "finished_at":  "2026-09-17T03:14:06Z"
+                    },
+    "postflight":  {
+                       "result":  "PASS",
+                       "checks":  [
+                                      {
+                                          "name":  "view_exists",
+                                          "result":  "PASS",
+                                          "observed":  "v"
+                                      },
+                                      {
+                                          "name":  "owner_tpi_admin",
+                                          "result":  "PASS",
+                                          "observed":  "tpi_admin"
+                                      },
+                                      {
+                                          "name":  "security_barrier_true",
+                                          "result":  "PASS",
+                                          "observed":  true
+                                      },
+                                      {
+                                          "name":  "columns_exact_in_order",
+                                          "result":  "PASS",
+                                          "observed":  [
+                                                           "id_auditoria",
+                                                           "id_lead",
+                                                           "fecha_hora",
+                                                           "actor_subject",
+                                                           "id_asesor",
+                                                           "estado_anterior",
+                                                           "estado_nuevo"
+                                                       ]
+                                      },
+                                      {
+                                          "name":  "id_asesor_type_uuid",
+                                          "result":  "PASS",
+                                          "observed":  "uuid"
+                                      },
+                                      {
+                                          "name":  "public_no_privileges",
+                                          "result":  "PASS",
+                                          "observed":  [
+
+                                                       ]
+                                      },
+                                      {
+                                          "name":  "acl_only_owner_and_tpi_app",
+                                          "result":  "PASS",
+                                          "observed":  [
+                                                           "tpi_admin",
+                                                           "tpi_app"
+                                                       ]
+                                      },
+                                      {
+                                          "name":  "tpi_app_view_select",
+                                          "result":  "PASS",
+                                          "observed":  true
+                                      },
+                                      {
+                                          "name":  "tpi_app_view_no_insert_update_delete",
+                                          "result":  "PASS",
+                                          "observed":  {
+                                                           "insert":  false,
+                                                           "update":  false,
+                                                           "delete":  false
+                                                       }
+                                      },
+                                      {
+                                          "name":  "tpi_app_view_only_select",
+                                          "result":  "PASS",
+                                          "observed":  [
+                                                           "SELECT"
+                                                       ]
+                                      },
+                                      {
+                                          "name":  "tpi_app_schema_usage",
+                                          "result":  "PASS",
+                                          "observed":  true
+                                      },
+                                      {
+                                          "name":  "tpi_app_auditoria_no_select_update_delete",
+                                          "result":  "PASS",
+                                          "observed":  {
+                                                           "select":  false,
+                                                           "update":  false,
+                                                           "delete":  false
+                                                       }
+                                      },
+                                      {
+                                          "name":  "view_count_equals_filtered_auditoria",
+                                          "result":  "PASS",
+                                          "observed":  {
+                                                           "view":  2,
+                                                           "filtered_auditoria":  2
+                                                       }
+                                      },
+                                      {
+                                          "name":  "view_full_scan_ok_with_malformed_history",
+                                          "result":  "PASS",
+                                          "observed":  {
+                                                           "raw_malformed_id_asesor":  0,
+                                                           "raw_missing_id_asesor":  0,
+                                                           "view_null_id_asesor":  0
+                                                       }
+                                      },
+                                      {
+                                          "name":  "view_rows_match_approved_projection",
+                                          "result":  "PASS",
+                                          "observed":  {
+                                                           "view_minus_expected":  0,
+                                                           "expected_minus_view":  0
+                                                       }
+                                      }
+                                  ],
+                       "raw":  {
+                                   "effective_user":  "tpi_admin",
+                                   "view_exists":  true,
+                                   "relkind":  "v",
+                                   "owner":  "tpi_admin",
+                                   "security_barrier":  true,
+                                   "columns":  [
+                                                   "id_auditoria",
+                                                   "id_lead",
+                                                   "fecha_hora",
+                                                   "actor_subject",
+                                                   "id_asesor",
+                                                   "estado_anterior",
+                                                   "estado_nuevo"
+                                               ],
+                                   "column_types":  {
+                                                        "id_auditoria":  "uuid",
+                                                        "id_lead":  "uuid",
+                                                        "fecha_hora":  "timestamp with time zone",
+                                                        "actor_subject":  "text",
+                                                        "id_asesor":  "uuid",
+                                                        "estado_anterior":  "text",
+                                                        "estado_nuevo":  "text"
+                                                    },
+                                   "id_asesor_type":  "uuid",
+                                   "public_privileges":  [
+
+                                                         ],
+                                   "acl_grantees":  [
+                                                        "tpi_admin",
+                                                        "tpi_app"
+                                                    ],
+                                   "tpi_app_view_privileges":  [
+                                                                   "SELECT"
+                                                               ],
+                                   "tpi_app_view_select":  true,
+                                   "tpi_app_view_insert":  false,
+                                   "tpi_app_view_update":  false,
+                                   "tpi_app_view_delete":  false,
+                                   "tpi_app_view_truncate":  false,
+                                   "tpi_app_view_references":  false,
+                                   "tpi_app_view_trigger":  false,
+                                   "tpi_app_schema_usage":  true,
+                                   "tpi_app_auditoria_select":  false,
+                                   "tpi_app_auditoria_update":  false,
+                                   "tpi_app_auditoria_delete":  false,
+                                   "viewdef_md5":  "0baf390355421f3ddccebc68c6589aa5"
+                               },
+                       "data":  {
+                                    "view_row_count":  2,
+                                    "filtered_auditoria_count":  2,
+                                    "view_non_null_id_asesor":  2,
+                                    "view_null_id_asesor":  0,
+                                    "raw_malformed_id_asesor":  0,
+                                    "raw_missing_id_asesor":  0,
+                                    "view_minus_expected":  0,
+                                    "expected_minus_view":  0,
+                                    "full_scan_ok":  true
+                                }
+                   },
+    "safety":  {
+                   "rollback_executed":  false,
+                   "application_deployed":  false,
+                   "migrations_005_006_executed":  false,
+                   "security_groups_modified":  false,
+                   "aws_resources_modified":  false,
+                   "credentials_exposed":  false,
+                   "harness_state_modified":  false
+               },
+    "harness_state_expected_after":  "BLOCKED_HUMAN",
+    "cleanup":  {
+                    "tunnel_closed":  true,
+                    "temp_files_removed":  true,
+                    "credential_file_removed":  true,
+                    "credential_cleared_from_memory_variables":  true,
+                    "credential_was_loaded":  true
+                },
+    "next_human_step":  "Resolver BLOCKED_HUMAN -\u003e PREPARING_DEPLOYMENT con approve.py en la terminal humana, citando este informe; luego preparar el application candidate."
+}

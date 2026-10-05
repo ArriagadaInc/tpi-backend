@@ -1,0 +1,482 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "H3.3.5",
+  "created_at": "2026-09-22T16:06:04Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609221550-deployer-verify-post-identity",
+  "verification_scope": "post_identity_refresh_reverify",
+  "verification_scope_note": "Reverificacion read-only posterior a D7 pasos 5-6 (identidades advisor configuradas por el humano + RestartAppServer humano). Cubre D7 paso 7 (salud y release) y el smoke tecnico no autenticado. NO es cierre: AC-17 y AC-18 siguen pending_human; no se ejecuta verified. No sobrescribe verification-01 (postflight de datos).",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+  "deployed_commit": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+  "application_version": "h3-3-5-asesores-cartera-78bf33b-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "result": "PASS",
+  "result_note": "PASS de la reverificacion tecnica read-only. No implica aceptacion ni cierre de la tarea.",
+  "failure_class": null,
+  "state_task_check": {
+    "init": "init.ps1 --runtime claude: PASS",
+    "state": "VERIFYING",
+    "task_id": "H3.3.5",
+    "active_role": "deployer",
+    "allowed_events": [
+      "verified",
+      "verify_failed"
+    ],
+    "last_transition": "deploy_succeeded (DEPLOYING -> VERIFYING) 2026-09-21T21:58:22Z, evidence/H3.3.5/deployment/deployment-01.json",
+    "origin_main_after_fetch": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2"
+  },
+  "d7": {
+    "identity_state_previous": "unknown",
+    "identity_state_now": "configured_reported_by_human",
+    "rollback_policy": "phase_b_only",
+    "phase_a_enabled": false,
+    "d7_steps": {
+      "step_5_identities_configured": {
+        "status": "reported_by_human",
+        "inspected_by_deployer": false,
+        "human_report_non_sensitive": {
+          "sm_identity_payload_new_version_id": "b1cc29db-60fb-4473-9b4e-c6853212431c",
+          "total_users": 5,
+          "advisor1_entries": 1,
+          "advisor2_entries": 1,
+          "roles": "advisor",
+          "advisor_id_exact": true,
+          "preexisting_users_preserved": 3
+        },
+        "note": "Evidencia humana no sensible. El Deployer no leyo Secrets Manager ni el payload de identidades; no puede verificar mecanicamente estos valores."
+      },
+      "step_6_refresh": {
+        "status": "observed",
+        "mechanism": "RestartAppServer",
+        "executed_by": "human (fuera del Harness)",
+        "target_version_label": "h3-3-5-asesores-cartera-78bf33b-domainlocked-r1",
+        "eb_events_observed": [
+          "2026-09-22T15:47:06.959Z INFO restartAppServer is starting.",
+          "2026-09-22T15:47:18.129Z INFO Instance deployment completed successfully.",
+          "2026-09-22T15:47:22.607Z INFO Restarted application server on all ec2 instances.",
+          "2026-09-22T15:47:27.455Z INFO health Ok -> Info (application restart in progress)",
+          "2026-09-22T15:48:27.523Z INFO health Info -> Ok (application restart completed, took 15 seconds)"
+        ],
+        "version_label_during_refresh": "h3-3-5-asesores-cartera-78bf33b-domainlocked-r1",
+        "lkg_label_used_as_refresh": false,
+        "option_settings": false
+      },
+      "step_7_health_and_release_reverified": "PASS (esta evidencia)",
+      "step_8_authenticated_smoke": "pending_human (AC-17)"
+    }
+  },
+  "final_state": {
+    "version_label": "h3-3-5-asesores-cartera-78bf33b-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-09-22T15:47:22.541000+00:00",
+    "observations": [
+      {
+        "observed_at": "2026-09-22T15:50:30Z",
+        "version_label": "h3-3-5-asesores-cartera-78bf33b-domainlocked-r1",
+        "status": "Ready",
+        "health": "Green",
+        "health_status": "Ok",
+        "abortable": false,
+        "date_updated": "2026-09-22T15:47:22.541Z"
+      },
+      {
+        "observed_at": "2026-09-22T16:03:18Z",
+        "version_label": "h3-3-5-asesores-cartera-78bf33b-domainlocked-r1",
+        "status": "Ready",
+        "health": "Green",
+        "health_status": "Ok",
+        "abortable": false,
+        "date_updated": "2026-09-22T15:47:22.541Z"
+      }
+    ],
+    "stable": true,
+    "matches_human_observation": true
+  },
+  "events": {
+    "window": "desde el cutover 2026-09-21T21:54:52Z hasta 2026-09-22T16:03Z",
+    "levels_observed": [
+      "INFO"
+    ],
+    "errors": 0,
+    "warnings": 0,
+    "rollback_events": 0,
+    "unexpected_version_change": false,
+    "events_after_restart": 2,
+    "last_event": "2026-09-22T15:48:27.523Z health Info -> Ok (sin eventos nuevos hasta la segunda observacion)",
+    "result": "PASS"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> bundle sha256/digests -> ECR tag = release SHA",
+    "application_version_status": "UNPROCESSED",
+    "application_version_created": "2026-09-21T20:07:57.182Z",
+    "s3_key": "tpi-backoffice/dev-releases/h3-3-5-asesores-cartera-78bf33b-domainlocked-r1/f7e661411bbaacaf456a95405fd0e787136ac6cb04eb790fd78039d7938731f1.zip",
+    "s3_checksum_sha256_b64": "9+ZhQRu6rK9FapVAX9DnhxNqxssE63kP14A515OHMfE=",
+    "s3_checksum_type": "FULL_OBJECT",
+    "s3_content_length": 4815,
+    "s3_last_modified": "2026-09-21T20:07:32Z",
+    "local_bundle_sha256": "f7e661411bbaacaf456a95405fd0e787136ac6cb04eb790fd78039d7938731f1",
+    "local_bundle_sha256_b64_equals_s3": true,
+    "bundle_compose_digests": {
+      "tpi-dev-app": "sha256:f2ba920eeaf45a671e644347abb8d83fdf82ef34b8097d66c9723e6d14677b76",
+      "tpi-dev-caddy": "sha256:efbce63c9a0f4cc738873a584f9e57eb73e358abc4883e401dcdbc2bec0c27fc"
+    },
+    "ecr_images": {
+      "tpi-dev-app": {
+        "digest": "sha256:f2ba920eeaf45a671e644347abb8d83fdf82ef34b8097d66c9723e6d14677b76",
+        "status": "ACTIVE",
+        "tag": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2"
+      },
+      "tpi-dev-caddy": {
+        "digest": "sha256:efbce63c9a0f4cc738873a584f9e57eb73e358abc4883e401dcdbc2bec0c27fc",
+        "status": "ACTIVE",
+        "tag": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2"
+      }
+    },
+    "bundle_manifest_runtime_git_sha": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+    "digests_equal_approval_01": true,
+    "release_sha_exact": true
+  },
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "leads_board_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "dashboard_anonymous_403",
+      "result": "PASS",
+      "observed": "403"
+    },
+    {
+      "name": "lead_detail_anonymous_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login (UUID nulo; sin revelar existencia)"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "observed": "ninguna respuesta ni Location con genialabs"
+    },
+    {
+      "name": "runtime_reverify_after_identity_refresh",
+      "result": "PASS",
+      "observed": "Ready/Green/Ok + VersionLabel H3.3.5 en dos observaciones"
+    }
+  ],
+  "smoke_client": "Python urllib, TLS por defecto, sin seguir redirects, sin credenciales ni cookies",
+  "logs": {
+    "method": "aws_guard logs filter-log-events --query length(events) (solo conteos; sin volcar lineas)",
+    "windows": {
+      "since_cutover": "2026-09-21T21:54:52Z (1790027692000)",
+      "since_restart": "2026-09-22T15:47:06Z (1790092026000)"
+    },
+    "app_stdouterr_total_events": {
+      "since_cutover": 583,
+      "since_restart": 24
+    },
+    "app_stdouterr_pattern_counts": {
+      "ERROR": {
+        "since_cutover": 0,
+        "since_restart": 0
+      },
+      "Exception": {
+        "since_cutover": 0,
+        "since_restart": 0
+      },
+      "Traceback": {
+        "since_cutover": 0,
+        "since_restart": 0
+      },
+      "CRITICAL": {
+        "since_cutover": 0,
+        "since_restart": 0
+      },
+      "WARNING": {
+        "since_cutover": 0,
+        "since_restart": 0
+      },
+      "AccessDenied": {
+        "since_cutover": 0,
+        "since_restart": 0
+      },
+      "ValidationError": {
+        "since_cutover": 0,
+        "since_restart": 0
+      },
+      "JSONDecodeError": {
+        "since_cutover": 0,
+        "since_restart": 0
+      },
+      "Authorization": {
+        "since_cutover": 0,
+        "since_restart": 0
+      },
+      "Bearer": {
+        "since_cutover": 0,
+        "since_restart": 0
+      },
+      "raw_payload": {
+        "since_cutover": 0,
+        "since_restart": 0
+      }
+    },
+    "startup_markers": {
+      "Uvicorn": {
+        "since_cutover": 3,
+        "since_restart": 1
+      },
+      "port_8501_backoffice": {
+        "since_cutover": 3,
+        "since_restart": 1
+      },
+      "port_8000_api": {
+        "since_cutover": 2,
+        "since_restart": 0
+      },
+      "interpretation": "Despues del RestartAppServer hay exactamente un arranque Uvicorn y corresponde al puerto 8501 (backoffice, app.web.main, el proceso que parsea las identidades al crear la app segun runbook seccion 6). No se observa marcador de arranque del api (8000) despues del restart; el api no consume las identidades. Inferencia por conteos, sin leer lineas."
+    },
+    "eb_engine_ERROR": {
+      "since_cutover": 0,
+      "since_restart": 0
+    },
+    "unexpected_quit_events": {
+      "since_cutover": 0,
+      "since_restart": 0
+    },
+    "first_scan_windows_note": "Una primera pasada uso por error ventanas 24 h mas amplias (1789941292000 / 1790005626000): tambien 0 para ERROR/Exception/Traceback/CRITICAL; superconjunto, sin cambio en la conclusion.",
+    "result": "PASS"
+  },
+  "pii_log_scan": {
+    "matches": 0,
+    "result": "PASS",
+    "patterns": [
+      "Authorization",
+      "Bearer",
+      "raw_payload"
+    ],
+    "note": "Conteos unicamente, ventanas desde cutover y desde restart. No se imprimio contenido de logs. Patrones sobre el nombre de la variable de identidades, password/token/secret no se ejecutaron: ver guard_denials."
+  },
+  "guard_denials": [
+    {
+      "tool": "Bash (claude guard)",
+      "reason": "Lectura o manejo de secretos prohibido",
+      "context": "script wrapper de conteos cuyo texto incluia el nombre de la variable de identidades y terminos password/secret como filter-pattern",
+      "effect": "no ejecutado; sin llamadas AWS",
+      "follow_up": "Patron retirado; no se intento rodear."
+    },
+    {
+      "tool": "Bash (claude guard)",
+      "reason": "comando shell que podria modificar archivos protegidos del Harness",
+      "context": "heredoc a archivo temporal + subprocess sobre aws_guard",
+      "effect": "no ejecutado",
+      "follow_up": "Se uso el comando canonico de la skill aws-observability (una llamada aws_guard por patron)."
+    },
+    {
+      "tool": "aws_guard",
+      "reason": "se requiere exactamente <service> <operation> sin posicionales extra",
+      "context": "filter-pattern de varios terminos partido por el quoting de PowerShell 5.1",
+      "effect": "rechazado antes de ejecutar; sin efecto en AWS",
+      "follow_up": "Se usaron patrones de un solo termino."
+    },
+    {
+      "tool": "aws_guard",
+      "reason": "filter-log-events solo con --query length(events)",
+      "context": "intento de obtener events[].timestamp para Uvicorn",
+      "effect": "rechazado; sin lectura",
+      "follow_up": "Se uso conteo por ventana y puerto."
+    },
+    {
+      "tool": "Bash (claude guard)",
+      "reason": "comando shell que podria modificar archivos protegidos del Harness",
+      "context": "python -c con open() de aws-audit.jsonl (solo lectura)",
+      "effect": "no ejecutado",
+      "follow_up": "Resumen hecho con Grep read-only."
+    }
+  ],
+  "aws_audit_summary": {
+    "writes_since_cutover": 0,
+    "note": "En evidence/H3.3.5/aws-audit.jsonl la unica escritura posterior a candidate-02 es el update-environment del cutover (2026-09-21, deployment-01). Todas las invocaciones de esta sesion son mode=read. El RestartAppServer fue humano y fuera del Harness (no figura en el audit del Harness)."
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "both",
+      "evidence": "verification-01 (postflight de datos)"
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "both",
+      "evidence": "verification-01 (postflight de datos)"
+    },
+    {
+      "id": "AC-3",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Identidad asesor.desarrollo1 advisor con advisor_id exacto reportada por el humano (no inspeccionada por el Deployer); se confirma en el smoke autenticado."
+    },
+    {
+      "id": "AC-4",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Identidad asesor.desarrollo2 advisor con advisor_id exacto reportada por el humano (no inspeccionada por el Deployer); se confirma en el smoke autenticado."
+    },
+    {
+      "id": "AC-5",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Lado Harness: esta evidencia y la sesion no contienen contrasenas, hashes ni contenido del secreto; la confirmacion final es humana."
+    },
+    {
+      "id": "AC-6",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Requiere smoke autenticado advisor1."
+    },
+    {
+      "id": "AC-7",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Requiere smoke autenticado advisor2."
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "method": "automated",
+      "evidence": "Tests automatizados en CI 35629691243 (release 78bf33b), review-02."
+    },
+    {
+      "id": "AC-9",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Automatizado en CI; runtime pendiente del smoke humano."
+    },
+    {
+      "id": "AC-10",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Automatizado en CI; runtime pendiente del smoke humano."
+    },
+    {
+      "id": "AC-11",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Requiere smoke autenticado."
+    },
+    {
+      "id": "AC-12",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Requiere smoke autenticado."
+    },
+    {
+      "id": "AC-13",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Anonimo /dashboard = 403 real (PASS); advisors pendientes del smoke humano."
+    },
+    {
+      "id": "AC-14",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Requiere smoke autenticado."
+    },
+    {
+      "id": "AC-15",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Requiere smoke CEO/CTO."
+    },
+    {
+      "id": "AC-16",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Logs: 0 coincidencias de Authorization/Bearer/raw_payload y 0 errores; HTML autenticado pendiente del smoke humano."
+    },
+    {
+      "id": "AC-17",
+      "status": "pending_human",
+      "method": "human",
+      "evidence": "D7 pasos 1-7 completos (5-6 humanos reportados/observados, 7 PASS aqui); falta el smoke autenticado con ambas cuentas."
+    },
+    {
+      "id": "AC-18",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "Pendiente de aceptacion humana (idempotencia/preflight D5 del seed); no evaluado por el Deployer."
+    },
+    {
+      "id": "AC-19",
+      "status": "met",
+      "method": "human",
+      "evidence": "verification-01"
+    },
+    {
+      "id": "AC-20",
+      "status": "met",
+      "method": "automated",
+      "evidence": "CI 35629691243 success sobre release 78bf33b (gate de cobertura 85%)."
+    },
+    {
+      "id": "AC-21",
+      "status": "met",
+      "method": "automated",
+      "evidence": "Tests automatizados en CI 35629691243; runtime D4 se valida adicionalmente en el smoke humano si existe advisor preexistente sin advisor_id."
+    }
+  ],
+  "rollback_policy": "phase_b_only",
+  "rollback_executed": false,
+  "safety": {
+    "secrets_manager_read": false,
+    "identity_payload_read": false,
+    "advisor_credentials_used": false,
+    "restart_app_server_by_deployer": false,
+    "update_environment": false,
+    "rds_access": false,
+    "identities_modified": false,
+    "rollback": false,
+    "state_transition": false,
+    "verified_executed": false,
+    "approve_py_executed": false,
+    "aws_writes": []
+  },
+  "next_step": "Humano: smoke autenticado (AC-17) con asesor.desarrollo1 y asesor.desarrollo2 + no regresion CEO/CTO; luego approve.py accept para AC-17/AC-18 (y los ACs de metodo human/both que el humano confirme). Despues, Deployer en sesion nueva: reobservar salud/VersionLabel y ejecutar verified. Si el smoke falla: verify_failed (functional) -> fase B, sin rollback automatico."
+}

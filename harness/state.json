@@ -13,7 +13,238 @@
     "deployer": null
   },
   "worktrees": [],
-  "updated_at": "2026-09-14T00:00:00Z",
-  "last_transition": null,
-  "history": []
+  "updated_at": "2026-10-01T16:10:57Z",
+  "last_transition": {
+    "at": "2026-10-01T16:10:57Z",
+    "transition": "close",
+    "event": "close",
+    "from": "DONE",
+    "to": "IDLE",
+    "actor": "system",
+    "runtime": "claude",
+    "session_id": "claude-202610011609-deployer-sup8c758b",
+    "evidence": null
+  },
+  "history": [
+    {
+      "at": "2026-09-23T15:23:18Z",
+      "transition": "deploy_succeeded",
+      "event": "deploy_succeeded",
+      "from": "DEPLOYING",
+      "to": "VERIFYING",
+      "actor": "deployer",
+      "runtime": "claude",
+      "session_id": "claude-202609231517-deployer-sup63927f",
+      "evidence": "evidence/H3.3.6/deployment/deployment-01.json"
+    },
+    {
+      "at": "2026-09-23T19:52:19Z",
+      "transition": "verified",
+      "event": "verified",
+      "from": "VERIFYING",
+      "to": "DONE",
+      "actor": "deployer",
+      "runtime": "claude",
+      "session_id": "claude-202609231950-deployer-verify-final",
+      "evidence": "evidence/H3.3.6/deployment/verification-02.json"
+    },
+    {
+      "at": "2026-09-23T19:52:25Z",
+      "transition": "close",
+      "event": "close",
+      "from": "DONE",
+      "to": "IDLE",
+      "actor": "system",
+      "runtime": "claude",
+      "session_id": "claude-202609231950-deployer-verify-final",
+      "evidence": null
+    },
+    {
+      "at": "2026-09-29T22:17:22Z",
+      "transition": "activate_task",
+      "event": "activate_task",
+      "from": "IDLE",
+      "to": "NEW",
+      "actor": "human",
+      "runtime": null,
+      "session_id": null,
+      "evidence": null
+    },
+    {
+      "at": "2026-09-29T22:25:22Z",
+      "transition": "start_development",
+      "event": "start_development",
+      "from": "NEW",
+      "to": "DEVELOPING",
+      "actor": "developer",
+      "runtime": "claude",
+      "session_id": "claude-202609292224-developer-sup44caba",
+      "evidence": null
+    },
+    {
+      "at": "2026-09-29T23:19:46Z",
+      "transition": "submit_for_review",
+      "event": "submit_for_review",
+      "from": "DEVELOPING",
+      "to": "READY_FOR_REVIEW",
+      "actor": "developer",
+      "runtime": "claude",
+      "session_id": "claude-202609292304-developer-sup383cca",
+      "evidence": "evidence/H3.3.7/developer/developer-01.json"
+    },
+    {
+      "at": "2026-09-29T23:20:50Z",
+      "transition": "start_review",
+      "event": "start_review",
+      "from": "READY_FOR_REVIEW",
+      "to": "REVIEWING",
+      "actor": "reviewer",
+      "runtime": "claude",
+      "session_id": "claude-202609292320-reviewer-sup186584",
+      "evidence": null
+    },
+    {
+      "at": "2026-09-29T23:23:57Z",
+      "transition": "review_approve",
+      "event": "review_approve",
+      "from": "REVIEWING",
+      "to": "REVIEW_APPROVED",
+      "actor": "reviewer",
+      "runtime": "claude",
+      "session_id": "claude-202609292320-reviewer-sup186584",
+      "evidence": "evidence/H3.3.7/reviewer/review-01.json"
+    },
+    {
+      "at": "2026-09-29T23:25:01Z",
+      "transition": "start_merge",
+      "event": "start_merge",
+      "from": "REVIEW_APPROVED",
+      "to": "MERGING",
+      "actor": "deployer",
+      "runtime": "claude",
+      "session_id": "claude-202609292324-deployer-sup6895f8",
+      "evidence": null
+    },
+    {
+      "at": "2026-09-29T23:44:25Z",
+      "transition": "merged_deploy",
+      "event": "merged",
+      "from": "MERGING",
+      "to": "PREPARING_DEPLOYMENT",
+      "actor": "deployer",
+      "runtime": "claude",
+      "session_id": "claude-202609292342-deployer-reconcile",
+      "evidence": "evidence/H3.3.7/deployment/merge-01.json"
+    },
+    {
+      "at": "2026-09-29T23:49:52Z",
+      "transition": "preparation_failed",
+      "event": "preparation_failed",
+      "from": "PREPARING_DEPLOYMENT",
+      "to": "BLOCKED_HUMAN",
+      "actor": "deployer",
+      "runtime": "claude",
+      "session_id": "claude-202609292347-deployer-supaee373",
+      "evidence": "evidence/H3.3.7/deployment/failure-01.json"
+    },
+    {
+      "at": "2026-09-29T23:58:05Z",
+      "transition": "resolve_to_preparing",
+      "event": "human_resolve",
+      "from": "BLOCKED_HUMAN",
+      "to": "PREPARING_DEPLOYMENT",
+      "actor": "human",
+      "runtime": null,
+      "session_id": null,
+      "evidence": "evidence/H3.3.7/approvals/resolution-01.json"
+    },
+    {
+      "at": "2026-09-30T00:49:41Z",
+      "transition": "preparation_failed",
+      "event": "preparation_failed",
+      "from": "PREPARING_DEPLOYMENT",
+      "to": "BLOCKED_HUMAN",
+      "actor": "deployer",
+      "runtime": "claude",
+      "session_id": "claude-202609300037-deployer-sup0e9bd7",
+      "evidence": "evidence/H3.3.7/deployment/failure-02.json"
+    },
+    {
+      "at": "2026-09-30T00:58:48Z",
+      "transition": "resolve_to_preparing",
+      "event": "human_resolve",
+      "from": "BLOCKED_HUMAN",
+      "to": "PREPARING_DEPLOYMENT",
+      "actor": "human",
+      "runtime": null,
+      "session_id": null,
+      "evidence": "evidence/H3.3.7/approvals/resolution-02.json"
+    },
+    {
+      "at": "2026-09-30T01:10:20Z",
+      "transition": "candidate_ready",
+      "event": "candidate_ready",
+      "from": "PREPARING_DEPLOYMENT",
+      "to": "CANDIDATE_REVIEW",
+      "actor": "deployer",
+      "runtime": "claude",
+      "session_id": "claude-202609300102-deployer-supf0f588",
+      "evidence": "evidence/H3.3.7/deployment/candidate-01.json"
+    },
+    {
+      "at": "2026-10-01T14:34:12Z",
+      "transition": "candidate_approve",
+      "event": "candidate_approve",
+      "from": "CANDIDATE_REVIEW",
+      "to": "WAITING_HUMAN_APPROVAL",
+      "actor": "reviewer",
+      "runtime": "claude",
+      "session_id": "claude-202610011429-reviewer-sup641a65",
+      "evidence": "evidence/H3.3.7/reviewer/candidate_review-01.json"
+    },
+    {
+      "at": "2026-10-01T14:42:02Z",
+      "transition": "human_approve",
+      "event": "human_approve",
+      "from": "WAITING_HUMAN_APPROVAL",
+      "to": "DEPLOYING",
+      "actor": "human",
+      "runtime": null,
+      "session_id": null,
+      "evidence": "evidence/H3.3.7/approvals/approval-01.json"
+    },
+    {
+      "at": "2026-10-01T14:58:46Z",
+      "transition": "deploy_succeeded",
+      "event": "deploy_succeeded",
+      "from": "DEPLOYING",
+      "to": "VERIFYING",
+      "actor": "deployer",
+      "runtime": "claude",
+      "session_id": "claude-202610011445-deployer-sup57a975",
+      "evidence": "evidence/H3.3.7/deployment/deployment-01.json"
+    },
+    {
+      "at": "2026-10-01T16:10:56Z",
+      "transition": "verified",
+      "event": "verified",
+      "from": "VERIFYING",
+      "to": "DONE",
+      "actor": "deployer",
+      "runtime": "claude",
+      "session_id": "claude-202610011609-deployer-sup8c758b",
+      "evidence": "evidence/H3.3.7/deployment/verification-02.json"
+    },
+    {
+      "at": "2026-10-01T16:10:57Z",
+      "transition": "close",
+      "event": "close",
+      "from": "DONE",
+      "to": "IDLE",
+      "actor": "system",
+      "runtime": "claude",
+      "session_id": "claude-202610011609-deployer-sup8c758b",
+      "evidence": null
+    }
+  ]
 }

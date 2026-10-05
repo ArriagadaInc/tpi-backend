@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "H3.3.1",
+  "created_at": "2026-09-15T20:56:36Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609152059-deployer",
+  "approved_commit": "4aac143a396934186342bab5ec97b3df5e53085c",
+  "deployed_commit": "4aac143a396934186342bab5ec97b3df5e53085c",
+  "result": "FAIL",
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "detail": "GET https://dev.tupensioninteligente.cl/ -> 200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "detail": "GET https://backoffice.dev.tupensioninteligente.cl/login -> 200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "detail": "GET https://dev.tupensioninteligente.cl/api/v1/catalogs -> 200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "detail": "GET https://backoffice.dev.tupensioninteligente.cl/static/css/app.css -> 200"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "detail": "GET https://backoffice.dev.tupensioninteligente.cl/leads -> 307 redirect a /login sin seguir redirect"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "detail": "ninguna respuesta ni Location redirigio a genialabs.cl"
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "not_met",
+      "method": "both"
+    },
+    {
+      "id": "AC-2",
+      "status": "not_met",
+      "method": "both"
+    },
+    {
+      "id": "AC-3",
+      "status": "not_met",
+      "method": "both"
+    },
+    {
+      "id": "AC-4",
+      "status": "not_met",
+      "method": "human"
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "method": "automated"
+    }
+  ],
+  "pii_log_scan": {
+    "matches": 0,
+    "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+    "patterns": [
+      "password",
+      "Authorization"
+    ],
+    "window_start": "2026-09-15T20:40:11Z"
+  },
+  "failure_class": "functional"
+}

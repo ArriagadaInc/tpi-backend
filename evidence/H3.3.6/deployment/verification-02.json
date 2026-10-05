@@ -1,0 +1,361 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "H3.3.6",
+  "created_at": "2026-09-23T19:52:00Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609231950-deployer-verify-final",
+  "verification_scope": "final_verification_close",
+  "verification_scope_note": "Verificacion final que integra deployment-01 (cutover), verification-01 (postflight tecnico, pending_human), la aceptacion canonica acceptance-01 (approve.py accept) y la re-observacion post-aceptacion reportada por el humano, incluida su clasificacion de la unica coincidencia del patron 'hash' como falso positivo de Caddy/ACME. No sobrescribe verification-01. Sin nuevo deployment ni escrituras AWS.",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "5f5b3d37bf122f1d4438583b973fd03763aecebe",
+  "deployed_commit": "5f5b3d37bf122f1d4438583b973fd03763aecebe",
+  "application_version": "h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "PASS",
+  "failure_class": null,
+  "consistency_check": {
+    "origin_main_after_fetch": "5f5b3d37bf122f1d4438583b973fd03763aecebe",
+    "approval_01": {
+      "path": "evidence/H3.3.6/approvals/approval-01.json",
+      "sha256": "ba95e8a1a0a2793221a8ec786df34c1441febe4f90cae667e9b55c7f50d181d3",
+      "decision": "approved",
+      "approved_commit_matches": true,
+      "application_version_matches": true
+    },
+    "deployment_01": {
+      "path": "evidence/H3.3.6/deployment/deployment-01.json",
+      "sha256": "9d410805a809d76aed9e8226f53f8f46aba1fb060ce1e11006ec206ba8a6aecd",
+      "result": "success",
+      "deployed_commit_matches": true,
+      "application_version_matches": true,
+      "environment_account_region_match": true
+    },
+    "verification_01": {
+      "path": "evidence/H3.3.6/deployment/verification-01.json",
+      "sha256": "3d80eabf1ac20bb5f34a6dc39cc0c33c529e2549e1daac86a2f028ec34fd115c",
+      "result": "PASS",
+      "scope": "postdeploy_technical_pending_human",
+      "commits_and_version_match": true,
+      "automated_criteria_met": [
+        "AC-3",
+        "AC-4",
+        "AC-8",
+        "AC-9",
+        "AC-10",
+        "AC-14",
+        "AC-16",
+        "AC-17"
+      ],
+      "pending_human_criteria": [
+        "AC-1",
+        "AC-2",
+        "AC-5",
+        "AC-6",
+        "AC-7",
+        "AC-11",
+        "AC-12",
+        "AC-13",
+        "AC-15",
+        "AC-18"
+      ]
+    },
+    "result": "PASS"
+  },
+  "acceptance_check": {
+    "path": "evidence/H3.3.6/approvals/acceptance-01.json",
+    "sha256": "842b5696718cccfe7daee40e7c3c2c24e8797c5c2286e29c9a07fcdf670b1bee",
+    "kind": "acceptance",
+    "created_by": "scripts/harness/approve.py",
+    "interactive": true,
+    "role": "human",
+    "task_id": "H3.3.6",
+    "decision": "accepted",
+    "created_at": "2026-09-23T15:31:56Z",
+    "state_ref": "harness/state.json refs.acceptance = evidence/H3.3.6/approvals/acceptance-01.json",
+    "criteria_accepted": [
+      "AC-1",
+      "AC-2",
+      "AC-5",
+      "AC-6",
+      "AC-7",
+      "AC-11",
+      "AC-12",
+      "AC-13",
+      "AC-15",
+      "AC-18"
+    ],
+    "required_human_or_both": [
+      "AC-1",
+      "AC-2",
+      "AC-5",
+      "AC-6",
+      "AC-7",
+      "AC-11",
+      "AC-12",
+      "AC-13",
+      "AC-15",
+      "AC-18"
+    ],
+    "required_subset_of_accepted": true,
+    "automated_substitution": false,
+    "result": "PASS"
+  },
+  "final_state": {
+    "version_label": "h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "stable": true,
+    "source": "re-observacion post-aceptacion reportada por el humano en la sesion (describe-environments de lectura; ultimas lecturas del audit 2026-09-23T17:17:09Z)",
+    "transient_observation": {
+      "observed": "Yellow / Warning (transitorio)",
+      "status": "recovered",
+      "note": "Observacion transitoria previa de salud EB Yellow/Warning. Observaciones posteriores confirman de forma estable Ready/Green/Ok con la VersionLabel aprobada, sin operacion en curso y sin cambio de version ni rollback. Se documenta como recuperada; no constituye fallo de verificacion."
+    }
+  },
+  "events": {
+    "levels_observed": [
+      "INFO",
+      "WARN (transitorio, recuperado)"
+    ],
+    "errors": 0,
+    "rollback_events": 0,
+    "unexpected_version_change": false,
+    "result": "PASS",
+    "summary": "Cutover solo INFO (verification-01). Degradacion transitoria Yellow/Warning posterior recuperada a Green/Ok estable."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "source": "deployment-01 + re-observacion post-aceptacion (AV SourceBundle correcto; checksum S3 consistente)",
+    "s3_key": "tpi-backoffice/dev-releases/h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1/8fbd2526a6e311bdcfb0c2f72cdd20a7ba9f6a056de04562957214946332cb32.zip",
+    "s3_checksum_sha256_b64": "j70lJqbjEb3PsML3LN0gp7qfagVt4EVilXIUlGMyyzI=",
+    "bundle_sha256": "8fbd2526a6e311bdcfb0c2f72cdd20a7ba9f6a056de04562957214946332cb32"
+  },
+  "smoke_client": "Python urllib, TLS por defecto, sin seguir redirects, sin credenciales ni cookies",
+  "smoke_summary": "Re-observacion post-aceptacion: smoke anonimo 9/9 PASS (reporte humano). verification-01: 10/10 PASS.",
+  "smoke": [
+    {
+      "name": "anonymous_smoke_post_acceptance",
+      "result": "PASS",
+      "observed": "9/9 PASS"
+    },
+    {
+      "name": "anonymous_smoke_postdeploy_verification_01",
+      "result": "PASS",
+      "observed": "10/10 PASS (incl. /leads/export.xlsx anonimo -> 307 /login; POST anonimo -> 405)"
+    },
+    {
+      "name": "runtime_reverify_final",
+      "result": "PASS",
+      "observed": "Ready/Green/Ok estable + VersionLabel h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1"
+    },
+    {
+      "name": "authenticated_smoke_human_ac18",
+      "result": "PASS",
+      "observed": "acceptance-01 (approve.py accept, AC-18 accepted)"
+    }
+  ],
+  "logs": {
+    "method": "aws_guard logs filter-log-events (solo conteos) + inspeccion humana directa de la unica coincidencia 'hash'",
+    "log_group": "eb-current-app/stdouterr.log (tpi-backoffice-dev-green)",
+    "window": "post-aceptacion (desde 2026-09-23T15:31:56Z)",
+    "pattern_counts": {
+      "ERROR": 0,
+      "Exception": 0,
+      "Traceback": 0,
+      "CRITICAL": 0,
+      "WARNING": 0,
+      "HTTP_500": 0,
+      "Authorization": 0,
+      "password": 0,
+      "cookie": 0,
+      "AccessDenied": 0,
+      "hash": 1
+    },
+    "hash_match_classification": "false_positive (humano)",
+    "result": "PASS"
+  },
+  "pii_log_scan": {
+    "matches": 0,
+    "raw_pattern_hits": {
+      "hash": 1
+    },
+    "false_positives": [
+      {
+        "pattern": "hash",
+        "count": 1,
+        "classified_by": "human",
+        "classification": "FALSE_POSITIVE",
+        "source": "log informativo de Caddy",
+        "logger": "tls.cache.maintenance",
+        "message": "updated and stored ACME renewal information",
+        "identifier": "dev.tupensioninteligente.cl",
+        "triggering_field": "cert_hash",
+        "rationale": "cert_hash es la huella del certificado TLS mantenido por Caddy/ACME. No contiene PII, credenciales, secretos, tokens, cookies ni datos de aplicacion. No es exposicion de informacion sensible.",
+        "inspected_by_deployer": false
+      }
+    ],
+    "result": "PASS",
+    "patterns": [
+      "Authorization",
+      "Bearer",
+      "raw_payload",
+      "password",
+      "hash",
+      "cookie"
+    ],
+    "note": "matches = coincidencias sensibles confirmadas tras clasificacion humana. La unica coincidencia cruda ('hash', 1) fue inspeccionada directamente por el humano y clasificada como falso positivo; el Deployer no leyo lineas de log. Esta evidencia no contiene el valor del cert_hash."
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "both",
+      "evidence": "review-02 + CI main 35871225497; acceptance-01 (accepted)"
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "both",
+      "evidence": "review-02 + CI; smoke anonimo 307 -> /login; acceptance-01 (accepted)"
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 APPROVED sobre tree 82da9205 = release; CI main 35871225497 success"
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 + CI main 35871225497"
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "method": "both",
+      "evidence": "review-02 + CI; acceptance-01 (accepted)"
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "method": "both",
+      "evidence": "review-02 + CI; acceptance-01 (accepted)"
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "method": "both",
+      "evidence": "review-02 + CI; acceptance-01 (accepted)"
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 + CI main 35871225497"
+    },
+    {
+      "id": "AC-9",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 + CI main 35871225497"
+    },
+    {
+      "id": "AC-10",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 + CI main 35871225497"
+    },
+    {
+      "id": "AC-11",
+      "status": "met",
+      "method": "both",
+      "evidence": "review-02 + CI; acceptance-01 (accepted)"
+    },
+    {
+      "id": "AC-12",
+      "status": "met",
+      "method": "both",
+      "evidence": "review-02 + CI; acceptance-01 (accepted)"
+    },
+    {
+      "id": "AC-13",
+      "status": "met",
+      "method": "both",
+      "evidence": "review-02 + CI; smoke anonimo sin archivo; acceptance-01 (accepted)"
+    },
+    {
+      "id": "AC-14",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 + CI main 35871225497"
+    },
+    {
+      "id": "AC-15",
+      "status": "met",
+      "method": "both",
+      "evidence": "review-02 + CI; acceptance-01 (accepted)"
+    },
+    {
+      "id": "AC-16",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 + CI main 35871225497 (861 passed)"
+    },
+    {
+      "id": "AC-17",
+      "status": "met",
+      "method": "automated",
+      "evidence": "CI main 35871225497: cobertura 89.32% (>= 85)"
+    },
+    {
+      "id": "AC-18",
+      "status": "met",
+      "method": "human",
+      "evidence": "smoke humano autenticado en AWS DEV; acceptance-01 (accepted); logs post-aceptacion sin PII (unico hit 'hash' = falso positivo Caddy/ACME clasificado por humano)"
+    }
+  ],
+  "aws_audit_summary": {
+    "file": "evidence/H3.3.6/aws-audit.jsonl",
+    "modes": {
+      "candidate_read": 15,
+      "prepare": 18,
+      "cutover": 20,
+      "read": 80
+    },
+    "writes_in_verifying": 0,
+    "note": "Todas las operaciones en VERIFYING son mode=read. Esta sesion no ejecuto operaciones AWS."
+  },
+  "rollback_executed": false,
+  "safety": {
+    "rds_access": false,
+    "secrets_accessed": false,
+    "credentials_used": false,
+    "aws_writes_this_stage": [],
+    "approve_py_executed": false,
+    "functional_code_modified": false,
+    "guard_or_supervisor_modified": false,
+    "redeploy": false
+  },
+  "guard_denials": [
+    {
+      "tool": "Bash (TPI HARNESS GUARD)",
+      "reason": "comando shell que podria modificar archivos protegidos del Harness",
+      "context": "lectura ad hoc del aws-audit.jsonl con heredoc python inline",
+      "effect": "no ejecutado",
+      "follow_up": "Resumen del audit obtenido con grep de solo lectura; sin rodeos sobre archivos protegidos."
+    }
+  ],
+  "next_step": "transition.py verified --evidence evidence/H3.3.6/deployment/verification-02.json; auto_close_on_done -> IDLE."
+}

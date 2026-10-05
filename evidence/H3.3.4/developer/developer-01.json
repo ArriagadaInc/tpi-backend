@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "H3.3.4",
+  "created_at": "2026-09-18T11:37:50Z",
+  "role": "developer",
+  "runtime": "deepseek",
+  "session_id": "deepseek-202609181130-developer",
+  "head_sha": "5ffb2a265eeb351b051778cd77126d063265a6bd",
+  "branch": "harness/H3.3.4-historial-estados-dashboard-ejecutivo",
+  "pr_number": 55,
+  "pr_url": "https://github.com/ArriagadaInc/tpi-backend/pull/55",
+  "baseline": "c5e738c21ba202d9c664652412e6820628b18e3c",
+  "change_class": "D",
+  "gitpython_security_commit": "5ffb2a265eeb351b051778cd77126d063265a6bd",
+  "commits": {
+    "baseline": "c5e738c21ba202d9c664652412e6820628b18e3c",
+    "h3_3_4_head_before_security": "cfef1a184301353ee03833b8e53755b7c714a07d",
+    "security_gitpython_commit": "5ffb2a265eeb351b051778cd77126d063265a6bd",
+    "total_commits": 18
+  },
+  "tests": {
+    "command": "CI run 35339864274 (Linux, Python 3.12.14): pytest tests/ --cov=app --cov-report=xml --cov-fail-under=85 -> 715 passed, cobertura 88.87% (>=85). Local (Windows): 702 passed + 13 errores ambientales preexistentes (PermissionError WinError 5 en cleanup del basetemp tmp_path, verdes en CI Linux), cobertura 88.75% (>=85).",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "coverage": "PASS",
+    "docker_build": "PASS",
+    "release_tooling_validation": "PASS",
+    "validate_repo": "PASS",
+    "ci": "PASS"
+  },
+  "ci_run": {
+    "run_id": 35339864274,
+    "conclusion": "success",
+    "head_sha": "5ffb2a265eeb351b051778cd77126d063265a6bd",
+    "jobs": {
+      "release_tooling_validation": "PASS",
+      "lint_format": "PASS",
+      "tests": "PASS",
+      "docker_build": "PASS",
+      "security_audit": "PASS"
+    },
+    "pip_audit": "No known vulnerabilities found",
+    "bandit": "No issues identified."
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "tests/integration/test_lead_state_history.py (update_lead_status transaccional SELECT ... FOR UPDATE, no-op sin evento duplicado, rollback completo, prueba real de concurrencia); tests/unit/test_solicitud_assignment_service.py"
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "tests/unit/test_h3_3_4_migration_scripts.py (008 libre en todo el historial, accion cambio_estado_lead, no modifica 005/006/007)"
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "tests/integration/test_audit_state_view.py (vista sanitizada sin JSON crudo, REVOKE PUBLIC, GRANT solo tpi_app, sin SELECT directo sobre tpi.auditoria, indice justificado por EXPLAIN)"
+    },
+    {
+      "id": "AC-4",
+      "status": "pending_verification",
+      "evidence": "tests/unit/test_h3_3_4_timeline_presentation.py y tests/unit/test_web_app.py::test_detail_timeline_* (automated); smoke humano en AWS DEV pendiente (AC-9)"
+    },
+    {
+      "id": "AC-5",
+      "status": "not_applicable",
+      "evidence": "Artefacto operativo del migration candidate (Deployer/Human Gate, change_class D); fuera del alcance del rol Developer"
+    },
+    {
+      "id": "AC-6",
+      "status": "not_applicable",
+      "evidence": "Postflight humano de privilegios en AWS DEV tras aplicar la 008; el mecanismo queda cubierto por tests/integration/test_audit_state_view.py"
+    },
+    {
+      "id": "AC-7",
+      "status": "not_applicable",
+      "evidence": "Secuencia operativa del application candidate (Deployer/Human Gate); fuera del alcance del rol Developer"
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "evidence": "tests/integration/test_audit_state_view.py (rollback de la vista REVOKE/DROP probado en PostgreSQL de integracion local)"
+    },
+    {
+      "id": "AC-9",
+      "status": "not_applicable",
+      "evidence": "Smoke funcional humano en AWS DEV (etapa Deployer/Verifying); fuera del alcance del rol Developer"
+    },
+    {
+      "id": "AC-10",
+      "status": "pending_verification",
+      "evidence": "tests/unit/test_executive_dashboard_access.py (403 real server-side para roles no autorizados y anonimo); smoke humano del 403 en DEV pendiente (AC-18)"
+    },
+    {
+      "id": "AC-11",
+      "status": "met",
+      "evidence": "tests/integration/test_executive_dashboard_repository.py y test_executive_dashboard_full.py (KPIs, fecha_ingreso documentada, evolucion diaria/semanal/mensual, filtros combinables)"
+    },
+    {
+      "id": "AC-12",
+      "status": "met",
+      "evidence": "tests/integration/test_executive_dashboard_repository.py y test_executive_dashboard_full.py (cartera total/activa, casos por estado y asesor, nombre asesor solo CEO/CTO sin RUT/telefono/correo)"
+    },
+    {
+      "id": "AC-13",
+      "status": "met",
+      "evidence": "tests/integration/test_executive_dashboard_repository.py (buckets 0-2/3-7/8-15/16-30/+30 dias corridos, umbral default=5 configurable, movimiento operativo real)"
+    },
+    {
+      "id": "AC-14",
+      "status": "met",
+      "evidence": "tests/integration/test_executive_dashboard_repository.py (tiempo hasta asignacion y primera gestion, N/D cuando no existe, excluye asignacion automatica)"
+    },
+    {
+      "id": "AC-15",
+      "status": "met",
+      "evidence": "tests/integration/test_executive_dashboard_repository.py y test_executive_dashboard_full.py (funnel solo transiciones observables, COUNT(DISTINCT id_lead), sin tasas inventadas pre-cutover)"
+    },
+    {
+      "id": "AC-16",
+      "status": "met",
+      "evidence": "tests/integration/test_executive_dashboard_repository.py y tests/unit/test_executive_dashboard_filters.py (solo categorias MVP; genero y estado civil ausentes)"
+    },
+    {
+      "id": "AC-17",
+      "status": "met",
+      "evidence": "tests/unit/test_executive_dashboard_access.py y tests/unit/test_h3_3_1_rbac_pii_assignment.py (cero PII de leads, metricas agregadas, estados vacios/error)"
+    },
+    {
+      "id": "AC-18",
+      "status": "pending_verification",
+      "evidence": "tests/integration/test_executive_dashboard_full.py, test_executive_dashboard_render.py y tests/unit/test_executive_dashboard_presentation.py (automated: cero datos, limites, filtros combinados, estados desconocidos, sin asesor, fan-out); smoke humano Parte B en DEV pendiente"
+    }
+  ],
+  "files_changed": [
+    "app/config/settings.py",
+    "app/models/executive_dashboard.py",
+    "app/repositories/executive_dashboard_repository.py",
+    "app/repositories/lead_activity_sql.py",
+    "app/repositories/solicitud_repository.py",
+    "app/services/executive_dashboard_service.py",
+    "app/services/solicitud_service.py",
+    "app/web/dashboard_presentation.py",
+    "app/web/dependencies.py",
+    "app/web/main.py",
+    "app/web/presentation.py",
+    "app/web/routes/dashboard.py",
+    "app/web/routes/leads.py",
+    "app/web/static/css/app.css",
+    "app/web/templates/base.html",
+    "app/web/templates/dashboard_macros.html",
+    "app/web/templates/executive_dashboard.html",
+    "app/web/templates/lead_detail_panel.html",
+    "app/web/templates/leads.html",
+    "app/web/templates/leads_board.html",
+    "docs/H3_3_4_DASHBOARD_DESIGN.md",
+    "docs/H3_3_4_REQUIREMENTS_MATRIX.md",
+    "docs/database/02_PHYSICAL_SCHEMA.md",
+    "docs/database/04_MIGRATIONS.md",
+    "docs/prototypes/H3_3_4_dashboard_prototype.html",
+    "requirements/runtime.lock",
+    "scripts/benchmark_executive_dashboard.py",
+    "scripts/init_test_database.py",
+    "scripts/sql/008_create_lead_state_history.sql",
+    "scripts/sql/008_drop_lead_state_history.sql",
+    "tests/integration/test_audit_state_view.py",
+    "tests/integration/test_executive_dashboard_full.py",
+    "tests/integration/test_executive_dashboard_repository.py",
+    "tests/integration/test_lead_state_history.py",
+    "tests/unit/test_executive_dashboard_access.py",
+    "tests/unit/test_executive_dashboard_filters.py",
+    "tests/unit/test_executive_dashboard_presentation.py",
+    "tests/unit/test_executive_dashboard_render.py",
+    "tests/unit/test_executive_dashboard_service.py",
+    "tests/unit/test_h3_3_1_rbac_pii_assignment.py",
+    "tests/unit/test_h3_3_4_migration_scripts.py",
+    "tests/unit/test_h3_3_4_timeline_presentation.py",
+    "tests/unit/test_leads_operational_filters.py",
+    "tests/unit/test_solicitud_assignment_service.py",
+    "tests/unit/test_web_app.py"
+  ],
+  "assumptions": [
+    "La migracion 008 esta presente unicamente como codigo (forward + rollback versionados y probados en PostgreSQL local/integracion) y NO fue aplicada en AWS RDS DEV: change_class D sin fast path; requiere Human Gate explicito (migration candidate AC-5 + postflight AC-6) y aprobacion independiente del application candidate (AC-7).",
+    "RBAC CEO/CTO exclusivamente server-side (require_executive_access -> is_superuser); 403 real para otros roles y anonimo sin ejecutar consulta; cero PII de leads; nombre del asesor visible solo para CEO/CTO (nunca RUT/telefono/correo).",
+    "El render del dashboard usa snapshot consistente: transaccion REPEATABLE READ READ ONLY con un SAVEPOINT por consulta (una sola conexion del pool); una seccion que falla se reporta como error parcial sin abortar el resto.",
+    "Limitacion historica honesta: los cambios generales de estado se auditan solo desde el cutover de la migracion 008 (sin backfill inventado); los leads anteriores aportan al estado actual pero nunca a tasas/funnel.",
+    "Riesgo de rendimiento NO resuelto y registrado: benchmark reproducible a 20.000 leads / 12 asesores con 18 sentencias por render (constante, sin N+1), latencia total ~5,28 s (re-medido 6,80 s); consultas mas lentas ~1,3 s; causa principal parsing regexp de notas en leads.comentarios (EXPLAIN: Function Scan on regexp_matches). Posible normalizacion/read model futuro si el volumen real lo exige.",
+    "AC humanos pendientes (DEV): AC-5/AC-6 (migration candidate + postflight de privilegios), AC-7 (application candidate), AC-9/AC-18 (smoke humano AWS DEV Parte A y Parte B, incluido 403 para roles no autorizados).",
+    "Security gate unblock: pip-audit del CI detecto 3 vulnerabilidades en GitPython 3.1.59 (PYSEC-2026-3982, PYSEC-2026-3983, PYSEC-2026-3984), corregidas en 3.1.60. Se actualizo exclusivamente GitPython 3.1.59 -> 3.1.60 en requirements/runtime.lock (dependencia transitiva de runtime via streamlit; gitdb 4.0.12 y smmap 5.0.3 sin cambios). Commit separado security(deps): bump GitPython to 3.1.60 (5ffb2a2), autorizado por allow_lockfile_update: true. Sin otras actualizaciones de dependencias.",
+    "13 tests fallan localmente solo por limpieza del basetemp tmp_path en Windows (PermissionError WinError 5); son preexistentes (test_frozen_candidate_verification, test_domain_baseline_bundle, test_domain_locked_bundle, test_eb_candidate_promotion, test_promotion_data_artifact) y pasan en CI Linux (715 passed).",
+    "pip-audit, clean install, pip check e importacion de GitPython 3.1.60 no pudieron ejecutarse localmente (PyPI/OSV bloqueados en la sandbox Windows); quedan gateados y verificados por CI run 35339864274: pip-audit 'No known vulnerabilities found' y bandit 'No issues identified.', imagen Docker construida con GitPython-3.1.60.",
+    "security_audit.py local reporta 7/8 (unico fallo preexistente en app/database/healthcheck.py, no tocado por este PR). Los gates del CI (Security Audit = pip-audit + bandit) estan verdes.",
+    "No se modifico AWS, RDS DEV, Secrets Manager, Elastic Beanstalk ni se crearon Application Versions. No se ejecuto approve.py ni merge ni despliegue. No se declaro realizado el smoke visual humano."
+  ],
+  "migrations_included": true
+}

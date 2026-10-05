@@ -5,6 +5,7 @@ Usage: python scripts/harness/validate_repo.py
 
 from __future__ import annotations
 
+import ast
 import re
 import subprocess
 import sys
@@ -14,8 +15,9 @@ from typing import Any
 import yaml
 
 try:
-    from . import common, guards
+    from . import check_scope_tools, common, guards
 except ImportError:  # executed as a script
+    import check_scope_tools  # type: ignore[no-redef]
     import common  # type: ignore[no-redef]
     import guards  # type: ignore[no-redef]
 
@@ -53,6 +55,11 @@ REQUIRED_PATHS = (
     "scripts/harness/context_compact.py",
     "scripts/harness/worktree.py",
     "scripts/harness/evidence.py",
+    # v1.2: guard.py imports common.py and maintenance_scope.py; a missing module makes the hook
+    # exit 1, which Claude Code treats as a NON-blocking error (see HOOK_ENTRY below).
+    "scripts/harness/common.py",
+    "scripts/harness/maintenance_scope.py",
+    "scripts/harness/check_scope_tools.py",
     "runtime/claude/README.md",
     "runtime/codex/README.md",
     "runtime/deepseek/README.md",
@@ -67,7 +74,10 @@ SCHEMAS = (
     "environment",
     "project-profile",
     "evidence",
+    "maintenance_scope",
 )
+# The PreToolUse hook. Every sibling module it needs (transitively) must be in REQUIRED_PATHS.
+HOOK_ENTRY = "guard"
 ROLE_FILES = ("PROMPT.md", "CONTEXT.md", "POLICIES.md")
 SKILL_SECTIONS = (
     "## 1. Cuando se carga",
@@ -104,6 +114,29 @@ def all_skills(policies: dict[str, Any]) -> dict[str, set[str]]:
     return result
 
 
+def sibling_imports(path: Path) -> set[str]:
+    """Names imported with ``from . import a, b`` (the sibling modules of scripts/harness)."""
+    names: set[str] = set()
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.ImportFrom) and node.level == 1 and node.module is None:
+            names.update(alias.name for alias in node.names)
+    return names
+
+
+def hook_modules(root: Path) -> set[str]:
+    """Sibling modules the PreToolUse hook needs, transitively from guard.py."""
+    base = root / "scripts" / "harness"
+    seen: set[str] = set()
+    pending = [HOOK_ENTRY]
+    while pending:
+        module = pending.pop()
+        if module in seen or not (base / f"{module}.py").is_file():
+            continue
+        seen.add(module)
+        pending.extend(sibling_imports(base / f"{module}.py"))
+    return seen
+
+
 def validate(root: Path) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -111,6 +144,10 @@ def validate(root: Path) -> tuple[list[str], list[str]]:
     for relative in REQUIRED_PATHS:
         if not (root / relative).exists():
             errors.append(f"falta ruta obligatoria: {relative}")
+    for module in sorted(hook_modules(root)):
+        relative = f"scripts/harness/{module}.py"
+        if relative not in REQUIRED_PATHS:
+            errors.append(f"el hook importa {relative} pero REQUIRED_PATHS no lo exige")
     for schema in SCHEMAS:
         if not (root / "harness" / "schemas" / f"{schema}.schema.json").is_file():
             errors.append(f"falta schema: {schema}")
@@ -255,6 +292,26 @@ def validate(root: Path) -> tuple[list[str], list[str]]:
     ]
     ignored = _git_ignored(root, list(REQUIRED_PATHS) + tracked_candidates)
     errors.extend(f"ruta obligatoria ignorada por .gitignore: {path}" for path in ignored)
+
+    scope = policies["harness"]["maintenance_scope"]
+    if scope["env_var"] == policies["harness"]["maintenance_env_var"]:
+        errors.append("maintenance_scope.env_var debe ser distinta de harness.maintenance_env_var")
+    registry_probe = f"{scope['registry_dir']}/probe.json"
+    if not common.matches_any(registry_probe, policies["protected_paths"]):
+        errors.append("el registro de alcances de mantencion no esta en protected_paths")
+    if not any(
+        re.search(rule["pattern"], registry_probe, re.IGNORECASE)
+        for rule in policies["bash"]["forbidden_everywhere"]
+    ):
+        errors.append("ninguna regla bash.forbidden_everywhere cubre el registro de alcances")
+    matchers = check_scope_tools.hook_matchers(root)
+    unreached = [
+        tool
+        for tool in scope["runtime_tools"]
+        if not check_scope_tools.reaches_hook(tool, matchers)
+    ]
+    if unreached:
+        errors.append(f"runtime_tools que el matcher del hook no entrega al guard: {unreached}")
 
     environment = loaded["environment"]
     aws = policies["aws"]

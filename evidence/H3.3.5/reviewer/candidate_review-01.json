@@ -1,0 +1,235 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "H3.3.5",
+  "created_at": "2026-09-21T20:26:02Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609212020-reviewer-app-candidate",
+  "release_sha": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+  "reviewed_tree": "8c81c7a58fbcf844d7e324e22532902b9b75c39d",
+  "release_tree": "8c81c7a58fbcf844d7e324e22532902b9b75c39d",
+  "pr_number": 57,
+  "result": "FAIL",
+  "decision": "REJECTED",
+  "cause": "artifact",
+  "candidate_evidence": "evidence/H3.3.5/deployment/candidate-01.json",
+  "review_scope": "Revision independiente del application candidate candidate-01 (release, CI, publish, imagenes/scans, bundle, S3, AV, cadena, environment, plan version-only, rollback y D7). Rechazo limitado al plan de rollback D7; los artefactos (imagenes, bundle, objeto S3, Application Version) verifican y pueden reutilizarse en un candidate-02.",
+  "reviewer_session_note": "Sesion claude-202609212020-reviewer-app-candidate, distinta de la del Developer (deepseek-202609211610-developer-rework1), del Deployer (claude-202609211957-deployer-app-candidate) y de la revision de codigo previa.",
+  "identity_chain": {
+    "release_sha": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+    "release_tree": "8c81c7a58fbcf844d7e324e22532902b9b75c39d",
+    "ci_main_run": 35629691243,
+    "publish_run": 35648173483,
+    "images": {
+      "app": "sha256:f2ba920eeaf45a671e644347abb8d83fdf82ef34b8097d66c9723e6d14677b76",
+      "caddy": "sha256:efbce63c9a0f4cc738873a584f9e57eb73e358abc4883e401dcdbc2bec0c27fc"
+    },
+    "bundle_sha256": "f7e661411bbaacaf456a95405fd0e787136ac6cb04eb790fd78039d7938731f1",
+    "bundle_size_bytes": 4815,
+    "s3_key": "tpi-backoffice/dev-releases/h3-3-5-asesores-cartera-78bf33b-domainlocked-r1/f7e661411bbaacaf456a95405fd0e787136ac6cb04eb790fd78039d7938731f1.zip",
+    "s3_checksum_sha256_b64": "9+ZhQRu6rK9FapVAX9DnhxNqxssE63kP14A515OHMfE=",
+    "application_version": "h3-3-5-asesores-cartera-78bf33b-domainlocked-r1",
+    "lkg": "h3-3-4-historial-dashboard-3051a62-domainlocked-r1"
+  },
+  "checks": [
+    {
+      "name": "state_and_task",
+      "result": "PASS",
+      "note": "init.ps1 --runtime claude PASS; state.json CANDIDATE_REVIEW / H3.3.5 / reviewer; allowed_events candidate_approve|candidate_reject; candidate_rework_round 0."
+    },
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse 78bf33b^{tree} = 8c81c7a5 = review-02.reviewed_tree = merge-01.release_tree = candidate-01.release_tree."
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "git fetch: origin/main = 78bf33b; parent unico 3051a62 (LKG release)."
+    },
+    {
+      "name": "ci_main_green_on_release_sha",
+      "result": "PASS",
+      "note": "gh run view 35629691243: push/main, headSha 78bf33b, attempt 1, completed/success, 5/5 jobs success."
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "gh run view 35648173483: workflow_dispatch, headBranch main, headSha 78bf33b, attempt 1, 6/6 jobs success; unico run de publish para 78bf33b (gh run list); sin reintentos."
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "aws_guard ecr describe-images: app f2ba920e... y caddy efbce63c... ACTIVE con tag = 78bf33b...; digests identicos a APP_IMAGE/CADDY_IMAGE y a los push del log del run. Mutabilidad IMMUTABLE segun describe-repositories del Deployer (aws-audit) y tag = SHA completo."
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "Log del job 'Publish immutable images and release bundle' (paso fail-closed): 'tpi-dev-app: CRITICAL=0 HIGH=0' y 'tpi-dev-caddy: CRITICAL=0 HIGH=0'. describe-image-scan-findings no invocable via aws_guard (igual que H3.3.4)."
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "Reconstruccion independiente desde git archive de 78bf33b (blobs template cbdfd846, builder 6cee0d10) con build_domain_locked_bundle, dos veces: sha256 f7e66141...31f1, base64 9+ZhQRu6...fMfE=, 4815 bytes; byte-identico al zip del Deployer."
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "Entrada unica docker-compose.yml; imagenes solo por digest (app x2, caddy x1) exactamente los aprobados; sin build:, sin tags mutables, sin genialabs.cl; dominios literales dev/backoffice.dev.tupensioninteligente.cl."
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "Variables sensibles solo como referencias ${VAR}; 0 lineas con valores literales de nombres tipo secreto. Sin cambios en deployment/, .github/, requirements/, app/config entre 3051a62 y 78bf33b: no se requieren propiedades de entorno nuevas."
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "aws_guard s3api head-object --checksum-mode ENABLED: ContentLength 4815, ChecksumSHA256 9+ZhQRu6rK9FapVAX9DnhxNqxssE63kP14A515OHMfE=, FULL_OBJECT; key content-addressed por el sha256 del bundle."
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "describe-application-versions: label exacto, Status UNPROCESSED (no desplegada), SourceBundle = bucket/key S3 verificados."
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "release 78bf33b -> tags ECR = release -> digests app/caddy -> compose reconstruido -> bundle f7e66141 -> S3 key/checksum -> AV SourceBundle."
+    },
+    {
+      "name": "environment_unchanged_running_lkg",
+      "result": "PASS",
+      "note": "describe-environments: VersionLabel h3-3-4-historial-dashboard-3051a62-domainlocked-r1, Ready/Green/Ok, sin operacion abortable, DateUpdated 2026-09-21T00:39:15Z (cutover H3.3.4). aws-audit H3.3.5: sin update-environment, restart-app-server, option-settings, RDS ni secretos; unicas mutaciones s3api put-object y create-application-version declaradas."
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "LKG = VersionLabel observada en el environment Ready/Green/Ok."
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "AV LKG existe (UNPROCESSED); head-object de su bundle ChecksumSHA256 vL6TWIXc... (4815 bytes) = H3.3.4 candidate-02."
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "app a7881bad... y caddy 9da2be7a... ACTIVE con tag 3051a62."
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "Un unico update-environment --version-label via aws_guard; sin option-settings, template, plataforma ni tier."
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "Comandos de deploy y rollback con la forma declarada para DEPLOYING/ROLLING_BACK."
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS"
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": "Sin RDS, seed, migraciones, IAM, DNS ni escritura de secretos en comandos del Harness; AUTH_USERS_JSON solo como accion humana fuera del Harness."
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS"
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS"
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS"
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "Smoke tecnico + reverificacion tras refresh + smoke humano AC-17 con ambas cuentas."
+    },
+    {
+      "name": "d7_forward_cutover_order_fail_closed",
+      "result": "PASS",
+      "note": "d7_cutover_sequence: deploy H3.3.5 -> VersionLabel+Ready/Green/Ok -> humano agrega identidades -> refresh humano documentado (runbook seccion 6: RestartAppServer/UpdateEnvironment fuera del Harness) -> Deployer reverifica salud y release -> smoke autenticado. Precondicion de ausencia de identidades antes del cutover declarada como confirmacion humana en el gate."
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "Unico update-environment version-only al LKG nombrado, condicionado a rollback_authorization."
+    },
+    {
+      "name": "d7_rollback_after_identities_fail_closed",
+      "result": "FAIL",
+      "note": "Ver CR-D7-01. rollback_plan.d7_rollback_risk solo dice que el humano debe retirar primero las identidades 'o el rollback queda en BLOCKED_HUMAN'; no define refresh tras retirarlas, ni verificacion de que ya no son utilizables, ni una condicion D7 en rollback_plan.conditions; el runbook del release (seccion 7) no tiene procedimiento de rollback; g_rollback_permitted permite start_rollback desde VERIFY_FAILED (infraestructura) sin control D7."
+    }
+  ],
+  "findings": [
+    {
+      "id": "CR-D7-01",
+      "severity": "major",
+      "file": "evidence/H3.3.5/deployment/candidate-01.json",
+      "summary": "Plan de rollback no fail-closed respecto de D7 una vez configuradas las identidades advisor: falta (a) refresh humano posterior a retirar las identidades, (b) verificacion observable de que ya no son utilizables antes del rollback, (c) condicion D7 explicita en rollback_plan.conditions / precheck. Tras el paso 5 el estado es VERIFYING; un verify_failed de infraestructura habilita start_rollback al LKG (sin RBAC por cartera) sin que el guard compruebe identidades, y el UpdateEnvironment al LKG re-resolveria AUTH_USERS_JSON con credenciales advisor aun presentes si no se retiraron, violando el invariante D7.",
+      "required_action": "Deployer (PREPARING_DEPLOYMENT) emite candidate-02 reutilizando los mismos artefactos verificados (imagenes, bundle, S3, AV; sin reconstruir ni recrear) con rollback_plan que defina en orden: (1) si las identidades advisor ya fueron configuradas, el humano las retira de AUTH_USERS_JSON preservando los demas usuarios; (2) el humano aplica el refresh documentado en el runbook seccion 6 sobre la version H3.3.5 (RestartAppServer, o UpdateEnvironment con la misma label H3.3.5; nunca usar el rollback al LKG como refresh); (3) el Deployer reverifica Ready/Green/Ok y VersionLabel H3.3.5; (4) el humano confirma que el login de asesor.desarrollo1 y asesor.desarrollo2 falla, registrado como confirmacion en la evidencia de precheck; (5) solo entonces start_rollback al LKG h3-3-4-historial-dashboard-3051a62-domainlocked-r1. Agregar a conditions 'identidades advisor nunca configuradas, o retiradas + refresh + no utilizables confirmado'; si no puede demostrarse (p. ej. environment degradado impide el refresh) -> escalate a BLOCKED_HUMAN, sin rollback. Explicitar que antes del paso 5 (DEPLOYING / sin identidades) el rollback condicionado aplica sin este prerequisito."
+    },
+    {
+      "id": "CR-D7-02",
+      "severity": "minor",
+      "file": "docs/H3_3_5_DEV_RUNBOOK.md",
+      "summary": "El runbook del release (secciones 6-8) cubre el orden de cutover pero no el orden de rollback D7 posterior a configurar identidades.",
+      "required_action": "No bloquea este rework de artefacto (el plan del candidate es el instrumento aprobado por el Human Gate). Recomendado incorporar el procedimiento de rollback D7 al runbook en una tarea posterior o al cierre."
+    },
+    {
+      "id": "CR-INFO-01",
+      "severity": "info",
+      "file": "evidence/H3.3.5/deployment/candidate-01.json",
+      "summary": "Los tres comandos del Deployer denegados por el guard no produjeron bypass ni alteracion: el bundle se reprodujo byte a byte y aws-audit solo registra las dos mutaciones declaradas (put-object, create-application-version).",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "CR-INFO-02",
+      "severity": "info",
+      "file": "evidence/H3.3.5/deployment/candidate-01.json",
+      "summary": "AC-18 permanece pending_human y AC-17 pending_human; esta revision no los marca cumplidos ni declara cierre tecnico.",
+      "required_action": "Mantener en candidate-02."
+    },
+    {
+      "id": "CR-INFO-03",
+      "severity": "info",
+      "file": "progress/current.md",
+      "summary": "progress/current.md mostraba PREPARING_DEPLOYMENT; state.json es autoritativo (CANDIDATE_REVIEW).",
+      "required_action": "Actualizado en esta sesion."
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "id": "AC-18",
+      "status": "pending_human",
+      "note": "No evaluado como cumplido por esta revision."
+    },
+    {
+      "id": "AC-17",
+      "status": "pending_human"
+    }
+  ],
+  "safety": {
+    "aws_writes": false,
+    "update_environment": false,
+    "restart_app_server": false,
+    "option_settings": false,
+    "rds_access": false,
+    "seed_reexecuted": false,
+    "secrets_accessed": false,
+    "auth_users_json_read_or_modified": false,
+    "identities_created": false,
+    "code_or_artifacts_modified": false,
+    "approve_py_executed": false,
+    "aws_reads": "sts get-caller-identity; ecr describe-images x4; s3api head-object x2; elasticbeanstalk describe-application-versions x2; describe-environments x1 (modo candidate_read). 3 invocaciones denegadas por forma de argumentos (multi-valor), no ejecutadas."
+  }
+}

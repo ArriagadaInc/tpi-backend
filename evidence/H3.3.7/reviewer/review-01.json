@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "H3.3.7",
+  "created_at": "2026-09-29T23:23:34Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609292320-reviewer-sup186584",
+  "reviewed_sha": "6871c23aaacbd5146773c12a2c97d0772df6a96b",
+  "reviewed_tree": "f514a0e7658feba8c04bac980052bf982e497262",
+  "pr_number": 60,
+  "branch": "harness/H3.3.7-tema-claro-oscuro",
+  "base_sha": "b6df6d749c74ee072e19028bbd50cee3d0cb8e81",
+  "developer_evidence": "evidence/H3.3.7/developer/developer-01.json",
+  "review_scope": "Revision REVIEWING ronda 1 de H3.3.7 (PR #60) en el SHA exacto 6871c23 via worktree .harness-worktrees/H3.3.7-reviewer-6871c23. origin/main sigue en b6df6d7 (merge-base == baseline). Diff b6df6d7..6871c23: 5 archivos, 848 adiciones / 1 eliminacion (solo <html lang> en base.html). Sin AWS, sin modificar codigo.",
+  "ci": {
+    "run_id": 36641563530,
+    "conclusion": "success",
+    "head_sha": "6871c23aaacbd5146773c12a2c97d0772df6a96b",
+    "jobs_green": 5,
+    "jobs_total": 5,
+    "jobs": {
+      "Docker Build": "pass",
+      "Lint & Format": "pass",
+      "Release Tooling Validation": "pass",
+      "Security Audit": "pass",
+      "Tests": "pass"
+    },
+    "verification": "gh pr checks 60 sobre headRefOid 6871c23; PR OPEN, MERGEABLE, base main"
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "info",
+      "file": "app/web/templates/base.html",
+      "summary": "El boton de tema mantiene la etiqueta fija 'Tema oscuro' y comunica el estado via aria-pressed y el icono (luna/sol). Es el patron ARIA de toggle button y cumple la restriccion de nombre accesible + estado reflejado.",
+      "required_action": "Ninguna; confirmar en la revision visual humana que el estado es comprensible."
+    },
+    {
+      "id": "F2",
+      "severity": "info",
+      "file": "tests/unit/test_h3_3_7_theme.py",
+      "summary": "Las pruebas de theme.js dependen de Node; se omiten solo sin Node en local y fallan (pytest.fail) si CI esta definido y falta Node, por lo que el gate CI no puede pasar en silencio.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F3",
+      "severity": "info",
+      "file": "app/web/static/css/app.css",
+      "summary": "AC-1..AC-3 tienen evidencia tecnica (tokens claros intactos, todas las reglas nuevas acotadas a [data-theme=dark] o al control, overrides para cada superficie/texto con color fijo de la baseline) pero requieren validacion visual humana (requires_human_acceptance=true).",
+      "required_action": "Human acceptance en VERIFYING; no se infiere aceptacion humana."
+    }
+  ],
+  "checks": [
+    {
+      "name": "scope_paths",
+      "result": "PASS",
+      "detail": "Solo app/web/static/**, app/web/templates/base.html, docs/H3_3_7_*, tests/**; dentro de task.scope.paths"
+    },
+    {
+      "name": "no_backend_changes_AC6",
+      "result": "PASS",
+      "detail": "Ningun .py de app/ modificado; sin rutas, RBAC, PII, auth, APIs, esquema ni migraciones; sin dependencias nuevas"
+    },
+    {
+      "name": "client_side_persistence",
+      "result": "PASS",
+      "detail": "theme.js usa solo localStorage['tpi-theme']; normalize() acepta solo 'dark', todo lo demas => 'light'; sin cookies, fetch ni XHR"
+    },
+    {
+      "name": "storage_unavailable",
+      "result": "PASS",
+      "detail": "getStorage/readStored/store envueltos en try/catch; el toggle aplica a la pagina actual si el storage falla"
+    },
+    {
+      "name": "early_apply_no_flash",
+      "result": "PASS",
+      "detail": "script externo sincrono en <head> antes de app.css; servidor renderiza data-theme=light"
+    },
+    {
+      "name": "keyboard_accessibility",
+      "result": "PASS",
+      "detail": "<button type=button> nativo fuera de formularios, nombre accesible, aria-pressed sincronizado"
+    },
+    {
+      "name": "light_theme_unchanged_AC3",
+      "result": "PASS",
+      "detail": "Diff CSS solo agrega (237+/0-); tokens :root intactos"
+    },
+    {
+      "name": "dark_coverage_AC2",
+      "result": "PASS",
+      "detail": "Cada background claro fijo (topbar, card, inputs/select, board-table, th, auth-card, original-request-box, timeline-item, modal-card, quick-range) y cada color de texto oscuro fijo (status/badge, comment-history, comment-card p, chip-link, coverage-banner, chart-table summary) de la baseline tiene override en [data-theme=dark]"
+    },
+    {
+      "name": "local_tests",
+      "result": "PASS",
+      "detail": "pytest tests/unit/test_h3_3_7_theme.py tests/unit/test_web_app.py: 87 passed (Node presente, pruebas JS ejecutadas)"
+    },
+    {
+      "name": "local_lint",
+      "result": "PASS",
+      "detail": "ruff check app/ tests/ y black --check app/ tests/ sin hallazgos"
+    },
+    {
+      "name": "ci_exact_sha",
+      "result": "PASS",
+      "detail": "run 36641563530, 5/5 jobs verdes, cobertura 89.34% segun evidencia developer"
+    },
+    {
+      "name": "baseline_current",
+      "result": "PASS",
+      "detail": "origin/main == b6df6d7 == merge-base; PR MERGEABLE"
+    }
+  ],
+  "risks": [
+    "Regresion visual o contraste en pantallas no cubiertas por pruebas automatizadas: mitigado por revision visual humana obligatoria (AC-1..AC-3).",
+    "htmx se sigue cargando desde unpkg (preexistente, fuera de alcance)."
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met_pending_human_visual"
+    },
+    {
+      "id": "AC-2",
+      "status": "met_pending_human_visual"
+    },
+    {
+      "id": "AC-3",
+      "status": "met_pending_human_visual"
+    },
+    {
+      "id": "AC-4",
+      "status": "met"
+    },
+    {
+      "id": "AC-5",
+      "status": "met"
+    },
+    {
+      "id": "AC-6",
+      "status": "met"
+    }
+  ]
+}

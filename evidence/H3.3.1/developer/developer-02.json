@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "H3.3.1",
+  "created_at": "2026-09-15T19:25:18Z",
+  "role": "developer",
+  "runtime": "deepseek",
+  "session_id": "deepseek-202609151915-developer",
+  "head_sha": "838f5dbee57e8cf5440a32daffad2fcfb9916cec",
+  "branch": "harness/H3.3.1-rbac-pii-asignacion",
+  "pr_number": 52,
+  "change_class": "A",
+  "tests": {
+    "command": "CI (run 35013098086): pytest tests/ --cov=app --cov-report=xml --cov-fail-under=85; local: pytest tests/unit/test_web_app.py tests/unit/test_h3_3_1_rbac_pii_assignment.py tests/unit/test_solicitud_assignment_service.py tests/unit/test_crm_bandeja_service.py -q",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "docker_compose_config": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "tests/unit/test_h3_3_1_rbac_pii_assignment.py: CEO/CTO reciben PII completa en bandeja y detalle (service + HTML renderizado)."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "tests/unit/test_h3_3_1_rbac_pii_assignment.py y test_web_app.py: roles restringidos reciben PII enmascarada server-side; HTML servido no contiene rut/email/telefono completos, incluso con WEB_MASK_PII=false."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "tests/unit/test_h3_3_1_rbac_pii_assignment.py: control de asignacion visible solo para admin/executive; can_assign_lead centralizado."
+    },
+    {
+      "id": "AC-4",
+      "status": "pending_verification",
+      "evidence": "Logica cubierta por tests/integration/test_database_runtime.py (una asignacion activa, estado asignado, auditoria) y tests/unit (ruta: CSRF/403/409). Smoke autenticado en AWS DEV pendiente (humano)."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "docs/H3_3_CRM_LITE_WEB_UX.md y docs/PROJECT_STATUS.md corregidos: H3.3.1 pendiente de verificacion humana; sin labels/acceptance obsoletos ni rollback sin evidencia."
+    }
+  ],
+  "files_changed": [
+    "app/services/solicitud_service.py",
+    "app/web/routes/leads.py",
+    "docs/H3_3_CRM_LITE_WEB_UX.md",
+    "docs/PROJECT_STATUS.md",
+    "tests/unit/test_web_app.py",
+    "tests/unit/test_h3_3_1_rbac_pii_assignment.py"
+  ],
+  "assumptions": [
+    "CI en Linux (run 35013098086) es la autoridad para cobertura (>=85%) y docker build/compose; el sandbox Windows local deniega chmod/named-pipes, lo que afecta fixtures tmp_path de algunos tests de deployment preexistentes y pip-audit en local (todos verdes en CI).",
+    "tpi.asignaciones y tpi.auditoria existen en DEV (migraciones 005/006 ya aplicadas); no se incluyen migraciones.",
+    "AC-4 requiere smoke autenticado en AWS DEV (aceptacion humana); queda como pending_verification."
+  ],
+  "migrations_included": false
+}

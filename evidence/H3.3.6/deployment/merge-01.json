@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "H3.3.6",
+  "created_at": "2026-09-23T14:07:36Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609231406-deployer-sup906fce",
+  "pr_number": 58,
+  "pr_url": "https://github.com/ArriagadaInc/tpi-backend/pull/58",
+  "pr_title": "H3.3.6 Exportacion ejecutiva XLSX segura (CEO/CTO)",
+  "pr_state_after_merge": "MERGED",
+  "reviewed_sha": "a1e622855b25cafdf0afe63a89c3cedcd8de6403",
+  "reviewed_tree": "82da92058cc958d794bd4d58dc733c8825d40efb",
+  "release_sha": "5f5b3d37bf122f1d4438583b973fd03763aecebe",
+  "release_tree": "82da92058cc958d794bd4d58dc733c8825d40efb",
+  "main_parent_sha": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+  "main_before_merge": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+  "main_after_merge": "5f5b3d37bf122f1d4438583b973fd03763aecebe",
+  "method": "squash",
+  "match_head_commit_used": true,
+  "result": "PASS",
+  "change_class": "A",
+  "deploy_required": true,
+  "fast_path": true,
+  "merged_at": "2026-09-23T14:01:59Z",
+  "merged_by": "ArriagadaInc",
+  "release_commit_author": "Alvaro Arriagada",
+  "release_commit_committer": "GitHub",
+  "release_commit_subject": "H3.3.6 Exportacion ejecutiva XLSX segura (CEO/CTO) (#58)",
+  "gh_pr_merge_command": "gh pr merge 58 --squash --match-head-commit a1e622855b25cafdf0afe63a89c3cedcd8de6403",
+  "merge_executed_by_session": "claude-202609231400-deployer-sup3ad7d7",
+  "evidence_recorded_by_session": "claude-202609231406-deployer-sup906fce",
+  "tree_equivalence": {
+    "reviewed_tree": "82da92058cc958d794bd4d58dc733c8825d40efb",
+    "release_tree": "82da92058cc958d794bd4d58dc733c8825d40efb",
+    "equal": true,
+    "verification": "git rev-parse a1e6228^{tree} == git rev-parse 5f5b3d3^{tree} == review-02.reviewed_tree (re-verificado en esta sesion tras git fetch origin main)."
+  },
+  "branch": "harness/H3.3.6-xlsx-export",
+  "scope": {
+    "files_changed": 14,
+    "all_within_task_scope": true,
+    "files": [
+      "app/repositories/solicitud_repository.py",
+      "app/services/solicitud_service.py",
+      "app/services/xlsx_export.py",
+      "app/web/routes/leads.py",
+      "app/web/templates/leads.html",
+      "docs/H3_3_6_EXPORT_COLUMNS.md",
+      "docs/H3_3_6_REQUIREMENTS_MATRIX.md",
+      "pyproject.toml",
+      "requirements/runtime.lock",
+      "tests/integration/test_h3_3_6_export_full.py",
+      "tests/unit/test_h3_3_6_export_service.py",
+      "tests/unit/test_h3_3_6_export_web.py",
+      "tests/unit/test_h3_3_6_requirements_matrix_gate.py",
+      "tests/unit/test_h3_3_6_xlsx_export_builder.py"
+    ]
+  },
+  "references": {
+    "developer_evidence": "evidence/H3.3.6/developer/developer-02.json",
+    "review_evidence": "evidence/H3.3.6/reviewer/review-02.json"
+  },
+  "ci_pr": {
+    "run_id": 35864130756,
+    "workflow": "CI - Linting, Tests & Security",
+    "event": "pull_request",
+    "sha": "a1e622855b25cafdf0afe63a89c3cedcd8de6403",
+    "conclusion": "success",
+    "jobs": "5/5"
+  },
+  "ci_main": {
+    "run_id": 35871225497,
+    "workflow": "CI - Linting, Tests & Security",
+    "event": "push",
+    "branch": "main",
+    "sha": "5f5b3d37bf122f1d4438583b973fd03763aecebe",
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": "5/5",
+    "tests": "861 passed",
+    "coverage": "89.32% (>=85)",
+    "security_audit": "pip-audit sin vulnerabilidades"
+  },
+  "checks": [
+    {
+      "name": "init_state_role",
+      "result": "PASS",
+      "note": "init.ps1 --runtime claude: PASS, state MERGING, task H3.3.6, active_role deployer, allowed_events [merge_failed, merged]."
+    },
+    {
+      "name": "review_02_approved",
+      "result": "PASS",
+      "note": "decision APPROVED; reviewed_sha a1e6228, reviewed_tree 82da920, pr 58."
+    },
+    {
+      "name": "pr_merged_head_exact",
+      "result": "PASS",
+      "note": "gh pr view 58: MERGED, headRefOid a1e6228 == reviewed_sha, mergeCommit 5f5b3d3."
+    },
+    {
+      "name": "release_on_origin_main",
+      "result": "PASS",
+      "note": "git fetch origin main: origin/main = 5f5b3d3."
+    },
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "82da92058cc958d794bd4d58dc733c8825d40efb en ambos."
+    },
+    {
+      "name": "main_linear_single_parent",
+      "result": "PASS",
+      "note": "5f5b3d3 tiene un unico parent 78bf33b (baseline de la tarea)."
+    },
+    {
+      "name": "ci_main_green_on_release_sha",
+      "result": "PASS",
+      "note": "gh run view 35871225497: push, headSha 5f5b3d3, completed/success."
+    },
+    {
+      "name": "no_cloud_no_rds_no_secrets",
+      "result": "PASS",
+      "note": "Sin aws_guard, sin MCP AWS, sin RDS, sin lectura de secretos."
+    },
+    {
+      "name": "no_candidate_no_deploy",
+      "result": "PASS",
+      "note": "Sin publish workflow, bundle, AV ni update-environment en MERGING."
+    },
+    {
+      "name": "no_human_decision_tooling",
+      "result": "PASS",
+      "note": "Ninguna herramienta de decision humana invocada por el agente."
+    }
+  ],
+  "cloud_access": {
+    "operations": 0,
+    "rds_access": false,
+    "secrets_access": false,
+    "aws_guard_invocations": 0
+  },
+  "session_note": "El merge lo ejecuto la sesion claude-202609231400-deployer-sup3ad7d7; su registro de evidencia fue bloqueado por el hook guard (falso positivo por texto en el input). Esta sesion re-verifico todos los hechos contra Git/GitHub antes de registrar."
+}

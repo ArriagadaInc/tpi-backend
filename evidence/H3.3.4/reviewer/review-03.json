@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "H3.3.4",
+  "created_at": "2026-09-19T18:33:05Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609191905-reviewer-r3",
+  "reviewed_sha": "93fd96ae480feaa1e896845f9bfbedc5add712a8",
+  "reviewed_tree": "45627f59bf7a693412c8d3fec98f8699f7f7ae35",
+  "pr_number": 55,
+  "result": "FAIL",
+  "ci": {
+    "run_id": 35460433035,
+    "sha": "93fd96ae480feaa1e896845f9bfbedc5add712a8",
+    "conclusion": "success",
+    "note": "gh run view 35460433035: headSha exacto 93fd96a (event=pull_request, headBranch harness/H3.3.4-historial-estados-dashboard-ejecutivo). 5/5 jobs success: Release Tooling Validation ('Artifact verification passed.'), Lint & Format (ruff 'All checks passed!', black '170 files would be left unchanged.'), Tests ('Total coverage: 88.85%', '737 passed, 7 warnings in 58.98s', 0 SKIPPED, servicio postgres:15), Docker Build, Security Audit (pip-audit 'No known vulnerabilities found'; bandit 'No issues identified.', 0 nosec). 7 warnings identificadas: 1 StarletteDeprecationWarning (fastapi/testclient) + 6 altair UserWarning en tests/e2e/test_trazabilidad.py; ninguna de H3.3.4. Los 4 tests de tests/integration/test_executive_dashboard_per_advisor.py y los 18 del gate PASSED en CI."
+  },
+  "decision": "REJECTED",
+  "cause": "code",
+  "references": {
+    "previous_reviews": [
+      "evidence/H3.3.4/reviewer/review-01.json",
+      "evidence/H3.3.4/reviewer/review-02.json"
+    ],
+    "developer_evidence": "evidence/H3.3.4/developer/developer-03.json",
+    "remediation_commits": [
+      "a00667b docs(H3.3.4): normalize test references in requirements matrix",
+      "526919b test(H3.3.4): harden requirements traceability gate",
+      "93fd96a test(H3.3.4): verify per-advisor dashboard metrics"
+    ]
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "major",
+      "status": "OPEN MAJOR",
+      "file": "tests/unit/test_h3_3_4_requirements_matrix_gate.py",
+      "line": "34 (_FULL_REF_RE), 37 (_BARE_FILE_RE), 47 (_FN_DEF_RE), 161-165, 295-301",
+      "summary": "Contenido de la matriz CORREGIDO, gate aun burlable. Verificado: inventario independiente AST de todo el documento = 183 referencias, 22 archivos, 98 referencias a funcion; 183/183 en gramatica canonica tests/(unit|integration)/<f>.py[::test_x] y todas resuelven a funciones test_* de nivel modulo recolectables por pytest; 0 abreviadas, 0 sin prefijo, 0 rutas parciales; 67 REQ y 21 TC preservados, solo cambia la columna de prueba (+ columna implementacion en REQ-S-07/REQ-S-11); secciones 1 y 6 identicas byte a byte a 5ffb2a2 y 5262f1c. 18/18 tests del gate PASS local y CI. Ataques reproducidos con el propio _validate(): FALLAN correctamente 1 (matriz 5ffb2a2), 2b (quitar tests/integration/ -> nombre desnudo), 3 (::test_does_not_exist_anywhere), 4 (ruta valida + funcion inexistente), 5 (tests/integration/test_executive_dashboard.py), 6 (quitar prueba de REQ-B-17), 7 (eliminar REQ-B-17), 8 (duplicar REQ-B-17), 9a (AC-12 eliminado del documento), 10 (referencia movida a columna narrativa), nombre de funcion parcial y funcion solo comentada. NO FALLAN (gate PASS): ataque 2 literal 'quitar tests/ de una referencia' -> 'integration/test_executive_dashboard_per_advisor.py::test_cartera_por_asesor_fanout_safe_and_dimensional_filter' en REQ-B-13, 'unit/test_executive_dashboard_access.py::test_ceo_can_access_dashboard' en REQ-B-02, y en TC-19 (tabla TC); tambien ruta parcial a funcion INEXISTENTE ('integration/test_executive_dashboard_per_advisor.py::test_ghost_never_written'), './tests/...', 'tests/other/test_ghost.py::test_ghost'. Solo se detecta si la fila queda sin ninguna otra referencia valida (REQ-B-17). Causa: _BARE_FILE_RE excluye tokens precedidos por '/', _FULL_REF_RE exige 'tests/(unit|integration)/', y ninguna regla rechaza tokens de ruta de prueba que no cumplan la gramatica completa. Ademas: (a) '::_make_lead' (helper no-test) se acepta como referencia de prueba porque _FN_DEF_RE acepta cualquier def y la gramatica solo exige [A-Za-z_]\\w*, contrario a '::test_nombre_exacto'; (b) perdida de cobertura AC a nivel de filas no detectada: quitar AC-12 de las celdas AC de REQ-B-12/13/14/28 (conservandolo en la seccion 6) deja el gate en PASS, porque solo verifica presencia textual de AC-n en el documento, sin cruzar seccion 6 con las filas ni exigir >=1 fila REQ con prueba verificable por AC automatizado. La prueba negativa propia #2 usa un nombre desnudo ('test_does_not_exist.py'), no una ruta parcial, por lo que no cubre este caso. developer-03 afirma que el gate 'rechaza referencias sin prefijo/abreviadas/no canonicas en todo el documento': sobredeclarado para rutas parciales. Criterio explicito de la ronda: F1 solo CLOSED si todos los ataques fallan; el ataque 2 no falla.",
+      "required_action": "Solo gate/tests, sin cambios funcionales ni en la matriz (salvo que el nuevo gate revele algo): (1) todo token de ruta de prueba del documento (p.ej. [\\w./\\\\-]*test_\\w+\\.py(::\\w+)*, excluyendo explicitamente rutas de implementacion como scripts/init_test_database.py) debe cumplir fullmatch de ^tests/(unit|integration)/test_\\w+\\.py(::test_\\w+)?$ o fallar; (2) resolver la funcion con ast como def/async def test_* de nivel modulo (o metodo de clase Test*), no con regex sobre el texto; (3) cruzar la seccion 6 (AC -> REQ) con la columna AC de cada fila en ambos sentidos y exigir que cada AC automatizado tenga >=1 fila REQ con referencia verificable; (4) agregar pruebas negativas: ruta parcial 'integration/...' y 'unit/...' en fila multi-referencia y en fila TC, './tests/...', 'tests/<dir_desconocido>/...', '::_helper' no-test, y eliminacion de un AC solo de las filas REQ. Corregir la afirmacion en la evidencia Developer."
+    },
+    {
+      "id": "F7",
+      "severity": "info",
+      "status": "CLOSED",
+      "file": "tests/integration/test_executive_dashboard_per_advisor.py",
+      "summary": "CLOSED. 4 pruebas de integracion reales contra PostgreSQL (get_db_connection, full_health_check, siembra/limpieza real; PASSED en CI con postgres:15, 0 skips; localmente 4 skipped por ausencia de PostgreSQL). Valores esperados derivados a mano de las definiciones humanas, no re-ejecutando la consulta: cartera a1 total=6/activa=2 (nuevo + estado_raro; cerrado/perdido/no_califica/duplicado excluidos), a2 1/1, Sin asesor 1/1; fan-out inactiva+activa contada una vez, lead solo con asignacion inactiva -> Sin asesor; filtro estado aplicado. Matriz estado x asesor con 2 asesores, 4 estados, bucket None, celdas exactas, suma 7 = 7 leads y igualdad exacta del dict filtrado. Operacionales: estancado 30d, tiempo asignacion ~0 y ~2d, primera gestion ~7d (nota) que discrimina frente a la asignacion (2d) -> prueba la exclusion; N/D (None) sin base; paridad de universo con get_estancados/get_tiempo_asignacion/get_tiempo_primera_gestion. Contrastado con app/repositories/executive_dashboard_repository.py:386-565 (active_assignment DISTINCT ON, COUNT(DISTINCT id_lead), FILTER NOT IN CARTERA_INACTIVA_ESTADOS, LEAST(nota, cambio de estado) sin asignacion): consistente. REQ-B-12/13/14 citan rutas y funciones exactas; developer-03 AC-12 corregido.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F8",
+      "severity": "info",
+      "status": "CLOSED",
+      "file": "docs/H3_3_4_REQUIREMENTS_MATRIX.md",
+      "line": "89 (REQ-A-12), 209 (TC-19)",
+      "summary": "CLOSED. REQ-A-12 distingue existencia (tests/integration/test_audit_state_view.py::test_support_index_exists_and_is_used_for_state_history_query, pg_indexes) de EXPLAIN (tests/integration/test_executive_dashboard_repository.py::test_explain_state_history_uses_support_index, EXPLAIN FORMAT JSON con enable_seqscan=off, assert auditoria_state_history_idx). developer-03 AC-3 corrige la atribucion. developer-01/02 inmutables (created_at 2026-09-18, head 5ffb2a2/5262f1c, AC-3 original conservado). Plan normal sin forzar sigue explicito como follow-up F2 antes de DONE.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F9",
+      "severity": "minor",
+      "status": "NEW MINOR",
+      "file": "tests/integration/test_executive_dashboard_per_advisor.py:172-241; docs/H3_3_4_REQUIREMENTS_MATRIX.md:206-207",
+      "summary": "Nuevo, no bloqueante. (a) test_casos_por_estado_y_asesor_exact_matrix_counts no incluye un estado desconocido (pedido en review-02 F7) ni afirma len(rows)==len(cells) para detectar filas duplicadas por (asesor, estado) (el dict colapsaria duplicados; hoy las asserciones exactas lo compensan parcialmente) ni el orden determinista. (b) TC-17 sigue citando solo test_executive_dashboard_full.py::test_per_advisor_metrics_use_the_shared_definitions (review-02 pedia citar las nuevas funciones tambien en TC-17); TC-16 declara REQ-B-14 fan-out pero solo cita la prueba de repositorio.",
+      "required_action": "Agregar un estado desconocido y len(rows)==len(cells) a la prueba de matriz; citar las pruebas de test_executive_dashboard_per_advisor.py en TC-16/TC-17."
+    },
+    {
+      "id": "F2",
+      "severity": "minor",
+      "status": "ACCEPTED FOLLOW-UP",
+      "file": "docs/H3_3_4_REQUIREMENTS_MATRIX.md 11.6; scripts/sql/008_create_lead_state_history.sql:27-29",
+      "summary": "Sin cambios: EXPLAIN (ANALYZE, BUFFERS) sin forzar a volumen representativo pendiente antes de DONE; cifras ~40x/~90x calificadas como comparacion forzada; comentario SQL 008 aun sin calificar.",
+      "required_action": "Adjuntar el EXPLAIN normal sin forzar antes de DONE."
+    },
+    {
+      "id": "F3",
+      "severity": "minor",
+      "status": "ACCEPTED FOLLOW-UP",
+      "file": "docs/H3_3_4_REQUIREMENTS_MATRIX.md 13, REQ-B-01, REQ-B-02",
+      "summary": "Documentacion completa: seccion 13 enumera los 11 tests que requieren PostgreSQL (9 de test_executive_dashboard_service.py + test_nav_link_is_hidden_for_other_roles y test_hiding_the_link_is_not_the_access_control); REQ-B-01/REQ-B-02 anotados '(requiere PostgreSQL)'. Follow-up de codigo (repositorio dueno del snapshot) sigue no bloqueante.",
+      "required_action": "Ninguna en esta etapa."
+    },
+    {
+      "id": "F4",
+      "severity": "info",
+      "status": "CLOSED (esta etapa)",
+      "file": "docs/H3_3_4_REQUIREMENTS_MATRIX.md 12.10 punto 9",
+      "summary": "Sin cambios; valor efectivo de LEAD_STATE_HISTORY_CUTOVER en DEV pendiente de verificacion humana; ninguna fecha inventada.",
+      "required_action": "Verificacion humana en DEV."
+    },
+    {
+      "id": "F5",
+      "severity": "info",
+      "status": "RISK ACCEPTED",
+      "file": "docs/H3_3_4_REQUIREMENTS_MATRIX.md 12.7.1",
+      "summary": "REPEATABLE READ READ ONLY ~5-7 s por render (pool, xmin, autovacuum) preservado, no declarado resuelto.",
+      "required_action": "Preservar en el cierre."
+    },
+    {
+      "id": "F6",
+      "severity": "info",
+      "status": "RISK ACCEPTED (A, no bloqueante DEV)",
+      "file": "docs/H3_3_4_REQUIREMENTS_MATRIX.md 12.7",
+      "summary": "Preservado: 5,28-6,80 s a 20.000 leads/12 asesores, 18 sentencias constantes sin N+1, regexp_matches sobre leads.comentarios como costo dominante; 'El rendimiento no se declara resuelto'.",
+      "required_action": "Preservar en el cierre."
+    },
+    {
+      "id": "F10",
+      "severity": "info",
+      "status": "INFO",
+      "file": "tests/security/; docs/H3_3_4_REQUIREMENTS_MATRIX.md REQ-S-07, REQ-S-11",
+      "summary": "Correccion de premisa: tests/security/ SI existe (9 archivos, p.ej. tests/security/test_eb_deployment_security.py, ejecutados en CI). Su exclusion del gate es una restriccion de gramatica canonica (solo unit/integration), no inexistencia. La cita retirada de REQ-S-07 no verificaba option-settings (grep sin coincidencias) y REQ-S-07 mapea solo AC-7 (humano): sin perdida de cobertura. REQ-S-11 paso de 'tests/security/ + grep' (directorio, no prueba) a dos pruebas unitarias reales de redaccion.",
+      "required_action": "Ninguna."
+    }
+  ],
+  "checks": [
+    {
+      "name": "session_independence",
+      "result": "PASS",
+      "note": "runtime=claude session=claude-202609191905-reviewer-r3; distinta de claude-202609181245-reviewer, claude-202609191015-reviewer-r2 y de todas las sesiones Developer (deepseek-*)."
+    },
+    {
+      "name": "init_and_start_review",
+      "result": "PASS",
+      "note": "init.ps1 --runtime claude PASS: READY_FOR_REVIEW, H3.3.4, rol reviewer, rework_round 2/3. start_review -> REVIEWING."
+    },
+    {
+      "name": "exact_sha_reviewed",
+      "result": "PASS",
+      "note": "gh pr view 55 OPEN MERGEABLE headRefOid=93fd96a; git ls-remote rama y refs/pull/55/head = 93fd96a. Worktree read-only .harness-worktrees/H3.3.4-reviewer-93fd96a via worktree.py; reviewed_tree 45627f59."
+    },
+    {
+      "name": "ci_green_exact_sha",
+      "result": "PASS",
+      "note": "Run 35460433035 headSha 93fd96a; 5/5 success; 737 passed; 88.85%; pip-audit y bandit limpios; 7 warnings identificadas (ajenas a H3.3.4)."
+    },
+    {
+      "name": "remediation_scope",
+      "result": "PASS",
+      "note": "git log 5262f1c..93fd96a = a00667b, 526919b, 93fd96a. Diff solo docs/H3_3_4_REQUIREMENTS_MATRIX.md, tests/unit/test_h3_3_4_requirements_matrix_gate.py, tests/integration/test_executive_dashboard_per_advisor.py. Cero cambios en app/, scripts/ (SQL 005-008), requirements/, deployment/, .github/, Dockerfile. GitPython==3.1.60. Definiciones humanas (s.1) y mapeo AC<->REQ (s.6) identicos."
+    },
+    {
+      "name": "f1_reference_inventory",
+      "result": "PASS",
+      "note": "Inventario AST independiente: 183/183 referencias canonicas y resolubles a funciones test_* de nivel modulo; 0 rutas parciales/abreviadas/no canonicas; ningun REQ/AC/definicion/smoke/evidencia eliminado; unicas funciones retiradas de filas: test_per_advisor_metrics_use_the_shared_definitions en B-12/13/14 (reemplazada por pruebas especificas, sigue en TC-17)."
+    },
+    {
+      "name": "matrix_gate_robustness",
+      "result": "FAIL",
+      "note": "18/18 PASS. Ataques 1,3,4,5,6,7,8,9a,10 fallan correctamente; ataque 2 (quitar tests/) y rutas parciales a funciones inexistentes, tests/<otro>/, ::_helper y perdida de AC a nivel de filas PASAN el gate. Ver F1."
+    },
+    {
+      "name": "per_advisor_assertions",
+      "result": "PASS",
+      "note": "Ver F7: valores exactos contra PostgreSQL real, contrastados con el SQL de implementacion."
+    },
+    {
+      "name": "traceability_gate",
+      "result": "PASS",
+      "note": "Solicitud -> 67 REQ -> AC-1..AC-18 -> implementacion -> prueba real -> smoke -> evidencia completo; H3.3.5 solo aparece en el gate como chequeo negativo; genero/estado civil ausentes del codigo del dashboard; AC humanos (AC-5/6/7/9 y parte humana AC-4/10/18) pendientes; ninguna afirmacion de 008 aplicada ni de smoke DEV realizado; sin backfill (008 no inserta en tpi.auditoria)."
+    },
+    {
+      "name": "local_gates",
+      "result": "PASS",
+      "note": "En worktree 93fd96a: gate 18/18; per_advisor + access + presentation + filters + migration_scripts + timeline_presentation = 95 passed, 4 skipped (per_advisor sin PostgreSQL local; 4/4 PASSED en CI Linux); ruff y black PASS sobre archivos nuevos; validate_repo.py PASS."
+    },
+    {
+      "name": "guard_denial",
+      "result": "PASS",
+      "note": "(informativo) Un grep con un nombre de variable secreta como termino de busqueda fue DENEGADO por guard.py; no se intento rodeo; no era necesario para la decision."
+    },
+    {
+      "name": "no_mutation_no_aws",
+      "result": "PASS",
+      "note": "Reviewer sin cambios de producto, docs ni tests; sin AWS/RDS; migracion 008 no aplicada; sin merge, approve.py, deployment ni candidate."
+    }
+  ],
+  "risks": [
+    "F1 abierto: el gate de trazabilidad acepta rutas parciales (integration/..., unit/..., ./tests/..., tests/<otro>/...) incluso hacia funciones inexistentes cuando la fila tiene otra referencia valida, helpers no-test como referencia, y perdida de un AC a nivel de filas.",
+    "Ultima ronda de rework disponible: tras este rechazo rework_round=3/3; un nuevo rechazo lleva a BLOCKED_HUMAN.",
+    "F2: EXPLAIN (ANALYZE, BUFFERS) sin forzar pendiente antes de DONE.",
+    "F6: 5,28-6,80 s a 20.000 leads (regexp de notas), riesgo A no bloqueante DEV.",
+    "F5: transaccion REPEATABLE READ READ ONLY ~5-7 s por render.",
+    "Migracion 008 (clase D) NO aplicada en AWS RDS DEV; AC-5/AC-6/AC-7 pendientes de Human Gate/postflight; smoke humano AC-9/AC-18 (incluido 403) e inspeccion visual pendientes; LEAD_STATE_HISTORY_CUTOVER en DEV sin verificar. Cero AWS/RDS en esta revision."
+  ]
+}

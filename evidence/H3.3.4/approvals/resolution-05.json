@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "resolution",
+  "task_id": "H3.3.4",
+  "created_at": "2026-09-20T19:06:56Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "from_state": "BLOCKED_HUMAN",
+  "to_state": "PREPARING_DEPLOYMENT",
+  "reason": "Resolucion humana H3.3.4 posterior al merge del fix de cutover, release_sha 3051a6271e1626b40fe24a744abe097cab1ab0fe. La migracion 008 ya esta aplicada con postflight PASS y no debe reejecutarse. Se autoriza preparar un nuevo application candidate sobre este release, incluyendo LEAD_STATE_HISTORY_CUTOVER=2026-09-20 como propiedad del environment. El candidate anterior queda rechazado e inerte. Esta resolucion no autoriza update-environment ni despliegue."
+}

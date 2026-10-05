@@ -22,6 +22,97 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-01 - Harness: tarea H3.3.7 cerrada (DONE)
+
+- Titulo: Tema claro y oscuro para CRM Lite
+- Evidencia: `evidence/H3.3.7/` y `tasks/completed/H3.3.7.yaml`.
+- release_sha: `6f0f5bb1e934742cd8e8572d4a401f8bf29ab1c7`
+- pr_number: `60`
+- application_version: `h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1`
+- bundle_sha256: `efa590b9e0daef786ce1f4b69ea8026c1a160b39d8dac06999d1c79b7f82d8aa`
+- lkg: `h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `6f0f5bb1e934742cd8e8572d4a401f8bf29ab1c7`
+- verification: `PASS`
+
+### 2026-09-23 - Harness: tarea H3.3.6 cerrada (DONE)
+
+- Titulo: Exportacion ejecutiva XLSX segura
+- Evidencia: `evidence/H3.3.6/` y `tasks/completed/H3.3.6.yaml`.
+- release_sha: `5f5b3d37bf122f1d4438583b973fd03763aecebe`
+- pr_number: `58`
+- application_version: `h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1`
+- bundle_sha256: `8fbd2526a6e311bdcfb0c2f72cdd20a7ba9f6a056de04562957214946332cb32`
+- lkg: `h3-3-5-asesores-cartera-78bf33b-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `5f5b3d37bf122f1d4438583b973fd03763aecebe`
+- verification: `PASS`
+
+### 2026-09-22 - Harness: tarea H3.3.5 cerrada (DONE)
+
+- Titulo: Asesores DEV y cartera propia
+- Evidencia: `evidence/H3.3.5/` y `tasks/completed/H3.3.5.yaml`.
+- release_sha: `78bf33bcb946fc442a8e5488cdf0d2f89fd190c2`
+- pr_number: `57`
+- application_version: `h3-3-5-asesores-cartera-78bf33b-domainlocked-r1`
+- bundle_sha256: `f7e661411bbaacaf456a95405fd0e787136ac6cb04eb790fd78039d7938731f1`
+- lkg: `h3-3-4-historial-dashboard-3051a62-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `78bf33bcb946fc442a8e5488cdf0d2f89fd190c2`
+- verification: `PASS`
+
+### 2026-09-21 - Harness: tarea H3.3.4 cerrada (DONE)
+
+- Titulo: Historial integral de estados y Dashboard Ejecutivo CRM
+- Evidencia: `evidence/H3.3.4/` y `tasks/completed/H3.3.4.yaml`.
+- release_sha: `3051a6271e1626b40fe24a744abe097cab1ab0fe`
+- pr_number: `56`
+- application_version: `h3-3-4-historial-dashboard-3051a62-domainlocked-r1`
+- bundle_sha256: `bcbe935885dc50d279cd19c5f0ddf696449b29d7305c2e5506dc0a5afa9916d0`
+- lkg: `h3-3-3-historial-web-ux-c5e738c-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `3051a6271e1626b40fe24a744abe097cab1ab0fe`
+- verification: `PASS`
+
+### 2026-09-17 - Harness: tarea H3.3.3 cerrada (DONE)
+
+- Titulo: Historial operativo y navegacion Web UX
+- Evidencia: `evidence/H3.3.3/` y `tasks/completed/H3.3.3.yaml`.
+- release_sha: `c5e738c21ba202d9c664652412e6820628b18e3c`
+- pr_number: `54`
+- application_version: `h3-3-3-historial-web-ux-c5e738c-domainlocked-r1`
+- bundle_sha256: `6b6450b53df7e54a1d80ab637819d2f7dbc059e9435cd59221b549cfda949695`
+- lkg: `h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `c5e738c21ba202d9c664652412e6820628b18e3c`
+- verification: `PASS`
+
+### 2026-09-16 - Harness: tarea H3.3.2 cerrada (DONE)
+
+- Titulo: Modelo de superusuarios CEO/CTO e identidades DEV
+- Evidencia: `evidence/H3.3.2/` y `tasks/completed/H3.3.2.yaml`.
+- release_sha: `fec33e7951f862c95b2436b09b969e5ef1915769`
+- pr_number: `53`
+- application_version: `h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1`
+- bundle_sha256: `ddc5abe2047b624b5a5a1a8aa0615048b54291077bd0d1ffaff7c4fc9e273800`
+- lkg: `h3-3-1-rbac-pii-4aac143-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `fec33e7951f862c95b2436b09b969e5ef1915769`
+- verification: `PASS`
+
+### 2026-09-16 - Harness: tarea H3.3.1 cerrada (DONE)
+
+- Titulo: Completar RBAC/PII y asignacion manual en DEV
+- Evidencia: `evidence/H3.3.1/` y `tasks/completed/H3.3.1.yaml`.
+- release_sha: `4aac143a396934186342bab5ec97b3df5e53085c`
+- pr_number: `52`
+- application_version: `h3-3-1-rbac-pii-4aac143-domainlocked-r1`
+- bundle_sha256: `e49628affe9279b80764a12ec5b724f60e5b89eb5b8c72bb6d519c9a99e8f72c`
+- lkg: `h3-3-crm-web-43101be-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `4aac143a396934186342bab5ec97b3df5e53085c`
+- verification: `PASS`
+
 ### 2026-09-12 - Cierre H3.3 (CLOSED WITH DEFERRED ACCEPTANCE ITEMS) y handoff
 
 Entrada de referencia operativa vigente. Las entradas anteriores de H3.3 y los

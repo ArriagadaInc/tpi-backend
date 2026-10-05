@@ -22,17 +22,29 @@ CANDIDATE_REVIEW: revision automatica del release candidate real antes del Human
 - `candidate-*.json`, `merge-*.json` y `review-*.json` aprobada presentes; `git fetch origin main`.
 
 ## 5. Comandos y herramientas
+- Usar los comandos AWS de esta seccion como plantillas exactas: sustituir los placeholders sin agregar opciones.
+- En `ecr describe-image-scan-findings` NO agregar `--max-results`, opciones de paginacion ni otras opciones ausentes de la plantilla. No optimizar la consulta por iniciativa propia.
+- Antes de cada llamada, cotejar servicio, operacion y opciones con la allowlist vigente. No ejecutar comandos de prueba para descubrir permisos.
+- Si una plantilla requiere una opcion no autorizada, informar la incompatibilidad antes de invocarla.
 - `git rev-parse <release_sha>^{tree}` == `reviewed_tree` de la revision.
 - `gh run view <publish_run_id> --json conclusion,headSha`.
 - Reconstruccion: `python -c` con `build_domain_locked_bundle(template=deployment/aws/docker-compose.domainlocked.yml, ...)`
   en un directorio temporal y `sha256sum`.
 - `python scripts/harness/aws_guard.py ecr describe-images --repository-name tpi-dev-app --image-ids imageDigest=<digest>`
 - `python scripts/harness/aws_guard.py ecr describe-image-scan-findings --repository-name <repo> --image-id imageDigest=<digest>`
-- `python scripts/harness/aws_guard.py elasticbeanstalk describe-application-versions --application-name tpi-backoffice --version-labels <candidate> <lkg>`
+- Consultar candidate y LKG en DOS llamadas secuenciales, con un solo label por llamada:
+  - `python scripts/harness/aws_guard.py elasticbeanstalk describe-application-versions --application-name tpi-backoffice --version-labels <candidate>`
+  - `python scripts/harness/aws_guard.py elasticbeanstalk describe-application-versions --application-name tpi-backoffice --version-labels <lkg>`
+- Ejecutar un solo comando por llamada; no encadenar comandos ni ocultar errores.
+- Ante cualquier DENIED del Harness o AWS guard: STOP inmediato, sin mas herramientas, escrituras, compactacion ni transiciones.
 - `python scripts/harness/aws_guard.py s3api head-object --bucket <bucket> --key <key> --checksum-mode ENABLED`
 - `python scripts/harness/aws_guard.py elasticbeanstalk describe-environments --application-name tpi-backoffice --environment-names tpi-backoffice-dev-green --no-include-deleted`
 
 ## 6. Evidencia obligatoria
+- Para el check de secretos, no ejecutar busquedas por shell que el guard prohibe ni reformularlas para evitarlo.
+- Si existe un scan auxiliar realizado por el humano, verificar su procedencia, alcance y hashes contra los artefactos actuales. Citar sus limitaciones; cero coincidencias no basta por si solo.
+- Complementar con inspeccion estructural de los artefactos permitidos: referencias a variables frente a valores literales, campos y salidas seguras. No leer archivos de credenciales ni imprimir valores sensibles.
+- Revisar tambien la evidencia nueva antes de registrarla. El scan previo no la cubre. Si no puede demostrar el check, informar lo pendiente sin aprobar.
 Checks (PASS/FAIL) en `candidate_review-*.json`:
 - `release_tree_equals_reviewed_tree` y `release_sha_on_main`.
 - `publish_run_success_for_release_sha`.

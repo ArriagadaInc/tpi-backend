@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "H3.3.7",
+  "created_at": "2026-09-29T23:19:11Z",
+  "role": "developer",
+  "runtime": "claude",
+  "session_id": "claude-202609292304-developer-sup383cca",
+  "head_sha": "6871c23aaacbd5146773c12a2c97d0772df6a96b",
+  "branch": "harness/H3.3.7-tema-claro-oscuro",
+  "pr_number": 60,
+  "pr_url": "https://github.com/ArriagadaInc/tpi-backend/pull/60",
+  "change_class": "A",
+  "baseline": "b6df6d749c74ee072e19028bbd50cee3d0cb8e81",
+  "commits": [
+    "6871c23 feat(H3.3.7): tema claro y oscuro client-side para CRM Lite"
+  ],
+  "tests": {
+    "command": "CI Tests job (pytest tests/ --cov=app --cov-fail-under=85, PostgreSQL de servicio) run 36641563530 sobre 6871c23: 1426 passed, 0 failed, coverage 89.34% (>=85%). Local (.venv): pytest tests/unit/test_h3_3_7_theme.py -> 52 passed.",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "pytest_coverage": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "ci_run": {
+    "run_id": 36641563530,
+    "conclusion": "success",
+    "head_sha": "6871c23aaacbd5146773c12a2c97d0772df6a96b",
+    "jobs": {
+      "Docker Build": "PASS",
+      "Lint & Format": "PASS",
+      "Release Tooling Validation": "PASS",
+      "Security Audit": "PASS",
+      "Tests": "PASS"
+    },
+    "coverage_total": "89.34%"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "pending_verification",
+      "evidence": "test_every_page_renders_light_by_default_and_the_theme_toggle, test_toggle_lives_in_the_topbar_and_outside_any_form; requiere revision visual humana"
+    },
+    {
+      "id": "AC-2",
+      "status": "pending_verification",
+      "evidence": "test_dark_theme_overrides_hard_coded_light_surfaces, test_dark_palette_meets_wcag_contrast, test_dark_status_and_alert_colours_are_readable, test_dark_filled_buttons_keep_white_labels_readable, test_dark_theme_uses_very_dark_backgrounds_and_light_text; requiere revision visual humana"
+    },
+    {
+      "id": "AC-3",
+      "status": "pending_verification",
+      "evidence": "test_light_tokens_keep_the_baseline_values, test_dark_rules_are_all_scoped_to_the_dark_theme + suite web existente (CI PASS); requiere revision visual humana"
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "test_toggle_persists_across_reloads, test_stored_preference_is_applied_on_load (theme.js ejecutado en Node; CI PASS)"
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "test_without_preference_the_app_starts_light, test_invalid_stored_values_fall_back_to_light, test_storage_errors_never_break_the_page (CI PASS)"
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "evidence": "test_theme_script_never_talks_to_the_server_or_uses_cookies; git diff b6df6d7..6871c23 solo toca app/web/static, app/web/templates/base.html, docs/H3_3_7_*, tests/ (sin Python de app/)"
+    }
+  ],
+  "files_changed": [
+    "app/web/static/css/app.css",
+    "app/web/static/js/theme.js",
+    "app/web/templates/base.html",
+    "docs/H3_3_7_TEMA_CLARO_OSCURO.md",
+    "tests/unit/test_h3_3_7_theme.py"
+  ],
+  "assumptions": [
+    "Implementacion y push realizados por la sesion developer claude-202609292224-developer-sup44caba; esta sesion (claude-202609292304-developer-sup383cca) reverifico gates locales (ruff, black, mypy, bandit, tests H3.3.7) y CI verde sobre el mismo SHA antes de entregar.",
+    "Baseline revalidado: origin/main sigue en b6df6d749c74ee072e19028bbd50cee3d0cb8e81; PR #60 MERGEABLE contra main.",
+    "theme.js se carga sincrono en <head> antes de app.css para evitar destello del tema claro; archivo same-origin compatible con CSP script-src 'self'.",
+    "Solo se guardan 'light'/'dark' en localStorage['tpi-theme']; sin cookies, sin red, sin backend.",
+    "pip_audit y docker_build se toman del CI (jobs Security Audit y Docker Build) sobre el SHA exacto.",
+    "AC-1..AC-3 quedan pending_verification: la tarea exige revision visual humana; no se infiere aceptacion humana."
+  ],
+  "migrations_included": false
+}

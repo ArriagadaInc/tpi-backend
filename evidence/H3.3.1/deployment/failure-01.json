@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "failure",
+  "task_id": "H3.3.1",
+  "created_at": "2026-09-15T20:57:04Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609152059-deployer",
+  "action": "human_acceptance_review",
+  "resource": "task H3.3.1 acceptance criteria AC-1..AC-4 (RBAC/PII/asignacion) sobre environment tpi-backoffice-dev-green, version h3-3-1-rbac-pii-4aac143-domainlocked-r1",
+  "principal": "human (tpi-dev, autenticado en backoffice DEV)",
+  "error": "Decision humana registrada en evidence/H3.3.1/approvals/acceptance-01.json: decision=rejected para AC-1, AC-2, AC-3 y AC-4 (verification: both/human). El release desplegado no cumple los criterios funcionales de RBAC/PII/asignacion manual segun validacion humana autenticada.",
+  "state": "VERIFY_FAILED",
+  "recommendation": "No es degradacion de infraestructura: smoke no autenticado (6/6 PASS), identidad de runtime y pii_log_scan sin matches se mantienen verdes. Es un defecto puramente funcional (AC-1..AC-4 rechazados por el humano). Segun contrato v2 seccion 9 y smoke-testing-dev, no corresponde rollback automatico; el release puede permanecer en DEV para diagnostico. Escalar a BLOCKED_HUMAN para que el humano decida: resolve_to_developing (rework del defecto funcional) u otra resolucion.",
+  "residues": [],
+  "access_denied": false
+}

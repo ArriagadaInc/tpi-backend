@@ -1,0 +1,52 @@
+schema_version: 1
+task:
+  id: H3.3.1
+  title: Completar RBAC/PII y asignacion manual en DEV
+  objective: Cerrar la deuda funcional H3.3.1 del issue
+  source:
+    type: issue
+    ref: ArriagadaInc/tpi-backend#50
+  change_class: A
+  deploy_required: true
+  requires_human_acceptance: true
+  acceptance_criteria:
+  - id: AC-1
+    description: CEO/CTO ven PII completa en bandeja y detalle
+    verification: both
+  - id: AC-2
+    description: Roles restringidos reciben PII enmascarada server-side y el HTML servido no contiene
+      PII completa
+    verification: both
+  - id: AC-3
+    description: El control de asignacion manual aparece para roles autorizados
+    verification: both
+  - id: AC-4
+    description: Asignar un lead sin asignacion activa cambia estado a asignado, persiste en tpi.asignaciones,
+      registra tpi.auditoria y una sola asignacion activa
+    verification: human
+  - id: AC-5
+    description: Documentacion H3.3 corregida sin versiones/acceptance antiguos
+    verification: automated
+  constraints:
+  - No tocar AWS/IAM/CodePipeline/Route53
+  - No reejecutar migraciones 005/006
+  - No leer AUTH_USERS_JSON
+  dependencies: []
+  risk:
+    level: medium
+    notes: PII; requiere smoke autenticado humano
+  status: closed
+closure:
+  closed_at: '2026-09-16T13:21:11Z'
+  final_state: DONE
+  evidence_dir: evidence/H3.3.1
+  release:
+    release_sha: 4aac143a396934186342bab5ec97b3df5e53085c
+    pr_number: 52
+    application_version: h3-3-1-rbac-pii-4aac143-domainlocked-r1
+    bundle_sha256: e49628affe9279b80764a12ec5b724f60e5b89eb5b8c72bb6d519c9a99e8f72c
+    lkg: h3-3-crm-web-43101be-domainlocked-r1
+    deployment: success
+    deployed_commit: 4aac143a396934186342bab5ec97b3df5e53085c
+    verification: PASS
+  rework_rounds: 1

@@ -1,0 +1,207 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "H3.3.6",
+  "created_at": "2026-09-23T15:06:46Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609231501-reviewer-sup7a144b",
+  "release_sha": "5f5b3d37bf122f1d4438583b973fd03763aecebe",
+  "reviewed_tree": "82da92058cc958d794bd4d58dc733c8825d40efb",
+  "release_tree": "82da92058cc958d794bd4d58dc733c8825d40efb",
+  "pr_number": 58,
+  "result": "PASS",
+  "decision": "APPROVED",
+  "cause": null,
+  "candidate_evidence": "evidence/H3.3.6/deployment/candidate-01.json",
+  "merge_evidence": "evidence/H3.3.6/deployment/merge-01.json",
+  "review_evidence": "evidence/H3.3.6/reviewer/review-02.json",
+  "review_scope": "CANDIDATE_REVIEW de H3.3.6 (release 5f5b3d3, AV h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1). Verificacion independiente contra Git, GitHub y AWS (aws_guard modo candidate_read); bundle reconstruido desde git archive del release en un temporal fuera del repo. Sin escrituras AWS, sin RDS, sin secretos, sin modificar codigo.",
+  "reviewer_session_note": "Sesion claude-202609231501-reviewer-sup7a144b, distinta del Developer (deepseek-202609231213-developer-sup89f3f9) y de las sesiones Deployer que construyeron el candidate.",
+  "identity_chain": {
+    "reviewed_sha": "a1e622855b25cafdf0afe63a89c3cedcd8de6403",
+    "reviewed_tree": "82da92058cc958d794bd4d58dc733c8825d40efb",
+    "release_sha": "5f5b3d37bf122f1d4438583b973fd03763aecebe",
+    "release_parent": "78bf33bcb946fc442a8e5488cdf0d2f89fd190c2",
+    "publish_run_id": 35876549531,
+    "app_digest": "sha256:0c20c5d7dc0f3a4a651d8dd0b48583950540daff10a1205171fb8e009da51896",
+    "caddy_digest": "sha256:cd1adaf811f8b1583d0da21d773d999e82c2dda35e62cb3744ff6d19393b158c",
+    "bundle_sha256": "8fbd2526a6e311bdcfb0c2f72cdd20a7ba9f6a056de04562957214946332cb32",
+    "s3_checksum_sha256": "j70lJqbjEb3PsML3LN0gp7qfagVt4EVilXIUlGMyyzI=",
+    "s3_key": "tpi-backoffice/dev-releases/h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1/8fbd2526a6e311bdcfb0c2f72cdd20a7ba9f6a056de04562957214946332cb32.zip",
+    "application_version": "h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1"
+  },
+  "checks": [
+    {
+      "name": "state_and_task",
+      "result": "PASS",
+      "note": "init.ps1 --runtime claude PASS; CANDIDATE_REVIEW / H3.3.6 / rol reviewer; refs.candidate_evidence = candidate-01.json."
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "git fetch origin main: origin/main = FETCH_HEAD = 5f5b3d3; parent unico 78bf33b (baseline de la tarea); subject 'H3.3.6 ... (#58)'."
+    },
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse 5f5b3d3^{tree} == a1e6228^{tree} == review-02.reviewed_tree == 82da920."
+    },
+    {
+      "name": "ci_main_green_on_release_sha",
+      "result": "PASS",
+      "note": "gh run view 35871225497: push, headSha 5f5b3d3, completed/success."
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "gh run view 35876549531: workflow_dispatch, headSha 5f5b3d3, attempt 1, completed/success; los 6 jobs completed/success (incluido Tests: la anomalia in_progress registrada por el Deployer ya no se observa)."
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "aws_guard ecr describe-images: app 0c20c5d7... y caddy cd1adaf8... ACTIVE con tag = release_sha; referenciados por digest sha256 (contenido inmutable). Mutabilidad de tags del repositorio no observable en candidate_read (ver CR-03)."
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "Log del run 35876549531 re-leido via gh: step 'Fail closed on high or critical ECR findings' success con 'tpi-dev-app: CRITICAL=0 HIGH=0' y 'tpi-dev-caddy: CRITICAL=0 HIGH=0'. describe-image-scan-findings no ejecutable via aws_guard (ver CR-02)."
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "Reconstruccion independiente con build_domain_locked_bundle desde git archive 5f5b3d3 (deployment/) y los digests del manifest del publish: sha256 8fbd2526...cb32, 4815 bytes, identico al zip del Deployer."
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "Unica entrada docker-compose.yml; sin directivas build; sin genialabs.cl; app referenciada 2 veces y caddy 1 vez por digest."
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "aws_guard s3api head-object --checksum-mode ENABLED: ChecksumSHA256 j70lJqbj...yzI= (FULL_OBJECT), ContentLength 4815 = base64(sha256) del bundle reconstruido."
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "describe-application-versions: AV candidate UNPROCESSED, SourceBundle = bucket/key content-addressed del candidate."
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "reviewed_tree -> release_sha -> publish run (manifest runtime_git_sha = release) -> digests ECR (tag = release) -> bundle sha256 -> S3 key/checksum -> AV SourceBundle."
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "describe-environments tpi-backoffice-dev-green: VersionLabel h3-3-5-asesores-cartera-78bf33b-domainlocked-r1, Ready/Green/Ok, sin operacion abortable, DateUpdated 2026-09-22T15:47:22Z (runtime no mutado)."
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "AV LKG existe (UNPROCESSED, mismo patron que el candidate), SourceBundle presente en S3 con ChecksumSHA256 9+ZhQRu6...MfE= = candidate-01.lkg.source_bundle."
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "describe-images: app f2ba920e... y caddy efbce63c... ACTIVE, tag 78bf33b."
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "Compose domain-locked renderizado solo con referencias de imagen; candidate-01 y esta evidencia sin valores secretos, credenciales ni URLs prefirmadas."
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "smoke_plan con checks publicos, export_requires_auth anonimo (AC-2/AC-13), no_legacy_domain, runtime_identity_chain y human_acceptance_AC-18."
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "Unico comando: aws_guard elasticbeanstalk update-environment --environment-name tpi-backoffice-dev-green --version-label <candidate>; opciones dentro de v_update_environment; sin option settings, template, platform ni tier."
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "update-environment pertenece a aws.modes.cutover/rollback; environment = environments/dev.yaml deployment_target. Dry-run en CANDIDATE_REVIEW denegado correctamente por estado."
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "note": "Un comando de cutover, sin reintentos; aws_guard bloquea un segundo cutover por auditoria."
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "rollback_plan: version-only a h3-3-5-asesores-cartera-78bf33b-domainlocked-r1, max_attempts 1, condicionado a las 7 condiciones de rollback_authorization. El LKG conserva el RBAC por cartera de H3.3.5 (sin riesgo tipo D7); los eventos de exportacion en tpi.auditoria son append-only y compatibles."
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": "Sin IAM, Route53, secretos, migraciones ni cambios de infraestructura; clase A."
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "note": "Lecturas AWS con --query minimo; sin PII ni secretos en salidas registradas."
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS",
+      "note": "blast_radius_and_residues clasifica imagenes ECR, objeto S3 y AV UNPROCESSED como residuos inertes de preparacion; runtime sin mutar."
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "note": "rollback_plan excluye defectos puramente funcionales (condicion not_purely_functional_defect)."
+    }
+  ],
+  "findings": [
+    {
+      "id": "CR-01",
+      "severity": "info",
+      "file": "evidence/H3.3.6/deployment/candidate-01.json",
+      "summary": "La anomalia de la API de GitHub (job Tests in_progress) registrada por el Deployer ya no se observa: los 6 jobs del run 35876549531 estan completed/success.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "CR-02",
+      "severity": "info",
+      "file": "scripts/harness/aws_guard.py",
+      "summary": "v_ecr solo admite --image-ids, pero 'ecr describe-image-scan-findings' requiere --image-id; el comando documentado en la skill tpi-release-readiness es denegado y describe-images devuelve imageScanFindingsSummary null. El scan se verifico por el step fail-closed del publish run.",
+      "required_action": "No bloqueante. Mantenimiento del Harness (humano): alinear aws_guard y la skill para permitir la verificacion directa del scan en ECR."
+    },
+    {
+      "id": "CR-03",
+      "severity": "info",
+      "file": "harness/policies.yaml",
+      "summary": "ecr describe-repositories no esta en candidate_read, por lo que la mutabilidad de tags (IMMUTABLE) no es observable por el Reviewer; la cadena usa digests sha256 (inmutables por contenido).",
+      "required_action": "No bloqueante. Evaluar en mantenimiento del Harness."
+    },
+    {
+      "id": "R2-F1",
+      "severity": "minor",
+      "file": "app/services/xlsx_export.py",
+      "summary": "Arrastrado de review-02 (no bloqueante): mutacion global de tempfile.tempdir durante el save.",
+      "required_action": "Tarea futura, segun review-02."
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "id": "AC-18",
+      "status": "pending_human",
+      "note": "Smoke humano autenticado en AWS DEV tras el cutover (approve.py accept)."
+    }
+  ],
+  "safety": {
+    "aws_writes": false,
+    "aws_reads": "sts get-caller-identity x1; elasticbeanstalk describe-environments x1, describe-application-versions x2; s3api head-object x2; ecr describe-images x4 (aws_guard candidate_read). Denegados por aws_guard sin ejecucion: describe-application-versions con 2 labels, describe-repositories, describe-image-scan-findings x2, update-environment --dry-run.",
+    "rds_access": false,
+    "secrets_accessed": false,
+    "code_modified": false,
+    "human_decision_tooling_executed": false,
+    "temp_residue": "Directorio temporal del sistema /tmp/tmp.EJfC9O4DTP (fuera del repo) con deployment/ del release y el zip reconstruido; sin secretos. rm -rf denegado por el guard; queda para limpieza humana."
+  }
+}

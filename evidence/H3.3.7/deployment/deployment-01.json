@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "kind": "deployment",
+  "task_id": "H3.3.7",
+  "created_at": "2026-10-01T14:58:33Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610011445-deployer-sup57a975",
+  "approved_commit": "6f0f5bb1e934742cd8e8572d4a401f8bf29ab1c7",
+  "deployed_commit": "6f0f5bb1e934742cd8e8572d4a401f8bf29ab1c7",
+  "application_version": "h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "update_accepted": true,
+  "result": "success",
+  "started_at": "2026-10-01T14:46:54Z",
+  "finished_at": "2026-10-01T14:47:50Z",
+  "failure_class": null,
+  "previous_version_label": "h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1",
+  "final_state": {
+    "version_label": "h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-01T14:47:51Z",
+    "observed_at": "2026-10-01T14:50:00Z",
+    "observation_note": "Observado Ready/Green/Ok con VersionLabel exacta tras la convergencia (~56 s)."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1/efa590b9e0daef786ce1f4b69ea8026c1a160b39d8dac06999d1c79b7f82d8aa.zip",
+    "s3_checksum_sha256_b64": "76WQueDa73hs4fS2nqgCbBoWCznY2sBpmdHHm3+C2Ko=",
+    "s3_content_length": 4815,
+    "bundle_sha256": "efa590b9e0daef786ce1f4b69ea8026c1a160b39d8dac06999d1c79b7f82d8aa",
+    "bundle_compose_digests": {
+      "tpi-dev-app": "sha256:841595e4758a36536133bf9a5c2089893de71fcef877e742d2bbf9c9a14f3c42",
+      "tpi-dev-caddy": "sha256:92d49b1199de6d201db48f351581be0da65ef2c544ac42e118c6eeeb5d06b40f"
+    },
+    "digests_equal_approval_01": true,
+    "ecr_images_active": true,
+    "note": "AV SourceBundle (pre-cutover y post) y head-object re-observados; bundle local sha256 = aprobado (no reconstruido)."
+  },
+  "preflight": {
+    "at": "2026-10-01T14:46Z",
+    "result": "PASS",
+    "checks": [
+      "init PASS (DEPLOYING, rol deployer)",
+      "sha256 de candidate-01.json = 061c47e2... = approval-01.candidate_evidence.sha256; approval-01 decision approved",
+      "origin/main = release SHA 6f0f5bb",
+      "sts account 821656895812; region us-east-2 por aws_guard",
+      "environment en LKG h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1, Ready/Green/Ok, AbortableOperationInProgress false, DateUpdated 2026-09-23T15:20:47Z (sin cambio)",
+      "AV candidata UNPROCESSED, SourceBundle = key aprobada",
+      "ECR candidata app 841595e4 / caddy 92d49b11 ACTIVE",
+      "zip local sha256 = efa590b9... = aprobado"
+    ]
+  },
+  "cutover": {
+    "mechanism": "aws_guard update-environment version-label only",
+    "executed_by": "deployer",
+    "updates_applied": 1,
+    "retries": 0,
+    "option_settings": false,
+    "restart_app_server": false,
+    "rollback_executed": false,
+    "convergence": "exitosa en ~56 s (start 14:46:54Z, completed 14:47:50Z)"
+  },
+  "events": {
+    "levels_observed": [
+      "INFO"
+    ],
+    "errors": 0,
+    "warnings": 0,
+    "failed_deployments": 0,
+    "configuration_change_event": false,
+    "result": "PASS",
+    "summary": "Environment update is starting -> Deploying new version -> Instance deployment completed successfully -> New application version deployed -> Environment update completed successfully -> health Info->Ok."
+  },
+  "logs": {
+    "result": "not_executed",
+    "note": "Conteos de logs/PII diferidos a VERIFYING (aws-observability)."
+  },
+  "smoke_technical": {
+    "result": "not_executed",
+    "note": "Smoke en VERIFYING."
+  },
+  "inputs": {
+    "candidate_evidence": "evidence/H3.3.7/deployment/candidate-01.json",
+    "candidate_evidence_sha256": "061c47e2cefba3a090eefe87f73ea8b700174e81661dbee2e4da97241c16e5f6",
+    "candidate_review_evidence": "evidence/H3.3.7/reviewer/candidate_review-01.json",
+    "approval_evidence": "evidence/H3.3.7/approvals/approval-01.json",
+    "release_sha": "6f0f5bb1e934742cd8e8572d4a401f8bf29ab1c7",
+    "lkg_version_label": "h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1"
+  },
+  "safety": {
+    "rds_access": false,
+    "secrets_accessed": false,
+    "identities_created": false,
+    "option_settings": false,
+    "restart_app_server": false,
+    "retries": 0,
+    "rollback": false,
+    "aws_writes": [
+      "elasticbeanstalk update-environment (version-label unicamente, 1 vez)"
+    ]
+  },
+  "warnings": [
+    "AC-1/AC-2/AC-3 siguen pending_human (revision visual autenticada en VERIFYING)."
+  ]
+}

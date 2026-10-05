@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "resolution",
+  "task_id": "H3.3.4",
+  "created_at": "2026-09-20T17:24:34Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "from_state": "BLOCKED_HUMAN",
+  "to_state": "DEVELOPING",
+  "reason": "Resolucion humana H3.3.4 posterior al rechazo del application candidate. Se autoriza una correccion minima y exclusiva para cablear LEAD_STATE_HISTORY_CUTOVER desde la configuracion Elastic Beanstalk/Compose hacia el contenedor de la aplicacion, manteniendo default seguro None y agregando una prueba automatizada del contrato. La fecha no debe quedar fijada en codigo: se establecera como option setting usando la fecha real del despliegue en America/Santiago. La migracion 008 ya fue aplicada una vez, tiene postflight PASS y no debe reejecutarse ni modificarse. No se autorizan cambios adicionales de funcionalidad, metricas, RBAC, dependencias ni SQL. El candidate rechazado y sus artefactos quedan inertes y no deben reutilizarse como candidate aprobado."
+}

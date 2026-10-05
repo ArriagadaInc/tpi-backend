@@ -1,0 +1,274 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "H3.3.4",
+  "created_at": "2026-09-20T15:25:42Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609201530-reviewer-final",
+  "reviewed_sha": "1f4a1d963d6c9da2c1114cc6e9c24d24ebc0f314",
+  "reviewed_tree": "bf18968fad3d9555d29b0262b4e1eafe80e4ffce",
+  "pr_number": 55,
+  "pr_url": "https://github.com/ArriagadaInc/tpi-backend/pull/55",
+  "rework_round": 4,
+  "result": "PASS",
+  "decision": "APPROVED",
+  "cause": null,
+  "review_type": "final_bounded_review_after_human_resolution",
+  "risks": [
+    "F1 (deuda documental aceptada): el gate de la matriz acepta referencias de archivo completo sin ::test_funcion ni AST; follow-up obligatorio de endurecimiento, no es funcionalidad faltante.",
+    "F11 (deuda documental aceptada): mapeo de smoke AC-9/AC-18 desincronizado entre filas y seccion 6; follow-up obligatorio, los smokes humanos siguen exigidos y pendientes en DEV.",
+    "F2: EXPLAIN normal (sin enable_seqscan=off) a volumen representativo pendiente antes de DONE.",
+    "F6: rendimiento/read model del dashboard 5,28-6,80 s a 20.000 leads / 12 asesores (parsing regexp de comentarios); riesgo aceptado.",
+    "F5: snapshot REPEATABLE READ READ ONLY prolongado (~5-7 s por render) con efecto posible sobre pool, xmin y autovacuum; riesgo aceptado.",
+    "F4: valor efectivo de LEAD_STATE_HISTORY_CUTOVER en DEV pendiente de verificacion humana.",
+    "Migracion 008 no aplicada: AC-5/AC-6/AC-7 (Human Gate) y AC-9/AC-18 (smoke humano DEV) pendientes."
+  ],
+  "ci": {
+    "run_id": 35517138583,
+    "sha": "1f4a1d963d6c9da2c1114cc6e9c24d24ebc0f314",
+    "conclusion": "success",
+    "jobs": "5/5 success: Release Tooling Validation, Lint & Format, Tests, Docker Build, Security Audit",
+    "tests": "751 passed, 7 warnings; 0 skipped",
+    "coverage": "88.91% (>=85)",
+    "pip_audit": "No known vulnerabilities found",
+    "bandit": "No issues identified",
+    "note": "Verificado con gh run view 35517138583: headSha exacto 1f4a1d9, event=pull_request, status=completed. Es el unico run sobre ese SHA; sin runs posteriores en la rama."
+  },
+  "human_resolution": {
+    "ref": "evidence/H3.3.4/approvals/resolution-02.json",
+    "created_at": "2026-09-20T15:19:27Z",
+    "created_by": "scripts/harness/approve.py (interactive=true)",
+    "from_state": "BLOCKED_HUMAN",
+    "to_state": "READY_FOR_REVIEW",
+    "posterior_to_review_04": "Si: review-04 creada 2026-09-20T15:09:37Z; resolucion 15:19:27Z.",
+    "consistent_with_state": "Si: harness/state.json refs.resolution y last_transition (resolve_to_ready_for_review, human_resolve, BLOCKED_HUMAN -> READY_FOR_REVIEW, 2026-09-20T15:19:29Z) y evidence/H3.3.4/transitions.jsonl apuntan a resolution-02.json.",
+    "reclassification": "F1 y F11 reclasificados explicitamente como deuda no bloqueante de trazabilidad documental.",
+    "observation": "evidence/H3.3.4/approvals/resolution-01.json (15:17:54Z, to_state=REVIEW_APPROVED) no esta referenciada por state.json ni registrada como transicion; queda superada por resolution-02. No se usa como base de esta revision."
+  },
+  "references": {
+    "previous_reviews": [
+      "evidence/H3.3.4/reviewer/review-01.json",
+      "evidence/H3.3.4/reviewer/review-02.json",
+      "evidence/H3.3.4/reviewer/review-03.json",
+      "evidence/H3.3.4/reviewer/review-04.json"
+    ],
+    "developer_evidence": "evidence/H3.3.4/developer/developer-04.json",
+    "human_resolution": "evidence/H3.3.4/approvals/resolution-02.json",
+    "matrix": "docs/H3_3_4_REQUIREMENTS_MATRIX.md",
+    "gate": "tests/unit/test_h3_3_4_requirements_matrix_gate.py"
+  },
+  "scope": {
+    "diff_93fd96a_1f4a1d9": "3 archivos: docs/H3_3_4_REQUIREMENTS_MATRIX.md, tests/integration/test_executive_dashboard_per_advisor.py, tests/unit/test_h3_3_4_requirements_matrix_gate.py",
+    "cero_app": true,
+    "cero_migraciones": true,
+    "cero_requirements": true,
+    "cero_rbac_pii": true,
+    "cero_configuracion_infra": true,
+    "cero_aws_rds": "Ninguna operacion AWS/RDS ejecutada ni requerida. Migracion 008 presente solo como codigo (scripts/sql/008_*), no aplicada en DEV.",
+    "cero_despliegue": true
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "minor",
+      "status": "ACCEPTED NON-BLOCKING DEBT",
+      "file": "tests/unit/test_h3_3_4_requirements_matrix_gate.py",
+      "summary": "Deuda no bloqueante de trazabilidad documental: el gate de la matriz acepta referencias de archivo completo (sin ::test_funcion) sin exigir validacion AST de una funcion colectable. Reclasificado de OPEN MAJOR a deuda no bloqueante por la resolucion humana resolution-02.json. No es funcionalidad faltante del producto; los archivos referenciados existen y las 183 referencias actuales fueron verificadas independientemente segun la resolucion.",
+      "required_action": "Follow-up obligatorio: endurecer posteriormente las referencias de archivo sin funcion exacta (exigir tests/(unit|integration)/test_*.py::test_* con AST, o whitelist minima y justificada). No reinterpretar como funcionalidad faltante."
+    },
+    {
+      "id": "F11",
+      "severity": "minor",
+      "status": "ACCEPTED NON-BLOCKING DEBT",
+      "file": "docs/H3_3_4_REQUIREMENTS_MATRIX.md",
+      "summary": "Deuda no bloqueante de trazabilidad documental: el mapeo de smoke humano AC-9/AC-18 no esta sincronizado entre la columna 'Smoke humano' de las filas y la seccion 6 de la matriz. Reclasificado de OPEN MAJOR a deuda no bloqueante por la resolucion humana resolution-02.json. Los smokes humanos AC-9 y AC-18 siguen exigidos por el task y permanecen pendientes en AWS DEV; no hay requisito ausente.",
+      "required_action": "Follow-up obligatorio: sincronizar posteriormente el mapeo de smoke AC-9/AC-18 entre las filas y la seccion 6 (y cruzar la columna 'Smoke humano' en el gate). No reinterpretar como funcionalidad faltante."
+    },
+    {
+      "id": "F2",
+      "severity": "minor",
+      "status": "ACCEPTED FOLLOW-UP",
+      "summary": "EXPLAIN (ANALYZE, BUFFERS) real sin enable_seqscan=off a volumen representativo pendiente antes de DONE (matriz seccion 11.6, REQ-A-12).",
+      "required_action": "Ejecutar y documentar el EXPLAIN normal a volumen representativo antes de DONE."
+    },
+    {
+      "id": "F3",
+      "severity": "minor",
+      "status": "ACCEPTED FOLLOW-UP",
+      "summary": "11 pruebas requieren PostgreSQL (enumeradas en matriz seccion 13); verdes en CI Linux con servicio postgres.",
+      "required_action": "Mantener la enumeracion actualizada."
+    },
+    {
+      "id": "F4",
+      "severity": "info",
+      "status": "PENDIENTE DEV",
+      "summary": "Valor efectivo de LEAD_STATE_HISTORY_CUTOVER en AWS DEV pendiente de verificacion humana; ninguna fecha inventada.",
+      "required_action": "Verificar la configuracion efectiva del cutover en DEV en el checklist humano de Deployer/Verifying."
+    },
+    {
+      "id": "F5",
+      "severity": "info",
+      "status": "RISK ACCEPTED",
+      "summary": "Snapshot prolongado: transaccion REPEATABLE READ READ ONLY de ~5-7 s por render del dashboard, con efectos posibles sobre pool, xmin y autovacuum. Riesgo aceptado, no declarado resuelto.",
+      "required_action": "Follow-up: monitorear/mitigar snapshot prolongado."
+    },
+    {
+      "id": "F6",
+      "severity": "info",
+      "status": "RISK ACCEPTED",
+      "summary": "Rendimiento/read model: 5,28-6,80 s a 20.000 leads / 12 asesores, 18 consultas constantes sin N+1, parsing regexp de leads.comentarios como costo dominante. Clasificacion (A) no bloqueante.",
+      "required_action": "Follow-up: evaluar read model / optimizacion de rendimiento."
+    },
+    {
+      "id": "F7",
+      "severity": "info",
+      "status": "CLOSED",
+      "summary": "Pruebas de valores por asesor con assertions exactas; permanece CLOSED.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F8",
+      "severity": "info",
+      "status": "CLOSED",
+      "summary": "Atribucion de existencia del indice vs EXPLAIN real (REQ-A-12, AC-3); permanece CLOSED.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F9",
+      "severity": "info",
+      "status": "CLOSED",
+      "summary": "Estado desconocido, bucket Sin asesor y fan-out cubiertos con conteos exactos; PASSED contra PostgreSQL real en CI 35517138583.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F10",
+      "severity": "info",
+      "status": "INFO",
+      "summary": "tests/security/ existe (9 archivos); fuera de la gramatica de la matriz solo por convencion de normalizacion a unit/integration.",
+      "required_action": "Ninguna."
+    }
+  ],
+  "known_issues": [
+    {
+      "id": "F1",
+      "kind": "documentary_traceability_debt",
+      "blocking": false,
+      "disposition": "deuda no bloqueante aceptada por resolution-02"
+    },
+    {
+      "id": "F11",
+      "kind": "documentary_traceability_debt",
+      "blocking": false,
+      "disposition": "deuda no bloqueante aceptada por resolution-02"
+    },
+    {
+      "id": "F2",
+      "kind": "explain_normal_at_representative_volume",
+      "blocking": false,
+      "disposition": "follow-up aceptado; antes de DONE"
+    },
+    {
+      "id": "F6",
+      "kind": "performance_read_model",
+      "blocking": false,
+      "disposition": "riesgo aceptado / follow-up"
+    },
+    {
+      "id": "F5",
+      "kind": "prolonged_snapshot_transaction",
+      "blocking": false,
+      "disposition": "riesgo aceptado / follow-up"
+    },
+    {
+      "id": "F4",
+      "kind": "cutover_effective_config_dev",
+      "blocking": false,
+      "disposition": "pendiente de verificacion humana en DEV"
+    }
+  ],
+  "follow_up_required": [
+    "F1: endurecer referencias de archivo sin funcion exacta en el gate de la matriz (deuda documental; no es funcionalidad faltante).",
+    "F11: sincronizar el mapeo de smoke AC-9/AC-18 entre filas y seccion 6 de la matriz (deuda documental; no es funcionalidad faltante).",
+    "F2: EXPLAIN (ANALYZE, BUFFERS) normal (sin enable_seqscan=off) a volumen representativo antes de DONE.",
+    "F6: rendimiento / read model del dashboard (5,28-6,80 s a 20.000 leads).",
+    "F5: snapshot REPEATABLE READ prolongado (~5-7 s por render).",
+    "F4: verificar la configuracion efectiva del cutover LEAD_STATE_HISTORY_CUTOVER en AWS DEV."
+  ],
+  "checks": [
+    {
+      "name": "session_independence",
+      "result": "PASS",
+      "note": "runtime=claude session=claude-202609201530-reviewer-final; distinta de todas las sesiones Reviewer anteriores (claude-202609181245-reviewer, claude-202609191015-reviewer-r2, claude-202609191905-reviewer-r3, claude-202609201500-reviewer-r3-close) y de las sesiones Developer (deepseek-*)."
+    },
+    {
+      "name": "init_and_start_review",
+      "result": "PASS",
+      "note": "init.ps1 --runtime claude PASS: READY_FOR_REVIEW, H3.3.4, rol reviewer. start_review -> REVIEWING."
+    },
+    {
+      "name": "human_resolution_valid",
+      "result": "PASS",
+      "note": "resolution-02.json creada por approve.py interactivo, posterior a review-04, to_state=READY_FOR_REVIEW, contiene reclasificacion explicita de F1/F11 y preserva los follow-ups; coherente con state.json (refs.resolution, last_transition) y transitions.jsonl."
+    },
+    {
+      "name": "pr_open_head_exact",
+      "result": "PASS",
+      "note": "gh pr view 55: OPEN, MERGEABLE, mergeStateStatus CLEAN, headRefOid=1f4a1d963d6c9da2c1114cc6e9c24d24ebc0f314; origin/harness/H3.3.4-... = 1f4a1d9; 0 comentarios/reviews en el PR; sin commits posteriores. reviewed_tree bf18968 coincide con git rev-parse 1f4a1d9^{tree}."
+    },
+    {
+      "name": "ci_green_on_exact_sha",
+      "result": "PASS",
+      "note": "Run 35517138583: headSha 1f4a1d9, success, 5/5 jobs; 751 passed; cobertura 88.91%; pip-audit y bandit limpios. Sin runs posteriores."
+    },
+    {
+      "name": "validate_repo",
+      "result": "PASS",
+      "note": "python scripts/harness/validate_repo.py -> VALIDATE: PASS"
+    },
+    {
+      "name": "gate_and_migration_tests_local",
+      "result": "PASS",
+      "note": "38 passed en el worktree read-only del reviewer (tests/unit/test_h3_3_4_requirements_matrix_gate.py + test_h3_3_4_migration_scripts.py)."
+    },
+    {
+      "name": "migrations_005_006_007_untouched",
+      "result": "PASS",
+      "note": "git diff baseline c5e738c..1f4a1d9 sobre scripts/sql/005*, 006*, 007*: sin cambios. Solo se agregan 008_create_lead_state_history.sql y 008_drop_lead_state_history.sql."
+    },
+    {
+      "name": "migration_008_present_not_applied",
+      "result": "PASS",
+      "note": "008 forward/rollback presentes como codigo; no se ejecuto ninguna operacion AWS/RDS; aplicacion sigue pendiente de AC-5/AC-6 (Human Gate)."
+    },
+    {
+      "name": "scope_since_last_reviewed_sha",
+      "result": "PASS",
+      "note": "Diff 93fd96a..1f4a1d9 = 3 archivos (matriz, gate, pruebas por asesor); cero cambios en app/, requirements/, scripts/, environments/, deployment/, .github/. RBAC CEO/CTO y proteccion de PII sin cambios respecto a lo revisado en review-01..04."
+    },
+    {
+      "name": "no_contradictory_evidence",
+      "result": "PASS",
+      "note": "Sin evidencia posterior contradictoria: sin defecto funcional, de seguridad/PII, perdida o corrupcion de datos, migracion insegura, CI rojo en el HEAD vigente, requisito original ausente ni resolucion humana invalida. F1/F11 son deuda documental aceptada."
+    },
+    {
+      "name": "no_aws_no_rds_no_mutation",
+      "result": "PASS",
+      "note": "Sin AWS/RDS, sin approve.py, sin merge, sin candidates, sin despliegue, sin cambios de codigo/docs/tests ni reescritura de review-01..04."
+    }
+  ],
+  "human_pending": [
+    "AC-5: aprobacion humana del migration candidate (SQL 008 forward/rollback, preflight DB)",
+    "AC-6: postflight de privilegios tras aplicar la 008 en AWS DEV",
+    "AC-7: aprobacion humana independiente del application candidate",
+    "AC-9: smoke humano de Parte A en AWS DEV",
+    "AC-18: smoke humano completo de Parte B en AWS DEV, incluido el 403 para roles no autorizados",
+    "Operacion DEV: aplicar migracion 008, verificar cutover efectivo y desplegar segun Harness (fuera de esta etapa)"
+  ],
+  "aws": {
+    "operations": "ninguna",
+    "rds": "ninguna",
+    "deployment": "ninguno",
+    "note": "Revision exclusivamente sobre Git, filesystem y CI."
+  }
+}

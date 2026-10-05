@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "kind": "acceptance",
+  "task_id": "H3.3.3",
+  "created_at": "2026-09-17T13:23:54Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "decision": "accepted",
+  "criteria": [
+    {
+      "id": "AC-3",
+      "status": "accepted"
+    },
+    {
+      "id": "AC-4",
+      "status": "accepted"
+    },
+    {
+      "id": "AC-8",
+      "status": "accepted"
+    }
+  ],
+  "notes": "Smoke humano autenticado PASS para AC-3, AC-4 y AC-8: enlace Volver al sitio, timeline de asignacion, notas, controles, PII CTO, estado vacio y proyeccion historica sin backfill. Brecha adicional detectada: los cambios generales de estado del lead no aparecen con fecha, actor, estado anterior y estado nuevo. H3.3.3 cubre formalmente eventos de asignacion, no todas las transiciones de estado; registrar una tarea correctiva H3.3.4 y una mejora del Harness de trazabilidad entre solicitud original y AC."
+}

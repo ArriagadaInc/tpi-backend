@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "failure",
+  "task_id": "H3.3.2",
+  "created_at": "2026-09-16T14:39:35Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609161600-deployer",
+  "action": "aws_read_preflight",
+  "resource": "sts get-caller-identity (perfil tpi-dev, cuenta 821656895812, region us-east-2) via python scripts/harness/aws_guard.py",
+  "principal": "tpi-dev (perfil local AWS)",
+  "error": "aws_guard.py sts get-caller-identity fallo con exit code 255: \"Your session has expired. Please reauthenticate using 'aws login'.\" No se ejecuto ninguna escritura AWS antes ni despues de este fallo; ninguna operacion de PREPARING_DEPLOYMENT (publish ECR, bundle, S3, AV) se inicio.",
+  "state": "PREPARING_DEPLOYMENT",
+  "recommendation": "No es AccessDenied ni degradacion de infraestructura ni defecto funcional del release: es una sesion local de credenciales AWS vencida, ajena al alcance del Deployer (aws login/reautenticacion es accion humana en su propia terminal, fuera del Harness). Sin residuos: no se realizo ninguna escritura AWS. Escalar a BLOCKED_HUMAN para que el humano reautentique el perfil tpi-dev y luego decida resolve_to_preparing para reanudar PREPARING_DEPLOYMENT sobre release_sha fec33e7951f862c95b2436b09b969e5ef1915769 (release_tree == reviewed_tree, merge ya completado y registrado en evidence/H3.3.2/deployment/merge-01.json).",
+  "residues": [],
+  "access_denied": false
+}

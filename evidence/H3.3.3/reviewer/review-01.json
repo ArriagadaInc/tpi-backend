@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "H3.3.3",
+  "created_at": "2026-09-16T20:16:34Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609161645-reviewer",
+  "reviewed_sha": "815971660b8c24d684eb79d229103b85fe4bedd0",
+  "reviewed_tree": "5744c0914da2a5da6063c6a7cd5e9d70d65e033e",
+  "pr_number": 54,
+  "ci": {
+    "run_id": 35143655710,
+    "sha": "815971660b8c24d684eb79d229103b85fe4bedd0",
+    "conclusion": "success",
+    "note": "5/5 jobs SUCCESS (Release Tooling Validation, Docker Build, Security Audit, Lint & Format, Tests) via gh run view 35143655710 --json headSha,jobs. headSha coincide exactamente con reviewed_sha. Log crudo del job Tests (databaseId 104954132274) leido completo: 520 passed, 0 failed, 7 warnings, TOTAL coverage 86.49% (gate >=85%). Ningun SKIPPED/XFAIL en el log."
+  },
+  "decision": "APPROVED",
+  "findings": [],
+  "checks": [
+    {
+      "name": "session_independence",
+      "result": "PASS",
+      "note": "Developer: runtime=deepseek, session_id=deepseek-202609161614-developer. Reviewer: runtime=claude, session_id=claude-202609161645-reviewer. Sesiones y runtimes distintos, cumple reviewer_session_independent."
+    },
+    {
+      "name": "developer_evidence_read",
+      "result": "PASS",
+      "note": "evidence/H3.3.3/developer/developer-01.json leido; head_sha=815971660b8c24d684eb79d229103b85fe4bedd0, pr_number=54 coinciden con el PR real."
+    },
+    {
+      "name": "exact_sha_reviewed",
+      "result": "PASS",
+      "note": "worktree.py create --ref 815971660b8c24d684eb79d229103b85fe4bedd0 (no rama movil, no working tree del Developer). gh pr view 54 --json headRefOid confirma el mismo SHA como HEAD del PR #54. Se revisaron los 3 commits del PR (3ccb172, 0c4be4c, 8159716) sobre baseline fec33e7."
+    },
+    {
+      "name": "baseline_correct",
+      "result": "PASS",
+      "note": "git log origin/main confirma fec33e7951f862c95b2436b09b969e5ef1915769 como HEAD de origin/main y padre directo del primer commit del PR (3ccb172). Baseline declarado en tasks/current.yaml coincide."
+    },
+    {
+      "name": "scope_integrity",
+      "result": "PASS",
+      "note": "gh pr view 54 --json files coincide exactamente (22 archivos) con files_changed de developer-01.json: migracion 007 (forward+rollback), bootstrap de tests, repositorio/servicio/web (dependencies/main/routes/presentation/templates/css), tests nuevos y de regresion, docs. Sin cambios en evidence/, tasks/completed/, progress/, harness/, agents/, scripts/harness/, .claude/, AGENTS.md ni CLAUDE.md. Sin secretos, credenciales ni PII en el diff. Unico cambio incidental: eliminacion de un BOM en la primera linea de app/repositories/solicitud_repository.py (no funcional, informativo, no bloqueante)."
+    },
+    {
+      "name": "h332_evidence_untouched",
+      "result": "PASS",
+      "note": "git diff fec33e7..8159716 --stat -- evidence/ tasks/completed/ progress/ no produce salida: H3.3.2 y su evidencia historica no fueron alteradas."
+    },
+    {
+      "name": "assignment_audit_transaction_intact",
+      "result": "PASS",
+      "note": "El unico cambio en app/repositories/solicitud_repository.py es la adicion de get_lead_assignment_events (metodo nuevo); el metodo assign_lead existente (transaccion asignacion+auditoria) no aparece en el diff. Confirmado ademas por tests/integration/test_database_runtime.py::test_assignment_creates_row_updates_state_and_audits PASS sin cambios de aserciones."
+    },
+    {
+      "name": "migration_007_sql_review",
+      "result": "PASS",
+      "note": "scripts/sql/007_create_audit_assignment_view.sql y 007_drop_audit_assignment_view.sql revisados linea por linea: forward y rollback en archivos separados; BEGIN/COMMIT en ambos; CREATE OR REPLACE VIEW (idempotente) y rollback condicional a EXISTS (idempotente); security_barrier=true; objetos schema-qualified (tpi.*); sin OWNER TO explicito, consistente con el patron ya establecido en 001/006 (objetos creados por tpi_admin, sin rol nuevo); filtro exacto accion='asignacion_lead' AND tabla_afectada='tpi.asignaciones'; columnas expuestas unicamente id_auditoria, id_lead, fecha_hora, actor_subject, id_asesor, estado_anterior, estado_nuevo; sin JSON crudo (detalle), ip_origen, id_persona ni id_usuario; CASE + regex ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' anclada y case-insensitive antes del cast a uuid, ELSE NULL sin excepcion; REVOKE ALL ON ... FROM PUBLIC; GRANT SELECT unicamente a tpi_app; preflight/postflight con DO $$ ... RAISE EXCEPTION confirman que tpi_app no gana SELECT/UPDATE/DELETE sobre tpi.auditoria; rollback con REVOKE SELECT + DROP VIEW, transaccional; bootstrap scripts/init_test_database.py replica el SELECT de la vista caracter por caracter respecto al forward."
+    },
+    {
+      "name": "real_postgres_privilege_tests",
+      "result": "PASS",
+      "note": "tests/integration/test_audit_assignment_view.py (PostgreSQL real, no solo string-matching): test_view_exposes_only_assignment_columns_and_filters_events prueba que otro accion y otra tabla_afectada no aparecen y solo las 7 columnas contractuales se exponen; test_view_invalid_uuid_projects_null_and_keeps_other_rows prueba detalle malformado -> NULL sin romper la fila valida; test_view_privileges_public_and_app_only crea un rol de minimo privilegio real (tpi_audit_view_reader), abre una conexion PostgreSQL real con ese rol, prueba que SELECT sobre la vista funciona y SELECT directo sobre tpi.auditoria lanza excepcion real, y que PUBLIC no tiene ACL alguna (aclexplode grantee=0); test_view_rollback_revokes_and_drops_view ejecuta el rollback real y confirma to_regclass(...) IS NULL. UPDATE/DELETE=false de tpi_app sobre tpi.auditoria ya esta cubierto por el test de regresion preexistente test_database_runtime.py::test_assignment_runtime_role_has_exact_minimum_privileges (PASS, sin cambios)."
+    },
+    {
+      "name": "repository_left_join",
+      "result": "PASS",
+      "note": "app/repositories/solicitud_repository.py::get_lead_assignment_events usa LEFT JOIN tpi.asesores ases ON ases.id_asesor = v.id_asesor (no INNER JOIN); un asesor NULL/invalido/inexistente no elimina el evento historico. Confirmado por test_view_invalid_uuid_projects_null_and_keeps_other_rows (asesor_nombre=None cuando id_asesor es NULL) y por el fallback 'Ejecutivo sin asignar' en el template."
+    },
+    {
+      "name": "repository_contract",
+      "result": "PASS",
+      "note": "id_lead enlazado via %s (psycopg parametrizado), sin interpolacion de string; lectura exclusiva desde tpi.v_asignacion_auditoria (ningun SELECT a tpi.auditoria en el diff); ORDER BY fecha_hora DESC, id_auditoria DESC exacto; una sola consulta (sin N+1); tipos consistentes entre repositorio (dict rows), servicio (passthrough con normalizacion UUID) y presentacion (build_timeline_items)."
+    },
+    {
+      "name": "timeline_presentation_security",
+      "result": "PASS",
+      "note": "app/web/templates/lead_detail_panel.html usa unicamente interpolacion Jinja2 por defecto ({{ }}), sin |safe ni Markup en el diff completo (grep del diff confirma cero coincidencias). tests/unit/test_web_app.py::test_detail_timeline_escapes_html_in_event_fields prueba explicitamente que <script>alert(1)</script> en actor_subject se escapa a &lt;script&gt;. Una sola timeline_list fusiona notas y eventos (build_timeline_items); orden determinista en empate exacto (test_build_timeline_items_keeps_event_before_note_on_exact_tie, sort estable de Python); conversion real a America/Santiago via zoneinfo (test_event_timestamp_is_displayed_in_america_santiago); badge Automatico presente solo en eventos; sin controles de edicion/eliminacion en el template para ningun tipo de item; notas humanas sin cambios de comportamiento; estado vacio coherente (test_detail_timeline_empty_state_is_coherent)."
+    },
+    {
+      "name": "no_secrets_password_hash",
+      "result": "PASS",
+      "note": "actor_subject se mantiene como identidad historica y fallback obligatorio (decision documentada); ningun archivo del diff referencia password_hash ni AUTH_USERS_JSON (verificado por lectura completa de los diffs de dependencies.py, main.py, presentation.py, routes/leads.py, solicitud_service.py y solicitud_repository.py)."
+    },
+    {
+      "name": "volver_al_sitio",
+      "result": "PASS",
+      "note": "resolve_web_public_site_url() en app/web/dependencies.py reutiliza efectivamente get_public_site_url() (preexistente en app/components/ui.py, no reescrita) sin pasar por Streamlit; se computa una vez en app.state.web_public_site_url (main.py) y se expone en el contexto tanto del tablero como del detalle (routes/leads.py), cubriendo todas las vistas autenticadas via base.html. En base.html el enlace solo se renderiza dentro de '{% if selected_user %}', por lo que no aparece en login (selected_user es None) ni en superficies publicas; test_login_page_does_not_render_volver_al_sitio lo confirma explicitamente. href exacto verificado por test_detail_renders_volver_al_sitio_when_approved_and_authenticated (href=\"https://dev.tupensioninteligente.cl/\"). get_public_site_url() falla cerrado (retorna None) ante URL ausente, esquema/host/puerto invalidos, credenciales, path distinto de raiz, query o fragment -- verificado por test_detail_hides_volver_al_sitio_when_url_missing_or_invalid y por el test preexistente test_backoffice_public_site_link.py. El href generado nunca agrega query/fragment/credenciales/sesion; no depende de render_public_site_link ni de ningun modulo Streamlit."
+    },
+    {
+      "name": "local_ci_test_reconciliation",
+      "result": "PASS",
+      "note": "developer-01.json declara: local 517 passed + 3 fallos ambientales en tests/integration/test_frozen_candidate_verification.py (bash bloqueado en sandbox Windows), verdes en CI. Verificacion independiente: (1) ese archivo de test no aparece en el diff fec33e7..8159716 (git diff sin salida): es preexistente, no modificado por este head; (2) el log crudo del job Tests en el run 35143655710 (SHA exacto) muestra los 3 tests de ese archivo (test_verifier_accepts_flat_downloaded_artifact, test_verifier_rejects_nested_download_layout, test_verifier_rejects_modified_bundle_with_same_name) como PASSED; (3) el log crudo confirma '520 passed, 7 warnings' sin ningun FAILED, SKIPPED ni XFAIL; (4) aritmetica consistente: 517 local + 3 fallo-ambiental-local-pero-verde-en-CI = 520 total, igual al total de CI. El PASS declarado en developer-01.json (tests.result=PASS) es fiel: no se afirma un PASS local inexistente, se documenta con precision el origen ambiental (Windows bash) y se reconcilia con CI verde en el SHA exacto. No hay skip/xfail nuevo introducido por este PR."
+    },
+    {
+      "name": "coverage_matrix_review",
+      "result": "PASS",
+      "note": "docs/H3_3_3_COVERAGE_MATRIX.md: cada fila AC-1..AC-9 apunta a requisito, implementacion concreta (archivo::funcion), prueba concreta (archivo::test), resultado (cubierto/implementado/pendiente) y verificacion humana pendiente cuando corresponde. AC-1/AC-2/AC-9 marcadas 'cubierto' con pruebas reales de PostgreSQL. AC-3/AC-4 marcadas 'implementado' (tienen pruebas automatizadas completas pero requieren smoke humano en DEV para el criterio funcional completo, incluida ausencia de regresion en PII/RBAC/asignacion unica activa en el entorno real) -- clasificacion conservadora y correcta, no una carencia. AC-5/AC-6/AC-7/AC-8 correctamente 'pendiente' (fuera del alcance Developer, etapa Deployer/Human Gate)."
+    },
+    {
+      "name": "h33_parity_regression",
+      "result": "PASS",
+      "note": "Revision de paridad acumulativa contra el contrato previo de H3.3 (autenticacion, listado/filtros, Actualizar/Limpiar, ficha, formato CLP, simulador, PII CEO/CTO completa, masking roles restringidos, ausencia de PII en HTML, asignacion, estado Asignado, asesor visible, persistencia, historial, auditoria, Volver al sitio): el log crudo del job Tests en el SHA exacto confirma 0 failed en las 520 pruebas totales, incluyendo 73 PASSED en los archivos test_web_app.py, test_h3_3_1_rbac_pii_assignment.py, test_web_crm_lite.py y test_backoffice_public_site_link.py (ninguno de estos archivos fue debilitado: los unicos cambios son aditivos -- stubs de interfaz y nuevos tests). tests/integration/test_web_crm_lite.py (regresion citada en la matriz de cobertura) existe y sus 6 tests estan PASSED en CI. No se detecto ninguna capacidad de H3.3 sin cobertura de regresion verificable."
+    },
+    {
+      "name": "documentation_operational_sequence",
+      "result": "PASS",
+      "note": "docs/database/02_PHYSICAL_SCHEMA.md, 04_MIGRATIONS.md y 05_SECURITY_ACCESS.md documentan el esquema fisico y la matriz de privilegios de tpi.v_asignacion_auditoria de forma coherente con el SQL real; docs/H3_3_CRM_LITE_WEB_UX.md y DEVELOPMENT_GUIDE.md declaran explicitamente 'no se ha aplicado en AWS RDS DEV al cierre de la etapa de desarrollo' y describen el orden operativo completo (merge -> BLOCKED_HUMAN -> migration candidate -> aprobacion humana -> migracion -> postflight -> PREPARING_DEPLOYMENT -> application candidate -> aprobacion -> deploy). Ninguna instruccion en el diff permite aplicar la migracion o desplegar por fast path; ningun archivo de deployment/, .github/workflows/ ni harness/ fue tocado."
+    },
+    {
+      "name": "quality_gates_complete",
+      "result": "PASS",
+      "note": "CI confirma 5/5 jobs SUCCESS en el SHA exacto (Release Tooling Validation, Docker Build, Security Audit, Lint & Format, Tests); log de Tests confirma cobertura 86.49% (gate >=85%) y 0 failed."
+    },
+    {
+      "name": "no_skipped_without_cause",
+      "result": "PASS",
+      "note": "Log crudo del job Tests sin SKIPPED ni XFAIL; ningun pytest.mark.skip/xfail nuevo en los archivos de test tocados por este PR."
+    }
+  ],
+  "risks": [
+    "AC-3 y AC-4 dependen de smoke humano autenticado en AWS DEV (AC-8) para el cierre funcional completo; correctamente marcado pending_verification/implementado, no cubierto como si ya estuviera verificado en el entorno real.",
+    "AC-5, AC-6 y AC-7 son artefactos y aprobaciones operativas de change_class D fuera del alcance Developer/Reviewer de software; el merge de este PR debe activar merged_non_fast_path hacia BLOCKED_HUMAN sin excepcion, y la migracion 007 no debe aplicarse por ningun fast path del Harness.",
+    "Eliminacion de BOM en la primera linea de app/repositories/solicitud_repository.py es un cambio incidental no funcional; no bloqueante pero se deja registrado para trazabilidad."
+  ]
+}

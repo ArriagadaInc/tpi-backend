@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "H3.3.4",
+  "created_at": "2026-09-21T00:32:11Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609210040-reviewer-app-candidate-r2",
+  "release_sha": "3051a6271e1626b40fe24a744abe097cab1ab0fe",
+  "reviewed_tree": "b4780f85fda23ef26c6648d5207a9a7e5362db8d",
+  "release_tree": "b4780f85fda23ef26c6648d5207a9a7e5362db8d",
+  "pr_number": 56,
+  "result": "PASS",
+  "decision": "APPROVED",
+  "cause": null,
+  "candidate_evidence": "evidence/H3.3.4/deployment/candidate-02.json",
+  "supersedes_review": "evidence/H3.3.4/reviewer/candidate_review-01.json (REJECTED CAND-01, remediado por PR #56)",
+  "review_scope": "Revision operacional focalizada del application candidate candidate-02 (ocho controles). No se reabren documentacion, matriz, F1/F11, rendimiento ni el incidente del bundle descartado (solo se confirma que nunca llego a S3 ni a una Application Version).",
+  "reviewer_session_note": "CANDIDATE_REVIEW no tiene transicion de inicio en workflow.yaml; la sesion queda establecida por esta evidencia y por candidate_approve, distinta de la del Developer (deepseek-202609191838-developer-r3) y de la del review previa.",
+  "identity_chain": {
+    "release_sha": "3051a6271e1626b40fe24a744abe097cab1ab0fe",
+    "release_tree": "b4780f85fda23ef26c6648d5207a9a7e5362db8d",
+    "tree_verification": "git rev-parse 3051a62^{tree} == b4780f85 == reviewed_tree (review-06) == release_tree (merge-02). git diff 19725b4 3051a62 vacio. 3051a62 aparece 1 vez en git log origin/main (parent c99b260, squash de PR #56).",
+    "publish_run": "gh run view 35531516296: conclusion=success, headSha=3051a62, event=workflow_dispatch, 6/6 jobs success; unico run para 3051a62.",
+    "images": {
+      "app": "sha256:a7881bad7e7fd9c76e3fca7e4a6efa5d197bfceeb6623d0a41f6e3585ec6620d",
+      "caddy": "sha256:9da2be7ab7dd6edb2dfaaa55791209dc3f881c8946ae5b8570148750b8a52325"
+    },
+    "bundle_sha256": "bcbe935885dc50d279cd19c5f0ddf696449b29d7305c2e5506dc0a5afa9916d0",
+    "s3_key": "tpi-backoffice/dev-releases/h3-3-4-historial-dashboard-3051a62-domainlocked-r1/bcbe935885dc50d279cd19c5f0ddf696449b29d7305c2e5506dc0a5afa9916d0.zip",
+    "s3_checksum_sha256_b64": "vL6TWIXcUNJ5zRnF8N32lkSbKdcwXC5VBtwKWvqZFtA=",
+    "application_version": "h3-3-4-historial-dashboard-3051a62-domainlocked-r1"
+  },
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "Control 1. b4780f85 en review-06, merge-02, candidate y git."
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "Control 1. git log origin/main contiene 3051a62 (fetch reciente)."
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "Control 3. Run 35531516296 success con headSha=3051a62."
+    },
+    {
+      "name": "migration_01_pass_and_008_not_rerun",
+      "result": "PASS",
+      "note": "Control 2. migration-01.json result=PASS, applied_once=true, postflight_pass=true, rollback_executed=false; sha256 e94c5720... identico entre evidence/ y .harness-release y a la referencia del candidate. El candidate no incluye migracion ni comando SQL; su precondicion dice 'no se reejecuta'."
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "Control 3. aws_guard ecr describe-images: ambos digests existen y llevan el tag 3051a6271e...; los digests coinciden con los APP_IMAGE/CADDY_IMAGE del log del run y con las imagenes del compose reconstruido."
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "Control 4. Log del run 35531516296 (paso 'Fail closed on high or critical ECR findings'): 'tpi-dev-app: CRITICAL=0 HIGH=0' y 'tpi-dev-caddy: CRITICAL=0 HIGH=0'. describe-image-scan-findings no es utilizable via aws_guard; la evidencia es el log del workflow."
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "Control 5. Reconstruido por el Reviewer con build_domain_locked_bundle usando SOLO los blobs del release (git show 3051a62: build_eb_ecr_bundle.py 6cee0d10, docker-compose.domainlocked.yml cbdfd846) y los digests del run: SHA256 bcbe9358...16d0, 4815 B. Igual a candidate.bundle.sha256, al zip local .harness-release y al ChecksumSHA256 de S3."
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "Unica entrada docker-compose.yml; sin 'build:'; sin genialabs.cl; imagenes por digest sha256."
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "Control 5. head-object: ContentLength 4815, ChecksumSHA256 vL6TWIXc...ZtA= = base64(bcbe9358...)."
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "Control 5. describe-application-versions: label h3-3-4-historial-dashboard-3051a62-domainlocked-r1, SourceBundle.S3Key = key content-addressed bcbe9358..., Status UNPROCESSED."
+    },
+    {
+      "name": "discarded_bundle_never_reached_s3_or_av",
+      "result": "PASS",
+      "note": "Control 5 (solo confirmacion). Los unicos AV h3-3-4 son el de c99b260 (candidate-01, a9cb2362...) y el de 3051a62 (bcbe9358...); ninguno referencia b3182145. La evidencia registra solo el prefijo b3182145 (no el hash completo) y s3api list-objects-v2 esta denegado al Reviewer, por lo que la ausencia en S3 se sustenta en la ausencia de AV y en el hash content-addressed del unico objeto del label, no en un listado del bucket."
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "commit -> tree -> digests -> bundle SHA256 -> S3 key/checksum -> AV -> VersionLabel, todo coherente."
+    },
+    {
+      "name": "environment_ready_green_ok_at_lkg",
+      "result": "PASS",
+      "note": "Control 6. describe-environments: VersionLabel h3-3-3-historial-web-ux-c5e738c-domainlocked-r1, Ready/Green/Ok, DateUpdated 2026-09-17T03:59:40Z (sin cambios respecto del candidate)."
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "LKG == VersionLabel observada del environment."
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "AV del LKG existe, UNPROCESSED, key 6b6450b5...949695.zip."
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "9333994e... (app) y 27e8c5dc... (caddy) presentes en ECR."
+    },
+    {
+      "name": "compose_forwards_lead_state_history_cutover_to_backoffice",
+      "result": "PASS",
+      "note": "Control 7. En el compose reconstruido la variable aparece una sola vez, en el servicio backoffice: 'LEAD_STATE_HISTORY_CUTOVER: ${LEAD_STATE_HISTORY_CUTOVER:-}'. Ausente en api y caddy (servicios: api, backoffice, caddy)."
+    },
+    {
+      "name": "candidate_requires_environment_property",
+      "result": "PASS",
+      "note": "Control 8. candidate-02 declara environment_properties_required LEAD_STATE_HISTORY_CUTOVER (namespace aws:elasticbeanstalk:application:environment) con applied_by_harness=false y applied_at_candidate_time=false; el environment no fue mutado."
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "Control 8. 17 pasos: publicos (HTTPS, login, catalogs, css, /leads exige auth, sin genialabs.cl), AC-10 (/dashboard anonimo 403 sin fuga, CEO/CTO, RBAC 403), AC-1..4, AC-11..17, regresion H3.3.3 y F4_cutover_effective_value."
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "deployment_plan.commands = un unico update-environment --environment-name tpi-backoffice-dev-green --version-label <candidate>; sin --option-settings, template, platform ni tier. La ausencia de --option-settings es limitacion conocida del Harness, no defecto del producto (disposicion humana)."
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "Comando unico dentro de aws.modes.cutover."
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "note": "Un unico update-environment."
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "Control 8. rollback_plan: update-environment --version-label <LKG> una sola vez, condicionado (update aceptado; environment degradado; LKG utilizable y en ECR; no defecto puramente funcional; sin rollback previo). No revierte la migracion 008 (aditiva, compatible con el LKG; rollback SQL es decision humana separada)."
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": "Ningun IAM, Route53, secretos ni migracion en el plan."
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "note": "Solo IDs, hashes y estados; sin URLs prefirmadas ni secretos."
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS",
+      "note": "blast_radius_and_residues clasifica S3/AV inertes y environment sin mutar."
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "note": "Condicion explicita en rollback_plan.conditions."
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "El compose usa referencias ${VAR}; no hay valores secretos."
+    }
+  ],
+  "cutover_disposition": {
+    "mechanism": "human_operator_combined_update",
+    "authorized_by": "Disposicion humana obligatoria recibida en la instruccion de esta revision (CANDIDATE_REVIEW H3.3.4).",
+    "description": "El despliegue lo ejecuta el humano mediante UNA unica llamada update-environment sobre tpi-backoffice-dev-green que combina (a) VersionLabel h3-3-4-historial-dashboard-3051a62-domainlocked-r1 y (b) la propiedad de entorno LEAD_STATE_HISTORY_CUTOVER (namespace aws:elasticbeanstalk:application:environment) con la fecha efectiva del despliegue en America/Santiago.",
+    "not_before_human_gate": "La propiedad NO se aplica antes del Human Gate. Esto reemplaza la redaccion de candidate-02 (precondicion 4 y sequencing_note) que sugeria aplicarla antes del cutover; ese texto queda superado por esta disposicion. candidate-02 no se modifica (evidencia inmutable).",
+    "date_rule": "Si al desplegar la fecha de Santiago sigue siendo 2026-09-20, usar 2026-09-20; si cambio el dia, usar la fecha real (ISO YYYY-MM-DD) y registrarla en la deployment evidence. Observado por el Reviewer: America/Santiago 2026-09-20T21:29-03:00.",
+    "known_harness_limitation": "aws_guard deniega --option-settings y el guard candidate_valid lo prohibe en deployment_plan.commands: limitacion conocida del Harness, no defecto del producto. El Harness no ejecuta ni relaja nada; el humano opera fuera del fast path.",
+    "post_deploy_verification": "El Deployer verifica despues que la propiedad efectiva del environment coincide con la fecha registrada en la deployment evidence (y F4 en smoke), ademas de VersionLabel exacta + Ready/Green/Ok y cadena AV -> S3 -> digests.",
+    "rollback_interaction": "El rollback version-only al LKG no revierte la propiedad; es inocua para el LKG (su compose no referencia la variable)."
+  },
+  "findings": [
+    {
+      "id": "CR2-01",
+      "severity": "info",
+      "file": "evidence/H3.3.4/deployment/candidate-02.json",
+      "summary": "El texto de candidate-02 sobre aplicar la propiedad antes del cutover queda superado por la disposicion human_operator_combined_update (una sola llamada, tras el Human Gate).",
+      "required_action": "Ninguna sobre candidate-02; el Deployer debe registrar la fecha efectiva y verificar la propiedad efectiva."
+    },
+    {
+      "id": "CR2-02",
+      "severity": "info",
+      "file": "evidence/H3.3.4/deployment/candidate-02.json",
+      "summary": "La ausencia en S3 del bundle descartado (b3182145) se confirma indirectamente (ningun AV lo referencia; hash completo no registrado; list-objects-v2 denegado al Reviewer).",
+      "required_action": "Ninguna; incidente de proceso no reabierto."
+    }
+  ],
+  "risks": [
+    "Si el humano omite la propiedad en el update combinado, la app arranca con None (falla segura: F4 abierto, embudo y tiempo a primera gestion no disponibles).",
+    "Un update combinado fallido puede dejar la propiedad y la version en estado intermedio; el rollback version-only al LKG no revierte la propiedad (inocua para el LKG).",
+    "Residuos inertes de candidate-01 (AV c99b260 y objeto S3) permanecen; el Harness no puede borrarlos."
+  ],
+  "follow_ups_preserved": {
+    "F1": "no reabierto",
+    "F11": "no reabierto",
+    "F2/F6": "rendimiento a volumen representativo",
+    "F4": "valor efectivo de LEAD_STATE_HISTORY_CUTOVER: se resuelve con el update combinado y su verificacion posterior",
+    "F5": "snapshot REPEATABLE READ prolongado",
+    "AC-7": "Human Gate del application candidate sobre 3051a62",
+    "AC-9/AC-18": "smoke humano en DEV (RBAC/403 y dashboard visual)"
+  },
+  "mutations": {
+    "code_modified": false,
+    "aws_writes": false,
+    "update_environment": false,
+    "rds_or_migrations": false,
+    "rollback": false,
+    "deployment": false,
+    "note": "Solo lecturas: git (show, rev-parse, log, diff, fetch), gh run view/list, aws_guard (sts, ecr describe-images, EB describe-application-versions/describe-environments, s3api head-object) y reconstruccion local del bundle en scratchpad."
+  }
+}

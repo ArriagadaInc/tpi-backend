@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "H3.3.7",
+  "created_at": "2026-10-01T14:34:00Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610011429-reviewer-sup641a65",
+  "release_sha": "6f0f5bb1e934742cd8e8572d4a401f8bf29ab1c7",
+  "reviewed_tree": "f514a0e7658feba8c04bac980052bf982e497262",
+  "release_tree": "f514a0e7658feba8c04bac980052bf982e497262",
+  "pr_number": 60,
+  "result": "PASS",
+  "decision": "APPROVED",
+  "cause": null,
+  "candidate_evidence": "evidence/H3.3.7/deployment/candidate-01.json",
+  "merge_evidence": "evidence/H3.3.7/deployment/merge-01.json",
+  "review_evidence": "evidence/H3.3.7/reviewer/review-01.json",
+  "review_scope": "CANDIDATE_REVIEW de H3.3.7 tras decisiones humanas 2026-10-01 (progress/decisions.md). Lecturas AWS solo via aws_guard (modo candidate_read), llamadas secuenciales, un comando por llamada, un label por llamada, sin DENIED. No se ejecuto dry-run de update-environment (el guard no lo autoriza para Reviewer); el plan se valido por inspeccion.",
+  "identity_chain": {
+    "release_sha": "6f0f5bb1e934742cd8e8572d4a401f8bf29ab1c7",
+    "publish_run": "36651430697 success, headSha = release_sha",
+    "app_digest": "sha256:841595e4758a36536133bf9a5c2089893de71fcef877e742d2bbf9c9a14f3c42",
+    "caddy_digest": "sha256:92d49b1199de6d201db48f351581be0da65ef2c544ac42e118c6eeeb5d06b40f",
+    "bundle_sha256": "efa590b9e0daef786ce1f4b69ea8026c1a160b39d8dac06999d1c79b7f82d8aa",
+    "s3_checksum_sha256_b64": "76WQueDa73hs4fS2nqgCbBoWCznY2sBpmdHHm3+C2Ko=",
+    "s3_key": "tpi-backoffice/dev-releases/h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1/efa590b9e0daef786ce1f4b69ea8026c1a160b39d8dac06999d1c79b7f82d8aa.zip",
+    "application_version": "h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1",
+    "lkg": "h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1"
+  },
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse 6f0f5bb^{tree} == 6871c23^{tree} == f514a0e7658feba8c04bac980052bf982e497262 (tras git fetch origin main)."
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "origin/main == FETCH_HEAD == 6f0f5bb; parent unico b6df6d7 (merge-01)."
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "gh run view 36651430697 --json conclusion,headSha -> success / 6f0f5bb."
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "ecr describe-images app 841595e4 y caddy 92d49b11: ACTIVE, tag = release_sha, via aws_guard. Inmutabilidad: referencias por digest sha256 en el compose (ECR IMMUTABLE segun contrato); no se consulto describe-repositories."
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "describe-image-scan-findings COMPLETE, findings vacio y findingSeverityCounts vacio en app y caddy."
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "build_domain_locked_bundle con template de 6f0f5bb y digests/runtime_git_sha del candidate en directorio temporal: sha256 efa590b9... identico al bundle del candidate y a check-*.zip."
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "zip con unica entrada docker-compose.yml; sin 'genialabs' ni clave build:; solo 3 referencias @sha256 (app x2, caddy x1) iguales a los digests del candidate."
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "head-object --checksum-mode ENABLED: ChecksumSHA256 76WQueDa... FULL_OBJECT, ContentLength 4815; igual al base64 sha256 calculado del bundle local."
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "describe-application-versions (solo label candidate): SourceBundle bucket/key == s3 del candidate, Status UNPROCESSED."
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "release -> publish run -> digests -> bundle sha256 -> S3 key/checksum -> AV, todos verificados en esta sesion."
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "describe-environments tpi-backoffice-dev-green: VersionLabel = h3-3-6-xlsx-export-5f5b3d3-domainlocked-r1, Ready/Green/Ok, sin operacion abortable, DateUpdated 2026-09-23T15:20:47Z sin cambio; cuenta 821656895812 verificada via aws_guard sts."
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "describe-application-versions (solo label LKG): existe, SourceBundle presente, UNPROCESSED, sin option settings requeridos segun candidate-01."
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "ecr describe-images LKG app 0c20c5d7 y caddy cd1adaf8: ACTIVE, tag 5f5b3d3."
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "Scan humano auxiliar (evidence/H3.3.7/reviewer-support/human-artifact-scan-01.json; ejecutado por Alvaro Arriagada, no por el Reviewer): hashes revalidados contra los artefactos actuales (candidate-01.json sha256 061c47e2... y docker-compose.yml sha256 478f9794..., este ultimo recalculado por el Reviewer desde el bundle reconstruido); 0 coincidencias. Limitaciones: scan por patrones solo sobre candidate JSON y compose, no cubre evidencia nueva ni prueba ausencia universal. Complemento estructural del Reviewer: en el compose DATABASE_PASSWORD, API_IDEMPOTENCY_HMAC_SECRET, AUTH_USERS_JSON y WEB_SESSION_SECRET son referencias de variable, ninguna es literal; no se imprimieron valores. Evidencia nueva (este archivo) revisada por el Reviewer: solo SHAs, digests, hashes, labels y keys publicas del release; sin credenciales."
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "candidate-01.smoke_plan: 11 pasos (HTTPS publico, login, catalogs, static css/theme.js, reglas dark, bootstrap de tema, leads requiere auth, sin redirect legacy, cadena de identidad runtime, aceptacion humana AC-1..AC-3)."
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "deployment_plan.commands: unico aws_guard elasticbeanstalk update-environment --environment-name tpi-backoffice-dev-green --version-label <candidate>; sin --option-settings, template, platform ni tier (candidate-01; contrato v2 seccion 4; global_deny_flags en policies.yaml aws). Sin dry-run."
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "Se evalua contra el Deployer en DEPLOYING: state_modes DEPLOYING -> cutover = @read + elasticbeanstalk update-environment (policies.yaml aws.modes/state_modes); el plan solo usa update-environment y lecturas de describe-environments/describe-events. No es el permiso actual del Reviewer. No se ejecuto dry-run."
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "note": "Un solo comando de promocion; espera por describe-environments (30 s, max 30 min), sin reintento de escritura; invariante no_auto_retry_writes (project-profile); contrato v2 seccion 13 (retry sin causa cerrada prohibido)."
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "rollback_plan: un update-environment --version-label al LKG nombrado h3-3-6-...-r1 (observado en el preflight, no por timestamp), max_attempts 1, condicionado a las 7 condiciones de policies.yaml rollback_authorization; transiciones DEPLOY_FAILED/VERIFY_FAILED -> ROLLING_BACK con guard rollback_permitted y efecto mark_rollback_attempted; rollback fallido -> BLOCKED_HUMAN."
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": "Plan sin IAM, Route53, secretos ni migraciones; database_changes: ninguna; environment_properties_required vacio; global_deny_services de policies.yaml aplican."
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "note": "Evidencia candidate-01 registra solo identificadores, hashes y estados; safety.secrets_accessed false; sin presigned URLs ni valores de entorno; read-only no es safe-to-log, se minimizo la salida en esta revision."
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS",
+      "note": "candidate-01.blast_radius_and_residues clasifica residuos de staging (imagenes ECR, objeto S3 content-addressed, AV UNPROCESSED; inertes hasta el cutover) y del runtime (environment sin mutar); la fase de environment en transicion se trata en DEPLOY_FAILED/inventario de residuos del workflow."
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "note": "rollback_authorization exige not_purely_functional_defect y environment_degraded_inconsistent_or_not_expected_state; contrato v2 seccion 14: FAIL funcional -> issue sin mas cambios AWS salvo rollback necesario; rollback_plan.conditions del candidate lo reitera."
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "info",
+      "file": "evidence/H3.3.7/reviewer-support/human-artifact-scan-01.json",
+      "summary": "El scan de secretos es auxiliar humano por patrones y cubre solo candidate-01.json y docker-compose.yml; se complemento con inspeccion estructural y revision de la evidencia nueva.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F2",
+      "severity": "info",
+      "file": "evidence/H3.3.7/deployment/candidate-01.json",
+      "summary": "No se ejecuto dry-run de update-environment: el modo candidate_read no lo permite; el plan se valido por inspeccion segun la decision humana 2026-10-01.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F3",
+      "severity": "info",
+      "file": "evidence/H3.3.7/deployment/candidate-01.json",
+      "summary": "AC-1..AC-3 requieren aceptacion visual humana tras el cutover (requires_human_acceptance=true); esta aprobacion no la infiere ni aprueba el despliegue (Human Gate).",
+      "required_action": "Human Gate y aceptacion humana en VERIFYING."
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "id": "AC-1",
+      "status": "pending_human_visual"
+    },
+    {
+      "id": "AC-2",
+      "status": "pending_human_visual"
+    },
+    {
+      "id": "AC-3",
+      "status": "pending_human_visual"
+    },
+    {
+      "id": "AC-4",
+      "status": "met_automated"
+    },
+    {
+      "id": "AC-5",
+      "status": "met_automated"
+    },
+    {
+      "id": "AC-6",
+      "status": "met_automated"
+    }
+  ],
+  "safety": {
+    "aws_writes": [],
+    "update_environment_executed": false,
+    "dry_run_executed": false,
+    "secrets_accessed": false,
+    "aws_reads_via_guard_only": true,
+    "denied_events": 0
+  }
+}

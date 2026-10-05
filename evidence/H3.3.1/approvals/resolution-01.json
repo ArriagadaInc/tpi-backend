@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "resolution",
+  "task_id": "H3.3.1",
+  "created_at": "2026-09-16T13:09:33Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "from_state": "BLOCKED_HUMAN",
+  "to_state": "VERIFYING",
+  "reason": "Decision del owner: cerrar H3.3.1 sin rollback. Deployment, CI y smoke tecnico correctos. La validacion funcional CEO/CTO y asignacion no fue concluyente porque las identidades DEV no representan aun el modelo de negocio requerido. Esa deuda se traslada explicitamente a H3.3.2."
+}

@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "H3.3.1",
+  "created_at": "2026-09-15T19:47:37Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609151800-reviewer",
+  "reviewed_sha": "838f5dbee57e8cf5440a32daffad2fcfb9916cec",
+  "reviewed_tree": "b6eab9ce3ef8153d77c3ae73be9ebf45fb0cfef2",
+  "pr_number": 52,
+  "ci": {
+    "run_id": 35013098086,
+    "sha": "838f5dbee57e8cf5440a32daffad2fcfb9916cec",
+    "conclusion": "success",
+    "note": "5/5 jobs PASS (Docker Build, Lint & Format, Release Tooling Validation, Security Audit, Tests) sobre el SHA exacto via gh pr checks 52 y gh run list --commit."
+  },
+  "decision": "APPROVED",
+  "findings": [],
+  "checks": [
+    {
+      "name": "developer_evidence_read",
+      "result": "PASS"
+    },
+    {
+      "name": "head_sha_contains_change",
+      "result": "PASS"
+    },
+    {
+      "name": "pr_exists",
+      "result": "PASS"
+    },
+    {
+      "name": "ci_green_on_exact_sha",
+      "result": "PASS"
+    },
+    {
+      "name": "diff_review_app",
+      "result": "PASS"
+    },
+    {
+      "name": "quality_gates_complete",
+      "result": "PASS"
+    },
+    {
+      "name": "no_migrations",
+      "result": "PASS"
+    },
+    {
+      "name": "no_aws_iam_changes",
+      "result": "PASS"
+    },
+    {
+      "name": "functional_compliance",
+      "result": "PASS",
+      "note": "AC-1, AC-2, AC-3, AC-5 verificados con tests que corren en CI; AC-4 automatizado (CSRF/rol/409) verificado, logica de asignacion unica+auditoria cubierta por tests/integration/test_database_runtime.py (preexistente, verde en CI); verificacion humana declarada pending_verification, no reclamada como PASS."
+    },
+    {
+      "name": "layering",
+      "result": "PASS",
+      "note": "route -> service -> repository preservado; sin acceso directo a BD desde la ruta."
+    },
+    {
+      "name": "maintainability",
+      "result": "PASS",
+      "note": "can_view_full_pii/can_assign_lead centralizados en el servicio; sin sobreingenieria."
+    },
+    {
+      "name": "compatibility",
+      "result": "PASS"
+    },
+    {
+      "name": "scope_no_unrelated_changes",
+      "result": "PASS",
+      "note": "gh pr diff 52 confirma exactamente los 6 archivos declarados en developer-02.json (500+/105-); una comparacion local inicial contra una rama main desactualizada en el worktree de revision resulto enganosa y fue descartada en favor de gh pr diff (fuente autoritativa)."
+    },
+    {
+      "name": "documentation",
+      "result": "PASS",
+      "note": "docs/H3_3_CRM_LITE_WEB_UX.md y docs/PROJECT_STATUS.md ya no declaran PASS/Human UX Acceptance; marcan AC-4 pendiente de verificacion humana (RV-H3.3.1-05 corregido)."
+    },
+    {
+      "name": "pii_server_side",
+      "result": "PASS",
+      "note": "can_view_full_pii(user) en SolicitudService; masking incondicional por rol en board y detalle (app/services/solicitud_service.py, app/web/routes/leads.py)."
+    },
+    {
+      "name": "no_pii_in_html_for_restricted_roles",
+      "result": "PASS",
+      "note": "test_ac2_pii_masked_even_with_web_mask_pii_false y test_ac1_ac2_ac3_web_html_rendering verifican ausencia de rut/email/telefono completos en HTML para roles restringidos, incluso con WEB_MASK_PII=False (RV-H3.3.1-03 corregido); reproducido localmente (37 tests PASS)."
+    },
+    {
+      "name": "csrf_and_session",
+      "result": "PASS",
+      "note": "POST /leads/{id}/assign valida csrf_token antes de mutar; probado (403 con token invalido)."
+    },
+    {
+      "name": "no_secrets_in_diff",
+      "result": "PASS"
+    },
+    {
+      "name": "safe_logging",
+      "result": "PASS",
+      "note": "sin nuevas sentencias de logging en el diff revisado."
+    },
+    {
+      "name": "authz_fail_closed",
+      "result": "PASS",
+      "note": "rol no autorizado para asignar recibe 403 sin mutar estado (test_ac4_assign_lead_unauthorized_role_returns_403)."
+    },
+    {
+      "name": "ci_green_exact_sha",
+      "result": "PASS"
+    },
+    {
+      "name": "coverage_85",
+      "result": "PASS",
+      "note": "CI ejecuta pytest tests/ --cov=app --cov-fail-under=85 con Postgres real (services.postgres) y el job Tests esta verde en 838f5db. Ejecucion local (Windows, sin DATABASE_HOST) reproduce fallos de tests/integration y tests/e2e por DatabaseConfigurationError, no por defectos de codigo; ruff/black/mypy/bandit reproducidos localmente en verde y los 37 tests unitarios de PII/RBAC/asignacion corren y pasan localmente con cobertura completa de leads.py (85%) y solicitud_service.py."
+    },
+    {
+      "name": "tests_cover_acceptance_criteria",
+      "result": "PASS",
+      "note": "AC-1/AC-2/AC-3 en tests/unit/test_h3_3_1_rbac_pii_assignment.py y test_web_app.py; AC-4 ruta (CSRF/403/409) en el mismo archivo; AC-4 persistencia/auditoria en tests/integration/test_database_runtime.py (preexistente); AC-5 en test_ac5_documentation_h3_3_has_no_obsolete_versions."
+    },
+    {
+      "name": "tests_validate_behavior_not_coverage",
+      "result": "PASS",
+      "note": "aserciones sobre contenido HTML renderizado, codigos de estado y llamadas al repositorio, no solo ejecucion de lineas."
+    },
+    {
+      "name": "no_skipped_without_cause",
+      "result": "PASS",
+      "note": "sin pytest.mark.skip/xfail en los archivos de test tocados."
+    }
+  ],
+  "risks": [
+    "AC-4 permanece pending_verification: requiere smoke autenticado humano en AWS DEV antes de aceptacion final (ya contemplado por el Harness en VERIFYING/requires_human_acceptance).",
+    "tests/integration y tests/e2e no son ejecutables en este sandbox Windows local (requieren Postgres real); se validaron via CI (Linux, servicio postgres:15) sobre el SHA exacto, consistente con la nota de supuestos del Developer."
+  ],
+  "local_verification": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "bandit": "PASS",
+    "pytest_targeted": "37 passed (tests/unit/test_h3_3_1_rbac_pii_assignment.py + tests/unit/test_web_app.py)",
+    "pytest_full_local": "29 failed / 429 passed / 13 errors -- fallos confinados a tests/integration/test_database_runtime.py, tests/e2e/*, tests/integration/test_public_api_idempotency.py y similares por DatabaseConfigurationError (falta DATABASE_HOST/PORT/NAME/USER local); no relacionados con el diff de H3.3.1"
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "H3.3.4",
+  "created_at": "2026-09-20T18:06:38Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609201801-reviewer-cutover-fix",
+  "reviewed_sha": "19725b45525d127985183e0640a2ae5b74963725",
+  "reviewed_tree": "b4780f85fda23ef26c6648d5207a9a7e5362db8d",
+  "pr_number": 56,
+  "branch": "harness/H3.3.4-cutover-wiring",
+  "base_sha": "c99b260ffc32aae0ab8fe80585e6243aa1be5665",
+  "review_scope": "Revision focalizada del fix de cutover (CAND-01) para H3.3.4. Alcance estrictamente limitado a los ocho controles solicitados: diff de cuatro archivos, cableado de LEAD_STATE_HISTORY_CUTOVER solo al backoffice, ausencia de fecha fijada en el repositorio, resolucion segura a None, parseo ISO valido con rechazo de invalidos, pruebas focalizadas, CI verde en el HEAD exacto y no alteracion de areas fuera de alcance. No se reabren H3.3.4, la matriz documental, F1/F11, rendimiento ni hallazgos ya aceptados.",
+  "ci": {
+    "run_id": 35526661282,
+    "conclusion": "success",
+    "head_sha": "19725b45525d127985183e0640a2ae5b74963725",
+    "workflow": "CI - Linting, Tests & Security",
+    "event": "pull_request",
+    "jobs_green": 5,
+    "jobs_total": 5,
+    "jobs": {
+      "docker_build": "success",
+      "release_tooling_validation": "success",
+      "security_audit": "success",
+      "lint_format": "success",
+      "tests": "success"
+    },
+    "tests_summary": "753 passed, 7 warnings in 59.62s",
+    "coverage": "88.91% (gate 85%)",
+    "runs_for_sha": 1,
+    "verification": "gh run view 35526661282 (headSha exacto), gh run list --commit 19725b4 (un unico run), gh pr checks 56 (5/5 pass)"
+  },
+  "decision": "APPROVED",
+  "remediated_finding": "CAND-01 (candidate_review-01.json)",
+  "developer_evidence": "evidence/H3.3.4/developer/developer-05.json",
+  "checks": [
+    {
+      "name": "pr_diff_exactly_four_files",
+      "result": "PASS",
+      "note": "gh pr diff 56 --name-only y git diff --name-status origin/main 19725b4 coinciden: app/config/settings.py, deployment/aws/docker-compose.domainlocked.yml, tests/unit/test_domain_locked_bundle.py, tests/unit/test_h3_3_4_timeline_presentation.py. Cuatro modificaciones (M), sin altas, bajas ni renombres. 35 inserciones y 2 supresiones. Un unico commit 19725b4 sobre c99b260 (HEAD de origin/main)."
+    },
+    {
+      "name": "cutover_wired_only_to_backoffice",
+      "result": "PASS",
+      "note": "docker-compose.domainlocked.yml linea 66: LEAD_STATE_HISTORY_CUTOVER dentro del bloque environment del servicio backoffice, con el mismo patron de reenvio de variables de runtime usado por el resto del archivo. Los bloques environment de api (lineas 10-32) y caddy (77-83) no la declaran. El bundle contiene solo ese compose y no hay env_file."
+    },
+    {
+      "name": "cutover_date_not_pinned_in_repo",
+      "result": "PASS",
+      "note": "git grep LEAD_STATE_HISTORY_CUTOVER en 19725b4: el compose reenvia con default vacio, settings.py declara default None, y los unicos literales de fecha estan en tests y en scripts/benchmark_executive_dashboard.py (fixtures). Ningun archivo de deployment/ ni environments/ fija una fecha. El valor se suministra como propiedad de entorno al desplegar."
+    },
+    {
+      "name": "absent_or_empty_value_resolves_none_and_starts",
+      "result": "PASS",
+      "note": "Verificado ejecutando Settings en el worktree del SHA revisado: ausente da None, cadena vacia da None, solo espacios da None. El field_validator en modo before normaliza cadenas vacias antes del parseo de date, preservando el default seguro. Los tres consumidores toleran None sin excepcion: executive_dashboard_service.py:78 devuelve None (cobertura incompleta), web/routes/leads.py:355 usa getattr con default None y presentation.state_history_cutover_notice emite el aviso sin fecha. No hay ruta de arranque que exija la variable.",
+      "probe": "absent=None; ''=None; '   '=None; '2026-09-20'=date(2026,9,20)"
+    },
+    {
+      "name": "valid_iso_parses_invalid_still_rejected",
+      "result": "PASS",
+      "note": "2026-09-20 se parsea como date(2026, 9, 20). Siguen rechazandose con ValidationError: 20-09-2026, 2026-13-01, no-date, 2026-9-20, 2026-09-20T10:00:00Z, 2026-09-20 10:00 y false. El validador solo intercepta cadenas vacias o en blanco; cualquier otro valor pasa intacto al parseo de date, por lo que la superficie de rechazo previa se conserva."
+    },
+    {
+      "name": "focused_tests_cover_wiring_and_empty_string",
+      "result": "PASS",
+      "note": "test_domain_locked_bundle_forwards_lead_state_history_cutover_to_backoffice afirma el reenvio en el bloque backoffice del compose renderizado y su ausencia en api. test_cutover_settings_empty_value_is_none afirma que la cadena vacia resuelve a None. El caso vacio se retiro de la lista de valores invalidos de test_cutover_settings_rejects_invalid_or_timezone_values de forma coherente con el nuevo contrato. Ejecucion local en el worktree del SHA revisado: 16 passed."
+    },
+    {
+      "name": "ci_green_for_exact_head",
+      "result": "PASS",
+      "note": "Run 35526661282 con headSha 19725b45525d127985183e0640a2ae5b74963725, status completed, conclusion success; 5 de 5 jobs en success; log del job de tests: 753 passed y cobertura total 88.91% sobre gate de 85%. gh run list --commit devuelve un unico run para el SHA; no hay ejecuciones posteriores ni pendientes."
+    },
+    {
+      "name": "out_of_scope_areas_untouched",
+      "result": "PASS",
+      "note": "git diff --name-only origin/main 19725b4 acotado a scripts/, docs/, harness/, agents/, tasks/, evidence/, .github/, requirements/, pyproject.toml, app/services, app/repositories, app/web y app/db no devuelve ninguna ruta. Hashes de blob identicos entre c99b260 y 19725b4 para 005, 006, 007 y ambos scripts de 008 (forward y rollback): la migracion 008 no se modifica ni se reejecuta. Metricas, dashboard ejecutivo, RBAC y enmascaramiento, dependencias y Harness intactos."
+    },
+    {
+      "name": "bundle_hash_constant_consistent_with_compose",
+      "result": "PASS",
+      "note": "El unico cambio de EXPECTED_BUNDLE_SHA256 es consecuencia deterministica de la linea agregada al compose. La prueba de reproducibilidad del bundle reconstruye el artefacto desde el compose del SHA revisado y pasa con el nuevo valor."
+    },
+    {
+      "name": "no_sensitive_material_introduced",
+      "result": "PASS",
+      "note": "El diff no agrega ni expone credenciales, material sensible de entorno ni datos personales. La variable cableada es una fecha de corte."
+    }
+  ],
+  "findings": [
+    {
+      "id": "R6-01",
+      "severity": "info",
+      "file": "app/config/settings.py",
+      "summary": "Pydantic sigue coercionando cadenas numericas como 0 a una fecha epoch (1970-01-01) para el campo de tipo date. Es comportamiento preexistente del framework, identico en la base c99b260, y no lo introduce ni lo amplia este cambio: el validador agregado solo intercepta cadenas vacias o en blanco. No es un valor que el operador vaya a suministrar en el despliegue.",
+      "required_action": "Ninguna en este PR. Queda registrado como observacion informativa; no bloquea la aprobacion ni exige pruebas adicionales."
+    }
+  ],
+  "risks": [
+    "El valor efectivo del cutover se define al desplegar como propiedad de entorno; si el operador lo omite, la aplicacion arranca con None y el embudo y el tiempo a primera gestion permanecen como no disponibles con cobertura suficiente. Es la falla segura buscada, no un defecto.",
+    "La fecha a usar debe ser la del despliegue real en America/Santiago, no la fecha provisoria del plan de despliegue previo.",
+    "Este PR requiere un nuevo release_sha y un nuevo application candidate; el candidate rechazado anterior queda inerte.",
+    "La migracion 008 permanece aplicada desde el ciclo anterior y este cambio no la vuelve a ejecutar."
+  ],
+  "out_of_scope_not_reopened": [
+    "Implementacion de H3.3.4 y su matriz de requisitos",
+    "F1 y F11 (deuda documental)",
+    "F2 y F6 (rendimiento a volumen representativo)",
+    "F5 (snapshot REPEATABLE READ prolongado)",
+    "Hallazgos ya aceptados en review-05 y candidate_review-01 distintos de CAND-01"
+  ],
+  "mutations": {
+    "code_modified": false,
+    "aws_calls": false,
+    "rds_or_migrations": false,
+    "merge": false,
+    "candidate": false,
+    "deployment": false,
+    "git_push_or_commit": false,
+    "note": "Solo lecturas: git (log, diff, grep, rev-parse, ls-files), gh (pr view, pr diff, pr checks, run view, run list) y ejecucion local de pruebas en un worktree de revision. Escrituras limitadas a este payload, la evidencia generada, progress/ y la transicion del Harness."
+  }
+}

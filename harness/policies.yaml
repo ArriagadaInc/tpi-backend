@@ -10,6 +10,42 @@ harness:
   deploy_capable_runtimes: [claude]
   deploy_states: [PREPARING_DEPLOYMENT, DEPLOYING, VERIFYING, DEPLOY_FAILED, VERIFY_FAILED, ROLLING_BACK]
   maintenance_env_var: TPI_HARNESS_MAINTENANCE
+  # v1.2: alcance de mantencion (scripts/harness/maintenance_scope.py). Lo abre y cierra SOLO
+  # el humano con `approve.py maintenance-scope open|close`; se activa si ademas el humano lanza
+  # el runtime con TPI_HARNESS_MAINTENANCE=1 y <env_var>=<id>. Solicitado pero invalido => se
+  # deniegan escrituras y shell. Con un registro abierto, la mantencion simple sin <env_var>
+  # tambien se deniega. Bajo alcance: escritura solo en write_paths del worktree registrado y
+  # shell solo por allowlist (lecturas verificadas y puntos de entrada de checks/pruebas).
+  # COBERTURA: el guard solo juzga las llamadas que Claude Code entrega al hook (matcher de
+  # .claude/settings.json). Las herramientas fuera de ese matcher (Monitor, Agent/Task, Skill,
+  # EnterWorktree, WebFetch...) NO llegan al guard y el alcance no las restringe: el humano lanza
+  # el runtime con --tools <runtime_tools> y lo comprueba con scripts/harness/check_scope_tools.py
+  # (procedimiento en runtime/claude/README.md).
+  maintenance_scope:
+    env_var: TPI_HARNESS_MAINTENANCE_SCOPE
+    registry_dir: .harness-runtime/maintenance
+    worktrees_dir: .harness-worktrees
+    max_hours: 12
+    # Unicas herramientas integradas con las que se lanza el runtime bajo alcance (--tools). Todas
+    # deben estar en el matcher del hook; ver check_scope_tools.py.
+    runtime_tools: [Read, Glob, Grep, Write, Edit, Bash]
+    never_writable:
+      - ".git"
+      - ".git/**"
+      - "**/.git"
+      - "**/.git/**"
+      - ".gitattributes"
+      - "**/.gitattributes"
+      - "pyproject.toml"
+      - "harness/state.json"
+      - "harness/workflow.yaml"
+      - "tasks/**"
+      - "evidence/**"
+      - "progress/**"
+      - ".harness-runtime/**"
+      - ".harness-worktrees/**"
+      - ".claude/**"
+      - ".mcp.json"
   human_script: scripts/harness/approve.py
   # D3: allowlist declarativa y explicita de mantenimiento. Solo estas rutas quedan
   # habilitadas para escritura fuera de worktree cuando TPI_HARNESS_MAINTENANCE=1.
@@ -57,6 +93,8 @@ protected_paths:
   # v1.1: latch DENIED del Supervisor y log del guard: ningun agente puede borrarlos.
   - ".harness-runtime/supervisor/**"
   - ".harness-runtime/guard.log"
+  # v1.2: registro de alcances de mantencion (solo approve.py maintenance-scope, humano).
+  - ".harness-runtime/maintenance/**"
 
 # Lectura denegada para todos los roles (secretos locales).
 secret_read_deny:
@@ -155,6 +193,9 @@ bash:
     - {pattern: "git\\s+push\\b[^\\n]*\\b(main|master)\\b", reason: "Push directo a main prohibido"}
     - {pattern: "\\bgh\\s+(secret|variable|auth\\s+token|repo\\s+(edit|delete)|release\\s+(create|delete))\\b", reason: "Operacion gh sensible prohibida"}
     - {pattern: "\\bboto3\\b", reason: "SDK AWS directo prohibido: usar aws_guard.py"}
+    # v1.2: el registro de alcances solo lo escribe approve.py maintenance-scope (humano). Regla de
+    # texto (enforcement parcial, como D4); bajo alcance activo rige ademas la allowlist de shell.
+    - {pattern: "\\.harness-runtime[\\\\/]+maintenance", reason: "Registro de alcance de mantencion: solo el humano via approve.py maintenance-scope"}
     # D4: operaciones destructivas bloqueadas SIEMPRE, incluso bajo mantenimiento (esta lista
     # se evalua sin excepcion de maintenance en guard.py:check_command). Enforcement parcial:
     # cubre los patrones literales soportados; no puede demostrarse cobertura total frente a

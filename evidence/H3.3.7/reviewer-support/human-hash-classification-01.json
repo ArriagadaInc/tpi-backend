@@ -1,0 +1,16 @@
+{
+  "kind": "human_log_pattern_classification",
+  "task_id": "H3.3.7",
+  "recorded_at": "2026-10-01T15:58:44.296231+00:00",
+  "classified_by": "human",
+  "human_name": "Alvaro Arriagada",
+  "pattern": "hash",
+  "count": 1,
+  "classification": "FALSE_POSITIVE",
+  "reason": "Evento INFO del logger tls de Caddy: updated and stored ACME renewal information. Coincidencia en cert_hash, huella de certificado TLS; no credencial ni PII.",
+  "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+  "window_start": "2026-10-01T14:46:00Z",
+  "event_timestamp_ms": 1790866064060,
+  "event_id": "39937647779297480363026248313298981176592225410691366932",
+  "scope": "Solo este evento; no clasifica coincidencias futuras ni indicadores fuertes."
+}

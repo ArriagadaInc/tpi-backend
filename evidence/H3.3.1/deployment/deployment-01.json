@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "kind": "deployment",
+  "task_id": "H3.3.1",
+  "created_at": "2026-09-15T20:43:06Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609152038-deployer",
+  "approved_commit": "4aac143a396934186342bab5ec97b3df5e53085c",
+  "deployed_commit": "4aac143a396934186342bab5ec97b3df5e53085c",
+  "application_version": "h3-3-1-rbac-pii-4aac143-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "update_accepted": true,
+  "result": "success",
+  "final_state": {
+    "version_label": "h3-3-1-rbac-pii-4aac143-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "preflight": {
+    "account_matches": true,
+    "region_matches": true,
+    "environment_ready_before_update": true,
+    "codepipeline_promote_disabled": true
+  },
+  "events_summary": [
+    "Environment update is starting.",
+    "Deploying new version to instance(s).",
+    "Instance deployment completed successfully.",
+    "New application version was deployed to running EC2 instances.",
+    "Environment update completed successfully."
+  ],
+  "started_at": "2026-09-15T20:40:11Z",
+  "finished_at": "2026-09-15T20:40:58Z",
+  "warnings": [],
+  "failure_class": null
+}

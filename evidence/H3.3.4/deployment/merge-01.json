@@ -1,0 +1,273 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "H3.3.4",
+  "created_at": "2026-09-20T15:37:57Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609201532-deployer-merge",
+  "pr_number": 55,
+  "pr_url": "https://github.com/ArriagadaInc/tpi-backend/pull/55",
+  "pr_title": "H3.3.4: Historial integral de estados y Dashboard Ejecutivo CRM (Parte A + Parte B)",
+  "pr_state_after_merge": "MERGED",
+  "reviewed_sha": "1f4a1d963d6c9da2c1114cc6e9c24d24ebc0f314",
+  "reviewed_tree": "bf18968fad3d9555d29b0262b4e1eafe80e4ffce",
+  "release_sha": "c99b260ffc32aae0ab8fe80585e6243aa1be5665",
+  "release_tree": "bf18968fad3d9555d29b0262b4e1eafe80e4ffce",
+  "main_parent_sha": "c5e738c21ba202d9c664652412e6820628b18e3c",
+  "method": "squash",
+  "match_head_commit_used": true,
+  "result": "PASS",
+  "change_class": "D",
+  "merged_at": "2026-09-20T15:32:34Z",
+  "merged_by": "ArriagadaInc",
+  "gh_pr_merge_command": "gh pr merge 55 --squash --match-head-commit 1f4a1d963d6c9da2c1114cc6e9c24d24ebc0f314",
+  "merge_strategy": "squash merge server-side via gh, anclado al HEAD aprobado con --match-head-commit; sin --delete-branch (rama remota preservada para no interferir con worktrees); sin rebase, sin force-push, sin auto-merge, sin otros PR.",
+  "tree_verification": "git rev-parse c99b260ffc32aae0ab8fe80585e6243aa1be5665^{tree} == bf18968fad3d9555d29b0262b4e1eafe80e4ffce == reviewed_tree; git diff 1f4a1d9 c99b260 vacio (contenido identico).",
+  "branch": "harness/H3.3.4-historial-estados-dashboard-ejecutivo",
+  "remote_branch_deleted": false,
+  "remote_branch_head_after_merge": "1f4a1d963d6c9da2c1114cc6e9c24d24ebc0f314",
+  "references": {
+    "review_evidence": "evidence/H3.3.4/reviewer/review-05.json",
+    "developer_evidence": "evidence/H3.3.4/developer/developer-04.json",
+    "human_resolution": "evidence/H3.3.4/approvals/resolution-02.json"
+  },
+  "human_resolution": {
+    "ref": "evidence/H3.3.4/approvals/resolution-02.json",
+    "created_at": "2026-09-20T15:19:27Z",
+    "from_state": "BLOCKED_HUMAN",
+    "to_state": "READY_FOR_REVIEW",
+    "authoritative": true,
+    "note": "Posterior a review-04; autoriza la aprobacion y reclasifica F1/F11 como deuda documental no bloqueante. resolution-01.json no se usa: quedo sin transicion, no esta referenciada por state.json y fue superada por resolution-02."
+  },
+  "ci_pr": {
+    "run_id": 35517138583,
+    "url": "https://github.com/ArriagadaInc/tpi-backend/actions/runs/35517138583",
+    "workflow": "CI - Linting, Tests & Security",
+    "event": "pull_request",
+    "sha": "1f4a1d963d6c9da2c1114cc6e9c24d24ebc0f314",
+    "conclusion": "success",
+    "jobs": "5/5 success: Release Tooling Validation, Lint & Format, Tests, Docker Build, Security Audit",
+    "tests": "751 passed, 7 warnings",
+    "coverage": "88.91% (>=85)",
+    "pip_audit": "No known vulnerabilities found",
+    "bandit": "No issues identified"
+  },
+  "ci_main": {
+    "run_id": 35519913701,
+    "url": "https://github.com/ArriagadaInc/tpi-backend/actions/runs/35519913701",
+    "workflow": "CI - Linting, Tests & Security",
+    "event": "push",
+    "branch": "main",
+    "sha": "c99b260ffc32aae0ab8fe80585e6243aa1be5665",
+    "conclusion": "success",
+    "created_at": "2026-09-20T15:32:43Z",
+    "completed_at": "2026-09-20T15:35:20Z",
+    "jobs": "5/5 success: Tests, Release Tooling Validation, Security Audit, Docker Build, Lint & Format",
+    "tests": "751 passed, 7 warnings",
+    "coverage": "88.91% (>=85)",
+    "pip_audit": "No known vulnerabilities found",
+    "bandit": "No issues identified",
+    "docker_build": "PASS",
+    "release_tooling_validation": "PASS (Artifact verification passed)",
+    "regression_vs_ci_pr": "ninguna: mismos 751 tests y misma cobertura 88.91%",
+    "note": "CI de main propio del release_sha; no se reutiliza el CI del PR."
+  },
+  "checks": [
+    {
+      "name": "init_state_role",
+      "result": "PASS",
+      "note": "init.ps1 --runtime claude: REVIEW_APPROVED, H3.3.4, rol deployer, next_action start_merge."
+    },
+    {
+      "name": "session_new_and_distinct",
+      "result": "PASS",
+      "note": "runtime=claude session=claude-202609201532-deployer-merge; primera sesion deployer de H3.3.4 (state.sessions.deployer era null) y distinta de toda sesion previa."
+    },
+    {
+      "name": "human_resolution_authoritative",
+      "result": "PASS",
+      "note": "resolution-02.json (approve.py interactivo) referenciada por state.json refs.resolution y por transitions.jsonl; posterior a review-04."
+    },
+    {
+      "name": "pr_open_mergeable_head_exact",
+      "result": "PASS",
+      "note": "Inmediatamente antes del merge: state=OPEN, mergeable=MERGEABLE, mergeStateStatus=CLEAN, headRefOid=1f4a1d963d6c9da2c1114cc6e9c24d24ebc0f314."
+    },
+    {
+      "name": "review_05_pass_approved",
+      "result": "PASS",
+      "note": "review-05.json result=PASS, decision=APPROVED, reviewed_sha/reviewed_tree coincidentes, sin hallazgos blocker/major."
+    },
+    {
+      "name": "ci_pr_on_exact_sha",
+      "result": "PASS",
+      "note": "Run 35517138583 headSha=1f4a1d9, 5/5 jobs success; unico run sobre ese SHA; sin runs ni commits posteriores en la rama."
+    },
+    {
+      "name": "no_later_commit_or_ci",
+      "result": "PASS",
+      "note": "origin/harness/H3.3.4-... = 1f4a1d9 antes y despues del merge; gh run list de la rama sin ejecuciones posteriores a 35517138583."
+    },
+    {
+      "name": "branch_up_to_date_with_main",
+      "result": "PASS",
+      "note": "0 commits de origin/main ausentes en 1f4a1d9 (descendiente estricto de c5e738c); 26 commits por delante."
+    },
+    {
+      "name": "validate_repo",
+      "result": "PASS",
+      "note": "python scripts/harness/validate_repo.py -> VALIDATE: PASS."
+    },
+    {
+      "name": "worktrees_clean",
+      "result": "PASS",
+      "note": "Worktrees H3.3.4 developer/reviewer sin cambios; checkout principal solo con archivos operativos del Harness modificados (harness/state.json, progress/current.md, tasks/*.yaml, docs/BITACORA.md); cero cambios en app/, tests/, front/, deployment/, .github/."
+    },
+    {
+      "name": "merge_squash_match_head",
+      "result": "PASS",
+      "note": "gh pr merge 55 --squash --match-head-commit 1f4a1d9; sin auto-merge, sin rebase, sin force-push, sin --delete-branch."
+    },
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "release_tree bf18968 == reviewed_tree bf18968; git diff 1f4a1d9..c99b260 vacio."
+    },
+    {
+      "name": "main_linear_single_parent",
+      "result": "PASS",
+      "note": "c99b260 tiene un unico parent c5e738c (main_parent_sha), consistente con squash."
+    },
+    {
+      "name": "ci_main_green_on_release_sha",
+      "result": "PASS",
+      "note": "Run 35519913701 (push, main, headSha c99b260) 5/5 success; sin regresion de tests ni cobertura; security audit limpio; Docker Build y Release Tooling Validation PASS."
+    },
+    {
+      "name": "no_cloud_no_rds",
+      "result": "PASS",
+      "note": "Cero operaciones en la nube y cero acceso RDS en esta sesion; aws_guard.py no invocado."
+    },
+    {
+      "name": "no_candidates_prepared",
+      "result": "PASS",
+      "note": "Ningun migration candidate ni application candidate preparado; sin gh workflow run; sin bundle; .harness-release/ no utilizado."
+    },
+    {
+      "name": "migration_008_not_applied",
+      "result": "PASS",
+      "note": "scripts/sql/008 presente como codigo en main tras el merge; no aplicada en DEV; pendiente de AC-5/AC-6 (Human Gate de migration candidate)."
+    },
+    {
+      "name": "no_approve_py",
+      "result": "PASS",
+      "note": "scripts/harness/approve.py no ejecutado; decisiones humanas fuera del alcance del agente."
+    }
+  ],
+  "cloud_access": {
+    "operations": 0,
+    "rds_access": false,
+    "aws_guard_invocations": 0,
+    "note": "El estado MERGING no habilita ningun modo de acceso a la nube (harness/policies.yaml no define MERGING en aws.state_modes)."
+  },
+  "release_scope": {
+    "migration_008_applied": false,
+    "migration_candidate_prepared": false,
+    "application_candidate_prepared": false,
+    "deployment_executed": false,
+    "environment_mutated": false,
+    "rollback_executed": false
+  },
+  "known_issues": [
+    {
+      "id": "F1",
+      "kind": "documentary_traceability_debt",
+      "blocking": false,
+      "summary": "Endurecer referencias documentales de archivo sin funcion exacta (el gate de la matriz acepta referencias de archivo completo sin ::test_funcion ni validacion AST).",
+      "required_action": "Follow-up obligatorio: exigir tests/(unit|integration)/test_*.py::test_* con AST o whitelist minima justificada. No reinterpretar como funcionalidad faltante.",
+      "disposition": "deuda no bloqueante aceptada por resolution-02; no se corrige en esta sesion de merge."
+    },
+    {
+      "id": "F11",
+      "kind": "documentary_traceability_debt",
+      "blocking": false,
+      "summary": "Sincronizar el mapeo de smoke AC-9/AC-18 entre la columna 'Smoke humano' de las filas y la seccion 6 de docs/H3_3_4_REQUIREMENTS_MATRIX.md.",
+      "required_action": "Follow-up obligatorio: sincronizar el mapeo y cruzar la columna en el gate. Los smokes humanos AC-9/AC-18 siguen exigidos y pendientes en DEV.",
+      "disposition": "deuda no bloqueante aceptada por resolution-02; no se corrige en esta sesion de merge."
+    },
+    {
+      "id": "F2",
+      "kind": "explain_normal_at_representative_volume",
+      "blocking": false,
+      "summary": "EXPLAIN (ANALYZE, BUFFERS) normal (sin enable_seqscan=off) a volumen representativo pendiente antes de DONE (matriz seccion 11.6, REQ-A-12).",
+      "required_action": "Ejecutar y documentar el EXPLAIN normal a volumen representativo antes de DONE.",
+      "disposition": "follow-up aceptado."
+    },
+    {
+      "id": "F4",
+      "kind": "cutover_effective_config_dev",
+      "blocking": false,
+      "summary": "Definir y verificar el valor efectivo de LEAD_STATE_HISTORY_CUTOVER en DEV; ninguna fecha inventada.",
+      "required_action": "Verificar la configuracion efectiva del cutover en DEV en el checklist humano de Deployer/Verifying.",
+      "disposition": "pendiente de verificacion humana en DEV."
+    },
+    {
+      "id": "F5",
+      "kind": "prolonged_snapshot_transaction",
+      "blocking": false,
+      "summary": "Riesgo de snapshot prolongado: transaccion REPEATABLE READ READ ONLY de ~5-7 s por render, con efectos posibles sobre pool, xmin y autovacuum.",
+      "required_action": "Follow-up: monitorear/mitigar el snapshot prolongado.",
+      "disposition": "riesgo aceptado, no resuelto."
+    },
+    {
+      "id": "F6",
+      "kind": "performance_read_model",
+      "blocking": false,
+      "summary": "Rendimiento y posible read model: 5,28-6,80 s a 20.000 leads / 12 asesores, con el parsing regexp de notas como costo dominante (18 consultas constantes, sin N+1).",
+      "required_action": "Follow-up: evaluar read model / optimizacion de rendimiento.",
+      "disposition": "riesgo aceptado, no resuelto."
+    },
+    {
+      "id": "AC-5/AC-6",
+      "kind": "human_gate_migration_candidate",
+      "blocking": true,
+      "summary": "Human Gate de migration candidate y postflight de la migracion 008 (fase de migracion, sin fast path por change_class D).",
+      "required_action": "Aprobacion humana independiente via scripts/harness/approve.py; postflight completo antes de preparar el application candidate.",
+      "disposition": "pendiente; no satisfecho en esta sesion."
+    },
+    {
+      "id": "AC-7",
+      "kind": "human_gate_application_candidate",
+      "blocking": true,
+      "summary": "Human Gate independiente del application candidate, no intercambiable con el de migracion.",
+      "required_action": "Aprobacion humana independiente via scripts/harness/approve.py tras el postflight de la migracion.",
+      "disposition": "pendiente; no satisfecho en esta sesion."
+    },
+    {
+      "id": "AC-9/AC-18",
+      "kind": "human_smoke_dev",
+      "blocking": true,
+      "summary": "Smoke humano en DEV, incluido RBAC/403 para roles no autorizados y verificacion visual del Dashboard Ejecutivo.",
+      "required_action": "Ejecutar el smoke humano en DEV y registrar acceptance via approve.py accept.",
+      "disposition": "pendiente; ningun criterio humano se declara satisfecho en esta sesion."
+    }
+  ],
+  "follow_up_required": [
+    "F1: endurecer referencias documentales de archivo sin funcion exacta.",
+    "F11: sincronizar el mapeo de smoke AC-9/AC-18 entre filas y seccion 6 de la matriz.",
+    "F2: EXPLAIN normal a volumen representativo antes de DONE.",
+    "F4: definir y verificar LEAD_STATE_HISTORY_CUTOVER efectivo en DEV.",
+    "F5: riesgo de snapshot prolongado (monitorear/mitigar).",
+    "F6: rendimiento y posible read model por parsing regexp de notas.",
+    "AC-5/AC-6: Human Gate de migration candidate y postflight.",
+    "AC-7: Human Gate independiente de application candidate.",
+    "AC-9/AC-18: smoke humano en DEV, incluido RBAC/403 y dashboard visual."
+  ],
+  "human_pending": [
+    "AC-5/AC-6 Human Gate migration candidate + postflight",
+    "AC-7 Human Gate application candidate",
+    "AC-9/AC-18 smoke humano DEV (RBAC/403 y dashboard visual)"
+  ],
+  "scope_of_session": "Solo merge controlado: preflight, start_merge, merge squash de PR #55, verificacion de main, CI de main, evidencia de merge y transicion posterior. Sin candidates, sin operaciones en la nube ni RDS, sin despliegue, sin migracion aplicada, sin approve.py."
+}

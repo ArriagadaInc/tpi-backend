@@ -1,0 +1,252 @@
+schema_version: 1
+task:
+  id: H3.3.4
+  title: Historial integral de estados y Dashboard Ejecutivo CRM
+  objective: 'Cerrar KI-H3.3.3-LEAD-STATE-TIMELINE-GAP (evidence/H3.3.3/deployment/verification-01.json)
+    mediante una tarea unica con dos fases internas inseparables, alcance cerrado y sin ninguna porcion
+    diferida a una tarea posterior. Parte A (historial integral): auditar todo cambio general de estado_lead
+    mediante update_lead_status transaccional (SELECT ... FOR UPDATE, compara estado anterior/nuevo, no-op
+    sin evento duplicado si no hay cambio real, UPDATE de estado_lead + INSERT de auditoria en un unico
+    commit, rollback completo si la auditoria falla, prueba real de concurrencia). La migracion 008 agrega
+    la accion de auditoria cambio_estado_lead (actor, fecha_hora, estado_anterior, estado_nuevo) y la
+    vista sanitizada tpi.v_historial_estado_lead (mismo patron de minimo privilegio que la vista de asignaciones
+    de la migracion 007: sin JSON crudo, id_persona, id_usuario, ip_origen ni otros eventos; REVOKE ALL
+    ... FROM PUBLIC; GRANT SELECT unicamente a tpi_app; la aplicacion nunca hace SELECT directo sobre
+    tpi.auditoria; indices de apoyo sujetos a EXPLAIN real, no especulativo); no modifica las migraciones
+    005/006/007. La ficha de lead funde en una sola linea de tiempo cronologica y de orden estable las
+    notas humanas, las asignaciones (migracion 007) y los cambios generales de estado (migracion 008),
+    en hora America/Santiago, con badge "Automatico" para eventos del sistema, sin edicion ni eliminacion,
+    conservando integramente el comportamiento de H3.3.3; la cobertura de cambios generales de estado
+    aplica unicamente desde el cutover de la migracion 008 hacia adelante (sin backfill inventado), y
+    las asignaciones historicas ya recuperables por la migracion 007 se conservan visibles. Parte B (Dashboard
+    Ejecutivo): nueva navegacion "Dashboard Ejecutivo" con control de acceso exclusivamente server-side
+    para los roles ceo y cto; cualquier otro rol autenticado y cualquier usuario no autenticado recibe
+    un 403 real, sin filtracion de consultas ni datos sensibles en HTML/API/JavaScript/source. El dashboard
+    expone: tarjetas KPI (total de leads, leads ingresados en el periodo -usando fecha_ingreso, documentando
+    su diferencia frente a created_at-, casos por estado, asignados y sin asignar), evolucion diaria/semanal/mensual
+    con filtros combinables, resumen por asesor (cartera total y cartera activa -estado_lead NOT IN (cerrado,
+    perdido, no_califica, duplicado)-, casos por estado y asesor; nombre del asesor visible solo para
+    CEO/CTO, nunca RUT/telefono/correo del asesor), casos estancados por antiguedad (buckets 0-2, 3-7,
+    8-15, 16-30 y +30 dias corridos, no habiles; estancado = cinco dias corridos completos sin movimiento
+    operativo -nota humana, evento de asignacion o cambio general de estado, nunca solo updated_at-, umbral
+    configurable default=5, regla operacional interna, no SLA), tiempo hasta asignacion y tiempo hasta
+    primera gestion (primera gestion = primer evento entre la primera nota humana y el primer cambio general
+    de estado, excluyendo la asignacion automatica; NULL/N-D si no existe), y embudo/tasas de avance basados
+    unicamente en transiciones observables (los leads anteriores al cutover de la migracion 008 aportan
+    al estado actual pero nunca a tasas inventadas; denominadores COUNT(DISTINCT id_lead)). Las distribuciones
+    y filtros usan exclusivamente las categorias MVP (estado, asesor, AFP, origen del lead, fuente actual);
+    genero y estado civil quedan expresamente fuera del MVP por baja utilidad ejecutiva y mayor sensibilidad,
+    y no aparecen en ninguna parte, ni como dimension activa ni como alcance diferido. El dashboard nunca
+    muestra RUT, nombres, telefono, correo ni otra PII de leads; todas las metricas son agregadas; existen
+    estados vacios y de error coherentes; la interfaz es responsive y consistente con la Web UX actual;
+    sin plataforma BI externa. Arquitectura y operacion: baseline origin/main@c5e738c21ba202d9c664652412e6820628b18e3c
+    (re-verificada en esta sesion de mantenimiento; coincide con tasks/completed/H3.3.3.yaml.closure.release.release_sha);
+    migracion 008 confirmada libre en todo el historial git (no solo el arbol actual); dos aprobaciones
+    humanas independientes y no intercambiables (migration candidate y application candidate, mismo patron
+    que H3.3.3); postflight DB completo antes de preparar el application candidate; ningun fast path para
+    la migracion; sin --option-settings; DB-PATH-MECHANISM permanece como deuda no bloqueante (no se resuelve
+    en esta tarea); rollback de la vista y demas objetos de la migracion 008 probado en integracion antes
+    de DEV; ningun fallo posterior al despliegue elimina automaticamente evidencia ni objetos; AUTH_USERS_JSON
+    y password_hash nunca se leen ni se registran. Como el Harness impide crear docs/H3_3_4_REQUIREMENTS_MATRIX.md
+    durante IDLE, el backlog exige que, al entrar en DEVELOPING y antes de cualquier cambio funcional,
+    el Developer cree esa matriz mapeando solicitud original -> requirement ID -> objetivo -> AC -> implementacion
+    prevista -> prueba automatizada -> smoke humano -> evidencia esperada, cubriendo Parte A, Parte B,
+    seguridad, privacidad, arquitectura, migracion, casos de prueba minimos y operacion/despliegue; antes
+    de modificar codigo, el Developer ejecuta y registra un gate de cobertura (todos los requisitos con
+    AC, todos los AC con requisito, pruebas y smoke especificados, cero alcance diferido, cero metricas
+    ambiguas) y se detiene sin implementar si el gate falla; el Reviewer compara la matriz contra esta
+    solicitud humana original, y cualquier omision, diferimiento, metrica irreproducible o requisito sin
+    prueba/smoke aplicable es BLOCKER.'
+  source:
+    type: story
+    ref: 'Known issue de H3.3.3: evidence/H3.3.3/deployment/verification-01.json (known_issues KI-H3.3.3-LEAD-STATE-TIMELINE-GAP,
+      harness_debt); 10 definiciones humanas aprobadas 2026-09-17 en sesion de mantenimiento (TPI_HARNESS_MAINTENANCE=1):
+      estancado, movimiento operativo, categorias MVP, asesor, leads, cartera activa, primera gestion,
+      lead ingresado, funnel, estado del backlog/pending.'
+  change_class: D
+  deploy_required: true
+  requires_human_acceptance: true
+  allow_lockfile_update: true
+  acceptance_criteria:
+  - id: AC-1
+    description: update_lead_status es transaccional (SELECT ... FOR UPDATE, compara estado_anterior/estado_nuevo,
+      no-op sin evento duplicado cuando no hay cambio real, UPDATE de estado_lead + INSERT de auditoria
+      en un unico commit, rollback completo si la insercion de auditoria falla), cubierto por una prueba
+      real de concurrencia (dos actualizaciones concurrentes sobre el mismo lead) que demuestra ausencia
+      de condiciones de carrera y de eventos duplicados.
+    verification: automated
+  - id: AC-2
+    description: La migracion 008 (siguiente numero libre, confirmado inspeccionando todo el historial
+      git) agrega exclusivamente la accion de auditoria cambio_estado_lead (actor, fecha_hora, estado_anterior,
+      estado_nuevo) sin modificar el contenido de las migraciones 005/006/007.
+    verification: automated
+  - id: AC-3
+    description: La vista tpi.v_historial_estado_lead proyecta unicamente lo necesario para el historial
+      de cambios generales de estado (sin JSON crudo, id_persona, id_usuario, ip_origen ni otros eventos);
+      PUBLIC no obtiene privilegios (REVOKE ALL ... FROM PUBLIC) y unicamente tpi_app recibe SELECT; ninguna
+      ruta de la aplicacion hace SELECT directo sobre tpi.auditoria; los indices de apoyo declarados estan
+      justificados por EXPLAIN real documentado.
+    verification: automated
+  - id: AC-4
+    description: La ficha de lead muestra una unica linea de tiempo cronologica de orden estable que fusiona
+      notas humanas, asignaciones (migracion 007) y cambios generales de estado (migracion 008) en hora
+      America/Santiago, con badge Automatico para eventos del sistema, sin edicion ni eliminacion; se
+      conserva integramente el comportamiento de H3.3.3; la cobertura de cambios generales de estado aplica
+      unicamente desde el cutover de la migracion 008 hacia adelante sin backfill inventado, y las asignaciones
+      historicas ya recuperables por la migracion 007 se conservan visibles.
+    verification: both
+  - id: AC-5
+    description: El migration candidate (commit SHA exacto de main, ruta y SHA-256 del forward 008, ruta
+      y SHA-256 del rollback 008, SQL revisado por un Reviewer independiente, preflight DB y evidencia
+      del estado anterior) cuenta con aprobacion humana explicita, especifica del migration candidate
+      y nunca sustituida por la del application candidate, antes de tocar AWS RDS DEV; ningun fast path
+      del Harness ejecuta la migracion (change_class D fuerza BLOCKED_HUMAN tras el merge).
+    verification: human
+  - id: AC-6
+    description: Postflight de privilegios tras aplicar la migracion 008 en AWS DEV confirma que PUBLIC
+      no obtiene privilegios sobre la vista, que unicamente tpi_app recibe SELECT, y que tpi_app continua
+      sin SELECT/UPDATE/DELETE directo sobre tpi.auditoria.
+    verification: human
+  - id: AC-7
+    description: El application candidate (Parte A + Parte B) solo se prepara (BLOCKED_HUMAN -> PREPARING_DEPLOYMENT)
+      despues de que la migracion 008 quedo aplicada y su postflight (AC-6) fue verificado; sigue PREPARING_DEPLOYMENT
+      -> CANDIDATE_REVIEW -> WAITING_HUMAN_APPROVAL -> DEPLOYING con su propia aprobacion humana en WAITING_HUMAN_APPROVAL,
+      independiente y no sustituible por la aprobacion del migration candidate.
+    verification: human
+  - id: AC-8
+    description: El rollback de la vista y demas objetos nuevos de la migracion 008 (REVOKE, DROP VIEW
+      y equivalentes) esta probado o validado en un entorno de integracion antes de aplicarse en DEV;
+      ningun fallo posterior al despliegue elimina automaticamente evidencia ni objetos; cualquier rollback
+      se evalua conforme a aws-failure-analysis y rollback_authorization del Harness.
+    verification: automated
+  - id: AC-9
+    description: Smoke humano en AWS DEV confirma que la Parte A (linea de tiempo unificada con cambios
+      generales de estado) funciona en el entorno real segun AC-4, sin regresion sobre H3.3.3.
+    verification: human
+  - id: AC-10
+    description: Existe una nueva entrada de navegacion Dashboard Ejecutivo con control de acceso exclusivamente
+      server-side para los roles ceo y cto; cualquier otro rol autenticado y cualquier usuario no autenticado
+      recibe un 403 real al intentar acceder (HTML, API, JS o cualquier otra superficie); ninguna consulta
+      de dashboard ni dato sensible se expone en el HTML, la API, el JavaScript ni el source servido a
+      roles no autorizados.
+    verification: both
+  - id: AC-11
+    description: El dashboard expone tarjetas KPI (total de leads, leads ingresados en el periodo usando
+      fecha_ingreso, casos por estado, asignados y sin asignar) y una serie temporal de evolucion diaria,
+      semanal y mensual, con filtros combinables entre si; fecha_ingreso se documenta explicitamente como
+      distinta de created_at.
+    verification: automated
+  - id: AC-12
+    description: El dashboard expone un resumen por asesor (cartera total y cartera activa, donde cartera
+      activa excluye estado_lead in (cerrado, perdido, no_califica, duplicado)) y casos por estado y asesor;
+      el nombre del asesor es visible unicamente para CEO/CTO y nunca se muestra RUT, telefono, correo
+      ni otra PII del asesor.
+    verification: automated
+  - id: AC-13
+    description: El dashboard clasifica casos estancados en buckets de antiguedad 0-2, 3-7, 8-15, 16-30
+      y +30 dias corridos (no habiles); un lead se considera estancado tras cinco dias corridos completos
+      sin movimiento operativo, con el umbral configurable (default=5) como regla operacional interna,
+      no SLA; movimiento operativo es nota humana, evento de asignacion o cambio general de estado, nunca
+      solo updated_at.
+    verification: automated
+  - id: AC-14
+    description: El dashboard calcula tiempo hasta asignacion y tiempo hasta primera gestion, donde primera
+      gestion es el primer evento entre la primera nota humana y el primer cambio general de estado, excluyendo
+      explicitamente la asignacion automatica; cuando ese evento no existe, el valor se reporta como NULL/N-D,
+      nunca inventado.
+    verification: automated
+  - id: AC-15
+    description: El embudo y las tasas de avance se calculan unicamente a partir de transiciones observables;
+      los leads anteriores al cutover de la migracion 008, sin historia completa, aportan al conteo del
+      estado actual pero nunca a tasas de transicion inventadas; todos los denominadores usan COUNT(DISTINCT
+      id_lead).
+    verification: automated
+  - id: AC-16
+    description: Las distribuciones y filtros del dashboard usan exclusivamente las categorias MVP (estado,
+      asesor, AFP, origen del lead, fuente actual); genero y estado civil no aparecen en ninguna parte
+      del dashboard, ni como dimension activa ni como alcance diferido o mencion de trabajo futuro.
+    verification: automated
+  - id: AC-17
+    description: El dashboard no muestra RUT, nombres, telefono, correo ni otra PII de leads en ningun
+      momento; todas las metricas son agregadas; existen estados vacios y de error coherentes; la interfaz
+      es responsive y consistente con la Web UX actual; no se integra ninguna plataforma BI externa.
+    verification: automated
+  - id: AC-18
+    description: Existen pruebas automatizadas para cero datos, limites temporales, filtros combinados,
+      estados desconocidos, leads sin asesor asignado y fan-out de joins sin duplicar conteos; el rendimiento
+      se valida con volumen representativo; un smoke humano completo en AWS DEV confirma el comportamiento
+      real de la Parte B, incluyendo el control de acceso 403 para roles no autorizados.
+    verification: both
+  constraints:
+  - Tarea unica con dos fases internas inseparables (A y B); alcance unico y cerrado, sin crear ni diferir
+    ninguna porcion a una tarea posterior separada.
+  - 'change_class D: la migracion 008 y su aplicacion en AWS DEV no siguen ningun fast path; tras el merge
+    la transicion obligatoria es merged_non_fast_path hacia BLOCKED_HUMAN, sin excepcion.'
+  - No modificar el contenido de las migraciones 005/006/007.
+  - No asumir el siguiente numero de migracion sin inspeccionar el historial completo (008 confirmado
+    libre en toda la historia git, no solo en el arbol actual, verificado nuevamente antes de desarrollar).
+  - 'No trabajar sobre una rama obsoleta ni hacer cherry-pick ciego: baseline = origin/main en c5e738c21ba202d9c664652412e6820628b18e3c
+    (re-verificar al iniciar DEVELOPING).'
+  - Antiguedad y umbral de estancado se miden en dias corridos completos (calendario); queda explicitamente
+    excluido cualquier conteo por jornada laboral.
+  - Genero y estado civil quedan expresamente fuera del MVP; no deben aparecer como requisitos diferidos
+    ni como trabajo futuro en ningun artefacto de esta tarea.
+  - El nombre del asesor es visible solo para CEO/CTO; nunca se muestra RUT, telefono ni correo del asesor.
+  - El dashboard nunca muestra RUT, nombres, telefono, correo ni otra PII de leads.
+  - Cartera activa se define exclusivamente como estado_lead NOT IN (cerrado, perdido, no_califica, duplicado).
+  - Primera gestion es el primer evento entre la primera nota humana y el primer cambio general de estado,
+    excluyendo siempre la asignacion automatica.
+  - El funnel y las tasas de avance usan unicamente transiciones observables; denominadores COUNT(DISTINCT
+    id_lead); sin tasas ni metricas inventadas para leads sin historia completa pre-cutover.
+  - No crear backfill inventado para los cambios generales de estado; la cobertura aplica solo desde el
+    cutover de la migracion 008.
+  - El migration candidate y el application candidate son artefactos y aprobaciones humanas distintos;
+    la aprobacion de uno nunca sustituye ni se usa retroactivamente como aprobacion del otro (mismo patron
+    que H3.3.3).
+  - No desplegar la aplicacion antes de que la migracion 008 exista en DEV y su postflight (AC-6) haya
+    sido verificado.
+  - No usar --option-settings en ninguna operacion de despliegue.
+  - DB-PATH-MECHANISM permanece como deuda no bloqueante; esta tarea no la resuelve y sigue el mecanismo
+    manual de Human Gate para la migracion, igual que H3.3.3.
+  - El rollback de la vista y demas objetos de la migracion 008 debe estar probado o validado en integracion
+    antes de la aplicacion en DEV.
+  - Ningun fallo posterior al despliegue elimina automaticamente evidencia ni objetos; cualquier rollback
+    se evalua conforme al Harness (aws-failure-analysis, rollback_authorization), nunca de forma automatica.
+  - Nunca leer ni registrar AUTH_USERS_JSON ni password_hash en logs, tests, evidencia o salida.
+  - 'Como el Harness impide crear docs/H3_3_4_REQUIREMENTS_MATRIX.md durante IDLE: al entrar en DEVELOPING
+    y antes de cualquier cambio funcional, el Developer debe crear esa matriz (solicitud original -> requirement
+    ID -> objetivo -> AC -> implementacion prevista -> prueba automatizada -> smoke humano -> evidencia
+    esperada), cubriendo Parte A, Parte B, seguridad, privacidad, arquitectura, migracion, casos de prueba
+    minimos y operacion/despliegue.'
+  - Antes de modificar codigo, el Developer debe ejecutar y registrar un gate de cobertura (todos los
+    requisitos con AC, todos los AC con requisito, pruebas y smoke especificados, cero alcance diferido,
+    cero metricas ambiguas) y detenerse sin implementar si el gate falla.
+  - El Reviewer debe comparar la matriz contra la solicitud humana original de esta tarea; cualquier omision,
+    diferimiento, metrica irreproducible o requisito sin prueba/smoke aplicable es BLOCKER.
+  - No mezclar cambios no relacionados; no reducir la cobertura minima de pruebas (85%).
+  dependencies:
+  - H3.3.3
+  risk:
+    level: high
+    notes: Cambio de esquema RDS (migracion 008, accion de auditoria cambio_estado_lead + vista tpi.v_historial_estado_lead)
+      con grants nuevos hacia tpi_app, mas una superficie nueva de alto privilegio informativo (Dashboard
+      Ejecutivo) restringida a CEO/CTO. Change_class D sin fast path; dos aprobaciones humanas explicitas
+      y no intercambiables. Riesgos principales, privilegios mal acotados sobre la vista o sobre tpi.auditoria;
+      fuga de datos del dashboard a roles no autorizados (server-side, no solo ocultamiento en UI); metricas
+      de funnel o de estancamiento inventadas o no reproducibles; confundir la aprobacion del migration
+      candidate con la del application candidate.
+  status: closed
+closure:
+  closed_at: '2026-09-21T13:37:50Z'
+  final_state: DONE
+  evidence_dir: evidence/H3.3.4
+  release:
+    release_sha: 3051a6271e1626b40fe24a744abe097cab1ab0fe
+    pr_number: 56
+    application_version: h3-3-4-historial-dashboard-3051a62-domainlocked-r1
+    bundle_sha256: bcbe935885dc50d279cd19c5f0ddf696449b29d7305c2e5506dc0a5afa9916d0
+    lkg: h3-3-3-historial-web-ux-c5e738c-domainlocked-r1
+    deployment: success
+    deployed_commit: 3051a6271e1626b40fe24a744abe097cab1ab0fe
+    verification: PASS
+  rework_rounds: 0

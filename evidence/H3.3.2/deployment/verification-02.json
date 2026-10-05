@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "H3.3.2",
+  "created_at": "2026-09-16T17:44:43Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202609161745-deployer",
+  "approved_commit": "fec33e7951f862c95b2436b09b969e5ef1915769",
+  "deployed_commit": "fec33e7951f862c95b2436b09b969e5ef1915769",
+  "application_version": "h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1",
+  "result": "PASS",
+  "environment_state": {
+    "version_label": "h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true,
+    "detail": "Reverificado de forma independiente en esta sesion (nueva, distinta de claude-202609161547-deployer): describe-environments confirma VersionLabel=h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1 en Ready/Green/Ok; describe-application-versions confirma Status UNPROCESSED y SourceBundle S3Key identico al aprobado en approval-01.json; s3api head-object --checksum-mode ENABLED confirma ChecksumSHA256=3cWr4gR7YktaWhqKoGFQSLVCkQd70NH/r/fE/J4nOAA= igual al aprobado y al de deployment-01.json/verification-01.json. Checksum de bundle identico implica contenido identico, incluidos los digests app/caddy ya verificados de forma reproducible en candidate-01.json/candidate_review-01.json."
+  },
+  "post_cutover_events": {
+    "checked": "elasticbeanstalk describe-events --max-records 20",
+    "errors_or_aborts_found": false,
+    "note": "Sin AccessDenied, abort ni rollback inesperado. VersionLabel se mantiene h3-3-2-superusuarios-ceo-cto-fec33e7-domainlocked-r1 en todos los eventos con VersionLabel reportado. Se observan dos ciclos adicionales de 'restartAppServer'/'Application restart' (2026-09-16T16:26:12Z-16:27:55Z y 2026-09-16T17:01:48Z-17:03:55Z), sin cambio de VersionLabel ni degradacion (Environment health transitiona Ok->Info->Ok en cada ciclo, 'completed successfully'); consistentes con la publicacion de la configuracion de identidades DEV (AUTH_USERS_JSON) realizada por el humano fuera del Harness segun resolution-02.json. No corresponden a ninguna operacion AWS ejecutada por un rol de este Harness en esta tarea (unico update-environment de version registrado es el cutover de deployment-01.json)."
+  },
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "detail": "GET https://dev.tupensioninteligente.cl/ -> 200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "detail": "GET https://backoffice.dev.tupensioninteligente.cl/login -> 200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "detail": "GET https://dev.tupensioninteligente.cl/api/v1/catalogs -> 200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "detail": "GET https://backoffice.dev.tupensioninteligente.cl/static/css/app.css -> 200"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "detail": "GET https://backoffice.dev.tupensioninteligente.cl/leads -> 307 redirect a /login (Location: /login), sin seguir el redirect"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "detail": "Ninguna respuesta ni cabecera Location de los checks anteriores redirigio a genialabs.cl"
+    }
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "human",
+      "note": "diego.operaciones: login PASS, rol CEO PASS (smoke autenticado humano, resolution-02.json), aceptado por el humano (acceptance-01.json). Este rol Deployer no ejecuto ni presencio el login ni maneja credenciales."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "human",
+      "note": "alvaro.operaciones: login PASS, rol CTO PASS (smoke autenticado humano, resolution-02.json), aceptado por el humano (acceptance-01.json)."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "method": "both",
+      "note": "Automatizado: tests/unit/test_h3_3_1_rbac_pii_assignment.py y tests/unit/test_web_app.py (developer-01.json, CI run 35106955650, PASS). Funcional en AWS DEV: acceso a leads PASS y PII completa PASS para diego.operaciones (CEO) y alvaro.operaciones (CTO), smoke autenticado humano (resolution-02.json), aceptado por el humano (acceptance-01.json)."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "method": "both",
+      "note": "Automatizado: tests/unit/test_rbac_superusers.py y test_solicitud_assignment_service.py. Funcional en AWS DEV: asignacion manual ejecucion PASS, estado Asignado PASS, persistencia tras recargar PASS (resolution-02.json), aceptado por el humano (acceptance-01.json)."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "method": "both",
+      "note": "Automatizado: tests/unit/test_rbac_superusers.py y test_web_app.py::test_ceo_and_cto_can_execute_superuser_actions. Funcional en AWS DEV: rol CEO/CTO PASS, acceso a leads PASS y asignacion manual PASS para ambas identidades (resolution-02.json), aceptado por el humano (acceptance-01.json)."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "method": "both",
+      "note": "Automatizado: tests/unit/test_h3_3_1_rbac_pii_assignment.py::test_ac2_pii_masked_even_with_web_mask_pii_false (sin regresion respecto a H3.3.1; roles no privilegiados continuan enmascarados server-side). El smoke humano de esta tarea se centro en las nuevas identidades CEO/CTO (PII completa PASS); no se reporto ninguna regresion de enmascaramiento. Aceptado por el humano (acceptance-01.json)."
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "method": "both",
+      "note": "Automatizado: tests/integration/test_database_runtime.py (flujo de asignacion y tpi.auditoria sin cambios respecto a H3.3.1). Funcional en AWS DEV: asignacion manual ejecucion PASS, estado Asignado PASS, persistencia tras recargar PASS (resolution-02.json). El humano reporto ademas, como known issue no bloqueante de AC-7, que la ficha web no muestra la fecha/actor/transicion de la asignacion en pantalla aunque el registro existe en tpi.auditoria (ver known_issues). Aceptado por el humano (acceptance-01.json)."
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "method": "human",
+      "note": "Smoke autenticado humano en AWS DEV ejecutado y aceptado por el humano con diego.operaciones (CEO) y alvaro.operaciones (CTO): login, rol, acceso a leads y PII completa PASS para ambos (resolution-02.json, acceptance-01.json). Este rol Deployer no ejecuto el smoke autenticado ni manejo credenciales; solo consume la evidencia humana registrada por approve.py."
+    }
+  ],
+  "pii_log_scan": {
+    "matches": 0,
+    "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+    "patterns": [
+      "password",
+      "Authorization"
+    ],
+    "window_start": "2026-09-16T15:34:23Z",
+    "note": "Ventana desde el cutover de esta version hasta el momento del escaneo; cubre ambos ciclos de restartAppServer observados. Sin volcado de lineas: solo conteo (length(events))."
+  },
+  "known_issues": [
+    {
+      "id": "KI-CRMLITE-VOLVER-AL-SITIO",
+      "summary": "La Web UX FastAPI/Jinja2 del backoffice no muestra un enlace/boton 'Volver al sitio'.",
+      "detected_during": "smoke autenticado humano de H3.3.2",
+      "scope": "defecto preexistente del CRM Lite, no introducido por H3.3.2 y no forma parte de AC-1..AC-8",
+      "blocks_h3_3_2_closure": false,
+      "blocks_crm_lite_complete_declaration": true,
+      "source": "resolution-02.json (reason)"
+    },
+    {
+      "id": "KI-CRMLITE-TRAZABILIDAD-ASIGNACION",
+      "summary": "La ficha de lead no muestra fecha, actor ni transicion de estado de la asignacion en la UI, aunque el registro existe en tpi.auditoria.",
+      "detected_during": "smoke autenticado humano de H3.3.2",
+      "scope": "defecto preexistente del CRM Lite, no introducido por H3.3.2 y no forma parte de AC-1..AC-8",
+      "blocks_h3_3_2_closure": false,
+      "blocks_crm_lite_complete_declaration": true,
+      "source": "resolution-02.json (reason)"
+    }
+  ],
+  "human_evidence_sources": {
+    "resolution": "evidence/H3.3.2/approvals/resolution-02.json",
+    "acceptance": "evidence/H3.3.2/approvals/acceptance-01.json"
+  },
+  "failure_class": null,
+  "rollback_recommended": false,
+  "note": "Postflight de solo lectura reverificado de forma independiente (identidad de runtime 4/4, environment Ready/Green/Ok en la version aprobada, eventos sin errores/AccessDenied/abort desde el cutover, smoke no autenticado 6/6 PASS, pii_log_scan sin coincidencias). AC-1..AC-8 se declaran 'met' combinando evidencia automatizada previa (developer-01.json/CI), la aceptacion humana registrada por approve.py (acceptance-01.json) y el detalle funcional reportado por el humano (resolution-02.json). No se declara el CRM Lite integralmente completo: quedan registrados dos known issues preexistentes (Volver al sitio; trazabilidad visible de la asignacion) que no afectan AC-1..AC-8 de H3.3.2 y no se corrigen en esta sesion."
+}

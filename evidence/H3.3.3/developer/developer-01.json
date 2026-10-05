@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "H3.3.3",
+  "created_at": "2026-09-16T20:01:43Z",
+  "role": "developer",
+  "runtime": "deepseek",
+  "session_id": "deepseek-202609161614-developer",
+  "head_sha": "815971660b8c24d684eb79d229103b85fe4bedd0",
+  "branch": "harness/H3.3.3-historial-navegacion-web-ux",
+  "pr_number": 54,
+  "change_class": "D",
+  "tests": {
+    "command": "CI (run 35143655710, Tests PASS): pytest tests/ --cov=app --cov-report=xml --cov-fail-under=85; local: pytest tests/ --cov=app --cov-fail-under=85 -> 517 passed, cobertura 86.43%, 3 fallos ambientales preexistentes (bash bloqueado en sandbox Windows, verdes en CI)",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "docker_compose_config": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "tests/integration/test_audit_assignment_view.py::test_view_exposes_only_assignment_columns_and_filters_events y ::test_view_invalid_uuid_projects_null_and_keeps_other_rows; tests/unit/test_h3_3_3_migration_scripts.py"
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "tests/integration/test_audit_assignment_view.py::test_repository_orders_events_by_fecha_hora_then_id_auditoria_desc; regresion tests/integration/test_database_runtime.py::test_assignment_creates_row_updates_state_and_audits"
+    },
+    {
+      "id": "AC-3",
+      "status": "pending_verification",
+      "evidence": "tests/unit/test_h3_3_3_timeline_presentation.py y tests/unit/test_web_app.py::test_detail_timeline_* (automated); smoke humano en AWS DEV pendiente (AC-8)"
+    },
+    {
+      "id": "AC-4",
+      "status": "pending_verification",
+      "evidence": "tests/unit/test_backoffice_public_site_link.py y tests/unit/test_web_app.py::test_detail_renders_volver_al_sitio_*, ::test_login_page_does_not_render_volver_al_sitio, ::test_detail_hides_volver_al_sitio_* (automated); smoke humano en DEV pendiente"
+    },
+    {
+      "id": "AC-5",
+      "status": "not_applicable",
+      "evidence": "Artefacto operativo del migration candidate (Deployer/Human Gate, change_class D); fuera del alcance del rol Developer"
+    },
+    {
+      "id": "AC-6",
+      "status": "not_applicable",
+      "evidence": "Postflight humano en AWS DEV tras aplicar 007; el mecanismo de privilegios queda cubierto por tests/integration/test_audit_assignment_view.py::test_view_privileges_public_and_app_only"
+    },
+    {
+      "id": "AC-7",
+      "status": "not_applicable",
+      "evidence": "Secuencia operativa del application candidate (Deployer/Human Gate); fuera del alcance del rol Developer"
+    },
+    {
+      "id": "AC-8",
+      "status": "not_applicable",
+      "evidence": "Smoke funcional humano en AWS DEV (etapa Deployer/Verifying); fuera del alcance del rol Developer"
+    },
+    {
+      "id": "AC-9",
+      "status": "met",
+      "evidence": "tests/integration/test_audit_assignment_view.py::test_view_rollback_revokes_and_drops_view (rollback probado en PostgreSQL de integracion local)"
+    }
+  ],
+  "files_changed": [
+    "scripts/sql/007_create_audit_assignment_view.sql",
+    "scripts/sql/007_drop_audit_assignment_view.sql",
+    "scripts/init_test_database.py",
+    "app/repositories/solicitud_repository.py",
+    "app/services/solicitud_service.py",
+    "app/web/dependencies.py",
+    "app/web/main.py",
+    "app/web/presentation.py",
+    "app/web/routes/leads.py",
+    "app/web/static/css/app.css",
+    "app/web/templates/base.html",
+    "app/web/templates/lead_detail_panel.html",
+    "tests/integration/test_audit_assignment_view.py",
+    "tests/unit/test_h3_3_3_migration_scripts.py",
+    "tests/unit/test_h3_3_3_timeline_presentation.py",
+    "tests/unit/test_web_app.py",
+    "tests/unit/test_h3_3_1_rbac_pii_assignment.py",
+    "docs/database/02_PHYSICAL_SCHEMA.md",
+    "docs/database/04_MIGRATIONS.md",
+    "docs/database/05_SECURITY_ACCESS.md",
+    "docs/H3_3_CRM_LITE_WEB_UX.md",
+    "docs/DEVELOPMENT_GUIDE.md",
+    "docs/H3_3_3_COVERAGE_MATRIX.md"
+  ],
+  "assumptions": [
+    "La migracion 007 NO se ha aplicado en AWS RDS DEV: change_class D, requiere Human Gate explicito (migration candidate AC-5 + postflight AC-6); el desarrollo deja el forward/rollback versionados y probados en PostgreSQL local/integracion.",
+    "Se conserva actor_subject como identidad historica del actor. Resolver display_name exigiria exponer el directorio de usuarios del secreto AUTH_USERS_JSON (que incluye password_hash), lo que amplia materialmente el alcance y esta prohibido; la limitacion queda documentada en docs/H3_3_CRM_LITE_WEB_UX.md.",
+    "La vista no impone orden (PostgreSQL no lo garantiza en vistas); el orden estable fecha_hora DESC, id_auditoria DESC lo aplica la consulta del repositorio.",
+    "pip-audit y docker build/compose build no pudieron ejecutarse localmente (red bloqueada para OSV/PyPI y Docker daemon no arranca en la sandbox Windows); quedan gateados y verificados por CI (run 35143655710: Security Audit y Docker Build PASS). docker compose config --quiet se ejecuto localmente con PASS.",
+    "3 tests de integracion (tests/integration/test_frozen_candidate_verification.py) fallan localmente porque invocan bash (bloqueado por la sandbox Windows); son preexistentes, no relacionados con H3.3.3 y pasan en CI ubuntu.",
+    "No se modifico AWS, RDS DEV, Secrets Manager, Elastic Beanstalk ni se crearon Application Versions. No se ejecuto approve.py ni se hizo merge."
+  ],
+  "migrations_included": true
+}

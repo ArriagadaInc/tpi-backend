@@ -1,0 +1,212 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "H3.3.5",
+  "created_at": "2026-09-21T15:56:49Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609211600-reviewer-h3-3-5",
+  "reviewed_sha": "56254e36e810c5491a1921e516dc0439756846dc",
+  "reviewed_tree": "957ad9b2ce1e38ce4aafcbe5a880312e2da74e87",
+  "pr_number": 57,
+  "branch": "harness/H3.3.5-asesores-dev-cartera",
+  "base_sha": "3051a6271e1626b40fe24a744abe097cab1ab0fe",
+  "developer_evidence": "evidence/H3.3.5/developer/developer-01.json",
+  "review_scope": "Revision completa REVIEWING de H3.3.5 (10 revisiones solicitadas). Un commit sobre la baseline, 18 archivos, todos dentro de scope. No se ejecuto el seed, no se accedio a AWS/RDS/Secrets Manager, no se modifico codigo. Las pruebas de DB se hicieron contra PostgreSQL 15 efimero en Docker local (DATABASE_URL de prueba, sin credenciales reales).",
+  "ci": {
+    "run_id": 35618013993,
+    "conclusion": "success",
+    "head_sha": "56254e36e810c5491a1921e516dc0439756846dc",
+    "workflow": "CI - Linting, Tests & Security",
+    "event": "pull_request",
+    "jobs_green": 5,
+    "jobs_total": 5,
+    "runs_for_sha": 1,
+    "verification": "gh run list --commit <sha>; gh pr checks 57 (5/5 pass)"
+  },
+  "decision": "REJECTED",
+  "cause": null,
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "blocker",
+      "file": "app/repositories/solicitud_repository.py",
+      "line": "1189-1226 (append_lead_comment)",
+      "summary": "El orden de los parametros SQL de append_lead_comment con advisor_scope es incorrecto: params=[fragmento, fragmento, 'activa', id_asesor, id_lead] pero los placeholders son (fragmento, fragmento, id_lead, estado, id_asesor). Toda nota de un advisor (lead propio o ajeno) falla con DatabaseQueryError 'invalid input syntax for type uuid: \"activa\"'.",
+      "failure_scenario": "Reproducido contra Postgres 15 con el esquema de scripts/init_test_database.py: advisor A comenta su lead propio -> DatabaseQueryError; comenta lead ajeno -> DatabaseQueryError (no 404). La ruta POST /leads/{id}/comments solo captura ValueError, por lo que el advisor recibe un error no manejado. AC-11 (advisor puede agregar notas en leads propios) queda ROTO y AC-10 para comentarios no es verificable. Los roles no-advisor no se ven afectados (ownership_sql vacio; verificado con CEO).",
+      "required_action": "Corregir el orden de parametros (id_lead antes del predicado de ownership o reordenar los placeholders) y agregar prueba de integracion contra PostgreSQL real que cubra: propio -> True y nota escrita; ajeno -> False sin escritura; sin asignar -> False; asignacion historica/inactiva -> False."
+    },
+    {
+      "id": "F2",
+      "severity": "blocker",
+      "file": "tests/ (ausencia); docs/H3_3_5_REQUIREMENTS_MATRIX.md",
+      "line": "filas 7,9-13,16,17 de la matriz",
+      "summary": "Ninguna prueba ejecuta el SQL del alcance de cartera ni del ownership: portfolio_asesor_id, advisor_scope, get_active_advisor_by_id y lead_active_assignment_belongs_to no aparecen en tests/integration, tests/e2e ni tests/security (grep). Los tests nuevos usan un repositorio falso cuyo filtro de cartera es tautologico. La matriz declara cubiertas esas filas citando tests/integration/test_crm_lite_board.py y test_lead_state_history.py, que no ejercen ninguna de esas rutas.",
+      "failure_scenario": "El defecto F1 paso CI verde (790 tests, 88.75%) precisamente por esta falta de pruebas contra DB. AC-6, AC-7, AC-8, AC-9, AC-10, AC-11 y AC-16 se declaran 'met' sin que ningun test verifique aislamiento entre carteras, asignacion inactiva/historica, conteos/paginacion ni rollback en denegacion sobre el SQL real. Requisito sin prueba efectiva y mock que evita la autorizacion real = BLOCKER segun criterio de la revision.",
+      "required_action": "Agregar pruebas de integracion (PostgreSQL) con dos asesores: Asesor1 no ve leads de Asesor2 y viceversa; lead sin asignacion activa no aparece; asignacion inactiva/historica no concede acceso; conteos == filas; paginacion tras el filtro; sin_asignar/estancado/busqueda/asesor=<otro> no rompen el aislamiento; asesor inactivo o rol distinto -> vacio; update_lead_status ajeno sin escritura ni auditoria. Corregir la matriz para citar solo pruebas que ejecuten el comportamiento."
+    },
+    {
+      "id": "F3",
+      "severity": "blocker",
+      "file": "scripts/sql/dev/seed_asesores_desarrollo.sql",
+      "line": "INSERT INTO tpi.asesores (nombre) (bloque count=0)",
+      "summary": "El seed inserta solo (nombre) y depende de defaults 'asesor'/'activo' de rol y estado_disponibilidad que no estan respaldados por el DDL versionado: scripts/init_test_database.py declara ambas columnas NOT NULL SIN default. docs/database/02_PHYSICAL_SCHEMA.md indica defaults, pero contradice al DDL versionado y la seccion 'Observado en AWS DEV' no los confirma. Esquema real no evidenciado = SQL basado en supuesto.",
+      "failure_scenario": "En una base creada con el DDL versionado, INSERT INTO tpi.asesores (nombre) falla con 'null value in column \"rol\" violates not-null constraint' (reproducido). Falla segura (rollback) pero el seed no puede crear los asesores; si la base real tuviera defaults distintos, insertaria valores no deseados. El test test_h3_3_5_seed_sql.py solo comprueba presencia de cadenas y no ejecuta ni modela el seed, por lo que no lo detecta.",
+      "required_action": "Insertar explicitamente rol='asesor' y estado_disponibilidad='activo' (no depender de defaults) y documentar/evidenciar la contradiccion doc-vs-DDL (AGENTS.md: contradiccion relevante entre fuentes). Reforzar la verificacion del seed (p.ej. prueba que lo ejecute en un Postgres efimero con el chequeo de base parametrizable o modelo equivalente) sin ejecutarlo contra AWS."
+    },
+    {
+      "id": "F4",
+      "severity": "major",
+      "file": "tests/unit/test_h3_3_5_advisor_web.py",
+      "line": "n/a",
+      "summary": "No hay pruebas web de mutaciones de advisor: POST /leads/{id}/status y /comments sobre lead ajeno/no asignado (404, sin escritura), ni POST /cleanup como advisor (403). Solo se prueba assign (403) y lecturas.",
+      "failure_scenario": "AC-10 pide 'requests directos' a status, comments y cleanup; ninguno tiene test HTTP como advisor. El defecto F1 en la ruta de comentarios habria sido detectado por un test end-to-end.",
+      "required_action": "Agregar tests HTTP (service real + repositorio real o de integracion) para status/comments/cleanup como advisor: propio permitido (status/comments), ajeno y sin asignar 404 sin revelar existencia, cleanup 403 explicito por rol."
+    },
+    {
+      "id": "F5",
+      "severity": "major",
+      "file": "docs/H3_3_5_DEV_RUNBOOK.md",
+      "line": "seccion 6 y seccion 7 paso 6",
+      "summary": "El runbook demuestra por codigo que AUTH_USERS_JSON se lee una vez en SimpleDevAuth.__init__ y queda cacheado, pero no nombra la operacion concreta de refresh (dice 'publicar secreto + reinicio controlado (Secrets Manager / EB environment secrets)') ni cita la fuente. La documentacion oficial de AWS (Elastic Beanstalk, Fetching secrets and parameters to environment variables) establece que EB solo resuelve los secretos al bootstrap de instancia y que el refresh requiere RestartAppServer o UpdateEnvironment.",
+      "failure_scenario": "El operador humano no tiene instruccion inequivoca de que operacion ejecutar; un secreto actualizado sin RestartAppServer/UpdateEnvironment dejaria las cuentas advisor sin activarse (o una secuencia incorrecta). La regla de la tarea exige mecanismo real demostrado, no supuesto.",
+      "required_action": "Nombrar la operacion (RestartAppServer o UpdateEnvironment, ejecutada por el humano fuera del Harness), citar docs.aws.amazon.com/elasticbeanstalk/latest/dg/AWSHowTo.secrets.env-vars.html, confirmar que el backoffice consume AUTH_USERS_JSON via environmentsecrets, y cubrir el chequeo de release/salud posterior."
+    },
+    {
+      "id": "F6",
+      "severity": "minor",
+      "file": "tests/unit/test_h3_3_1_rbac_pii_assignment.py",
+      "line": "165-170, 257-262, 308-312",
+      "summary": "Los tests de regresion H3.3.1 retiraron 'advisor' de los bucles de roles restringidos/enmascarados (incluido web_mask_pii=False). El cambio es coherente con el nuevo contrato pero el reemplazo son pruebas con repositorio falso (ver F2), por lo que se perdio verificacion HTTP de PII para advisor sin sustituto efectivo.",
+      "failure_scenario": "Regresion futura en enmascaramiento/HTML del advisor sin test que la detecte.",
+      "required_action": "Cubrir con las pruebas de integracion pedidas en F2/F4."
+    },
+    {
+      "id": "F7",
+      "severity": "minor",
+      "file": "scripts/sql/dev/seed_asesores_desarrollo.sql",
+      "line": "BEGIN;/validaciones; compatibilidad NULL; comparacion sin trim",
+      "summary": "(a) BEGIN precede a las validaciones dentro del DO (la revision pedia validar antes de abrir; el efecto es equivalente por rollback, y el preflight humano es previo). (b) Un rol/estado NULL hace que 'lower(v_rol) <> asesor' sea NULL y no aborte en la rama de adopcion; lo detiene la verificacion final, con mensaje poco claro. (c) lower(nombre) sin trim: 'Asesor Desarrollo 1 ' con espacio final no se detecta como existente.",
+      "failure_scenario": "Mensajes de aborto confusos o creacion de un registro casi duplicado.",
+      "required_action": "Usar IS DISTINCT FROM/COALESCE en la comparacion, considerar lower(btrim(nombre)) y documentar el orden BEGIN/validaciones."
+    },
+    {
+      "id": "F8",
+      "severity": "minor",
+      "file": "docs/H3_3_5_DEV_RUNBOOK.md; docs/H3_3_5_REQUIREMENTS_MATRIX.md",
+      "line": "seccion 0/1; filas de matriz",
+      "summary": "El preflight D5 cita instancia RDS/base/puerto pero no el endpoint (hostname) esperado, y la matriz cita pruebas que no ejercen el comportamiento (ver F2). Tampoco se menciona el Human Gate del data candidate previo a la ejecucion del seed.",
+      "failure_scenario": "Preflight incompleto frente a D5 ('endpoint/base').",
+      "required_action": "Referenciar la fuente canonica del endpoint (o registrar que no esta documentado) y alinear el runbook con los gates de la tarea."
+    },
+    {
+      "id": "F9",
+      "severity": "minor",
+      "file": "app/auth/simple_dev.py; tests/unit/test_h3_3_5_advisor_auth.py",
+      "line": "_parse_advisor_id",
+      "summary": "La advertencia por advisor_id malformado no identifica a que entrada corresponde (no incluye subject/username) y ningun test verifica con caplog que el valor crudo, el secreto o el hash no se registren.",
+      "failure_scenario": "Advertencia poco accionable; propiedad de no-logging sin test.",
+      "required_action": "Incluir subject (no secreto) en la advertencia y agregar assert de caplog."
+    },
+    {
+      "id": "O1",
+      "severity": "info",
+      "file": "app/repositories/solicitud_repository.py",
+      "line": "assign_lead 1059-1160",
+      "summary": "Observacion (sin accion): assign_lead rechaza asignar si ya existe una asignacion activa, y no hay reasignacion en la app; ademas update_lead_status comprueba ownership tras SELECT FOR UPDATE. Por eso no se observa un TOCTOU explotable via la aplicacion. append_lead_comment usa EXISTS en un solo UPDATE (sin bloqueo previo) pero no puede perder ownership por la app.",
+      "failure_scenario": "n/a",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "O2",
+      "severity": "info",
+      "file": "app/pages/2_solicitudes_registradas.py",
+      "line": "186",
+      "summary": "Observacion pre-existente y fuera de alcance: la pagina Streamlit legacy llama get_crm_bandeja sin usuario (sin scope, siempre enmascarada). La app desplegada (FastAPI /leads) si esta scopeada. Conviene confirmar que Streamlit no se expone en DEV.",
+      "failure_scenario": "n/a",
+      "required_action": "Ninguna en H3.3.5."
+    }
+  ],
+  "checks": [
+    {
+      "name": "preconditions_state_task_pr_head_base",
+      "result": "PASS",
+      "note": "state READY_FOR_REVIEW, task H3.3.5, PR #57 head 56254e3 (=evidencia Developer), base 3051a62, 1 commit, 18 archivos dentro de scope, sin archivos protegidos del Harness; validate_repo PASS; start_review OK con sesion claude-202609211600-reviewer-h3-3-5."
+    },
+    {
+      "name": "ci_green_exact_sha",
+      "result": "PASS",
+      "note": "run 35618013993 success, 5/5 jobs, un unico run para el SHA."
+    },
+    {
+      "name": "ruff_black_mypy_bandit_pip_audit",
+      "result": "PASS",
+      "note": "Python 3.12.2 con dev.lock: ruff OK; black 174 archivos sin cambios; mypy 68 archivos OK; bandit sin hallazgos medium+; pip-audit runtime.lock sin vulnerabilidades."
+    },
+    {
+      "name": "full_suite_and_coverage",
+      "result": "PASS",
+      "note": "(3 fallos ambientales clasificados abajo) pytest tests/ contra Postgres 15 efimero: 790 passed, 3 failed, cobertura 88.75% (>=85). Reproduce lo reportado por el Developer (790/3/88.73%)."
+    },
+    {
+      "name": "three_bash_failures_classification",
+      "result": "PASS",
+      "note": "Ambientales. test_frozen_candidate_verification.py::{test_verifier_accepts_flat_downloaded_artifact,test_verifier_rejects_nested_download_layout,test_verifier_rejects_modified_bundle_with_same_name} fallan identico en la baseline limpia 3051a62 (Windows: bash recibe la ruta con backslashes y responde '/bin/bash: ...No such file or directory', exit 127). La PR no modifica scripts/release ni ese test (git diff vacio). CI Linux (Tests) pasa."
+    },
+    {
+      "name": "six_harness_failures_classification",
+      "result": "PASS",
+      "note": "tests/harness no es parte de la PR ni de la baseline (vive en la rama del Harness). Ejecutado en el checkout principal en estado REVIEWING: 131 passed, 3 failed (test_init_works_in_idle_without_task, test_c_cold_start_briefing_idle, test_e_transition_denies_human_event_without_human_flag; assert 'REVIEWING' == 'IDLE'). La dependencia exacta es tests/harness/conftest.py::_copy_skeleton, que copia harness/state.json vivo y esos tests asumen IDLE. En un worktree limpio del commit 2909242 (state IDLE) pasan 134/134. El numero de fallos varia con el estado vivo (6 reportados en DEVELOPING/READY, 3 en REVIEWING). No causados por H3.3.5."
+    },
+    {
+      "name": "portfolio_read_scope_sql_probe",
+      "result": "PASS",
+      "note": "Sonda ad hoc (fuera del repo, DB efimera, sin modificar codigo): A ve {1,2}, B ve {3,5}; lead con asignacion historica de A y activa de B solo lo ve B; sin asignar no aparece; sin_asignar+scope vacio; asesor=B con scope A ignorado; busqueda del nombre ajeno vacia; paginacion y total correctos; asesor inactivo o rol distinto -> None/vacio; detalle ajeno/no asignado/historico/advisor invalido -> None (404). El SQL de lectura es correcto pero no esta cubierto por pruebas (F2)."
+    },
+    {
+      "name": "advisor_mutation_probe",
+      "result": "FAIL",
+      "note": "status: propio True con auditoria; ajeno/no asignado False sin escritura ni auditoria; advisor inactivo False. comments: propio y ajeno -> DatabaseQueryError (F1)."
+    },
+    {
+      "name": "fail_closed_no_global_fallback",
+      "result": "PASS",
+      "note": "advisor sin/malformado/inexistente/inactivo advisor_id -> bandeja vacia sin consulta, detalle 404, mutaciones denegadas; portfolio_asesor_id None solo para roles no-advisor; advisor_id de sesion validado; no se acepta advisor_id del navegador."
+    },
+    {
+      "name": "dashboard_403_and_nav",
+      "result": "PASS",
+      "note": "require_executive_access 403 para no-superusuario (baseline vigente) y test_h3_3_5_advisor_web verifica 403 real para advisor valido e invalido; nav oculta enlace; CEO/CTO sin cambios."
+    },
+    {
+      "name": "pii_html_and_raw_payload",
+      "result": "PASS",
+      "note": "raw_payload no se consulta en list/detalle; los templates no usan mask_pii; PII completa solo en leads propios (servicio); ajenos 404 sin PII en HTML."
+    },
+    {
+      "name": "seed_static_review",
+      "result": "FAIL",
+      "note": "No ejecutado. DEV-only, no numerado, sin secretos, sin asignaciones/grants, lower(nombre), crea/adopta/aborta, verificacion final, UUID via NOTICE. Bloqueado por F3 (INSERT dependiente de defaults no respaldados por DDL)."
+    },
+    {
+      "name": "runbook_cutover_review",
+      "result": "FAIL",
+      "note": "Orden de cutover D7 correcto y refresh asignado al humano; lectura unica y cache de AUTH_USERS_JSON verificadas en codigo; operacion de refresh sin nombrar/citar (F5)."
+    },
+    {
+      "name": "secrets_pii_scan",
+      "result": "PASS",
+      "note": "Sin hashes, contrasenas, endpoints sensibles, comandos AWS de mutacion, lockfiles ni cambios de infraestructura en el diff; fixtures con datos sinteticos; logs de advertencia sin advisor_id/secretos."
+    },
+    {
+      "name": "requirements_matrix_ac_traceability",
+      "result": "FAIL",
+      "note": "33 requisitos/AC-1..21 con componente real, pero AC-6..11 y AC-16 se apoyan en pruebas que no ejecutan el SQL (F2, F4). AC-1..4,17..19 pendientes de verificacion humana/Deployer por diseno; AC-5,12,13,14,15,20,21 con cobertura efectiva."
+    }
+  ],
+  "risks": [
+    "REJECTED: F1 (advisor no puede escribir notas: AC-11 roto), F2 (aislamiento de cartera sin pruebas contra DB) y F3 (seed depende de defaults no evidenciados) deben corregirse antes de aprobar. El SQL de lectura del alcance de cartera fue verificado correcto mediante sonda independiente, pero debe quedar cubierto por tests permanentes.",
+    "No revisar de nuevo H3.3.5 sin CI verde en el nuevo SHA y con las pruebas de integracion pedidas.",
+    "Sesion Reviewer: claude-202609211600-reviewer-h3-3-5. Worktrees: .harness-worktrees/H3.3.5-reviewer-56254e3 (PR), -3051a62 (baseline), -2909242 (Harness limpio). PostgreSQL efimero Docker tpi-h335-review-pg (a eliminar)."
+  ]
+}

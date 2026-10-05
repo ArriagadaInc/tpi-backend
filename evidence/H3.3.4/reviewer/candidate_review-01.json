@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "H3.3.4",
+  "created_at": "2026-09-20T17:22:00Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609201720-reviewer-candidate-review",
+  "release_sha": "c99b260ffc32aae0ab8fe80585e6243aa1be5665",
+  "reviewed_tree": "bf18968fad3d9555d29b0262b4e1eafe80e4ffce",
+  "release_tree": "bf18968fad3d9555d29b0262b4e1eafe80e4ffce",
+  "pr_number": 55,
+  "result": "FAIL",
+  "decision": "REJECTED",
+  "cause": "code",
+  "review_scope": "Candidate review de la aplicacion H3.3.4 tras migracion 008 aplicada. No se reabren F1/F11 ni hallazgos documentales resueltos. Un unico defecto funcional bloqueante.",
+  "reviewer_session_note": "CANDIDATE_REVIEW no tiene transicion de inicio en workflow.yaml (allowed_events = candidate_approve | candidate_reject; start_review solo existe desde READY_FOR_REVIEW). No se invento ninguna. La sesion queda establecida por esta evidencia y la transicion de rechazo, distinta de la del Developer (deepseek-202609191838-developer-r3) y de las revisiones previas.",
+  "migration_validation": {
+    "evidence": "evidence/H3.3.4/deployment/migration-01.json",
+    "sha256": "e94c5720401f1454bf3c515d62d1117236c0314bf339c2660b2f127ed372b0c5",
+    "sha256_matches_staged_and_candidate_reference": true,
+    "result": "PASS",
+    "applied_once": true,
+    "postflight_result": "PASS",
+    "rollback_executed": false,
+    "release_sha_matches": true,
+    "release_tree_matches": true,
+    "migration": "008_create_lead_state_history",
+    "forward_sha256": "2e2b8c9d46fd72f2696b3bbb06c194b5e795097d13167228d0400e381ed9ee06",
+    "rollback_sha256": "326078eed3d29f85106d088038bb694c64711f64e932dc2f584e61b954931838",
+    "limits": "El agente no tiene acceso RDS (servicio denegado); la evidencia es el informe del operador humano. No se reverifico contra la base."
+  },
+  "identity_chain": {
+    "release_sha": "c99b260ffc32aae0ab8fe80585e6243aa1be5665",
+    "release_tree": "bf18968fad3d9555d29b0262b4e1eafe80e4ffce",
+    "tree_verification": "git rev-parse c99b260^{tree} == reviewed_tree (review-05) == release_tree (merge-01 y candidate); c99b260 pertenece al historial de origin/main (git log origin/main, 1 coincidencia; HEAD de main).",
+    "publish_run": "gh run view 35523362252: conclusion=success, headSha=c99b260, event=workflow_dispatch. Log del paso 'Fail closed on high or critical ECR findings': tpi-dev-app CRITICAL=0 HIGH=0; tpi-dev-caddy CRITICAL=0 HIGH=0.",
+    "images": {
+      "app": "sha256:a0a619fc2b6e34e7f50dc98e08c6680242c5b6ca3890763777a901a01429e225 (aws_guard ecr describe-images: presente, tag=release_sha)",
+      "caddy": "sha256:6faea46e0dabbc2ac8bf41cb3d2e050d35c07623bef4b326303f77efd6c10804 (presente, tag=release_sha)"
+    },
+    "bundle": "sha256 a9cb23622bc289a81facc3cc62408fb21b89d5738bc4088a3c5966b48ab44886; el archivo local coincide y la reconstruccion independiente con build_domain_locked_bundle desde deployment/aws/docker-compose.domainlocked.yml@c99b260 produce el mismo SHA256. Zip con unica entrada docker-compose.yml; sin genialabs.cl; sin 'build:'.",
+    "s3": "head-object con checksum-mode: ContentLength=4749, ChecksumSHA256=qcsjYivCiagfrMPMYkCPshuJ1XOLxAiKPFlmtIq0SIY= == base64(bundle sha256).",
+    "application_version": "h3-3-4-historial-dashboard-c99b260-domainlocked-r1 UNPROCESSED; SourceBundle S3Bucket/S3Key coinciden con el candidate.",
+    "environment": "tpi-backoffice-dev-green Ready/Green/Ok con VersionLabel = LKG h3-3-3-historial-web-ux-c5e738c-domainlocked-r1; DateUpdated 2026-09-17T03:59:40Z (sin mutar).",
+    "lkg": "AV UNPROCESSED existente con SourceBundle esperado; digests app sha256:9333994e... y caddy sha256:27e8c5dc... presentes en ECR."
+  },
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS"
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS"
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS"
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS"
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "Conteos desde el log del run (paso fail-closed); describe-images del guard no expone imageScanFindingsSummary."
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS"
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS"
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS"
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS"
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS"
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS"
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS"
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS"
+    },
+    {
+      "name": "migration_evidence_pass_applied_once_postflight_pass_no_rollback",
+      "result": "PASS"
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS"
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS"
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS"
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "Revision estatica del plan (un unico update-environment version-only). aws_guard --dry-run deniega update-environment en modo candidate_read del reviewer, como corresponde; no se ejecuto."
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS"
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS"
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS"
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS"
+    },
+    {
+      "name": "lead_state_history_cutover_reaches_container",
+      "result": "FAIL",
+      "note": "deployment/aws/docker-compose.domainlocked.yml@c99b260 no declara LEAD_STATE_HISTORY_CUTOVER en el bloque environment de backoffice ni de api; el bundle contiene solo ese compose y no hay env_file. La variable no llega al contenedor. Coincide con candidate.deployment_plan.lead_state_history_cutover.wired_in_bundle=false."
+    }
+  ],
+  "findings": [
+    {
+      "id": "CAND-01",
+      "severity": "blocker",
+      "classification": "functional",
+      "file": "deployment/aws/docker-compose.domainlocked.yml",
+      "summary": "LEAD_STATE_HISTORY_CUTOVER figura en el deployment_plan (2026-09-20) pero no esta cableada al contenedor: el compose/template productivo del release no la declara, por lo que la aplicacion (app/config/settings.py: lead_state_history_cutover, default None) nunca la recibe. Consecuencia: el embudo y el tiempo a primera gestion del Dashboard Ejecutivo quedan permanentemente 'No disponible con cobertura suficiente' en el runtime desplegado. Es un defecto funcional bloqueante del candidate; no es fallo de la migracion 008 (PASS) ni de seguridad (falla segura, sin fecha inventada, sin exposicion de datos).",
+      "evidence": [
+        "git show c99b260:deployment/aws/docker-compose.domainlocked.yml: los bloques environment de api y backoffice enumeran variables sin LEAD_STATE_HISTORY_CUTOVER",
+        "git grep LEAD_STATE_HISTORY_CUTOVER c99b260: solo settings.py, presentation.py, benchmark y tests; ningun archivo de deployment/",
+        "candidate-01.json deployment_plan.lead_state_history_cutover.wired_in_bundle=false"
+      ],
+      "required_action": "Remediacion minima en un nuevo release: (1) agregar al compose/template productivo el paso de LEAD_STATE_HISTORY_CUTOVER hacia el contenedor backoffice (sin fijar fecha en el codigo); (2) mantener el default seguro None cuando la variable no este definida o vacia; (3) el valor se establece por configuracion del environment al desplegar, usando como cutover la fecha real del despliegue en America/Santiago (no la fecha provisoria 2026-09-20 del plan); (4) agregar prueba automatizada que demuestre que la variable llega al contenedor/configuracion (compose renderizado -> Settings); (5) generar nuevo release_sha y nuevo application candidate.",
+      "scope_exclusions": "No reabre F1/F11 ni hallazgos documentales resueltos. No afecta la migracion 008 ni la seguridad."
+    }
+  ],
+  "risks": [
+    "El candidate rechazado deja imagenes ECR, bundle, objeto S3 content-addressed y Application Version UNPROCESSED inertes; no se borran (el Harness no puede ni debe).",
+    "La migracion 008 permanece aplicada; es aditiva y compatible con el LKG (H3.3.3 no la consulta). Un rollback SQL es decision humana separada.",
+    "El nuevo release reutiliza la migracion 008 ya aplicada: el nuevo candidate no debe volver a ejecutarla.",
+    "Nota de workflow: cause=code con rework_round=4 (max 3) enruta a BLOCKED_HUMAN (candidate_reject_code_exhausted); el humano debe resolver a DEVELOPING (resolve_to_developing resetea rework y release)."
+  ],
+  "follow_ups_preserved": {
+    "F1": "deuda documental no reabierta",
+    "F11": "deuda documental no reabierta",
+    "F2/F6": "rendimiento a volumen representativo",
+    "F4": "valor efectivo de LEAD_STATE_HISTORY_CUTOVER en DEV: se resuelve con CAND-01",
+    "F5": "snapshot REPEATABLE READ prolongado",
+    "AC-7": "Human Gate del nuevo application candidate",
+    "AC-9/AC-18": "smoke humano en DEV"
+  },
+  "mutations": {
+    "code_modified": false,
+    "aws_writes": false,
+    "images_bundle_s3_av_deleted": false,
+    "update_environment": false,
+    "rollback": false,
+    "rds_or_migrations": false,
+    "note": "Solo lecturas via aws_guard (sts, EB describe, S3 head-object, ECR describe-images) y gh run view; escrituras locales limitadas a este payload, evidencia, progress/ y la transicion."
+  }
+}

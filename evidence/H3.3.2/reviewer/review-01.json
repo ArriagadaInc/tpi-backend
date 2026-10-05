@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "H3.3.2",
+  "created_at": "2026-09-16T14:30:44Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202609161500-reviewer",
+  "reviewed_sha": "f99ab7805ad5732a3c17677c6d24120be50c0f90",
+  "reviewed_tree": "6ad2f8f5f2269be0a551ce15f247f643de0497af",
+  "pr_number": 53,
+  "ci": {
+    "run_id": 35106955650,
+    "sha": "f99ab7805ad5732a3c17677c6d24120be50c0f90",
+    "conclusion": "success",
+    "note": "5/5 jobs SUCCESS (Lint & Format, Tests, Security Audit, Docker Build, Release Tooling Validation) via gh pr view 53 --json statusCheckRollup y gh run view 35106955650. Log del job Tests confirma 497 passed, TOTAL coverage 86.27% (gate >=85%); log del job Security Audit confirma bandit 0 issues por severidad; ambos verificados leyendo el log crudo de CI, no solo el auto-reporte del Developer."
+  },
+  "decision": "APPROVED",
+  "findings": [],
+  "checks": [
+    {
+      "name": "developer_evidence_read",
+      "result": "PASS",
+      "note": "evidence/H3.3.2/developer/developer-01.json leido; head_sha, pr_number y archivos declarados coinciden con el estado real del PR."
+    },
+    {
+      "name": "pr_exists_and_mergeable",
+      "result": "PASS",
+      "note": "gh pr view 53: state=OPEN, baseRefName=main, mergeable=MERGEABLE, headRefOid=f99ab78..."
+    },
+    {
+      "name": "ci_green_on_exact_sha",
+      "result": "PASS"
+    },
+    {
+      "name": "scope_no_unrelated_changes",
+      "result": "PASS",
+      "note": "gh pr diff 53 --name-only y git diff origin/main..f99ab78 coinciden exactamente: app/auth/models.py, app/services/solicitud_service.py, app/web/dependencies.py, app/web/routes/leads.py, docs/DECISIONES_TECNICAS.md, docs/H3_3_2_SUPERUSUARIOS_CEO_CTO.md, docs/INDEX.md y 4 archivos de tests. Un diff local inicial contra la rama 'main' desactualizada del working copy mostro 108 archivos por desfase de la rama local; se descarto en favor de origin/main (autoritativo), que confirma un solo commit encima de origin/main."
+    },
+    {
+      "name": "superuser_centralization",
+      "result": "PASS",
+      "note": "SUPERUSER_ROLES = frozenset({'ceo','cto'}) e is_superuser(role) definidos una sola vez en app/auth/models.py; es la unica fuente de verdad, sin duplicacion de la logica de rol en otras capas."
+    },
+    {
+      "name": "superuser_applied_consistently",
+      "result": "PASS",
+      "note": "is_superuser() se usa en SolicitudService.can_view_full_pii, SolicitudService.can_assign_lead, app/web/dependencies.py (_MockLeadBoardService.can_assign_lead) y app/web/routes/leads.py (_can_write, _can_cleanup). Grep de 'role in {' / 'role ==' en app/ no encontro ningun gate adicional sin actualizar; app/api/* (frontend publico) no tiene logica de rol backoffice."
+    },
+    {
+      "name": "ceo_cto_functional_superset",
+      "result": "PASS",
+      "note": "tests/unit/test_rbac_superusers.py prueba PII completa + asignacion + escritura + cleanup para ceo/cto; tests/unit/test_web_app.py::test_ceo_and_cto_can_execute_superuser_actions ejercita end-to-end (cliente HTTP) assign/status/comments/cleanup con 200/303 y persistencia de estado 'asignado'."
+    },
+    {
+      "name": "no_permission_reduction_other_roles",
+      "result": "PASS",
+      "note": "Los 4 cambios de produccion son estrictamente aditivos: 'is_superuser(user.role) or <condicion original sin modificar>' (_WRITE_ROLES, _CLEANUP_ROLES, {'admin','executive'} intactos). No es posible que un rol no-superusuario pierda una capacidad que ya tenia; verificado por lectura directa del diff, no solo por tests."
+    },
+    {
+      "name": "no_pii_regression_masked_roles",
+      "result": "PASS",
+      "note": "tests/unit/test_h3_3_1_rbac_pii_assignment.py::test_ac1_ac2_pii_visibility_by_role y test_ac2_pii_masked_even_with_web_mask_pii_false (sin cambios de aserciones para roles restringidos) siguen verificando masking server-side y ausencia de PII completa en HTML para advisor/operations/admin/executive/readonly/tester."
+    },
+    {
+      "name": "no_aws_iam_harness_deploy_permissions",
+      "result": "PASS",
+      "note": "El diff no toca deployment/, .github/workflows/, harness/, agents/, scripts/harness/ ni archivos IAM; SUPERUSER_ROLES es una nocion exclusivamente de RBAC de aplicacion (backoffice), documentada explicitamente como sin alcance AWS/IAM/Harness/deployment en app/auth/models.py, docs/H3_3_2_SUPERUSUARIOS_CEO_CTO.md y docs/DECISIONES_TECNICAS.md."
+    },
+    {
+      "name": "no_migrations",
+      "result": "PASS",
+      "note": "developer-01.json declara migrations_included=false; ningun archivo scripts/sql/ en el diff."
+    },
+    {
+      "name": "auth_users_json_treatment",
+      "result": "PASS",
+      "note": "AUTH_USERS_JSON tratado correctamente como secreto vivo clase E: no leido, no impreso, no modificado por Developer. docs/H3_3_2_SUPERUSUARIOS_CEO_CTO.md deja el procedimiento preparado (subject/username/display_name/role, generacion Argon2id interactiva) sin exponer hashes/passwords, para ejecucion por el rol/humano autorizado."
+    },
+    {
+      "name": "smoke_pending_treatment",
+      "result": "PASS",
+      "note": "AC-1, AC-2 y AC-8 (autenticacion real y smoke humano) quedan status=pending_verification en developer-01.json y AC-1/AC-2/AC-8 en el doc de tarea; no se afirma verificacion humana como completada ni se inventa resultado de smoke. Consistente con acceptance_criteria verification=human/both y con el precedente de H3.3.1 (acceptance-02.json)."
+    },
+    {
+      "name": "layering",
+      "result": "PASS",
+      "note": "route (leads.py) -> service (SolicitudService) -> repository preservado; is_superuser vive en app/auth/models.py (capa de contrato de auth), consumido correctamente desde services y web sin acceso directo a BD desde la ruta."
+    },
+    {
+      "name": "documentation_consistency",
+      "result": "PASS",
+      "note": "docs/H3_3_2_SUPERUSUARIOS_CEO_CTO.md, docs/DECISIONES_TECNICAS.md (nueva seccion) y docs/INDEX.md (entrada nueva) son consistentes entre si y con el codigo; docs/H3_3_2 referencia correctamente el cierre de H3.3.1 (acceptance-02.json) como origen de la deuda funcional absorbida."
+    },
+    {
+      "name": "quality_gates_complete",
+      "result": "PASS",
+      "note": "ruff/black/mypy/bandit/pip-audit/docker build/docker compose config PASS declarados por Developer y confirmados por CI (jobs Lint & Format, Security Audit, Docker Build, Release Tooling Validation todos SUCCESS en el SHA exacto)."
+    },
+    {
+      "name": "coverage_85",
+      "result": "PASS",
+      "note": "Log crudo del job Tests: 'Required test coverage of 85% reached. Total coverage: 86.27%.' TOTAL 3263 stmts, 448 miss, 86%. 497 passed, 0 failed."
+    },
+    {
+      "name": "tests_validate_behavior_not_coverage",
+      "result": "PASS",
+      "note": "Aserciones sobre valores de PII enmascarada/no enmascarada, codigos de estado HTTP (200/303/403), contenido HTML renderizado y persistencia de estado_lead, no solo ejecucion de lineas."
+    },
+    {
+      "name": "no_skipped_without_cause",
+      "result": "PASS",
+      "note": "sin pytest.mark.skip/xfail en los archivos de test tocados por este PR."
+    },
+    {
+      "name": "no_secrets_in_diff",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "AC-1, AC-2 y AC-8 permanecen pending_verification: dependen de una accion de identidad sobre AUTH_USERS_JSON (clase E) que el Developer no puede ni debe ejecutar; requiere rol autorizado (humano/secret path) y smoke autenticado posterior antes de la aceptacion funcional final. Ya contemplado por requires_human_acceptance=true en tasks/current.yaml.",
+    "El PR no incluye cambios de infraestructura/despliegue; el alcance revisado es exclusivamente RBAC de aplicacion, consistente con change_class A."
+  ]
+}
