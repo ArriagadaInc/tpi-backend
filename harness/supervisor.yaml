@@ -5,9 +5,9 @@ schema_version: 1
 
 # Rol del Harness (workflow.states[state].role) -> runtime. Roles ausentes = STOP.
 roles:
-  developer: claude     # DeepSeek sigue deshabilitado abajo; independencia via sesion/session_uuid nuevos por turno
-  reviewer: claude
-  deployer: claude
+  developer: other      # DeepAgents (DeepSeek) via harness_deepagents.worker; guard.py + capa extra en cada tool
+  reviewer: other       # DeepAgents (Anthropic); CANDIDATE_REVIEW exige claude (ver deploy_capable_runtimes)
+  deployer: claude      # decision D2: sigue en Claude Code hasta demostrar paridad de enforcement
 
 # Comando por runtime (una sesion nueva por turno, sin reutilizar contexto).
 # Placeholders: {prompt} {session_id} {session_uuid} {runtime} {role} {python}
