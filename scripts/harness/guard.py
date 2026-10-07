@@ -271,13 +271,29 @@ def check_write(
     )
 
 
-def _gh_action(command: str) -> str | None:
-    match = re.search(r"\bgh\s+([a-z-]+)(?:\s+([a-z-]+))?", command)
-    if not match:
-        return None
-    if match.group(1) == "api":
-        return "api"
-    return f"{match.group(1)} {match.group(2) or ''}".strip()
+def _gh_action_of(first: str, second: str | None) -> str:
+    return "api" if first == "api" else f"{first} {second or ''}".strip()
+
+
+def _gh_actions(view: CommandView) -> list[str]:
+    """Action (``pr view``, ``api``...) of every real ``gh`` invocation in a command.
+
+    Classified on the parsed invocations, not on the raw text: ``which gh git`` mentions gh but
+    does not run it, and ``gh pr view 1 && gh pr merge 1`` runs two actions, both judged.
+    """
+    actions = []
+    for invocation in view.invocations():
+        argv = invocation.argv
+        if not argv or _word_name(argv[0]) not in ("gh", "gh.exe"):
+            continue
+        words = [word.text for word in argv[1:] if not word.text.startswith("-")]
+        if words:
+            actions.append(_gh_action_of(words[0], words[1] if len(words) > 1 else None))
+    for text in view.opaque_texts():  # code the parser cannot read keeps the v1 text rule
+        match = re.search(r"\bgh\s+([a-z-]+)(?:\s+([a-z-]+))?", _legacy_view(text))
+        if match:
+            actions.append(_gh_action_of(match.group(1), match.group(2)))
+    return actions
 
 
 # ---------------------------------------------------------------------------
@@ -600,6 +616,39 @@ def _scoped(
     return False
 
 
+def _check_gh_action(action: str, command: str, ctx: dict[str, Any]) -> tuple[bool, str] | None:
+    """Deny decision for one ``gh`` action under the active role and state; None when allowed."""
+    role, state, policies = ctx["role"], ctx["state"], ctx["policies"]
+    if role not in common.AGENT_ROLES:
+        return _deny(f"gh no permitido en estado {state['state']}")
+    role_policy = policies["roles"][role]
+    allowed = set(role_policy["gh_allow"]) | set(
+        (role_policy.get("gh_state_allow") or {}).get(state["state"], [])
+    )
+    if action == "api":
+        if "api-get" not in allowed:
+            return _deny("gh api no permitido para este rol")
+        if re.search(
+            r"(-X|--method)\s*(POST|PUT|PATCH|DELETE)|\s(-f|-F|--field|--raw-field|--input)\s",
+            command,
+        ):
+            return _deny("gh api solo lectura (GET)")
+    elif action not in allowed:
+        return _deny(f"gh {action} no permitido para {role} en {state['state']}")
+    if action == "pr merge" and not re.search(
+        r"--squash\b.*--match-head-commit\s+[0-9a-f]{40}|--match-head-commit\s+[0-9a-f]{40}.*--squash\b",
+        command,
+    ):
+        return _deny("gh pr merge requiere --squash y --match-head-commit <reviewed_sha>")
+    if action == "pr merge" and "--auto" in command:
+        return _deny("auto-merge no disponible/aprobado")
+    if action == "workflow run" and not re.search(
+        r"publish-dev-ecr-images\.yml.*source_sha=[0-9a-f]{40}", command
+    ):
+        return _deny("solo gh workflow run publish-dev-ecr-images.yml -f source_sha=<release_sha>")
+    return None
+
+
 def check_command(
     root: Path,
     ctx: dict[str, Any],
@@ -641,7 +690,6 @@ def check_command(
                 f"comando shell que podria modificar archivos protegidos del Harness ({problem})"
             )
     # git/gh: classify the real subcommand (git global options skipped, merge-base != merge).
-    stripped = _strip_quoted(command)
     gits = _git_subcommands(view)
     subcommands = {sub for sub, _, _ in gits}
     if "push" in subcommands:
@@ -678,37 +726,10 @@ def check_command(
     if subcommands & {"merge", "rebase", "reset"}:
         if role != "developer" or state["state"] != "DEVELOPING":
             return _deny(f"git merge/rebase/reset no permitido para {role} en {state['state']}")
-    action = _gh_action(stripped)
-    if action:
-        if role not in common.AGENT_ROLES:
-            return _deny(f"gh no permitido en estado {state['state']}")
-        role_policy = policies["roles"][role]
-        allowed = set(role_policy["gh_allow"]) | set(
-            (role_policy.get("gh_state_allow") or {}).get(state["state"], [])
-        )
-        if action == "api":
-            if "api-get" not in allowed:
-                return _deny("gh api no permitido para este rol")
-            if re.search(
-                r"(-X|--method)\s*(POST|PUT|PATCH|DELETE)|\s(-f|-F|--field|--raw-field|--input)\s",
-                command,
-            ):
-                return _deny("gh api solo lectura (GET)")
-        elif action not in allowed:
-            return _deny(f"gh {action} no permitido para {role} en {state['state']}")
-        if action == "pr merge" and not re.search(
-            r"--squash\b.*--match-head-commit\s+[0-9a-f]{40}|--match-head-commit\s+[0-9a-f]{40}.*--squash\b",
-            command,
-        ):
-            return _deny("gh pr merge requiere --squash y --match-head-commit <reviewed_sha>")
-        if action == "pr merge" and "--auto" in command:
-            return _deny("auto-merge no disponible/aprobado")
-        if action == "workflow run" and not re.search(
-            r"publish-dev-ecr-images\.yml.*source_sha=[0-9a-f]{40}", command
-        ):
-            return _deny(
-                "solo gh workflow run publish-dev-ecr-images.yml -f source_sha=<release_sha>"
-            )
+    for action in _gh_actions(view):
+        denial = _check_gh_action(action, command, ctx)
+        if denial:
+            return denial
     return True, ""
 
 

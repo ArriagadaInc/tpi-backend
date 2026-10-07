@@ -13,6 +13,13 @@ roles:
 # Placeholders: {prompt} {session_id} {session_uuid} {runtime} {role} {python}
 # probe: comando inocuo de salud/version (sin sesion LLM, fuera del repo, timeout corto).
 runtimes:
+  # Runtime DeepAgents registrado bajo la clave 'other': transition.py/init.py solo aceptan
+  # claude|codex|deepseek|other y el Supervisor exige que el runtime de cada transicion coincida con
+  # esta clave. Inerte hasta que un rol se mapee a el. {python} es el interprete que lanzo el
+  # Supervisor: debe tener instalado harness-deepagents (p. ej. el venv de ese proyecto).
+  other:
+    command: ["{python}", -m, harness_deepagents.worker, --role, "{role}", --session, "{session_id}", --prompt, "{prompt}"]
+    probe: null   # sin sesion LLM: el preflight real lo hace el propio worker (init.py + guard)
   deepseek:
     # v1.1 P0 de seguridad (dogfood H3.3.6): bajo el sandbox DSH el push fallo (sh.exe /
     # CreateFileMapping 5) y en el rework el agente lo esquivo con un GIT_ASKPASS que ejecutaba
