@@ -235,13 +235,15 @@ def test_disabled_runtime_is_never_launched(harness: Harness):
 
 
 # ---------------------------------------------------------------------------
-# Routing: automatic Developer -> Claude (DeepSeek stays disabled)
+# Routing: Developer and Reviewer -> DeepAgents (DeepSeek stays disabled)
 # ---------------------------------------------------------------------------
-def test_real_config_routes_every_agent_role_to_claude():
+def test_real_config_routes_developer_and_reviewer_to_deepagents():
     config = supervisor.load_config(REAL_ROOT)
-    assert config["roles"] == {"developer": "claude", "reviewer": "claude", "deployer": "claude"}
+    assert config["roles"] == {"developer": "other", "reviewer": "other", "deployer": "claude"}
     assert config["runtimes"]["deepseek"]["enabled"] is False
     assert config["runtimes"]["claude"].get("enabled", True) is True
+    other = config["runtimes"]["other"]
+    assert other.get("enabled", True) is True and "harness_deepagents.worker" in other["command"]
 
 
 @pytest.mark.parametrize("state_name", ["NEW", "DEVELOPING", "REVIEW_REJECTED"])
@@ -250,7 +252,7 @@ def test_real_config_developer_state_no_longer_stops(tmp_harness_repo: Path, sta
     bind_task(tmp_harness_repo, state_name=state_name)
     config = supervisor.load_config(tmp_harness_repo)
     current = supervisor.plan(tmp_harness_repo, config, supervisor.read_state(tmp_harness_repo))
-    assert (current.role, current.runtime, current.auto) == ("developer", "claude", True)
+    assert (current.role, current.runtime, current.auto) == ("developer", "other", True)
     assert current.stop_kind is None and "deshabilitado" not in str(current.reason)
 
 

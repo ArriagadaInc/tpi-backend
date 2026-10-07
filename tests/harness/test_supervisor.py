@@ -75,6 +75,9 @@ def make_harness(
         "deepseek": {"command": FAKE_COMMAND},
         "claude": {"command": FAKE_COMMAND},
     }
+    # These tests exercise the Supervisor's mechanics with fake runtimes: they must not depend on
+    # which runtime production routes each role to.
+    config["roles"] = {"developer": "claude", "reviewer": "claude", "deployer": "claude"}
     config["heartbeat_seconds"] = 0.2
     config["interrupt_grace_seconds"] = 1
     # Preflight thresholds are exercised in test_supervisor_v11.py; here the host disk must not
@@ -104,17 +107,25 @@ def _plan_for(root: Path, state_name: str) -> supervisor.Plan:
 # status: role -> runtime mapping (real harness/supervisor.yaml copy)
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("state_name", ["NEW", "DEVELOPING", "REVIEW_REJECTED"])
-def test_status_developer_maps_to_claude(tmp_harness_repo: Path, state_name: str):
-    """v1.1 routing: automatic Developer is Claude (DeepSeek stays disabled) -> no config STOP."""
+def test_status_developer_maps_to_deepagents(tmp_harness_repo: Path, state_name: str):
+    """Routing: the automatic Developer is the DeepAgents worker -> no config STOP."""
     current = _plan_for(tmp_harness_repo, state_name)
-    assert (current.role, current.runtime, current.auto) == ("developer", "claude", True)
+    assert (current.role, current.runtime, current.auto) == ("developer", "other", True)
     assert current.stop_kind is None and current.reason is None
 
 
-@pytest.mark.parametrize("state_name", ["READY_FOR_REVIEW", "REVIEWING", "CANDIDATE_REVIEW"])
-def test_status_reviewer_maps_to_claude(tmp_harness_repo: Path, state_name: str):
+@pytest.mark.parametrize("state_name", ["READY_FOR_REVIEW", "REVIEWING"])
+def test_status_reviewer_maps_to_deepagents(tmp_harness_repo: Path, state_name: str):
     current = _plan_for(tmp_harness_repo, state_name)
-    assert (current.role, current.runtime, current.auto) == ("reviewer", "claude", True)
+    assert (current.role, current.runtime, current.auto) == ("reviewer", "other", True)
+
+
+def test_candidate_review_needs_a_deploy_capable_runtime(tmp_harness_repo: Path):
+    """The Reviewer maps to a runtime that is not in ``deploy_capable_runtimes`` (decision D2), so
+    the Supervisor stops at CANDIDATE_REVIEW: a human runs that one review with Claude Code."""
+    current = _plan_for(tmp_harness_repo, "CANDIDATE_REVIEW")
+    assert (current.role, current.runtime, current.auto) == ("reviewer", "other", False)
+    assert current.stop_kind == "config" and "exige runtime" in str(current.reason)
 
 
 @pytest.mark.parametrize(
@@ -549,7 +560,7 @@ def test_telemetry_has_required_fields_and_no_secrets(
 
 def test_real_config_prompt_is_minimal_and_shell_safe():
     config = supervisor.load_config(REAL_ROOT)
-    assert config["roles"] == {"developer": "claude", "reviewer": "claude", "deployer": "claude"}
+    assert config["roles"] == {"developer": "other", "reviewer": "other", "deployer": "claude"}
     prompt = config["prompt"]
     assert len(prompt) < 600 and "AGENTS.md" in prompt and "{session_id}" in prompt
     assert not supervisor._UNSAFE_ARG.search(prompt) and prompt.isascii()
