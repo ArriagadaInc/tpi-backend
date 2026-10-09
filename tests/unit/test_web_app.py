@@ -945,6 +945,8 @@ def test_templates_and_static_assets_exist() -> None:
         Path("app/web/templates/lead_detail_panel.html"),
         Path("app/web/static/css/app.css"),
         Path("app/web/static/js/app.js"),
+        Path("app/web/static/img/logo.svg"),
+        Path("app/web/static/img/logo-dark.svg"),
     ):
         assert relative.exists(), f"Missing web asset: {relative}"
 
@@ -971,6 +973,66 @@ def test_board_html_uses_relative_static_asset_urls() -> None:
     assert "/static/css/app.css" in response.text
     assert "/static/js/app.js" in response.text
     assert "http://backoffice.dev.tupensioninteligente.cl/static/" not in response.text
+
+
+def test_official_logo_asset_is_served_locally() -> None:
+    client = _build_client()
+    response = client.get("/static/img/logo.svg")
+    assert response.status_code == 200
+    assert "image/svg+xml" in response.headers["content-type"].lower()
+    body = response.text
+    assert "TU PENSIÓN" in body
+    assert "INTELIGENTE" in body
+
+
+def test_header_and_login_render_official_logo_with_alt_text() -> None:
+    client = _build_client()
+
+    login = client.get("/login")
+    assert login.status_code == 200
+    assert 'src="/static/img/logo.svg"' in login.text
+    assert 'alt="Tu Pensión Inteligente"' in login.text
+
+    _login(client)
+    leads = client.get("/leads")
+    assert leads.status_code == 200
+    assert 'src="/static/img/logo.svg"' in leads.text
+    assert 'alt="Tu Pensión Inteligente"' in leads.text
+
+
+def test_official_logo_is_never_loaded_from_an_external_origin() -> None:
+    client = _build_client()
+    login = client.get("/login").text
+    _login(client)
+    leads = client.get("/leads").text
+    for html in (login, leads):
+        assert 'src="/static/img/logo.svg"' in html
+        assert re.search(r'<img[^>]*src="https?://', html) is None
+
+
+def test_dark_theme_has_light_logo_variant() -> None:
+    client = _build_client()
+
+    dark = client.get("/static/img/logo-dark.svg")
+    assert dark.status_code == 200
+    assert "image/svg+xml" in dark.headers["content-type"].lower()
+    assert "TU PENSIÓN" in dark.text
+    # The dark variant must use a light text fill, not the light-theme navy.
+    assert "#172837" not in dark.text
+
+    login = client.get("/login")
+    assert login.status_code == 200
+    _login(client)
+    leads = client.get("/leads")
+    assert leads.status_code == 200
+
+    for html in (login.text, leads.text):
+        assert 'src="/static/img/logo-dark.svg"' in html
+        assert 'alt="Tu Pensión Inteligente"' in html
+
+    css = Path("app/web/static/css/app.css").read_text(encoding="utf-8")
+    assert '[data-theme="dark"] .brand-logo-dark' in css
+    assert '[data-theme="dark"] .brand-logo' in css
 
 
 def test_detail_renders_volver_al_sitio_when_approved_and_authenticated() -> None:
