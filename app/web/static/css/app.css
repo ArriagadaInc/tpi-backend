@@ -83,6 +83,12 @@ select {
   width: auto;
 }
 
+/* The dark logo variant is only visible when the client-side theme is dark
+   (see [data-theme="dark"] rules below); in light theme the light SVG shows. */
+.brand-logo-dark {
+  display: none;
+}
+
 .brand-copy {
   display: flex;
   flex-direction: column;
@@ -1749,6 +1755,16 @@ a:focus-visible {
 [data-theme="dark"] .topbar {
   background: rgba(11, 17, 32, 0.92);
   border-bottom-color: var(--border);
+}
+
+/* Swap to the light-on-dark logo so the brand name stays legible (H3.3.7). */
+[data-theme="dark"] .brand-logo,
+[data-theme="dark"] .brand-logo-large {
+  display: none;
+}
+
+[data-theme="dark"] .brand-logo-dark {
+  display: block;
 }
 
 /* The dark accent is a light teal for text and lines; filled buttons keep a
