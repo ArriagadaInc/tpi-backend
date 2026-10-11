@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 48" width="260" height="48">
+  <circle cx="24" cy="24" r="20" fill="#0170b9"/>
+  <path d="M15 24l6 6 12-12" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="56" y="21" font-family="Roboto, Arial, sans-serif" font-size="16" font-weight="800" fill="#e2e8f0">TU PENSIÓN</text>
+  <text x="56" y="40" font-family="Roboto, Arial, sans-serif" font-size="14" font-weight="500" fill="#60a5fa" letter-spacing="2">INTELIGENTE</text>
+</svg>

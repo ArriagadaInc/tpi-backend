@@ -71,35 +71,28 @@ select {
   gap: 14px;
 }
 
-.brand-mark {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  font-weight: 800;
-  font-size: 0.86rem;
-  color: white;
-  background: linear-gradient(135deg, var(--primary), #1e3a8a);
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+.brand-logo {
+  display: block;
+  height: 32px;
+  width: auto;
 }
 
-.brand-mark.large {
-  width: 58px;
-  height: 58px;
-  border-radius: 18px;
+.brand-logo-large {
+  display: block;
+  height: 44px;
+  width: auto;
+}
+
+/* The dark logo variant is only visible when the client-side theme is dark
+   (see [data-theme="dark"] rules below); in light theme the light SVG shows. */
+.brand-logo-dark {
+  display: none;
 }
 
 .brand-copy {
   display: flex;
   flex-direction: column;
   gap: 2px;
-}
-
-.brand-title {
-  font-size: 0.98rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
 }
 
 .brand-badge,
@@ -552,8 +545,9 @@ select:focus {
 
 .auth-brand {
   display: flex;
-  gap: 18px;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
   margin-bottom: 24px;
 }
 
@@ -1763,9 +1757,14 @@ a:focus-visible {
   border-bottom-color: var(--border);
 }
 
-[data-theme="dark"] .brand-mark {
-  background: linear-gradient(135deg, var(--accent-strong), #1e3a8a);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+/* Swap to the light-on-dark logo so the brand name stays legible (H3.3.7). */
+[data-theme="dark"] .brand-logo,
+[data-theme="dark"] .brand-logo-large {
+  display: none;
+}
+
+[data-theme="dark"] .brand-logo-dark {
+  display: block;
 }
 
 /* The dark accent is a light teal for text and lines; filled buttons keep a
