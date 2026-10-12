@@ -20,4 +20,3 @@ def test_app_image_updates_only_the_explicit_package_fixes() -> None:
     assert f"RUN apk add --no-cache {EXPECTED_PACKAGES}" in dockerfile
     assert "apk upgrade --no-cache" not in dockerfile
     assert dockerfile.count("apk add --no-cache") == 1
-
