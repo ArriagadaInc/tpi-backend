@@ -141,9 +141,9 @@ jobs:
           app_packages="$(docker run --rm tpi-backoffice-h21:${{ github.sha }} sh -c 'apk info -v | LC_ALL=C sort')"
           package_diff="$(diff -U0 <(printf '%s\n' "$base_packages") <(printf '%s\n' "$app_packages") | awk '/^[+-][^+-]/ {print}')"
 
-          test "$package_diff" = $'-libuuid-2.42.1-r0\n+libuuid-2.42.3-r1'
+          test "$package_diff" = $'-libuuid-2.42.1-r0\n+libuuid-2.42.3-r1\n-zlib-1.3.2-r0\n+zlib-1.3.2-r1'
           docker run --rm tpi-backoffice-h21:${{ github.sha }} \
-            sh -ec 'test "$(python --version)" = "Python 3.12.14" && apk info -e libuuid=2.42.3-r1 && apk info -v libssl3 libcrypto3 && apk list --installed | grep -E "^lib(ssl3|crypto3)-"'
+            sh -ec 'test "$(python --version)" = "Python 3.12.14" && apk info -e libuuid=2.42.3-r1 && apk info -e zlib=1.3.2-r1 && apk info -v libssl3 libcrypto3 && apk list --installed | grep -E "^lib(ssl3|crypto3)-"'
           docker run --rm tpi-dev-caddy:${{ github.sha }} \
             sh -c 'apk info -v libssl3 libcrypto3 && apk list --installed | grep -E "^lib(ssl3|crypto3)-"'
 
