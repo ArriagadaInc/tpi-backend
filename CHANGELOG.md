@@ -6,6 +6,24 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ---
 
+## [0.2.0] - 2026-10-12
+
+### ✅ Agregado
+
+- **Logo oficial de CRM Lite** (#64)
+  - Reemplaza el logo temporal por el logo oficial de Tu Pensión Inteligente.
+  - Se renderiza en la cabecera y en la pantalla de acceso de CRM Lite.
+  - Servido como recurso estático local (`app/web/static/img/logo.svg`), sin cargas desde orígenes externos.
+  - Variante clara (`logo-dark.svg`) para legibilidad en tema oscuro, seleccionada vía CSS.
+  - Texto alternativo accesible en ambas instancias.
+
+### 🔒 Seguridad
+
+- **Mitigación de CVE-2026-85091 (zlib)** (#65)
+  - Se fija `zlib=1.3.2-r1` en la imagen de la aplicación (`Dockerfile`).
+  - Se actualiza `zlib` en la imagen de Caddy (`deployment/caddy/Dockerfile`).
+  - Se actualizan los contratos de supply chain y el test de imagen de la aplicación.
+
 ## [0.1.0] - 2026-07-31
 
 ### ✅ Agregado
@@ -131,8 +149,8 @@ Este proyecto sigue [Semantic Versioning](https://semver.org/):
 - MINOR: Funcionalidades nuevas compatibles
 - PATCH: Correcciones de bugs
 
-**Versión Actual:** 0.1.0  
-**Próxima Versión:** 0.2.0 (Autenticación MVP2)
+**Versión Actual:** 0.2.0  
+**Próxima Versión:** 0.3.0 (por definir)
 
 ---
 
@@ -140,11 +158,12 @@ Este proyecto sigue [Semantic Versioning](https://semver.org/):
 
 | Versión | Fecha | Estado | Hito |
 |---------|-------|--------|------|
+| 0.2.0 | 12 Oct 2026 | 🚀 RELEASE DEV | Logo oficial de CRM Lite + mitigación zlib |
 | 0.1.0 | 31 Jul 2026 | ✅ VALIDADO | MVP1 Completado |
 | 0.0.1 | 30 Jul 2026 | ✅ INICIAL | Estructura Base |
 
 ---
 
-**Última actualización:** 31 Julio 2026  
+**Última actualización:** 12 Octubre 2026  
 **Responsable:** Equipo TPI Back-office  
 **Contacto:** dev@tupensioninteligente.cl
