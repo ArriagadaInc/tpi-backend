@@ -20,6 +20,7 @@ from app.web.dependencies import resolve_web_public_site_url, resolve_web_simula
 from app.web.routes.auth import router as auth_router
 from app.web.routes.dashboard import router as dashboard_router
 from app.web.routes.leads import router as leads_router
+from app.web.routes.simulador import router as simulador_router
 
 BASE_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = BASE_DIR / "templates"
@@ -63,6 +64,7 @@ def create_web_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(leads_router)
     app.include_router(dashboard_router)
+    app.include_router(simulador_router)
 
     @app.get("/")
     def root() -> RedirectResponse:

@@ -6,6 +6,19 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ---
 
+## [Unreleased]
+
+### ✅ Agregado
+
+- **Simulador de renta vitalicia en el CRM (perfil ejecutivo)** (SIM-RV-V1)
+  - Motor puro `app/simulador_pension` que reproduce el simulador de referencia dentro de ±1 UF (435/435 casos del fixture).
+  - Panel y formulario en el detalle del lead, visible solo para `executive` y superusuarios `ceo`/`cto` (403 real para el resto).
+  - PDF efímero en memoria con escape de marcado, sin persistencia de entradas ni resultados.
+  - Evento funcional append-only en `tpi.auditoria` sin PII (`app/services/simulador_auditoria.py`).
+  - Dependencia nueva: `reportlab==5.0.1`.
+
+---
+
 ## [0.2.0] - 2026-10-12
 
 ### ✅ Agregado

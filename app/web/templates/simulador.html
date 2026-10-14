@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="detail-page">
+    <div class="nav-back-row">
+      <a class="secondary btn-back" href="{{ return_to_url or '/leads' }}">← Volver al lead</a>
+    </div>
+
+    {% if lead_not_found %}
+      <section class="card empty-detail">
+        <h3>No encontramos el lead solicitado</h3>
+        <p>Revisa la bandeja o vuelve a aplicar los filtros desde la lista principal.</p>
+        <a class="secondary" href="/leads">Volver a Leads</a>
+      </section>
+    {% else %}
+      <section class="card">
+        <div class="story-card-head">
+          <div>
+            <p class="section-kicker">Simulador de renta vitalicia</p>
+            <h2>Simulación referencial de pensión mensual</h2>
+          </div>
+        </div>
+
+        {% if advertencia_ventana %}
+          <div class="notice notice-soft">
+            La ventana de validación del modelo ha vencido recientemente; los resultados deben
+            contrastarse con el simulador de referencia antes de entregarlos.
+          </div>
+        {% endif %}
+
+        {% if selected_lead %}
+          <p class="empty-inline">
+            Cliente: <strong>{{ selected_lead.nombre_completo }}</strong>
+          </p>
+        {% endif %}
+
+        <form method="post" action="/leads/{{ lead_id }}/simulador" class="note-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+          <fieldset class="simulator-fieldset">
+            <legend>Causante (el lead)</legend>
+            <div class="simulator-grid">
+              <label>
+                Sexo
+                <input type="text" value="{{ sexo_precargado or '' }}" readonly>
+              </label>
+              <label>
+                Fecha de nacimiento
+                <input type="text" value="{{ fecha_nacimiento_precargada.strftime('%d/%m/%Y') if fecha_nacimiento_precargada else '' }}" readonly>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="simulator-fieldset">
+            <legend>Datos de la simulación</legend>
+            <div class="simulator-grid">
+              <label>
+                Saldo en UF *
+                <input type="number" step="any" min="0" name="saldo_uf" required>
+              </label>
+              <label>
+                Tasa de venta (%) *
+                <input type="number" step="any" min="0" max="100" name="tasa_venta_pct" required>
+              </label>
+              <label>
+                Valor UF (opcional, para equivalentes en CLP)
+                <input type="number" step="any" min="0" name="valor_uf">
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="simulator-fieldset">
+            <legend>Cónyuge (opcional)</legend>
+            <div class="simulator-grid">
+              <label>
+                Sexo
+                <select name="conyuge_sexo">
+                  <option value="">Sin cónyuge</option>
+                  <option value="H">Masculino</option>
+                  <option value="M">Femenino</option>
+                </select>
+              </label>
+              <label>
+                Fecha de nacimiento
+                <input type="date" name="conyuge_nacimiento">
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="simulator-fieldset">
+            <legend>Hijos (máximo 4)</legend>
+            {% for i in [1, 2, 3, 4] %}
+              <div class="simulator-grid">
+                <label>
+                  Hijo {{ i }} — Sexo
+                  <select name="hijo_sexo_{{ i }}">
+                    <option value=""></option>
+                    <option value="H">Masculino</option>
+                    <option value="M">Femenino</option>
+                  </select>
+                </label>
+                <label>
+                  Hijo {{ i }} — Fecha de nacimiento
+                  <input type="date" name="hijo_nacimiento_{{ i }}">
+                </label>
+                <label class="simulator-check">
+                  <input type="checkbox" name="hijo_comun_{{ i }}" value="1">
+                  Común con el cónyuge
+                </label>
+                <label>
+                  Hijo {{ i }} — Invalidez
+                  <select name="hijo_invalidez_{{ i }}">
+                    <option value="no">Sin invalidez</option>
+                    <option value="parcial">Parcial</option>
+                    <option value="total">Total</option>
+                  </select>
+                </label>
+              </div>
+            {% endfor %}
+          </fieldset>
+
+          <fieldset class="simulator-fieldset">
+            <legend>Garantía y aumento temporal</legend>
+            <div class="simulator-grid">
+              <label>
+                Garantía (meses)
+                <input type="number" step="1" min="0" name="meses_garantizados" value="0">
+              </label>
+              <label>
+                Aumento temporal (meses)
+                <input type="number" step="1" min="0" name="meses_aumento_temporal" value="0">
+              </label>
+              <label>
+                Aumento temporal (%)
+                <input type="number" step="any" min="0" max="100" name="porcentaje_aumento_temporal" value="0">
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="simulator-fieldset">
+            <legend>Renta temporal (opcional)</legend>
+            <div class="simulator-grid">
+              <label>
+                Años de diferimiento (0 = renta inmediata, 1–10 = renta temporal)
+                <input type="number" step="1" min="0" max="10" name="anios_diferidos" value="0">
+              </label>
+              <label>
+                Relación RVD/RT (%)
+                <input type="number" step="any" min="50" max="100" name="porcentaje_rvd" value="100">
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="note-actions">
+            <button class="primary note-submit" type="submit">Generar PDF</button>
+          </div>
+        </form>
+      </section>
+    {% endif %}
+  </div>
+{% endblock %}

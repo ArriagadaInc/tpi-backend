@@ -401,6 +401,7 @@ def _resolve_detail_context(
         "request": request,
         "selected_user": user,
         "can_view_executive_dashboard": _can_view_executive_dashboard(user),
+        "can_simulate": bool(user) and (is_superuser(user.role) or user.role == "executive"),  # type: ignore[union-attr]
         "active_nav": "leads",
         "can_write": _can_write(user),
         "can_assign": can_assign,
