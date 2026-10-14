@@ -84,7 +84,7 @@ select {
 }
 
 /* The dark logo variant is only visible when the client-side theme is dark
-   (see [data-theme="dark"] rules below); in light theme the light SVG shows. */
+   (see [data-theme="dark"] rules below); in light theme the light PNG shows. */
 .brand-logo-dark {
   display: none;
 }

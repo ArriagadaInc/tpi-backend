@@ -13,8 +13,8 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 - **Logo oficial de CRM Lite** (#64)
   - Reemplaza el logo temporal por el logo oficial de Tu Pensión Inteligente.
   - Se renderiza en la cabecera y en la pantalla de acceso de CRM Lite.
-  - Servido como recurso estático local (`app/web/static/img/logo.svg`), sin cargas desde orígenes externos.
-  - Variante clara (`logo-dark.svg`) para legibilidad en tema oscuro, seleccionada vía CSS.
+  - Servido como recurso estático local (`app/web/static/img/official-logo-on-light.png` y `app/web/static/img/official-logo-on-dark.png`), sin cargas desde orígenes externos.
+  - Variante para tema oscuro (`official-logo-on-dark.png`) seleccionada vía CSS.
   - Texto alternativo accesible en ambas instancias.
 
 ### 🔒 Seguridad
