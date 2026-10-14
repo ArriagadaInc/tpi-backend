@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "kind": "failure",
+  "task_id": "TASK-002",
+  "created_at": "2026-10-14T13:21:55Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610141320-deployer",
+  "action": "verification_log_scan_strong_indicator",
+  "resource": "aws_guard logs filter-log-events (solo conteo) sobre el log group stdouterr.log del environment tpi-backoffice-dev-green, ventana desde 2026-10-14T04:31:33Z (cutover)",
+  "principal": "tpi-dev (perfil local AWS)",
+  "error": "Escaneo de logs por conteo: Authorization=3 (indicador fuerte) y hash=3 (debil); Bearer, password, cookie, raw_payload, secret y token en 0. La politica (observability.log_indicators, log_scan.py classify) bloquea verified ante cualquier coincidencia fuerte y no admite degradarla; el Deployer no lee lineas de log, por lo que las coincidencias no se pudieron clasificar. No hubo AccessDenied ni DENIED del guard en la sesion que registra este fallo.",
+  "state": "VERIFY_FAILED",
+  "failure_class": "observability",
+  "access_denied": false,
+  "recommendation": "No es degradacion de infraestructura ni un defecto confirmado: el environment esta Ready/Green/Ok en la version aprobada, la cadena de identidad coincide, los 20 eventos de EB son INFO, el smoke da 10/10 PASS y el humano acepto AC-2. No procede rollback (rollback_authorization: el environment no esta degradado y no hay causa de infraestructura); el release queda en DEV. Escalar a decision humana: (1) inspeccionar en CloudWatch las 3 coincidencias de Authorization y las 3 de hash (log group /aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log, desde 2026-10-14 04:31 UTC) y decidir si son nombres de campo/ACME de Caddy o valores reales; (2) si son benignos, el humano puede decidir sobre la politica de indicadores y volver a VERIFYING con approve.py resolve --to VERIFYING, o cancelar con resolve --to IDLE dejando DEV desplegado y aceptado; (3) si hay valores reales en logs, corregir el logging (defecto funcional). Hipotesis NO verificada: mensajes de Caddy/ACME al reiniciar el contenedor tras el despliegue (en H3.3.7 hubo un hash de Caddy clasificado por un humano). Nota operativa: los STOP previos del Orchestrator en VERIFYING se debieron a que el Deployer consultaba logs desde Git Bash, que convierte /aws/... en C:/Program Files/Git/aws/... (aws_guard lo rechaza); desde PowerShell o con MSYS_NO_PATHCONV=1 la consulta pasa.",
+  "residues": [],
+  "rollback_authorization_assessment": {
+    "update_environment_accepted": true,
+    "environment_degraded_inconsistent_or_not_expected_state": false,
+    "not_purely_functional_defect": "no aplica: causa de observabilidad, no de infraestructura",
+    "rollback_permitted": false,
+    "reason": "solo la degradacion de infraestructura habilita el rollback condicionado; aqui el environment esta sano y la causa es de observabilidad"
+  },
+  "verification_evidence": "evidence/TASK-002/deployment/verification-01.json",
+  "acceptance_evidence": "evidence/TASK-002/approvals/acceptance-01.json",
+  "environment_observed": {
+    "version_label": "h3-logo-png-cb628dc-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-14T04:32:24Z"
+  },
+  "safety": {
+    "aws_writes": [],
+    "update_environment_executed": false,
+    "rollback_executed": false,
+    "secrets_accessed": false,
+    "log_lines_read": false
+  }
+}

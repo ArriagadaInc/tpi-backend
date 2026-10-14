@@ -20,7 +20,43 @@ from typing import Any
 
 import yaml
 
-ROOT = Path(__file__).resolve().parents[2]
+WORKTREES_DIR = ".harness-worktrees"  # where worktree.py creates the worktrees of the roles
+
+
+def _is_worktree_of(worktree: Path, control: Path) -> bool:
+    """Is ``worktree`` a git worktree registered by the checkout ``control``?"""
+    try:
+        marker = (worktree / ".git").read_text(encoding="utf-8").strip()
+    except OSError:
+        return False
+    if not marker.startswith("gitdir:"):
+        return False
+    gitdir = Path(marker.split(":", 1)[1].strip()).resolve()
+    return os.path.normcase(str(gitdir.parent)) == os.path.normcase(
+        str((control / ".git" / "worktrees").resolve())
+    )
+
+
+def control_root(script: Path | None = None) -> Path:
+    """The checkout that owns the harness state, wherever the script is run from.
+
+    A role's worktree (``.harness-worktrees/<name>/``) holds only the CODE of its branch. It carries
+    its own versioned copy of ``scripts/harness`` and of ``harness/state.json`` and
+    ``tasks/current.yaml`` as ``main`` had them when it was cut (IDLE, no task), while the live
+    state, the active task, the evidence and the logs exist only in the control checkout. A script
+    that trusted its own location would read that stale copy; so when this file sits in a git
+    worktree registered by the checkout that holds ``.harness-worktrees/``, that checkout is the
+    root. Anything else (a plain checkout, a lookalike folder) is its own root, as before.
+    """
+    here = (script or Path(__file__)).resolve().parents[2]
+    if here.parent.name == WORKTREES_DIR:
+        control = here.parent.parent
+        if (control / "harness" / "state.json").is_file() and _is_worktree_of(here, control):
+            return control
+    return here
+
+
+ROOT = control_root()
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 HEX64_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -148,6 +184,24 @@ def load_policies(root: Path) -> dict[str, Any]:
 
 def load_profile(root: Path) -> dict[str, Any]:
     return read_yaml(root / "harness" / "project-profile.yaml")
+
+
+# Harness-visible names, configurable per project in harness/policies.yaml (`harness:` section).
+# When a key is absent the TPI values below apply, so an existing policies.yaml keeps working
+# unchanged. (harness.maintenance_env_var and harness.maintenance_scope.env_var were already
+# configurable; these are the ones that used to be hardcoded.)
+HARNESS_NAMING_DEFAULTS = {
+    "supervisor_turn_env_var": "TPI_SUPERVISOR_TURN",
+    "session_env_var": "TPI_HARNESS_SESSION",
+    "guard_label": "TPI HARNESS GUARD",
+    "runtime_env_var": "TPI_HARNESS_RUNTIME",
+}
+
+
+def naming(policies: dict[str, Any] | None, key: str) -> str:
+    """A configurable Harness name from `policies['harness']`, or its default."""
+    value = ((policies or {}).get("harness") or {}).get(key)
+    return str(value) if value else HARNESS_NAMING_DEFAULTS[key]
 
 
 def load_knowledge(root: Path) -> dict[str, Any]:

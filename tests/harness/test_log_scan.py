@@ -10,13 +10,21 @@ from scripts.harness import common, log_scan
 from tests.harness.conftest import REAL_ROOT
 
 POLICIES = common.load_policies(REAL_ROOT)
-STRONG = ["Authorization", "Bearer", "password", "cookie", "raw_payload", "secret", "token"]
+STRONG = [
+    "Authorization -REDACTED",
+    "Bearer",
+    "password",
+    "cookie",
+    "raw_payload",
+    "secret",
+    "token",
+]
 
 
 def test_policy_declares_strong_and_weak_lists():
     strong, weak = log_scan.indicators(POLICIES)
     assert set(STRONG) <= set(strong)
-    assert weak == ["hash"]
+    assert weak == ["hash", "hash -ACME"]
 
 
 def test_cert_hash_is_a_weak_indicator():
@@ -140,3 +148,18 @@ def test_cli_classify(capsys):
     out = json.loads(capsys.readouterr().out)
     assert out["weak_matches"] == {"hash": 1} and out["strong_matches"] == 0
     assert log_scan.main(["classify", "--counts", "[1]"]) == 1
+
+
+def test_redacted_authorization_is_not_an_indicator_but_a_raw_one_is():
+    assert log_scan.classify({"Authorization -REDACTED": 0}, POLICIES)["strong_matches"] == 0
+    assert log_scan.classify({"Authorization -REDACTED": 1}, POLICIES)["strong_matches"] == 1
+
+
+def test_bare_authorization_stays_fail_closed():
+    # el patron antiguo ya no esta declarado: se trata como fuerte
+    assert log_scan.classify({"Authorization": 1}, POLICIES)["strong_matches"] == 1
+
+
+def test_hash_excluding_acme_noise_is_weak_too():
+    result = log_scan.classify({"hash -ACME": 1}, POLICIES)
+    assert result["weak_matches"] == {"hash -ACME": 1} and result["strong_matches"] == 0

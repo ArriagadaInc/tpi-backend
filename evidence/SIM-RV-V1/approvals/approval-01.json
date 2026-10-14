@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "approval",
+  "task_id": "SIM-RV-V1",
+  "created_at": "2026-10-14T19:38:41Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "approved_commit": "13084414558f59a7b1e30dd859199469c2a62318",
+  "app_digest": "sha256:295dbebfc0486f9ca60a23e69a182d6e45020668d570c25905b8610b84fd37d1",
+  "caddy_digest": "sha256:c638212831be19dab098851d590e9fe053b74ff70784efe6049b16d771054436",
+  "bundle_sha256": "b91612eacdd0698661ceca28247199d6dd4254c1a675fbae6af969daa5431895",
+  "s3_key": "tpi-backoffice/dev-releases/h3-sim-rv-v1-1308441-domainlocked-r1/b91612eacdd0698661ceca28247199d6dd4254c1a675fbae6af969daa5431895.zip",
+  "application_version": "h3-sim-rv-v1-1308441-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "lkg_version_label": "h3-logo-png-cb628dc-domainlocked-r1",
+  "candidate_evidence": {
+    "path": "evidence/SIM-RV-V1/deployment/candidate-01.json",
+    "sha256": "e6edc81c8612a6e216cb4b9bbfcc1cc74343b0e7d8e698f86ed5103fa344291a"
+  },
+  "rollback_authorization": {
+    "scope": "single_version_only_rollback_to_named_lkg",
+    "max_attempts": 1,
+    "lkg_version_label": "h3-logo-png-cb628dc-domainlocked-r1",
+    "conditions": [
+      "update_environment_accepted",
+      "environment_degraded_inconsistent_or_not_expected_state",
+      "lkg_application_version_usable",
+      "lkg_images_present_in_ecr",
+      "no_option_settings_required",
+      "not_purely_functional_defect",
+      "no_previous_rollback_attempt"
+    ]
+  },
+  "decision": "approved"
+}

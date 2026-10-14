@@ -1,0 +1,210 @@
+schema_version: 1
+task:
+  id: SIM-RV-V1
+  title: Simulador de renta vitalicia en el CRM con PDF efimero (perfil ejecutivo), V1 solo validado
+  objective: Permitir que los usuarios con rol executive (y los superusuarios ceo/cto, que conservan todas
+    las capacidades) generen desde el detalle de un lead una simulacion referencial de pension mensual
+    de renta vitalicia y la descarguen como PDF, calculada por un modulo puro e independiente (app/simulador_pension)
+    que reproduce las respuestas reales del simulador de referencia dentro de +-1 UF, sin persistir las
+    entradas ni los resultados. La V1 cubre unicamente los escenarios validados (renta inmediata del causante
+    solo o con conyuge, hijos, garantia y aumento temporal; y renta temporal con RVD del causante solo);
+    cualquier otro escenario se rechaza con un mensaje claro. Lo pendiente queda documentado para retomarlo.
+  source:
+    type: story
+    ref: 'Definida con el humano el 2026-10-14 tras la ingenieria inversa del simulador de referencia;
+      decisiones: solo perfil ejecutivo, version 1 solo con lo validado, entrega en PDF, sin persistencia
+      por ahora.'
+  change_class: A
+  deploy_required: true
+  requires_human_acceptance: true
+  allow_lockfile_update: true
+  acceptance_criteria:
+  - id: AC-1
+    description: Solo los roles executive, ceo y cto (is_superuser) ven el panel Simulador en el detalle
+      del lead y pueden abrir el formulario o generar el PDF. Todo otro rol autenticado recibe 403 real
+      del lado servidor con cualquier metodo, querystring o formulario; el anonimo conserva el flujo canonico
+      de autenticacion. Ocultar el panel no cuenta como control. [DECISION] Se asume que los superusuarios
+      ceo/cto tambien pueden simular (superconjunto de capacidades); confirmar.
+    verification: both
+  - id: AC-2
+    description: La simulacion siempre se hace sobre un lead concreto (ruta bajo /leads/{id}/simulador).
+      Un lead inexistente o no visible para el usuario responde 404 con la misma resolucion que el detalle;
+      no se modifica ninguna regla de RBAC ni de enmascaramiento de PII vigente.
+    verification: both
+  - id: AC-3
+    description: 'El formulario precarga sexo y fecha de nacimiento del lead como causante. El ejecutivo
+      ingresa saldo en UF, tasa de venta (%), y segun el escenario: conyuge (sexo y nacimiento), hijos
+      (maximo 4; sexo, nacimiento, comun o no, invalidez no/parcial/total), garantia en meses, aumento
+      temporal (meses y %), anios de diferimiento (1 a 10) y relacion RVD/RT (100, 50 o 51 a 99). Un valor
+      UF opcional solo sirve para mostrar equivalentes en pesos en el PDF. La fecha de simulacion es la
+      fecha actual de America/Santiago calculada en el servidor y no es editable.'
+    verification: both
+  - id: AC-4
+    description: 'El alcance de la V1 es exactamente el validado: vejez edad, renta inmediata del causante
+      solo, con conyuge, con hijos (hasta 4, comunes o no, no invalidos o invalidos parciales y totales),
+      con garantia y aumento temporal, y renta temporal con RVD del causante solo (1 a 10 anios). Todo
+      lo demas se rechaza con 422 y un mensaje claro en espanol, sin aproximar: bono de reconocimiento,
+      vejez anticipada, invalidez, sobrevivencia, otros parentescos, conyuge invalido, mas de 4 hijos,
+      renta temporal con conyuge, hijos, garantia o aumento, y valores fuera de los rangos validados (tabla
+      en la matriz de requisitos).'
+    verification: automated
+  - id: AC-5
+    description: 'El motor vive en un modulo puro app/simulador_pension (sin I/O ni importaciones del
+      resto de app), con las tablas de mortalidad como datos versionados incluidos en el paquete instalado
+      (verificado con el build Docker, que instala con pip install --no-deps y solo incluye archivos .py
+      por defecto). Reproduce las 435 simulaciones reales del fixture: 435/435 dentro de +-1 UF y sin
+      superar los umbrales de error por categoria del paquete de referencia.'
+    verification: automated
+  - id: AC-6
+    description: 'Ventana de validacion fail-closed: una constante documentada define el rango de fechas
+      validado (15-oct-2025 a 13-oct-2026 al definir la tarea). Dentro de la ventana se genera normalmente;
+      hasta 90 dias despues se genera con una advertencia visible en pantalla y en el PDF; mas alla se
+      bloquea con 422. [DECISION] Confirmar los 90 dias; extender la ventana requiere una campana de revalidacion
+      y un release.'
+    verification: both
+  - id: AC-7
+    description: 'El PDF contiene, segun la matriz de contenido aprobada: logo oficial local, titulo de
+      simulacion referencial, fecha y hora (America/Santiago), ejecutivo, nombre del lead (sin RUT, correo
+      ni telefono, ni siquiera enmascarados), parametros ingresados, descripcion del escenario, tasa de
+      venta usada, resultados (pension mensual estimada en UF; en renta temporal tambien la renta temporal
+      mensual y los meses de diferimiento; equivalente en pesos solo si se dio el valor UF), supuestos
+      y advertencias, la leyenda de estimacion referencial no vinculante, version del modelo, codigo de
+      verificacion y paginacion.'
+    verification: both
+  - id: AC-8
+    description: 'Todo texto que provenga de datos (nombre del lead, nombres de personas, comentarios)
+      se escapa para el motor de PDF (reportlab interpreta marcado en Paragraph): un nombre con <, > o
+      & no rompe ni altera el PDF. Los caracteres del espanol se ven correctos. El PDF no tiene enlaces
+      activos, scripts ni adjuntos, y sus metadatos (titulo, autor) son genericos y sin PII.'
+    verification: automated
+  - id: AC-9
+    description: 'La entrega es efimera: el PDF se genera en memoria y nada se escribe en disco, S3 ni
+      RDS (si fuera inevitable un temporal, se elimina en finally). La respuesta usa application/pdf,
+      Content-Disposition attachment con nombre predecible fecha/hora sin PII, Cache-Control no-store
+      y X-Content-Type-Options nosniff. El contenido del PDF nunca se escribe en logs.'
+    verification: both
+  - id: AC-10
+    description: No se persiste ninguna entrada ni resultado de la simulacion (ni en base de datos ni
+      como nota del lead) y la simulacion no altera estado, notas, asignaciones ni datos del lead. La
+      unica escritura permitida es el evento de auditoria del AC-11.
+    verification: automated
+  - id: AC-11
+    description: '[DECISION] Cada PDF generado con exito registra un evento funcional append-only en el
+      mecanismo de auditoria existente (tpi.auditoria con el grant vigente, como en H3.3.6) con actor/subject,
+      rol, lead_id, timestamp, tipo de escenario, version del modelo y codigo de verificacion; sin saldo,
+      tasa, resultados, nombres ni datos personales. Los intentos no autorizados responden 403 sin evento
+      y sin filtrar informacion. Si requiere migracion, grant, vista o constraint nueva es BLOCKER y se
+      escala al humano; si el humano prefiere no registrar nada, este criterio se retira y la unica evidencia
+      es un log sin PII.'
+    verification: both
+  - id: AC-12
+    description: 'El codigo de verificacion es deterministico: hash truncado (sha256, 12 hex) de las entradas
+      canonicas, la version del modelo y la fecha de simulacion. Las mismas entradas dan el mismo codigo,
+      de modo que una simulacion puede comprobarse sin haberla guardado.'
+    verification: automated
+  - id: AC-13
+    description: 'La validacion es del lado servidor (Pydantic en el borde web): tipos, rangos validados,
+      fechas no futuras, coherencia entre fechas de nacimiento, maximo 4 hijos, y CSRF en los POST con
+      el patron vigente. Los errores son mensajes claros en espanol sin traceback ni PII; un fallo inesperado
+      responde 500 generico y falla cerrado.'
+    verification: automated
+  - id: AC-14
+    description: La unica dependencia nueva es reportlab==5.0.1 (rueda pura Python; sus transitivas pillow
+      y charset-normalizer ya estan fijadas en runtime.lock), declarada en pyproject.toml y en los lockfiles
+      con el mecanismo vigente. pip-audit limpio y docker build exitoso.
+    verification: automated
+  - id: AC-15
+    description: 'Sin regresion: listado, detalle, dashboard ejecutivo, exportacion XLSX, asignacion,
+      cartera aislada de advisors y RBAC/PII quedan sin cambios; no se modifica app/auth/**.'
+    verification: both
+  - id: AC-16
+    description: Las pruebas automatizadas cubren autorizacion por rol y anonimo, lead no visible, cada
+      escenario soportado y cada rechazo, el contrato de las 435 simulaciones, la ventana (dentro, advertencia
+      y bloqueo), el PDF (valido, texto extraible, sin RUT, correo ni telefono, escape de marcado), headers,
+      codigo de verificacion, auditoria y fallo durante la generacion. La cobertura total del proyecto
+      se mantiene igual o superior a 85%.
+    verification: automated
+  - id: AC-17
+    description: 'Documentacion creada al entrar en DEVELOPING y antes de tocar codigo funcional: docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md
+      (requisito -> AC -> componente -> prueba -> evidencia, con la matriz de contenido del PDF y la tabla
+      de rangos validados), docs/SIM_RV_V1_MODELO.md (ecuaciones y precision del modelo), docs/SIM_RV_V1_PENDIENTES.md
+      (copia de la lista de pendientes), mas CHANGELOG y BITACORA actualizados.'
+    verification: both
+  - id: AC-18
+    description: 'Precondicion de release: antes del despliegue, el humano ejecuta una campana canaria
+      de revalidacion contra el simulador de referencia (al menos 30 casos ciegos, procedimiento en la
+      seccion 3 de los pendientes) y actualiza la ventana validada; el resultado queda registrado como
+      evidencia.'
+    verification: human
+  - id: AC-19
+    description: 'Smoke humano en AWS DEV: un ejecutivo genera PDF de al menos tres escenarios (causante
+      solo, familia con garantia, renta temporal) y los resultados coinciden con el simulador de referencia
+      en tres casos contrastados; advisor, operations y readonly reciben 403; el PDF es legible y no contiene
+      RUT, correo ni telefono; los logs no contienen PII ni el contenido del PDF.'
+    verification: human
+  constraints:
+  - 'Baseline: revalidar SHA y tree al activar y al iniciar DEVELOPING (HEAD local c0b5434 al redactar;
+    la referencia local de origin/main apunta a cb628dc, el release de TASK-002). Si origin/main avanzo,
+    registrar el nuevo tip legitimo antes de trabajar; no desarrollar desde ramas o worktrees antiguos.'
+  - Tarea unica SIM-RV-V1; no mezclar otros cambios ni dejar alcance diferido sin documentar en los pendientes.
+  - 'change_class A (fast path version-only): sin migraciones, cambios de esquema, grants, escrituras
+    masivas ni infraestructura. Duda registrada: la unica escritura es el INSERT append-only de auditoria
+    (AC-11) con el grant existente; si el Developer o Reviewer encuentran que requiere migracion, grant,
+    vista o constraint nueva, es BLOCKER: detenerse y escalar al humano.'
+  - 'Insumos del motor: el paquete de referencia esta en C:/desarrollos/REA/simulador_pension (src/simulador_pension,
+    tests/data/casos_portal.json, scripts/informe_regresion.py, docs/MODELO.md, docs/PENDIENTES.md). El
+    Developer porta el motor a app/simulador_pension sin cambiar la logica numerica (solo importaciones,
+    empaquetado, tipos y estilo: black 100, ruff, mypy); cualquier cambio numerico exige repetir el contrato
+    de 435 casos. Si el Developer no puede leer esos insumos desde su worktree, es BLOCKER hasta que el
+    humano los deje accesibles dentro del repositorio.'
+  - 'Gates separados: (1) Requirements Coverage Gate en DEVELOPING antes de tocar codigo funcional; (2)
+    ruff/black/mypy/bandit/pip-audit vigentes y suite completa con cobertura >= 85%; (3) revision especifica
+    de PII, de escape de marcado y de autorizacion, con inspeccion real de los PDF generados por el Reviewer;
+    (4) CI obligatorio; (5) Candidate Review y Human Gate antes del despliegue; (6) campana canaria (AC-18)
+    y smoke humano en AWS DEV (AC-19).'
+  - Autorizacion server-side con los helpers vigentes (is_superuser y el rol executive) antes de resolver
+    el lead o construir el PDF; no modificar app/auth/** ni los permisos de otros roles.
+  - 'Prohibido: migraciones o cambios de esquema; persistir entradas o resultados; S3 para PDF; envio
+    por correo; bono de reconocimiento, vejez anticipada, invalidez, sobrevivencia y otros escenarios
+    fuera de la V1; tasas o UF obtenidas de servicios externos; cambios IAM, DNS, networking o infraestructura;
+    --option-settings; cambios en Harness, workflow, guards o policies; produccion.'
+  - 'Dependencias: solo reportlab==5.0.1 con sus transitivas ya fijadas; el Reviewer verifica que el diff
+    de requirements/** y pyproject.toml se limita a eso (mas la declaracion de datos del paquete).'
+  - Nunca leer, imprimir ni modificar AUTH_USERS_JSON, contrasenas, hashes ni secretos; no crear identidades.
+  - No reducir la cobertura minima (85%); no mezclar cambios no relacionados.
+  dependencies: []
+  risk:
+    level: high
+    notes: 'Modelo empirico (no normativo) cuyo resultado se entrega a clientes en un PDF. Riesgos: resultados
+      fuera de la ventana o de los rangos validados; deriva del simulador de referencia sin deteccion;
+      autorizacion solo visual; fuga de PII al PDF o a logs; inyeccion de marcado en el PDF; auditoria
+      que filtre datos; dependencia de PDF vulnerable o con transitivas innecesarias; datos del paquete
+      no incluidos en la imagen Docker.'
+  scope:
+    paths:
+    - app/simulador_pension/**
+    - app/web/**
+    - app/services/**
+    - tests/**
+    - requirements/**
+    - pyproject.toml
+    - CHANGELOG.md
+    - docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md
+    - docs/SIM_RV_V1_MODELO.md
+    - docs/SIM_RV_V1_PENDIENTES.md
+    - docs/BITACORA.md
+  status: closed
+closure:
+  closed_at: '2026-10-14T20:51:27Z'
+  final_state: DONE
+  evidence_dir: evidence/SIM-RV-V1
+  release:
+    release_sha: 13084414558f59a7b1e30dd859199469c2a62318
+    pr_number: 69
+    application_version: h3-sim-rv-v1-1308441-domainlocked-r1
+    bundle_sha256: b91612eacdd0698661ceca28247199d6dd4254c1a675fbae6af969daa5431895
+    lkg: h3-logo-png-cb628dc-domainlocked-r1
+    deployment: success
+    deployed_commit: 13084414558f59a7b1e30dd859199469c2a62318
+    verification: PASS
+  rework_rounds: 1

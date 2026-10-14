@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "kind": "acceptance",
+  "task_id": "SIM-RV-V1",
+  "created_at": "2026-10-14T20:47:29Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "decision": "accepted",
+  "criteria": [
+    {
+      "id": "AC-1",
+      "status": "accepted"
+    },
+    {
+      "id": "AC-2",
+      "status": "accepted"
+    },
+    {
+      "id": "AC-3",
+      "status": "accepted"
+    },
+    {
+      "id": "AC-6",
+      "status": "accepted"
+    },
+    {
+      "id": "AC-7",
+      "status": "accepted"
+    },
+    {
+      "id": "AC-9",
+      "status": "accepted"
+    },
+    {
+      "id": "AC-11",
+      "status": "accepted"
+    },
+    {
+      "id": "AC-15",
+      "status": "accepted"
+    },
+    {
+      "id": "AC-17",
+      "status": "accepted"
+    },
+    {
+      "id": "AC-18",
+      "status": "accepted"
+    },
+    {
+      "id": "AC-19",
+      "status": "accepted"
+    }
+  ],
+  "notes": "Aceptacion humana de los 11 criterios en DEV; extension de la ventana validada (AC-6/AC-18) pendiente de release posterior"
+}

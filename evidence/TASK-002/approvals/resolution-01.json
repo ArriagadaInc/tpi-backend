@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "resolution",
+  "task_id": "TASK-002",
+  "created_at": "2026-10-14T14:40:21Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "from_state": "BLOCKED_HUMAN",
+  "to_state": "VERIFYING",
+  "reason": "Politica de indicadores de logs afinada (Authorization -REDACTED, hash -ACME); se reintenta la verificacion"
+}

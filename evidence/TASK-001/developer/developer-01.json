@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "TASK-001",
+  "created_at": "2026-10-12T18:58:16Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610121850-developer-sup22202f",
+  "head_sha": "b893779e970e64ffa6f303c70bf951510bf08838",
+  "branch": "harness/TASK-001-logo-zlib-release",
+  "pr_number": 66,
+  "change_class": "A",
+  "tests": {
+    "command": "pytest tests/ --cov=app --cov-report=xml --cov-fail-under=85 (CI, workflow Tests job)",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "CI del PR #66 verde sobre el SHA b893779e970e64ffa6f303c70bf951510bf08838: Lint & Format (ruff/black/mypy), Tests (pytest --cov-fail-under=85), Security Audit (pip-audit/bandit), Docker Build y Release Tooling Validation, todos COMPLETED SUCCESS. El cambio es documental (CHANGELOG.md), por lo que no altera tests ni cobertura."
+    },
+    {
+      "id": "AC-2",
+      "status": "pending_verification",
+      "evidence": "La visibilidad del logo oficial en cabecera y pantalla de acceso en DEV, en tema claro y oscuro, es verificacion humana post-deploy (requires_human_acceptance). El codigo del logo (PR #64) ya esta en main y revisado; esta tarea solo documenta el release."
+    }
+  ],
+  "files_changed": [
+    "CHANGELOG.md"
+  ],
+  "assumptions": [
+    "El release 0.2.0 documenta dos PRs ya mergeados y revisados en main: #64 (logo oficial de CRM Lite) y #65 (mitigacion CVE-2026-85091 zlib). Esta tarea es documental.",
+    "La fecha de release se fija en 2026-10-12 (fecha de activacion de TASK-001).",
+    "AC-2 (verificacion visual en DEV) queda a cargo del humano tras el deploy, segun requires_human_acceptance."
+  ],
+  "migrations_included": false
+}

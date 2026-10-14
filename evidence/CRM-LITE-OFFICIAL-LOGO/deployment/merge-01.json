@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "CRM-LITE-OFFICIAL-LOGO",
+  "created_at": "2026-10-11T23:58:12Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610112339-deployer",
+  "pr_number": 64,
+  "pr_url": "https://github.com/ArriagadaInc/tpi-backend/pull/64",
+  "pr_title": "CRM-LITE-OFFICIAL-LOGO: logo oficial + variante clara para tema oscuro",
+  "pr_state_after_merge": "MERGED",
+  "reviewed_sha": "75bcac51ad8fd5ab7b2388e0ccfd56022e01feeb",
+  "reviewed_tree": "26a9d9f8725e1b18586bc758988809b798c9d1ba",
+  "release_sha": "6a5acd4d23d623c14b67158dd0ef202f1cbfa431",
+  "release_tree": "26a9d9f8725e1b18586bc758988809b798c9d1ba",
+  "main_parent_sha": "7caeb822b69aadc41ec1b798e7d14d83d673012a",
+  "main_before_merge": "7caeb822b69aadc41ec1b798e7d14d83d673012a",
+  "main_after_merge": "6a5acd4d23d623c14b67158dd0ef202f1cbfa431",
+  "method": "squash",
+  "match_head_commit_used": true,
+  "result": "PASS",
+  "change_class": "A",
+  "deploy_required": true,
+  "fast_path": true,
+  "merged_at": "2026-10-11T23:46:17Z",
+  "merged_by": "ArriagadaInc",
+  "release_commit_author": "Alvaro Arriagada",
+  "release_commit_committer": "GitHub",
+  "release_commit_subject": "CRM-LITE-OFFICIAL-LOGO: logo oficial + variante clara para tema oscuro (#64)",
+  "gh_pr_merge_command": "gh pr merge 64 --squash --match-head-commit 75bcac51ad8fd5ab7b2388e0ccfd56022e01feeb",
+  "merge_executed_by_session": "claude-202610112339-deployer",
+  "tree_equivalence": {
+    "reviewed_tree": "26a9d9f8725e1b18586bc758988809b798c9d1ba",
+    "release_tree": "26a9d9f8725e1b18586bc758988809b798c9d1ba",
+    "equal": true,
+    "verification": "git rev-parse 75bcac5^{tree} == git rev-parse 6a5acd4^{tree} == review-02.reviewed_tree, verificado tras git fetch origin main; 6a5acd4 tiene parent unico 7caeb82 (base del PR)."
+  },
+  "branch": "harness/CRM-LITE-OFFICIAL-LOGO-logo-oficial",
+  "scope": {
+    "files_changed": 6,
+    "all_within_task_scope": true,
+    "files": [
+      "app/web/static/css/app.css",
+      "app/web/static/img/logo-dark.svg",
+      "app/web/static/img/logo.svg",
+      "app/web/templates/base.html",
+      "app/web/templates/login.html",
+      "tests/unit/test_web_app.py"
+    ]
+  },
+  "references": {
+    "developer_evidence": "evidence/CRM-LITE-OFFICIAL-LOGO/developer/developer-02.json",
+    "review_evidence": "evidence/CRM-LITE-OFFICIAL-LOGO/reviewer/review-02.json"
+  },
+  "ci_pr": {
+    "run_id": 37954834977,
+    "workflow": "CI - Linting, Tests & Security",
+    "event": "pull_request",
+    "sha": "75bcac51ad8fd5ab7b2388e0ccfd56022e01feeb",
+    "conclusion": "success",
+    "jobs": "5/5"
+  },
+  "ci_main": {
+    "run_id": 38185530789,
+    "url": "https://github.com/ArriagadaInc/tpi-backend/actions/runs/38185530789",
+    "workflow": "CI - Linting, Tests & Security",
+    "event": "push",
+    "branch": "main",
+    "sha": "6a5acd4d23d623c14b67158dd0ef202f1cbfa431",
+    "status": "completed",
+    "conclusion": "success",
+    "jobs": "5/5 (Lint & Format, Docker Build, Tests, Security Audit, Release Tooling Validation)"
+  },
+  "classifier_denial": {
+    "at": "2026-10-11T23:41Z",
+    "source": "Claude Code auto mode classifier (motivo reportado: Merge Without Review)",
+    "denied_command": "gh pr merge 64 --squash --match-head-commit 75bcac51ad8fd5ab7b2388e0ccfd56022e01feeb",
+    "outcome": "merge no ejecutado en ese intento; la sesion se detuvo y pidio decision humana",
+    "human_resolution": "El humano agrego una regla de permiso acotada a ese comando exacto en su configuracion de usuario y pidio reintentar; el reintento se ejecuto en la misma sesion claude-202610112339-deployer y el merge se realizo una sola vez."
+  },
+  "checks": [
+    {
+      "name": "init_state_role",
+      "result": "PASS",
+      "note": "init.ps1 --runtime claude: PASS, state REVIEW_APPROVED, rol deployer; start_merge -> MERGING."
+    },
+    {
+      "name": "head_equals_reviewed_sha_before_merge",
+      "result": "PASS",
+      "note": "headRefOid 75bcac5 == review-02.reviewed_sha; mergeStateStatus CLEAN; sin auto-merge."
+    },
+    {
+      "name": "pr_up_to_date_with_main",
+      "result": "PASS",
+      "note": "merge-base(origin/main, 75bcac5) == origin/main == 7caeb82 antes del merge."
+    },
+    {
+      "name": "pr_merged",
+      "result": "PASS",
+      "note": "gh pr view 64: MERGED, mergeCommit 6a5acd4d23d623c14b67158dd0ef202f1cbfa431."
+    },
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "26a9d9f == 26a9d9f."
+    },
+    {
+      "name": "single_parent_squash",
+      "result": "PASS",
+      "note": "parent unico 7caeb82 == base del PR."
+    },
+    {
+      "name": "ci_main_release_sha",
+      "result": "PASS",
+      "note": "run 38185530789 completed/success sobre 6a5acd4, 5/5 jobs."
+    },
+    {
+      "name": "merge_not_repeated",
+      "result": "PASS",
+      "note": "una sola ejecucion exitosa de gh pr merge; el primer intento fue denegado y no se ejecuto."
+    }
+  ],
+  "cloud_access": "ninguno (MERGING)"
+}

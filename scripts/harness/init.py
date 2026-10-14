@@ -120,7 +120,10 @@ def build_report(root: Path, runtime: str) -> dict[str, Any]:
         state_name == "CANDIDATE_REVIEW"
         and runtime not in policies["harness"]["deploy_capable_runtimes"]
     ):
-        errors.append("CANDIDATE_REVIEW requiere lecturas AWS via aws_guard: solo Claude Code")
+        errors.append(
+            "CANDIDATE_REVIEW requiere lecturas AWS via aws_guard: solo runtimes con enforcement "
+            f"demostrado ({policies['harness']['deploy_capable_runtimes']})"
+        )
 
     skills: list[str] = []
     if role in common.AGENT_ROLES:

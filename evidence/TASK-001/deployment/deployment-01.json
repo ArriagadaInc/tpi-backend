@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "kind": "deployment",
+  "task_id": "TASK-001",
+  "created_at": "2026-10-13T16:57:06Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610131653-deployer-sup8b9593",
+  "approved_commit": "04e3f1a80aa0c609aef8a0724419f5f21f299c8f",
+  "deployed_commit": "04e3f1a80aa0c609aef8a0724419f5f21f299c8f",
+  "application_version": "h3-logo-zlib-04e3f1a-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "update_accepted": true,
+  "result": "success",
+  "started_at": "2026-10-13T16:54:35Z",
+  "finished_at": "2026-10-13T16:55:44Z",
+  "failure_class": null,
+  "previous_version_label": "h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1",
+  "final_state": {
+    "version_label": "h3-logo-zlib-04e3f1a-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-13T16:55:44Z",
+    "observed_at": "2026-10-13T16:56:04Z"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-logo-zlib-04e3f1a-domainlocked-r1/7026a0791cf7ab5c1c0a22cf9021b656b2f98c1a7a93fc568efba34ca8336a76.zip",
+    "s3_checksum_sha256_b64": "cCageRz3q1wcCiLPkCG2VrL5jBp6k/xWjvujTKgzanY=",
+    "s3_content_length": 4815,
+    "bundle_sha256": "7026a0791cf7ab5c1c0a22cf9021b656b2f98c1a7a93fc568efba34ca8336a76",
+    "bundle_compose_digests": {
+      "tpi-dev-app": "sha256:86d8e199c83ffe4d3f5bc3c7533b0b6f6dd64cd38c69314fc440c22f103be452",
+      "tpi-dev-caddy": "sha256:0aadd6dba8057a5ee06a71c92754e83f087b312c813de265cca986b517804345"
+    },
+    "digests_equal_approval_01": true,
+    "ecr_images_active": true,
+    "note": "Digests del bundle = approval-01 (bundle local sha256 igual al aprobado, no reconstruido); AV SourceBundle y head-object re-observados post-cutover."
+  },
+  "preflight": {
+    "at": "2026-10-13T16:54Z",
+    "result": "PASS",
+    "checks": [
+      "init PASS (DEPLOYING, rol deployer)",
+      "sha256 de candidate-01.json = a8aa18de... = approval-01.candidate_evidence.sha256; approval-01 approved",
+      "origin/main = release SHA 04e3f1a",
+      "sts account 821656895812; region us-east-2 por aws_guard",
+      "environment en LKG h3-3-7-..., Ready/Green/Ok, AbortableOperationInProgress false, DateUpdated 2026-10-01T14:47:51Z",
+      "AV candidata UNPROCESSED, SourceBundle = key aprobada",
+      "ECR candidata (app 86d8e199 / caddy 0aadd6db) y LKG (app 841595e4 / caddy 92d49b11) presentes"
+    ]
+  },
+  "cutover": {
+    "mechanism": "aws_guard update-environment version-label only",
+    "executed_by": "deployer",
+    "updates_applied": 1,
+    "retries": 0,
+    "option_settings": false,
+    "restart_app_server": false,
+    "rollback_executed": false,
+    "convergence": "exitosa en ~69 s (start 16:54:40Z, completed 16:55:43Z)"
+  },
+  "events": {
+    "levels_observed": [
+      "INFO"
+    ],
+    "errors": 0,
+    "note": "Environment update completed successfully; transicion Ok->Info->Ok durante el despliegue en la instancia."
+  },
+  "warnings": []
+}

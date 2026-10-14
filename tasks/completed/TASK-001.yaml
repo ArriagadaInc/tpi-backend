@@ -1,0 +1,41 @@
+schema_version: 1
+task:
+  id: TASK-001
+  title: Desplegar logo oficial de CRM Lite a DEV (release)
+  objective: 'Publicar en DEV el logo oficial de CRM Lite (PR #64) junto con la mitigacion de zlib (PR
+    #65), documentando el release en CHANGELOG.md.'
+  source:
+    type: story
+    ref: Definida con el asistente de tareas el 2026-10-12
+  change_class: A
+  deploy_required: true
+  requires_human_acceptance: true
+  acceptance_criteria:
+  - id: AC-1
+    description: Las pruebas del repositorio y los checks de CI pasan sobre el PR de la tarea. → verificación
+      automated
+    verification: automated
+  - id: AC-2
+    description: El logo oficial se ve en la cabecera y en la pantalla de acceso de CRM Lite en DEV, en
+      tema claro y en tema oscuro.
+    verification: human
+  constraints: []
+  dependencies: []
+  risk:
+    level: low
+    notes: Solo documenta; el codigo y la mitigacion ya estan en main y revisados.
+  status: cancelled
+closure:
+  closed_at: '2026-10-13T17:29:11Z'
+  final_state: CANCELLED
+  evidence_dir: evidence/TASK-001
+  release:
+    release_sha: 04e3f1a80aa0c609aef8a0724419f5f21f299c8f
+    pr_number: 66
+    application_version: h3-logo-zlib-04e3f1a-domainlocked-r1
+    bundle_sha256: 7026a0791cf7ab5c1c0a22cf9021b656b2f98c1a7a93fc568efba34ca8336a76
+    lkg: h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1
+    deployment: success
+    deployed_commit: 04e3f1a80aa0c609aef8a0724419f5f21f299c8f
+    verification: FAIL
+  rework_rounds: 0

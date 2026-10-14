@@ -502,7 +502,7 @@ def probe_runtime(
     if not executable:
         raise SupervisorStopError(f"preflight: ejecutable del probe no encontrado: {argv[0]}")
     env = worker_env(root)
-    env.pop(denials.ENV_VAR, None)
+    env.pop(denials.env_var(root), None)
     timeout = config["preflight"]["probe_timeout_seconds"]
     with tempfile.TemporaryDirectory(prefix="tpi-sup-probe-") as scratch:
         try:
@@ -559,9 +559,10 @@ def worker_env(root: Path, turn: str | None = None) -> dict[str, str]:
     session-scoped turn id the guards use to latch a DENIED for this turn only."""
     env = dict(os.environ)
     env.pop(common.load_policies(root)["harness"]["maintenance_env_var"], None)
-    env.pop(denials.ENV_VAR, None)
+    turn_var = denials.env_var(root)
+    env.pop(turn_var, None)
     if turn:
-        env[denials.ENV_VAR] = turn
+        env[turn_var] = turn
     return env
 
 

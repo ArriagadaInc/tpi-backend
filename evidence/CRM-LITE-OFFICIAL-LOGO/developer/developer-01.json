@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "CRM-LITE-OFFICIAL-LOGO",
+  "created_at": "2026-10-09T15:29:02Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610091515-developer-sup8cce74",
+  "head_sha": "d13daf80eeec57cbe383dbf837b4da579137f855",
+  "branch": "harness/CRM-LITE-OFFICIAL-LOGO-logo-oficial",
+  "pr_number": 64,
+  "change_class": "A",
+  "tests": {
+    "command": "pytest tests/unit/test_web_app.py -q --no-cov",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "test_official_logo_asset_is_served_locally verifica /static/img/logo.svg (200, image/svg+xml); test_header_and_login_render_official_logo_with_alt_text verifica que cabecera y login lo renderizan con alt text; test_official_logo_is_never_loaded_from_an_external_origin confirma que no se carga desde origen externo."
+    },
+    {
+      "id": "AC-2",
+      "status": "pending_verification",
+      "evidence": "La correspondencia visual con el recurso oficial adjunto es verificacion humana. El logo.svg se extrajo fielmente del SVG del header del sitio publico (front/index.html)."
+    }
+  ],
+  "files_changed": [
+    "app/web/static/css/app.css",
+    "app/web/static/img/logo.svg",
+    "app/web/templates/base.html",
+    "app/web/templates/login.html",
+    "tests/unit/test_web_app.py"
+  ],
+  "assumptions": [
+    "El logo oficial es el SVG embebido en el header del sitio publico (front/index.html); se reprodujo fielmente como recurso estatico local app/web/static/img/logo.svg.",
+    "La verificacion visual de AC-2 queda a cargo del humano (requires_human_acceptance)."
+  ],
+  "migrations_included": false
+}

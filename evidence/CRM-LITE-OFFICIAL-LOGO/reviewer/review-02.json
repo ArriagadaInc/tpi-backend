@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "CRM-LITE-OFFICIAL-LOGO",
+  "created_at": "2026-10-09T15:59:23Z",
+  "role": "reviewer",
+  "runtime": "other",
+  "session_id": "other-202610091557-reviewer-sup379e7a",
+  "reviewed_sha": "75bcac51ad8fd5ab7b2388e0ccfd56022e01feeb",
+  "reviewed_tree": "26a9d9f8725e1b18586bc758988809b798c9d1ba",
+  "pr_number": 64,
+  "change_class": "A",
+  "ci": {
+    "run_id": 37954834977,
+    "head_sha": "75bcac51ad8fd5ab7b2388e0ccfd56022e01feeb",
+    "conclusion": "success",
+    "jobs": {
+      "docker_build": "pass",
+      "lint_format": "pass",
+      "release_tooling_validation": "pass",
+      "security_audit": "pass",
+      "tests": "pass"
+    }
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "info",
+      "file": "app/web/static/css/app.css",
+      "summary": "Resuelto el F-1 de review-01. Se agrego app/web/static/img/logo-dark.svg (texto #e2e8f0 / #60a5fa, alto contraste sobre .topbar y .auth-card oscuros). Analisis de cascada: en tema claro .brand-logo-dark{display:none} se declara despues de .brand-logo/.brand-logo-large (misma especificidad) y oculta la variante oscura; en tema oscuro [data-theme=\"dark\"] .brand-logo-dark{display:block} se declara despues de [data-theme=\"dark\"] .brand-logo,.brand-logo-large{display:none} (misma especificidad 0,2,0) y gana. theme.js fija data-theme en <html>; no hay reglas prefers-color-scheme que queden sin cubrir. La variante oculta con display:none sale del arbol de accesibilidad, por lo que no se duplica el alt.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F-2",
+      "severity": "info",
+      "file": "app/web/static/img/logo.svg",
+      "summary": "Fallback de fuente (Roboto -> Arial/sans-serif en <img>) aceptado explicitamente por el Developer en developer-02 assumptions; cosmetico.",
+      "required_action": "Ninguna; queda dentro de la verificacion humana de AC-2."
+    },
+    {
+      "id": "F-3",
+      "severity": "info",
+      "file": "app/web/static/img/logo.svg",
+      "summary": "logo.svg sin cambios desde d13daf8 (ya verificado como reproduccion fiel del SVG de front/index.html). La correspondencia con el 'recurso oficial adjunto' es verificacion humana (AC-2, requires_human_acceptance).",
+      "required_action": "Humano: validar AC-2 visualmente en ambos temas."
+    },
+    {
+      "id": "F-4",
+      "severity": "minor",
+      "file": "tests/unit/test_web_app.py",
+      "summary": "test_dark_theme_has_light_logo_variant verifica presencia de selectores CSS mediante busqueda de texto, no el comportamiento de cascada en navegador; aceptable para un cambio visual estatico, sin regresion de gates.",
+      "required_action": "Opcional; no bloqueante."
+    }
+  ],
+  "checks": [
+    {
+      "name": "scope_within_task_paths",
+      "result": "PASS"
+    },
+    {
+      "name": "diff_matches_pr_files",
+      "result": "PASS"
+    },
+    {
+      "name": "pr_head_equals_reviewed_sha",
+      "result": "PASS"
+    },
+    {
+      "name": "ac1_local_static_asset_and_alt_text",
+      "result": "PASS"
+    },
+    {
+      "name": "no_external_logo_origin",
+      "result": "PASS"
+    },
+    {
+      "name": "dark_theme_logo_legibility",
+      "result": "PASS"
+    },
+    {
+      "name": "css_cascade_light_dark_swap",
+      "result": "PASS"
+    },
+    {
+      "name": "auth_authz_navigation_unchanged",
+      "result": "PASS"
+    },
+    {
+      "name": "no_dangling_css_class_references_in_app",
+      "result": "PASS"
+    },
+    {
+      "name": "local_pytest_test_web_app_39_passed",
+      "result": "PASS"
+    },
+    {
+      "name": "ci_green_on_exact_sha",
+      "result": "PASS"
+    },
+    {
+      "name": "no_migrations_no_secrets_no_pii",
+      "result": "PASS"
+    },
+    {
+      "name": "no_lockfile_changes",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "AC-2 (correspondencia visual con el recurso oficial) depende de verificacion humana.",
+    "Texto del SVG renderiza con fuente de sistema; puede diferir levemente del sitio publico."
+  ]
+}

@@ -307,5 +307,5 @@ rollback_authorization:
 # pero toda coincidencia exige clasificacion humana registrada antes de `verified`.
 observability:
   log_indicators:
-    strong: [Authorization, Bearer, password, cookie, raw_payload, secret, token]
-    weak: [hash]
+    strong: ["Authorization -REDACTED", Bearer, password, cookie, raw_payload, secret, token]
+    weak: [hash, "hash -ACME"]

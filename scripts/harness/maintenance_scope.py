@@ -1,7 +1,8 @@
 """Maintenance scope (Harness v1.2): a human-opened, time-boxed, path-bounded window.
 
 Requested when the human launches the runtime with ``harness.maintenance_scope.env_var`` set.
-Active only if, in addition, ``TPI_HARNESS_MAINTENANCE=1`` is set and the registry written by
+Active only if, in addition, ``<harness.maintenance_env_var>=1`` is set (``TPI_HARNESS_MAINTENANCE``
+in TPI; the name is configured in harness/policies.yaml) and the registry written by
 ``approve.py maintenance-scope open``:
 
 * exists, validates against ``maintenance_scope.schema.json`` and is ``open``;

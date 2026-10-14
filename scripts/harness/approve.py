@@ -1,6 +1,7 @@
 """Human decisions of the harness. Run ONLY by a human in an interactive terminal.
 
 Usage:
+  python scripts/harness/approve.py define --draft <path> --sha256 <hash>
   python scripts/harness/approve.py activate --task <ID>
   python scripts/harness/approve.py gate --decision approve|reject [--reason <text>]
   python scripts/harness/approve.py accept --decision accept|reject --criteria AC-1,AC-2 [--notes <text>]
@@ -23,10 +24,12 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from . import common, evidence, maintenance_scope, transition
+    from . import common, deploy_profile, evidence, maintenance_scope, static_site, transition
 except ImportError:  # executed as a script
     import common  # type: ignore[no-redef]
+    import deploy_profile  # type: ignore[no-redef]
     import maintenance_scope  # type: ignore[no-redef]
+    import static_site  # type: ignore[no-redef]
     import transition  # type: ignore[no-redef]
 
     import evidence  # type: ignore[no-redef]
@@ -84,18 +87,133 @@ def activate(root: Path, task_id: str) -> dict[str, Any]:
     return transition.apply_transition(root, "activate_task", _human=True)
 
 
+DRAFT_DIR = Path(".harness-runtime") / "orchestrator" / "drafts"
+
+
+def _draft_file(root: Path, draft: str) -> Path:
+    folder = (root / DRAFT_DIR).resolve()
+    candidate = Path(draft)
+    path = (candidate if candidate.is_absolute() else root / candidate).resolve()
+    if path.parent != folder or path.suffix != ".yaml":
+        raise common.HarnessError(f"el borrador debe ser un .yaml dentro de {DRAFT_DIR.as_posix()}")
+    if not path.is_file():
+        raise common.HarnessError("el borrador no existe")
+    return path
+
+
+def define(root: Path, draft: str, sha256: str) -> dict[str, Any]:
+    """Move a task draft written by the intake assistant into tasks/backlog.yaml (human only).
+
+    The draft is only a proposal: it must live in the drafts folder, match the hash the human saw
+    at the end of the interview, validate against the backlog and task schemas and use a free id.
+    The human then confirms by typing the id.
+    """
+    _require_tty()
+    state = _require_state(root, "IDLE")
+    path = _draft_file(root, draft)
+    if common.sha256_file(path) != sha256.strip().lower():
+        raise common.HarnessError(
+            "el borrador cambio despues de la entrevista (sha256 distinto): vuelve a generarlo"
+        )
+    try:
+        document = common.read_yaml(path)
+        item = document["item"]
+        task = item["task"]
+        valid_kind = document.get("kind") == "task_draft"
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise common.HarnessError(f"borrador ilegible o con formato inesperado: {error}") from error
+    if not valid_kind:
+        raise common.HarnessError("el archivo no es un borrador de tarea (kind task_draft)")
+    errors = common.validate_schema(
+        root, "backlog", {"schema_version": 1, "items": [item]}
+    ) + common.validate_schema(root, "task", {"schema_version": 1, "task": task})
+    if errors:
+        raise common.HarnessError("borrador invalido: " + "; ".join(errors))
+    backlog = common.load_backlog(root)
+    taken = {entry.get("id") for entry in backlog.get("items", [])}
+    taken |= {p.stem for p in (root / "tasks" / "completed").glob("*.yaml")}
+    if item["id"] != task["id"] or item["id"] in taken:
+        raise common.HarnessError(f"el ID {item['id']} ya existe o es inconsistente")
+    print(f"Guardar en el backlog la tarea {task['id']}: {task['title']}")
+    print(f"Objetivo: {task['objective']}")
+    for criterion in task["acceptance_criteria"]:
+        print(f"  {criterion['id']} [{criterion['verification']}] {criterion['description']}")
+    for constraint in task["constraints"]:
+        print(f"  restriccion: {constraint}")
+    print(
+        f"Clase {task['change_class']} | riesgo {task['risk']['level']} | "
+        f"deploy_required={task['deploy_required']}"
+    )
+    _confirm("Escribe el ID de la tarea para guardarla en el backlog: ", task["id"])
+    saved = {
+        **item,
+        "evidence": [
+            *item.get("evidence", []),
+            f"guardada con approve.py define por {_actor(root)['name']}",
+        ],
+    }
+    backlog["items"] = [*backlog.get("items", []), saved]
+    common.write_yaml_atomic(
+        root / "tasks" / "backlog.yaml",
+        backlog,
+        header="# Backlog del Harness. Ninguna tarea es current hasta que el humano la active.\n",
+    )
+    print(f"Tarea {task['id']} guardada en tasks/backlog.yaml. Activala con: ")
+    print(f"  python scripts/harness/approve.py activate --task {task['id']}")
+    return state
+
+
+# What the human reads, by deployment profile; and what is shown but not stored in the approval
+# (the approval is bound to the candidate evidence by its hash, which already covers these).
+_SHOWN_KEYS = {
+    deploy_profile.ELASTIC_BEANSTALK: (
+        "approved_commit",
+        "application_version",
+        "environment",
+        "app_digest",
+        "caddy_digest",
+        "bundle_sha256",
+        "s3_key",
+        "lkg_version_label",
+    ),
+    deploy_profile.STATIC_SITE: (
+        "approved_commit",
+        "application_version",
+        "environment",
+        "bundle_sha256",
+        "s3_prefix",
+        "lkg_version_label",
+    ),
+}
+_NOT_SIGNED = ("smoke_plan", "environment_observed", "files")
+
+
 def gate_package(root: Path, state: dict[str, Any]) -> dict[str, Any]:
     candidate = common.load_ref(root, state, "candidate_evidence")
     review = common.load_ref(root, state, "candidate_review_evidence")
     if not candidate or not review or review.get("decision") != "APPROVED":
         raise common.HarnessError("no hay candidate aprobado por CANDIDATE_REVIEW")
     policies = common.load_policies(root)
+    profile = deploy_profile.profile_of(
+        common.load_environment(root, state.get("environment", "dev"))
+    )
+    if deploy_profile.evidence_profile(candidate) != profile:
+        raise common.HarnessError(
+            f"el candidate es del perfil {deploy_profile.evidence_profile(candidate)} "
+            f"y el entorno es {profile}"
+        )
+    if profile == deploy_profile.STATIC_SITE:
+        specific = {"deployment_profile": profile, **static_site.gate_package(candidate)}
+    else:
+        specific = {
+            "app_digest": candidate["images"]["app"]["digest"],
+            "caddy_digest": candidate["images"]["caddy"]["digest"],
+            "bundle_sha256": candidate["bundle"]["sha256"],
+            "s3_key": candidate["s3"]["key"],
+        }
     return {
         "approved_commit": candidate["release_sha"],
-        "app_digest": candidate["images"]["app"]["digest"],
-        "caddy_digest": candidate["images"]["caddy"]["digest"],
-        "bundle_sha256": candidate["bundle"]["sha256"],
-        "s3_key": candidate["s3"]["key"],
+        **specific,
         "application_version": candidate["application_version"]["label"],
         "environment": candidate["environment"],
         "lkg_version_label": candidate["lkg"]["version_label"],
@@ -121,23 +239,16 @@ def gate(root: Path, decision: str, reason: str = "") -> dict[str, Any]:
     state = _require_state(root, "WAITING_HUMAN_APPROVAL")
     package = gate_package(root, state)
     print("=== AUTORIZAR DEPLOYMENT DEV ===")
-    for key in (
-        "approved_commit",
-        "application_version",
-        "environment",
-        "app_digest",
-        "caddy_digest",
-        "bundle_sha256",
-        "s3_key",
-        "lkg_version_label",
-    ):
+    for key in _SHOWN_KEYS[package.get("deployment_profile", deploy_profile.ELASTIC_BEANSTALK)]:
         print(f"{key}: {package[key]}")
+    for item in package.get("files", []):
+        print(f"  archivo {item['path']}  {item['bytes']} bytes  sha256 {item['sha256']}")
     print(f"environment_observed: {package['environment_observed']}")
     print("smoke_plan:", ", ".join(str(step) for step in package["smoke_plan"]))
     print("rollback condicionado (1 intento, version-only al LKG):")
     for condition in package["rollback_authorization"]["conditions"]:
         print(f"  - {condition}")
-    payload = {k: v for k, v in package.items() if k not in ("smoke_plan", "environment_observed")}
+    payload = {k: v for k, v in package.items() if k not in _NOT_SIGNED}
     if decision == "approve":
         _confirm("Escribe el release SHA completo para aprobar: ", package["approved_commit"])
         _confirm("Escribe APROBAR para confirmar: ", "APROBAR")
@@ -298,6 +409,9 @@ def main(argv: list[str] | None = None) -> int:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     sub = parser.add_subparsers(dest="command", required=True)
+    dfn = sub.add_parser("define")
+    dfn.add_argument("--draft", required=True)
+    dfn.add_argument("--sha256", required=True)
     act = sub.add_parser("activate")
     act.add_argument("--task", required=True)
     gt = sub.add_parser("gate")
@@ -346,7 +460,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"alcance {args.id}: {path}")
         return 0
     try:
-        if args.command == "activate":
+        if args.command == "define":
+            state = define(root, args.draft, args.sha256)
+        elif args.command == "activate":
             state = activate(root, args.task)
         elif args.command == "gate":
             state = gate(root, args.decision, args.reason)
