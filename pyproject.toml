@@ -38,7 +38,16 @@ dependencies = [
 
     # XLSX export (H3.3.6). Write-only usage: no defusedxml needed at runtime.
     "openpyxl>=3.1.5,<4.0",
+
+    # Simulador de renta vitalicia (SIM-RV-V1). Módulo puro: numpy para mortalidad.
+    "numpy>=2.5.1,<3.0",
+
+    # PDF efímero (SIM-RV-V1). Rueda pura Python; pillow y charset-normalizer ya fijadas.
+    "reportlab==5.0.1",
 ]
+
+[tool.setuptools.package-data]
+"app.simulador_pension" = ["datos/*.npz"]
 
 [project.optional-dependencies]
 dev = [
@@ -62,6 +71,7 @@ ignore = ["E501"]  # Line too long - handled by formatter
 
 [tool.ruff.lint.per-file-ignores]
 "app/pages/[0-9]*.py" = ["N999"]  # Streamlit usa prefijos numéricos para ordenar páginas
+"app/simulador_pension/*.py" = ["N803", "N806"]  # notación matemática (A, Q, P, N, D, ...)
 
 [tool.black]
 line-length = 100

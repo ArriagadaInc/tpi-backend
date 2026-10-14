@@ -22,6 +22,19 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-14 - SIM-RV-V1: simulador de renta vitalicia (en desarrollo, DEVELOPING)
+
+- Titulo: Simulador de renta vitalicia en el CRM con PDF efimero (perfil ejecutivo), V1 solo validado.
+- Motor puro portado a `app/simulador_pension` (sin cambios en la logica numerica); orquestacion en
+  `app/services/simulador_service.py` (PDF efimero, codigo de verificacion, clasificacion de escenario y ventana).
+- Decision de alcance (AC-11): el guard del Harness no permite editar `app/repositories/**` en esta tarea, asi
+  que el escritor del evento de auditoria vive en un modulo NUEVO `app/services/simulador_auditoria.py`, que usa
+  `get_db_connection` de `app.database.connection` con el mismo patron de INSERT append-only de
+  `record_xlsx_export_event` (`tpi.auditoria`, `accion='simulacion_renta_vitalicia'`, `tabla_afectada='tpi.leads'`,
+  `detalle` JSON sin PII). Se aparta de la convencion de capas; mover a `app/repositories/` en una tarea posterior
+  con ese alcance (ver `docs/SIM_RV_V1_PENDIENTES.md` item 15).
+- Siguiente paso: completar rutas web, plantillas, pruebas, gates de calidad y `submit_for_review`.
+
 ### 2026-10-01 - Harness: tarea H3.3.7 cerrada (DONE)
 
 - Titulo: Tema claro y oscuro para CRM Lite

@@ -1,0 +1,12 @@
+{% if can_simulate %}
+  <section class="state-control-bar card simulator-panel" aria-label="Simulador de renta vitalicia">
+    <div class="state-info">
+      <span class="state-label">Simulador</span>
+      <strong>Renta vitalicia referencial</strong>
+      <p class="empty-inline">Genera una simulación referencial de pensión mensual y descárgala en PDF.</p>
+    </div>
+    <div class="state-action-group">
+      <a class="btn-save-state" href="/leads/{{ selected_lead_id }}/simulador">Abrir simulador →</a>
+    </div>
+  </section>
+{% endif %}
