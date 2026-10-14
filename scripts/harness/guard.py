@@ -25,8 +25,9 @@ except ImportError:  # executed as a script
     except Exception as error:  # noqa: BLE001 - missing module, SyntaxError, broken import...
         # An uncaught import error exits 1, which Claude Code treats as a NON-blocking hook error
         # (the tool call would run unguarded). Only exit 2 blocks, so block explicitly.
+        # Static on purpose: the project label lives in policies.yaml, which cannot be read here.
         sys.stderr.write(
-            f"TPI HARNESS GUARD: DENIED - el guard no pudo cargar sus modulos: {error!r}\n"
+            f"HARNESS GUARD: DENIED - el guard no pudo cargar sus modulos: {error!r}\n"
         )
         sys.stderr.write(
             "Si esto bloquea una accion legitima: STOP y solicitar asistencia humana.\n"
@@ -63,6 +64,10 @@ PROTECTED_TOKENS = (
     # v1.2: registry of maintenance scopes (only approve.py maintenance-scope, run by the human).
     ".harness-runtime/maintenance",
     ".harness-runtime\\maintenance",
+    # v2: task drafts of the Orchestrator's intake assistant (the human reviews their hash and
+    # moves them into the backlog with approve.py define); an agent must not forge or replace one.
+    ".harness-runtime/orchestrator",
+    ".harness-runtime\\orchestrator",
 )
 SENSITIVE_HOME_DIRS = ("/.aws/", "/.claude/", "/.codex/", "/.dsh/", "/.ssh/")
 
@@ -504,11 +509,17 @@ def _maintenance_assignment(command: str, var: str) -> bool:
 
 
 def _sets_maintenance_variable(policies: dict[str, Any], command: str) -> bool:
-    """Setting/unsetting the maintenance variable or the v1.2 maintenance scope variable."""
+    """Setting/unsetting the maintenance variables or the variables that claim a runtime identity.
+
+    The v1.2 maintenance scope variable and the variables aws_guard.py reads to learn which runtime
+    is calling (CLAUDECODE, harness.runtime_env_var) are the human's or the runtime's, never the
+    agent's.
+    """
     names = [policies["harness"]["maintenance_env_var"]]
     scope = policies["harness"].get("maintenance_scope") or {}
     if scope.get("env_var"):
         names.append(scope["env_var"])
+    names += ["CLAUDECODE", common.naming(policies, "runtime_env_var")]
     return any(_maintenance_assignment(command, name) for name in names)
 
 
@@ -762,7 +773,8 @@ def decide(root: Path, event: dict[str, Any], env_vars: Mapping[str, str]) -> tu
         try:
             if not maintenance:
                 raise maintenance_scope.ScopeError(
-                    "el alcance requiere tambien TPI_HARNESS_MAINTENANCE=1 fijado por el humano"
+                    f"el alcance requiere tambien {policies['harness']['maintenance_env_var']}=1 "
+                    "fijado por el humano"
                 )
             scope = maintenance_scope.load(root, policies, scope_id)
         except common.HarnessError as error:
@@ -864,12 +876,20 @@ def _log(
             "maintenance_scope": scope_id[:64] if scope_id is not None else None,
             "context": "maintenance-bootstrap" if maintenance else "runtime-normal",
             # v1.1: Supervisor turn that launched this process tree (absent in manual mode).
-            "supervisor_turn": denials.turn_id(),
+            "supervisor_turn": denials.turn_id(root=root),
         }
         with (directory / "guard.log").open("a", encoding="utf-8", newline="\n") as handle:
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
     except OSError:
         pass
+
+
+def _guard_label(root: Path) -> str:
+    """harness.guard_label of this repository (default TPI HARNESS GUARD); never raises."""
+    try:
+        return common.naming(common.load_policies(root), "guard_label")
+    except Exception:  # noqa: BLE001 - the denial message must always be printed
+        return common.HARNESS_NAMING_DEFAULTS["guard_label"]
 
 
 def main() -> int:
@@ -889,7 +909,7 @@ def main() -> int:
         return 0
     # v1.1: structured, session-scoped latch so a Supervisor never continues after a DENIED.
     denials.record(common.ROOT, "guard", reason, label=str(event.get("tool_name") or ""))
-    sys.stderr.write(f"TPI HARNESS GUARD: DENIED - {reason}\n")
+    sys.stderr.write(f"{_guard_label(common.ROOT)}: DENIED - {reason}\n")
     sys.stderr.write("Si esto bloquea una accion legitima: STOP y solicitar asistencia humana.\n")
     return 2
 

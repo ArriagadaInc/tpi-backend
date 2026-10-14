@@ -16,6 +16,7 @@ import binascii
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from collections.abc import Callable, Mapping
@@ -24,10 +25,11 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from . import common, denials, evidence
+    from . import common, denials, deploy_profile, evidence
 except ImportError:  # executed as a script
     import common  # type: ignore[no-redef]
     import denials  # type: ignore[no-redef]
+    import deploy_profile  # type: ignore[no-redef]
 
     import evidence  # type: ignore[no-redef]
 
@@ -58,7 +60,6 @@ COMMON_OUTPUT_FLAGS = {
     "--max-items",
     "--page-size",
 }
-CANONICAL_REMOTE = "ArriagadaInc/tpi-backend"
 HELP_FLAGS = ("-h", "--help")
 # Options that take a list of values (`--repository-names a b`). Only the ones some validator
 # checks value by value; any other multi-value use still fails the parser (fail closed).
@@ -198,9 +199,93 @@ def _key_parts(env: dict[str, Any], key: str | None) -> re.Match[str] | None:
     return re.fullmatch(prefix + r"/(?P<label>[^/]+)/(?P<sha>[0-9a-f]{64})\.zip", key or "")
 
 
+def _wrong_profile(env: dict[str, Any], cmd: ParsedCommand, wanted: str) -> list[str]:
+    """Operations belong to one deployment profile; any other profile may not use them."""
+    actual = deploy_profile.profile_of(env)
+    if actual == wanted:
+        return []
+    return [f"'{cmd.key}' es del perfil {wanted} y este entorno es {actual}"]
+
+
+def _key_in_site(
+    env: dict[str, Any], key: str | None, *, live: bool, staged: bool, prefix_ok: bool = False
+) -> bool:
+    """Is ``key`` under the site's prefixes? ``prefix_ok``: the bare prefix itself also counts
+    (listing ``live/`` is fine; an object named just ``live/`` is not)."""
+    artifacts = env["artifacts"]
+    prefixes = []
+    if staged:
+        prefixes.append(artifacts["bundle_key_prefix"] + "/")
+    if live:
+        prefixes.append(artifacts["live_prefix"] + "/")
+    floor = 0 if prefix_ok else 1
+    return any(
+        (key or "").startswith(prefix) and len(key or "") >= len(prefix) + floor
+        for prefix in prefixes
+    )
+
+
+def v_put_object_static(
+    root: Path, state: dict[str, Any], env: dict[str, Any], cmd: ParsedCommand, mode: str
+) -> list[str]:
+    """Stage ONE file of the release: ``<prefix>/<label>/<path>``, checksum-verified by S3."""
+    reasons = _only_options(
+        cmd,
+        {
+            "--bucket",
+            "--key",
+            "--body",
+            "--checksum-algorithm",
+            "--checksum-sha256",
+            "--if-none-match",
+            "--content-type",
+        },
+    )
+    artifacts = env["artifacts"]
+    if cmd.one("--bucket") != artifacts["bundle_bucket"]:
+        reasons.append("bucket distinto del bucket del sitio DEV")
+    parts = re.fullmatch(
+        re.escape(artifacts["bundle_key_prefix"]) + r"/(?P<label>[^/]+)/(?P<path>.+)",
+        cmd.one("--key") or "",
+    )
+    if parts is None:
+        return reasons + ["key S3 no es <prefijo>/<version>/<ruta del archivo>"]
+    label, path = parts["label"], parts["path"]
+    reasons += _label_ok(root, state, env, label)
+    if not deploy_profile.safe_site_path(path):
+        reasons.append("ruta del archivo no segura")
+    content_type = deploy_profile.content_type_for(path)
+    if content_type is None:
+        reasons.append("extension de archivo no permitida en el sitio")
+    elif cmd.one("--content-type") != content_type:
+        reasons.append(f"--content-type debe ser {content_type}")
+    if (cmd.one("--checksum-algorithm") or "").upper() != "SHA256":
+        reasons.append("--checksum-algorithm SHA256 obligatorio")
+    if cmd.one("--if-none-match") != "*":
+        reasons.append("--if-none-match '*' obligatorio (nunca sobrescribir)")
+    body = cmd.one("--body")
+    if body is None:
+        return reasons + ["--body obligatorio"]
+    relative = common.to_repo_relative(root, Path(body))
+    if relative != f".harness-release/{label}/files/{path}":
+        return reasons + [f"--body debe ser .harness-release/{label}/files/{path}"]
+    local = common.resolve_repo_path(root, relative)
+    if not local.is_file():
+        return reasons + ["--body no existe"]
+    try:
+        declared = base64.b64decode(cmd.one("--checksum-sha256") or "", validate=True)
+    except (binascii.Error, ValueError):
+        declared = b""
+    if declared != bytes.fromhex(common.sha256_file(local)):
+        reasons.append("--checksum-sha256 no corresponde al SHA256 del archivo local")
+    return reasons
+
+
 def v_put_object(
     root: Path, state: dict[str, Any], env: dict[str, Any], cmd: ParsedCommand, mode: str
 ) -> list[str]:
+    if deploy_profile.profile_of(env) == deploy_profile.STATIC_SITE:
+        return v_put_object_static(root, state, env, cmd, mode)
     reasons = _only_options(
         cmd,
         {
@@ -248,6 +333,8 @@ def v_put_object(
 def v_create_application_version(
     root: Path, state: dict[str, Any], env: dict[str, Any], cmd: ParsedCommand, mode: str
 ) -> list[str]:
+    if wrong := _wrong_profile(env, cmd, deploy_profile.ELASTIC_BEANSTALK):
+        return wrong
     reasons = _only_options(
         cmd,
         {
@@ -281,6 +368,8 @@ def v_create_application_version(
 def v_update_environment(
     root: Path, state: dict[str, Any], env: dict[str, Any], cmd: ParsedCommand, mode: str
 ) -> list[str]:
+    if wrong := _wrong_profile(env, cmd, deploy_profile.ELASTIC_BEANSTALK):
+        return wrong
     reasons = _only_options(cmd, {"--environment-name", "--application-name", "--version-label"})
     if cmd.one("--environment-name") != env["deployment_target"]["environment_name"]:
         reasons.append("environment distinto del target DEV")
@@ -325,14 +414,118 @@ def v_head_object(
     reasons = _only_options(cmd, {"--bucket", "--key", "--checksum-mode", "--version-id"})
     if cmd.one("--bucket") != env["artifacts"]["bundle_bucket"]:
         reasons.append("head-object solo sobre el bucket de bundles DEV")
-    if not (cmd.one("--key") or "").startswith(env["artifacts"]["bundle_key_prefix"] + "/"):
+    if deploy_profile.profile_of(env) == deploy_profile.STATIC_SITE:
+        if not _key_in_site(env, cmd.one("--key"), live=True, staged=True):
+            reasons.append("head-object solo sobre los prefijos de releases o vivo del sitio DEV")
+    elif not (cmd.one("--key") or "").startswith(env["artifacts"]["bundle_key_prefix"] + "/"):
         reasons.append("head-object solo sobre el prefijo de releases DEV")
+    return reasons
+
+
+def v_list_objects(
+    root: Path, state: dict[str, Any], env: dict[str, Any], cmd: ParsedCommand, mode: str
+) -> list[str]:
+    """Read-only listing of ONE release (or of the live files); never of the whole bucket."""
+    if wrong := _wrong_profile(env, cmd, deploy_profile.STATIC_SITE):
+        return wrong
+    reasons = _only_options(cmd, {"--bucket", "--prefix"})
+    if cmd.one("--bucket") != env["artifacts"]["bundle_bucket"]:
+        reasons.append("list-objects-v2 solo sobre el bucket del sitio DEV")
+    if not _key_in_site(env, cmd.one("--prefix"), live=True, staged=True, prefix_ok=True):
+        reasons.append("list-objects-v2 requiere --prefix bajo los prefijos de releases o vivo")
+    return reasons
+
+
+def _approved_files(
+    approval: dict[str, Any], candidate: dict[str, Any], mode: str
+) -> tuple[str, dict[str, str]] | None:
+    """(label, {path: hex sha256}) the human allowed to be promoted in ``mode``."""
+    if mode == "cutover":
+        files = {f["path"]: f["sha256"] for f in candidate["bundle"]["files"]}
+        return str(approval["application_version"]), files
+    if mode == "rollback":
+        lkg = {
+            o["path"]: base64.b64decode(o["checksum_sha256"]).hex()
+            for o in candidate["lkg"]["files"]
+        }
+        return str(approval["lkg_version_label"]), lkg
+    return None
+
+
+def v_copy_object(
+    root: Path, state: dict[str, Any], env: dict[str, Any], cmd: ParsedCommand, mode: str
+) -> list[str]:
+    """Promote ONE approved file: staged object -> live object (cutover) or LKG -> live (rollback)."""
+    if wrong := _wrong_profile(env, cmd, deploy_profile.STATIC_SITE):
+        return wrong
+    reasons = _only_options(
+        cmd,
+        {
+            "--bucket",
+            "--key",
+            "--copy-source",
+            "--metadata-directive",
+            "--metadata",
+            "--content-type",
+            "--cache-control",
+        },
+    )
+    approval = common.load_ref(root, state, "approval")
+    candidate = common.load_ref(root, state, "candidate_evidence")
+    if (
+        not approval
+        or approval.get("decision") != "approved"
+        or approval.get("created_by") != "scripts/harness/approve.py"
+    ):
+        return reasons + ["sin aprobacion humana valida (Human Gate)"]
+    if not candidate or approval.get("approved_commit") != candidate.get("release_sha"):
+        return reasons + ["la aprobacion no corresponde al candidate vigente"]
+    allowed = _approved_files(approval, candidate, mode)
+    if allowed is None:
+        return reasons + [f"copy-object no permitido en modo {mode}"]
+    label, files = allowed
+    if mode == "rollback":
+        authorization = approval.get("rollback_authorization") or {}
+        if label != authorization.get("lkg_version_label"):
+            reasons.append("rollback solo al LKG aprobado")
+        if not state.get("rollback_attempted"):
+            reasons.append("rollback sin transicion start_rollback")
+    artifacts = env["artifacts"]
+    bucket, live = artifacts["bundle_bucket"], artifacts["live_prefix"]
+    if cmd.one("--bucket") != bucket:
+        reasons.append("bucket distinto del bucket del sitio DEV")
+    key = cmd.one("--key") or ""
+    if not key.startswith(live + "/"):
+        return reasons + ["el destino debe estar bajo el prefijo vivo del sitio"]
+    path = key[len(live) + 1 :]
+    if path not in files:
+        return reasons + ["archivo fuera de la lista aprobada"]
+    source = f"{bucket}/{artifacts['bundle_key_prefix']}/{label}/{path}"
+    if cmd.one("--copy-source") != source:
+        reasons.append(f"--copy-source debe ser {source}")
+    if cmd.one("--metadata-directive") != "REPLACE":
+        reasons.append("--metadata-directive REPLACE obligatorio")
+    metadata = f"release={label},sha256={files[path]}"
+    if cmd.one("--metadata") != metadata:
+        reasons.append(f"--metadata debe ser {metadata}")
+    content_type = deploy_profile.content_type_for(path)
+    if cmd.one("--content-type") != content_type:
+        reasons.append(f"--content-type debe ser {content_type}")
+    if cmd.one("--cache-control") not in (None, "no-cache"):
+        reasons.append("--cache-control solo puede ser no-cache")
+    if any(
+        r.get("executed") and r.get("mutation") == mode and r.get("target") == key
+        for r in _audit_records(root, state.get("task_id"))
+    ):
+        reasons.append("ese archivo ya se promovio: un release, una promocion")
     return reasons
 
 
 def v_ecr(
     root: Path, state: dict[str, Any], env: dict[str, Any], cmd: ParsedCommand, mode: str
 ) -> list[str]:
+    if wrong := _wrong_profile(env, cmd, deploy_profile.ELASTIC_BEANSTALK):
+        return wrong
     repositories = set(env["artifacts"]["ecr_repositories"].values())
     if cmd.operation == "describe-repositories":
         # v1.1: only the DEV repositories of this environment, always named explicitly
@@ -360,6 +553,8 @@ def v_ecr(
 def v_logs_filter(
     root: Path, state: dict[str, Any], env: dict[str, Any], cmd: ParsedCommand, mode: str
 ) -> list[str]:
+    if wrong := _wrong_profile(env, cmd, deploy_profile.ELASTIC_BEANSTALK):
+        return wrong
     reasons = _only_options(
         cmd, {"--log-group-name", "--filter-pattern", "--start-time", "--end-time"}
     )
@@ -380,6 +575,8 @@ VALIDATORS: dict[
     "elasticbeanstalk create-application-version": v_create_application_version,
     "elasticbeanstalk update-environment": v_update_environment,
     "s3api head-object": v_head_object,
+    "s3api list-objects-v2": v_list_objects,
+    "s3api copy-object": v_copy_object,
     "ecr describe-images": v_ecr,
     "ecr describe-image-scan-findings": v_ecr,
     "ecr describe-repositories": v_ecr,
@@ -412,6 +609,18 @@ def _final_argv(cmd: ParsedCommand, profile: str, region: str) -> list[str]:
     return argv
 
 
+def calling_runtime(env_vars: Mapping[str, str], policies: Mapping[str, Any]) -> str:
+    """Runtime that is calling aws_guard.py, or "" when it cannot be told.
+
+    Claude Code says so with ``CLAUDECODE=1``; any other runtime declares itself in the variable
+    named by ``harness.runtime_env_var``, which its worker sets and guard.py keeps out of the
+    agent's reach (like the maintenance variables).
+    """
+    if env_vars.get("CLAUDECODE") == "1":
+        return "claude"
+    return str(env_vars.get(common.naming(dict(policies), "runtime_env_var")) or "")
+
+
 def evaluate(
     root: Path, tokens: list[str], *, env_vars: Mapping[str, str] | None = None
 ) -> Decision:
@@ -438,8 +647,13 @@ def evaluate(
     reasons = decision.reasons
     if mode == "none":
         reasons.append(f"sin acceso AWS para rol '{role}' en estado {current}")
-    if env_vars.get("CLAUDECODE") != "1":
-        reasons.append("runtime sin enforcement demostrado: AWS solo desde Claude Code")
+    runtime = calling_runtime(env_vars, policies)
+    capable = policies["harness"]["deploy_capable_runtimes"]
+    if runtime not in capable:
+        reasons.append(
+            f"runtime sin enforcement demostrado ({runtime or 'desconocido'}): "
+            f"AWS solo desde {capable}"
+        )
     if cmd.service in aws["global_deny_services"]:
         reasons.append(f"servicio prohibido en el Harness: {cmd.service}")
     if cmd.key in aws["global_deny_operations"]:
@@ -480,7 +694,7 @@ def _audit(root: Path, state: dict[str, Any], decision: Decision, **extra: Any) 
         # D5/D6: mantenimiento auditado; nunca cambia mode/allowed (ver evaluate()).
         "maintenance_mode": getattr(decision, "maintenance", False),
         # v1.1: Supervisor turn of the calling process tree (null in manual mode).
-        "supervisor_turn": denials.turn_id(),
+        "supervisor_turn": denials.turn_id(root=root),
         **extra,
     }
     with (directory / "aws-audit.jsonl").open("a", encoding="utf-8", newline="\n") as handle:
@@ -488,7 +702,12 @@ def _audit(root: Path, state: dict[str, Any], decision: Decision, **extra: Any) 
 
 
 def _subprocess_runner(argv: list[str]) -> RunResult:
-    result = subprocess.run(argv, capture_output=True, text=True, check=False)  # noqa: S603
+    # Resolve the executable like a shell does (PATHEXT on Windows): `aws` may be a wrapper script
+    # (aws.cmd), which CreateProcess does not find by its bare name.
+    executable = shutil.which(argv[0]) or argv[0]
+    result = subprocess.run(  # noqa: S603
+        [executable, *argv[1:]], capture_output=True, text=True, check=False
+    )
     return RunResult(result.returncode, result.stdout, result.stderr)
 
 
@@ -498,9 +717,11 @@ def _verify_canonical_repo(root: Path) -> None:
         raise common.HarnessError(
             "aws_guard debe ejecutarse desde el checkout canonico del repositorio"
         )
+    # The repository this harness serves is declared by the project itself (project-profile.yaml).
+    canonical = str(common.load_profile(root)["project"]["repository"])
     remote = common.git(root, "remote", "get-url", "origin", check=False)
-    if CANONICAL_REMOTE not in remote:
-        raise common.HarnessError("remote origin no es el repositorio TPI")
+    if canonical not in remote:
+        raise common.HarnessError(f"remote origin no es el repositorio del proyecto ({canonical})")
 
 
 def run(
@@ -563,7 +784,7 @@ def run(
             )
             return 3
     mutation = MUTATIONS.get(decision.operation)
-    if decision.operation == "elasticbeanstalk update-environment":
+    if decision.operation in ("elasticbeanstalk update-environment", "s3api copy-object"):
         mutation = decision.mode
     result = runner(decision.argv)
     access_denied = any(marker in result.stderr for marker in markers)
@@ -573,6 +794,7 @@ def run(
         decision,
         executed=True,
         mutation=mutation,
+        target=parse(tokens).one("--key") if mutation else None,
         exit_code=result.returncode,
         access_denied=access_denied,
     )
@@ -598,7 +820,10 @@ def _record_access_denied(
     payload = {
         "action": decision.operation,
         "resource": common.redact(" ".join(decision.argv[3:])),
-        "principal": "perfil tpi-dev (ver sts get-caller-identity; no se registra ARN completo)",
+        "principal": (
+            f"perfil {common.load_policies(root)['aws']['profile']} "
+            "(ver sts get-caller-identity; no se registra ARN completo)"
+        ),
         "error": common.redact(result.stderr.strip())[:2000],
         "state": decision.state,
         "recommendation": "Revisar el contrato IAM completo de la operacion; decision humana requerida.",
@@ -610,8 +835,10 @@ def _record_access_denied(
             root,
             "failure",
             payload,
-            runtime="claude",
-            session=os.environ.get("TPI_HARNESS_SESSION", "aws-guard"),
+            runtime=calling_runtime(os.environ, common.load_policies(root)) or "claude",
+            session=os.environ.get(
+                common.naming(common.load_policies(root), "session_env_var"), "aws-guard"
+            ),
         )
     except common.HarnessError as error:
         print(f"no se pudo registrar evidencia de AccessDenied: {error}", file=sys.stderr)

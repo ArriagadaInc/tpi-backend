@@ -1,7 +1,7 @@
 """Session-scoped DENIED latch shared by guard.py / aws_guard.py and the Supervisor (v1.1).
 
-The Supervisor launches each worker with ``TPI_SUPERVISOR_TURN=<session_id>`` in its
-environment. When a guard denies an operation inside that process tree it appends one record
+The Supervisor launches each worker with ``<harness.supervisor_turn_env_var>=<session_id>`` in
+its environment (``TPI_SUPERVISOR_TURN`` unless the project renames it). When a guard denies an operation inside that process tree it appends one record
 to ``.harness-runtime/supervisor/denials/<session_id>.jsonl``; after the worker exits the
 Supervisor reads ONLY the file of the turn it launched and stops if it is not empty.
 
@@ -27,13 +27,21 @@ try:
 except ImportError:  # executed as a script
     import common  # type: ignore[no-redef]
 
-ENV_VAR = "TPI_SUPERVISOR_TURN"
+ENV_VAR = common.HARNESS_NAMING_DEFAULTS["supervisor_turn_env_var"]  # default name (TPI)
 DENIALS_DIR = Path(".harness-runtime") / "supervisor" / "denials"
 _TURN_RE = re.compile(r"^[A-Za-z0-9._-]{8,128}$")
 
 
-def turn_id(env: Mapping[str, str] | None = None) -> str | None:
-    value = (os.environ if env is None else env).get(ENV_VAR, "")
+def env_var(root: Path | None = None) -> str:
+    """The turn variable of this repository: harness.supervisor_turn_env_var, else ENV_VAR."""
+    try:
+        return common.naming(common.load_policies(root or common.ROOT), "supervisor_turn_env_var")
+    except Exception:  # noqa: BLE001 - a denial path must never raise
+        return ENV_VAR
+
+
+def turn_id(env: Mapping[str, str] | None = None, root: Path | None = None) -> str | None:
+    value = (os.environ if env is None else env).get(env_var(root), "")
     return value if _TURN_RE.fullmatch(value) else None
 
 
@@ -52,7 +60,7 @@ def record(
     env: Mapping[str, str] | None = None,
 ) -> bool:
     """Append a DENIED record for the current Supervisor turn. Never raises."""
-    turn = turn_id(env)
+    turn = turn_id(env, root)
     if turn is None:
         return False
     entry = {

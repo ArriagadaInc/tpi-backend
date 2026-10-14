@@ -9,10 +9,12 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from . import common, log_scan
+    from . import common, deploy_profile, log_scan, static_site
 except ImportError:  # executed as a script
     import common  # type: ignore[no-redef]
+    import deploy_profile  # type: ignore[no-redef]
     import log_scan  # type: ignore[no-redef]
+    import static_site  # type: ignore[no-redef]
 
 
 class GuardError(Exception):
@@ -181,11 +183,31 @@ def g_deploy_required_non_fast_path(ctx: GuardContext) -> None:
     )
 
 
+def _profile(ctx: GuardContext) -> str:
+    """Deployment profile of the environment; the project must actually deploy to use it."""
+    profile = deploy_profile.profile_of(ctx.environment)
+    _check(profile != deploy_profile.NO_DEPLOYMENT, "este proyecto no tiene destino de despliegue")
+    return profile
+
+
+def _same_profile(ctx: GuardContext, document: dict[str, Any], what: str) -> None:
+    written = deploy_profile.evidence_profile(document)
+    _check(
+        written == _profile(ctx),
+        f"{what} escrito para el perfil {written} y el entorno es {_profile(ctx)}",
+    )
+
+
 def g_candidate_valid(ctx: GuardContext) -> None:
     cand = ctx.require("candidate_evidence")
     merge = ctx.require("merge_evidence")
     env = ctx.environment
     artifacts = env["artifacts"]
+    _same_profile(ctx, cand, "candidate")
+    if _profile(ctx) == deploy_profile.STATIC_SITE:
+        problems = static_site.candidate_errors(cand, merge, env)
+        _check(not problems, "; ".join(problems))
+        return
     _check(cand["release_sha"] == merge["release_sha"], "release_sha del candidate != merge")
     _check(cand["account_id"] == env["account_id"], "cuenta AWS distinta")
     _check(cand["region"] == env["region"], "region AWS distinta")
@@ -285,10 +307,18 @@ def g_approval_valid(ctx: GuardContext) -> None:
     _check(approval["interactive"] is True, "aprobacion no interactiva")
     _check(candidate_review["decision"] == "APPROVED", "candidate review no aprobado")
     _check(approval["approved_commit"] == cand["release_sha"], "approved_commit != release_sha")
-    _check(approval["app_digest"] == cand["images"]["app"]["digest"], "digest app distinto")
-    _check(approval["caddy_digest"] == cand["images"]["caddy"]["digest"], "digest caddy distinto")
-    _check(approval["bundle_sha256"] == cand["bundle"]["sha256"], "bundle SHA256 distinto")
-    _check(approval["s3_key"] == cand["s3"]["key"], "S3 key distinta")
+    _same_profile(ctx, approval, "approval")
+    _same_profile(ctx, cand, "candidate")
+    if _profile(ctx) == deploy_profile.STATIC_SITE:
+        problems = static_site.approval_errors(approval, cand)
+        _check(not problems, "; ".join(problems))
+    else:
+        _check(approval["app_digest"] == cand["images"]["app"]["digest"], "digest app distinto")
+        _check(
+            approval["caddy_digest"] == cand["images"]["caddy"]["digest"], "digest caddy distinto"
+        )
+        _check(approval["bundle_sha256"] == cand["bundle"]["sha256"], "bundle SHA256 distinto")
+        _check(approval["s3_key"] == cand["s3"]["key"], "S3 key distinta")
     _check(approval["application_version"] == cand["application_version"]["label"], "AV distinta")
     _check(approval["environment"] == cand["environment"], "environment distinto")
     _check(approval["lkg_version_label"] == cand["lkg"]["version_label"], "LKG distinto")
@@ -322,8 +352,13 @@ def g_approval_rejected(ctx: GuardContext) -> None:
 def g_deployment_succeeded(ctx: GuardContext) -> None:
     dep = ctx.require("deployment_evidence")
     approval = ctx.require("approval")
+    _same_profile(ctx, dep, "deployment")
     _check(dep["result"] == "success", "deployment no exitoso")
-    _check(dep["update_accepted"] is True, "update-environment no aceptado")
+    if _profile(ctx) == deploy_profile.STATIC_SITE:
+        problems = static_site.deployment_errors(dep, approval, ctx.environment)
+        _check(not problems, "; ".join(problems))
+    else:
+        _check(dep["update_accepted"] is True, "update-environment no aceptado")
     _check(dep["approved_commit"] == approval["approved_commit"], "approved_commit alterado")
     _check(
         dep["deployed_commit"] == approval["approved_commit"], "approved_commit != deployed_commit"
@@ -334,6 +369,8 @@ def g_deployment_succeeded(ctx: GuardContext) -> None:
     _check(dep["environment"] == approval["environment"], "environment desplegado != aprobado")
     _check(dep["account_id"] == ctx.environment["account_id"], "cuenta AWS distinta")
     _check(dep["region"] == ctx.environment["region"], "region AWS distinta")
+    if _profile(ctx) == deploy_profile.STATIC_SITE:
+        return
     final = dep["final_state"]
     _check(common.env_healthy(final), "environment final no Ready/Green/Ok")
     _check(
@@ -425,6 +462,10 @@ def g_rollback_permitted(ctx: GuardContext) -> None:
         "solo degradacion de infraestructura habilita rollback",
     )
     _check(pre["lkg_usable"] is True, "LKG no utilizable")
+    if _profile(ctx) == deploy_profile.STATIC_SITE:
+        problems = static_site.rollback_errors(pre)
+        _check(not problems, "; ".join(problems))
+        return
     _check(pre["lkg_images_present"] is True, "imagenes del LKG ausentes en ECR")
     _check(pre["option_settings_required"] is False, "rollback requeriria option settings")
 
