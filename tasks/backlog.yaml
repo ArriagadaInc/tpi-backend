@@ -162,16 +162,6 @@ items:
     de AWS_DEPLOYMENT_POLICY.'
   evidence:
   - Discovery 2026-09-14
-- id: HYG-PREEXISTING-WORKTREES
-  title: Limpiar worktrees y temporales preexistentes
-  priority: P3
-  category: hygiene
-  status: pending
-  change_class: none
-  summary: 5 worktrees .tmp-*, 2 prunables, 4 en %TEMP%, directorios pytest-cache-files-*, archivos sueltos
-    sin versionar. No los administra el Harness.
-  evidence:
-  - git worktree list (2026-09-14)
 - id: HARNESS-RECORDS-COMMIT
   title: Automatizar el versionado de registros del Harness
   priority: P2
