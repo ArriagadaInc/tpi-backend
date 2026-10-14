@@ -1,0 +1,203 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "TASK-001",
+  "created_at": "2026-10-12T20:12:26Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610122011-reviewer",
+  "release_sha": "04e3f1a80aa0c609aef8a0724419f5f21f299c8f",
+  "reviewed_tree": "4d51c04efce46e952c919b2e6b4d7521fc821e9d",
+  "release_tree": "4d51c04efce46e952c919b2e6b4d7521fc821e9d",
+  "pr_number": 66,
+  "result": "PASS",
+  "decision": "APPROVED",
+  "cause": null,
+  "candidate_evidence": "evidence/TASK-001/deployment/candidate-01.json",
+  "merge_evidence": "evidence/TASK-001/deployment/merge-01.json",
+  "review_evidence": "evidence/TASK-001/reviewer/review-01.json",
+  "review_scope": "CANDIDATE_REVIEW de TASK-001. Ejecutado en una sesion interactiva de Claude Code (runtime claude) porque harness/supervisor.yaml asigna el rol reviewer al runtime 'other' y este estado exige runtime claude (lecturas AWS solo desde Claude Code); el Orchestrator se detuvo por esa regla de configuracion, no por un DENIED. Sesion distinta de la del Developer y de la del Deployer del candidate. Lecturas AWS solo via aws_guard (modo candidate_read), una por llamada, secuenciales, sin DENIED. No se ejecuto dry-run de update-environment (el modo candidate_read no lo permite); el plan se valido por inspeccion.",
+  "identity_chain": {
+    "release_sha": "04e3f1a80aa0c609aef8a0724419f5f21f299c8f",
+    "publish_run": "38295095608 success, headSha = release_sha",
+    "app_digest": "sha256:86d8e199c83ffe4d3f5bc3c7533b0b6f6dd64cd38c69314fc440c22f103be452",
+    "caddy_digest": "sha256:0aadd6dba8057a5ee06a71c92754e83f087b312c813de265cca986b517804345",
+    "bundle_sha256": "7026a0791cf7ab5c1c0a22cf9021b656b2f98c1a7a93fc568efba34ca8336a76",
+    "s3_checksum_sha256_b64": "cCageRz3q1wcCiLPkCG2VrL5jBp6k/xWjvujTKgzanY=",
+    "s3_key": "tpi-backoffice/dev-releases/h3-logo-zlib-04e3f1a-domainlocked-r1/7026a0791cf7ab5c1c0a22cf9021b656b2f98c1a7a93fc568efba34ca8336a76.zip",
+    "application_version": "h3-logo-zlib-04e3f1a-domainlocked-r1",
+    "lkg": "h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1"
+  },
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse 04e3f1a^{tree} == b893779^{tree} == 4d51c04efce46e952c919b2e6b4d7521fc821e9d, tras git fetch origin main; el release tiene padre unico 4763a8e (squash)."
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "FETCH_HEAD de origin/main == 04e3f1a == merge_commit del PR #66 (gh pr view 66); PR MERGED; archivos del PR: solo CHANGELOG.md."
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "gh run view 38295095608 --json conclusion,headSha: success / completed / headSha = 04e3f1a. CI de main sobre el release (run 38294884658): completed / success."
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "ecr describe-images app 86d8e199 y caddy 0aadd6db: ACTIVE, tag = release_sha, via aws_guard. Inmutabilidad: referencias por digest sha256 en el compose (ECR IMMUTABLE segun contrato); no se consulto describe-repositories."
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "describe-image-scan-findings (plantilla exacta, sin opciones extra) sobre ambos digests: imageScanStatus COMPLETE, findings vacio y findingSeverityCounts vacio. El hallazgo CVE-2026-85091 (zlib) que bloqueo el release 6a5acd4 ya no aparece en app ni en caddy."
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "build_domain_locked_bundle con la plantilla y el constructor del release (deployment/ identico entre 04e3f1a y el arbol de trabajo: git diff --stat vacio), digests del candidate y runtime_git_sha = release_sha, en directorio temporal: sha256 7026a0791cf7ab5c1c0a22cf9021b656b2f98c1a7a93fc568efba34ca8336a76, identico al bundle del candidate y al zip local del Deployer (4815 bytes)."
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "El zip reconstruido tiene la unica entrada docker-compose.yml; sin clave build: ni 'genialabs'; las referencias @sha256 son exactamente los dos digests del candidate."
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "head-object --checksum-mode ENABLED: ChecksumSHA256 cCageRz3q1wcCiLPkCG2VrL5jBp6k/xWjvujTKgzanY= FULL_OBJECT, ContentLength 4815; el base64 del sha256 del bundle reconstruido es identico."
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "describe-application-versions (solo label candidate): SourceBundle bucket/key == s3 del candidate, Status UNPROCESSED."
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "release -> publish run -> digests -> bundle sha256 -> S3 key/checksum -> Application Version, todos verificados en esta sesion contra Git, GitHub y AWS."
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "describe-environments tpi-backoffice-dev-green: VersionLabel = h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1, Ready/Green/Ok, sin operacion abortable, DateUpdated 2026-10-01T14:47:51Z sin cambio; cuenta 821656895812 verificada via aws_guard sts."
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "describe-application-versions (solo label LKG): existe, SourceBundle presente, UNPROCESSED; sin option settings requeridos segun candidate-01."
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "ecr describe-images LKG app 841595e4 y caddy 92d49b11: ACTIVE, tag 6f0f5bb."
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "No existe scan auxiliar humano para esta tarea. Inspeccion estructural del compose reconstruido: DATABASE_PASSWORD, API_IDEMPOTENCY_HMAC_SECRET, AUTH_USERS_JSON y WEB_SESSION_SECRET son referencias de variable, ninguna literal; sin patrones de clave de acceso ni material PEM; no se imprimieron valores. Evidencia candidate/merge/review leida completa y esta evidencia revisada antes de registrarla: solo SHAs, digests, hashes, labels y keys publicas del release. Limitacion: no hubo barrido por patrones sobre la evidencia."
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "candidate-01.smoke_plan: 8 pasos (HTTPS publico, login, catalogs, static css, leads requiere auth, sin redirect legacy, cadena de identidad runtime, aceptacion humana AC-2)."
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "deployment_plan.commands: unico aws_guard elasticbeanstalk update-environment --environment-name tpi-backoffice-dev-green --version-label h3-logo-zlib-04e3f1a-domainlocked-r1; sin --option-settings, template, platform ni tier (global_deny_flags de policies.yaml aws; contrato v2 seccion 4). Sin dry-run."
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "Evaluado contra el Deployer en DEPLOYING: state_modes DEPLOYING -> cutover = @read + elasticbeanstalk update-environment; el plan solo usa update-environment y las lecturas describe-environments/describe-events, ambas en @read. No es el permiso actual del Reviewer. No se ejecuto dry-run."
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "note": "Un solo comando de promocion; espera por describe-environments cada 30 s hasta 30 min, sin reintento de escritura; invariante no_auto_retry_writes del project-profile."
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "rollback_plan: un update-environment --version-label al LKG nombrado h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1 (observado por describe-environments, no por timestamp), max_attempts 1, condicionado a las 7 condiciones de policies.yaml rollback_authorization; rollback fallido -> BLOCKED_HUMAN."
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": "Plan sin IAM, Route53, secretos ni migraciones; database_changes: ninguna; environment_properties_required vacio; global_deny_services de policies.yaml aplican."
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "note": "La evidencia del candidate registra solo identificadores, hashes y estados; safety.secrets_accessed false; sin presigned URLs ni valores de entorno. Read-only no es safe-to-log: la salida AWS se minimizo en esta revision."
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS",
+      "note": "candidate-01.blast_radius_and_residues clasifica los residuos de staging (imagenes ECR, objeto S3 content-addressed, AV UNPROCESSED; inertes hasta el cutover) y del runtime (environment sin mutar)."
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "note": "rollback_authorization exige not_purely_functional_defect y environment_degraded_inconsistent_or_not_expected_state; rollback_plan.conditions del candidate lo reitera."
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "info",
+      "file": "evidence/TASK-001/deployment/merge-01.json",
+      "summary": "El CI de main sobre el release estaba in_progress cuando se registro el merge; se verifico en esta revision que el run 38294884658 termino completed/success sobre 04e3f1a, y el publish run re-ejecuto lint, tests, build y security audit (6/6).",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F2",
+      "severity": "info",
+      "file": "evidence/TASK-001/deployment/candidate-01.json",
+      "summary": "No se ejecuto dry-run de update-environment: el modo candidate_read no lo permite; el plan se valido por inspeccion de comandos, politicas y contrato.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F3",
+      "severity": "info",
+      "file": "evidence/TASK-001/deployment/candidate-01.json",
+      "summary": "No hay scan auxiliar humano de secretos para esta tarea. El check no_secrets_in_bundle_or_evidence se baso en inspeccion estructural del compose y lectura completa de la evidencia, sin barrido por patrones sobre la evidencia.",
+      "required_action": "Ninguna; el Human Gate puede exigir un scan adicional si lo considera necesario."
+    },
+    {
+      "id": "F4",
+      "severity": "info",
+      "file": "evidence/TASK-001/deployment/candidate-01.json",
+      "summary": "Las imagenes del LKG (release 6f0f5bb) se construyeron antes del PR #65 y no incluyen el pin de zlib; no se escanearon porque no es requisito de esta revision. Un rollback devolveria DEV a esa version.",
+      "required_action": "Ninguna; informativo para la decision del Human Gate."
+    },
+    {
+      "id": "F5",
+      "severity": "info",
+      "file": "evidence/TASK-001/deployment/candidate-01.json",
+      "summary": "AC-2 (logo oficial visible en DEV, tema claro y oscuro) requiere aceptacion visual humana tras el cutover; esta aprobacion no la infiere ni sustituye el Human Gate.",
+      "required_action": "Human Gate (approve.py gate) y aceptacion humana en VERIFYING (approve.py accept)."
+    }
+  ],
+  "acceptance_criteria_status": [
+    {
+      "id": "AC-1",
+      "status": "met_automated"
+    },
+    {
+      "id": "AC-2",
+      "status": "pending_human_visual"
+    }
+  ],
+  "safety": {
+    "aws_writes": [],
+    "update_environment_executed": false,
+    "dry_run_executed": false,
+    "secrets_accessed": false,
+    "aws_reads_via_guard_only": true,
+    "denied_events": 0
+  }
+}

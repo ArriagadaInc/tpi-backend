@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "kind": "failure",
+  "task_id": "CRM-LITE-OFFICIAL-LOGO",
+  "created_at": "2026-10-12T00:26:52Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610112339-deployer",
+  "action": "publish_ecr_images_scan_gate",
+  "resource": "workflow publish-dev-ecr-images.yml run 38187230651, job 'Publish immutable images and release bundle', paso 6 'Fail closed on high or critical ECR findings' (source_sha 6a5acd4d23d623c14b67158dd0ef202f1cbfa431)",
+  "principal": "GitHub Actions OIDC role tpi-github-actions-dev-ecr-role (workflow dispatch lanzado por la sesion Deployer)",
+  "error": "El scan de ECR dejo ambas imagenes con CRITICAL=0 HIGH=1: CVE-2026-85091 (zlib 1.3.2-r0, heap buffer overflow en gz_vacate(), CVSS 4.0 = 8.3) en tpi-dev-app y en tpi-dev-caddy. El gate fail-closed (exige CRITICAL=0 y HIGH=0) termino el job con exit code 1; los pasos 7 (bundle) y 8 (artifact) se omitieron.",
+  "state": "PREPARING_DEPLOYMENT",
+  "release_sha": "6a5acd4d23d623c14b67158dd0ef202f1cbfa431",
+  "release_tree": "26a9d9f8725e1b18586bc758988809b798c9d1ba",
+  "publish_run": {
+    "run_id": 38187230651,
+    "url": "https://github.com/ArriagadaInc/tpi-backend/actions/runs/38187230651",
+    "conclusion": "failure",
+    "dispatch": "gh workflow run publish-dev-ecr-images.yml --ref main -f source_sha=6a5acd4d23d623c14b67158dd0ef202f1cbfa431 (1 dispatch, sesion claude-202610112339-deployer)",
+    "jobs": {
+      "Authorize source revision": "success",
+      "Lint & Format": "success",
+      "Tests": "success",
+      "Docker Build": "success",
+      "Security Audit": "success",
+      "Publish immutable images and release bundle": "failure"
+    },
+    "failed_step": "Fail closed on high or critical ECR findings",
+    "steps_skipped": [
+      "Build and validate release bundle",
+      "Upload DEV release artifacts"
+    ]
+  },
+  "findings": [
+    {
+      "repository": "tpi-dev-app",
+      "image_digest": "sha256:4834f25ac61cec2510c1528a85017e00c2792be73e8e0190f429b3a33c513f89",
+      "critical": 0,
+      "high": 1,
+      "cve": "CVE-2026-85091",
+      "package_name": "zlib",
+      "package_version": "1.3.2-r0",
+      "cvss4": 8.3,
+      "uri": "https://nvd.nist.gov/vuln/detail/CVE-2026-85091"
+    },
+    {
+      "repository": "tpi-dev-caddy",
+      "image_digest": "sha256:84f04b64cc0226ef1d4490a102d642abb64a280ccf5f36fe28bf5ecc8b7db182",
+      "critical": 0,
+      "high": 1,
+      "cve": "CVE-2026-85091",
+      "package_name": "zlib",
+      "package_version": "1.3.2-r0",
+      "cvss4": 8.3,
+      "uri": "https://nvd.nist.gov/vuln/detail/CVE-2026-85091"
+    }
+  ],
+  "root_cause_analysis": {
+    "classification": "vulnerabilidad de la imagen base, no del cambio de la tarea",
+    "task_change_scope": "app/web/static/css/app.css, app/web/static/img/logo.svg, app/web/static/img/logo-dark.svg, app/web/templates/base.html, app/web/templates/login.html, tests/unit/test_web_app.py: no tocan Dockerfiles ni dependencias del sistema.",
+    "base_images_pinned_by_digest": [
+      "Dockerfile: python:3.12.14-alpine3.24@sha256:b64631e04e4920160c50fbe8d8df828f7f35f06f425cb44aa09bca53e708a35a",
+      "deployment/caddy/Dockerfile: caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648"
+    ],
+    "previous_release": "El release 6f0f5bb (publish run 36651430697, 2026-09-30) paso el mismo gate con CRITICAL=0 HIGH=0; el CVE se detecta ahora sobre las mismas bases fijadas.",
+    "dockerfiles_in_task_scope": false
+  },
+  "recommendation": "No es AccessDenied, ni degradacion de infraestructura, ni defecto funcional del release: es el gate de seguridad fail-closed funcionando. El Harness no puede ni debe saltarlo, reintentar el publish ni reconstruir imagenes localmente. Dos hechos limitan el reintento del mismo SHA: (1) las bases estan fijadas por digest, asi que reconstruir produce la misma zlib vulnerable; (2) los tags de ECR son IMMUTABLE y el tag del release_sha ya esta ocupado por las imagenes con el CVE, que el Harness no puede borrar. Camino sugerido (decision humana): abrir una tarea nueva de Developer para mitigar el CVE en ambos Dockerfiles (p. ej. actualizar zlib via apk o subir los digests base a versiones corregidas), con su PR/review/merge; el nuevo SHA en main ya incluye el logo oficial, y se despliega por el flujo normal. Alternativas humanas fuera del Harness: borrar los tags residuales en ECR para republicar este SHA, o aceptar el riesgo mediante una decision formal documentada (el contrato exige HIGH=0 para elegibilidad de deploy). Tras la decision, el humano usa approve.py resolve; no hay despliegue ni cambio en el environment.",
+  "residues": [
+    {
+      "type": "ecr_image",
+      "repository": "tpi-dev-app",
+      "tag": "6a5acd4d23d623c14b67158dd0ef202f1cbfa431",
+      "digest": "sha256:4834f25ac61cec2510c1528a85017e00c2792be73e8e0190f429b3a33c513f89",
+      "pushed_at": "2026-10-12T00:24:20Z",
+      "status": "ACTIVE",
+      "note": "Inerte: no referenciada por ningun bundle ni Application Version. El Harness no puede borrarla."
+    },
+    {
+      "type": "ecr_image",
+      "repository": "tpi-dev-caddy",
+      "tag": "6a5acd4d23d623c14b67158dd0ef202f1cbfa431",
+      "digest": "sha256:84f04b64cc0226ef1d4490a102d642abb64a280ccf5f36fe28bf5ecc8b7db182",
+      "pushed_at": "2026-10-12T00:24:24Z",
+      "status": "ACTIVE",
+      "note": "Inerte: no referenciada por ningun bundle ni Application Version. El Harness no puede borrarla."
+    }
+  ],
+  "access_denied": false,
+  "preflight": {
+    "account_id": "821656895812",
+    "region": "us-east-2",
+    "caller": "arn:aws:iam::821656895812:user/Alvaro",
+    "environment": {
+      "name": "tpi-backoffice-dev-green",
+      "version_label": "h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1",
+      "status": "Ready",
+      "health": "Green",
+      "health_status": "Ok",
+      "abortable_operation_in_progress": false,
+      "date_updated": "2026-10-01T14:47:51Z"
+    },
+    "lkg": {
+      "version_label": "h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1",
+      "av_status": "UNPROCESSED",
+      "images": [
+        {
+          "repository": "tpi-dev-app",
+          "digest": "sha256:841595e4758a36536133bf9a5c2089893de71fcef877e742d2bbf9c9a14f3c42",
+          "present": true
+        },
+        {
+          "repository": "tpi-dev-caddy",
+          "digest": "sha256:92d49b1199de6d201db48f351581be0da65ef2c544ac42e118c6eeeb5d06b40f",
+          "present": true
+        }
+      ],
+      "selected_by": "observacion de describe-environments en el preflight"
+    },
+    "codepipeline_promote": "inbound transition deshabilitada"
+  },
+  "environment_after_failure": {
+    "version_label": "h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1",
+    "date_updated": "2026-10-01T14:47:51Z",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "mutated": false
+  },
+  "session_note": "La sesion AWS de tpi-dev expiro al inicio del preflight; el humano la renovo con 'aws login --profile tpi-dev --remote' y el preflight se completo en PASS antes del dispatch.",
+  "safety": {
+    "update_environment": false,
+    "environment_mutated": false,
+    "option_settings": false,
+    "aws_writes_by_session": [],
+    "github_writes": [
+      "gh workflow run publish-dev-ecr-images.yml x1 (run 38187230651); sus pushes de imagenes a ECR los hizo el propio workflow via OIDC"
+    ],
+    "s3_object_created": false,
+    "application_version_created": false,
+    "publish_rerun_or_redispatch": false,
+    "local_image_rebuild": false,
+    "secrets_accessed": false,
+    "code_or_dependencies_modified": false
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "TASK-002",
+  "created_at": "2026-10-14T14:46:00Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610141441-deployer-supc28c4f",
+  "verification_scope": "Reintento de VERIFYING de TASK-002 tras resolucion humana (resolution-01) que afino la politica de indicadores de logs (Authorization -REDACTED, hash -ACME). Solo lecturas AWS via aws_guard; sin escrituras AWS. AC-2 ya aceptado por el humano (acceptance-01).",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "cb628dcb7550bed4bd7a5912c22595f650cc53c9",
+  "deployed_commit": "cb628dcb7550bed4bd7a5912c22595f650cc53c9",
+  "application_version": "h3-logo-png-cb628dc-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "PASS",
+  "failure_class": null,
+  "final_state": {
+    "version_label": "h3-logo-png-cb628dc-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-14T04:32:24Z",
+    "observed_at": "2026-10-14T14:50:00Z"
+  },
+  "events": {
+    "observed": 20,
+    "levels": {
+      "INFO": 20
+    },
+    "errors": 0,
+    "note": "describe-events --max-records 20: todos INFO; sin abortos ni degradacion."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-logo-png-cb628dc-domainlocked-r1/22f4f98440bdb822918797a6924ce3b600fd4f246b379880aab72a04a04b32c0.zip",
+    "s3_checksum_sha256_b64": "IvT5hEC9uCKRh5emkkzjtgD9TyRrN5iAqrcqBKBLMsA=",
+    "bundle_sha256": "22f4f98440bdb822918797a6924ce3b600fd4f246b379880aab72a04a04b32c0",
+    "note": "Re-observado: describe-environments, describe-application-versions y head-object --checksum-mode ENABLED; digests sin cambios respecto de deployment-01 (mismo bundle, mismo checksum)."
+  },
+  "smoke_client": "python urllib (cliente independiente), TLS por defecto, sin seguir redirects",
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "logo_png_assets_served_and_identical",
+      "result": "PASS",
+      "observed": "official-logo-on-light.png y official-logo-on-dark.png: 200 image/png, sha256 identico a los PNG del repo"
+    },
+    {
+      "name": "legacy_svg_removed",
+      "result": "PASS",
+      "observed": "logo.svg y logo-dark.svg: 404"
+    }
+  ],
+  "logs": {
+    "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+    "window_start": "2026-10-14T04:31:33Z",
+    "method": "aws_guard logs filter-log-events con --query length(events); solo conteos; no se leyeron lineas; patrones exactos de harness/policies.yaml"
+  },
+  "pii_log_scan": {
+    "matches": 0,
+    "raw_pattern_hits": {
+      "Authorization -REDACTED": 0,
+      "Bearer": 0,
+      "password": 0,
+      "cookie": 0,
+      "raw_payload": 0,
+      "secret": 0,
+      "token": 0,
+      "hash -ACME": 0
+    },
+    "strong_matches": 0,
+    "strong_hits": {},
+    "weak_matches": {},
+    "classification_required": false,
+    "patterns": [
+      "Authorization -REDACTED",
+      "Bearer",
+      "raw_payload",
+      "password",
+      "hash -ACME",
+      "cookie",
+      "secret",
+      "token"
+    ]
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 y candidate_review-01: CI 5/5 verde sobre PR #68 en el SHA exacto; publish run 38510183475 success."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "human",
+      "evidence": "evidence/TASK-002/approvals/acceptance-01.json (approve.py accept, 2026-10-14T12:40:22Z)"
+    }
+  ],
+  "rollback_executed": false,
+  "safety": {
+    "aws_writes": [],
+    "update_environment_executed": false,
+    "secrets_accessed": false,
+    "log_lines_read": false,
+    "denied_events": 0
+  }
+}

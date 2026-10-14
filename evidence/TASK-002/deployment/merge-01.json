@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "TASK-002",
+  "created_at": "2026-10-14T04:11:01Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610140409-deployer-supf12168",
+  "pr_number": 68,
+  "pr_url": "https://github.com/ArriagadaInc/tpi-backend/pull/68",
+  "pr_state_after_merge": "MERGED",
+  "reviewed_sha": "d7cd47d78dfc47765c37f32fdd14235514f8ab38",
+  "reviewed_tree": "9a7ade53b13aada01bf5490cb03f08e70d080c46",
+  "release_sha": "cb628dcb7550bed4bd7a5912c22595f650cc53c9",
+  "release_tree": "9a7ade53b13aada01bf5490cb03f08e70d080c46",
+  "main_parent_sha": "c0b5434c0eb23902ab94e8654fdfc411cf46c70c",
+  "main_before_merge": "c0b5434c0eb23902ab94e8654fdfc411cf46c70c",
+  "main_after_merge": "cb628dcb7550bed4bd7a5912c22595f650cc53c9",
+  "method": "squash",
+  "match_head_commit_used": true,
+  "result": "PASS",
+  "change_class": "A",
+  "deploy_required": true,
+  "fast_path": true,
+  "merged_at": "2026-10-14T04:10:34Z",
+  "merged_by": "ArriagadaInc",
+  "gh_pr_merge_command": "gh pr merge 68 --squash --match-head-commit d7cd47d78dfc47765c37f32fdd14235514f8ab38",
+  "tree_equivalence": {
+    "reviewed_tree": "9a7ade53b13aada01bf5490cb03f08e70d080c46",
+    "release_tree": "9a7ade53b13aada01bf5490cb03f08e70d080c46",
+    "equal": true,
+    "verification": "git rev-parse cb628dc^{tree} == reviewed_tree tras git fetch origin main; parent unico c0b5434."
+  },
+  "references": {
+    "developer_evidence": "evidence/TASK-002/developer/developer-01.json",
+    "review_evidence": "evidence/TASK-002/reviewer/review-01.json"
+  },
+  "ci_pr": {
+    "run_id": 38509101811,
+    "sha": "d7cd47d78dfc47765c37f32fdd14235514f8ab38",
+    "conclusion": "success",
+    "jobs": "5/5"
+  },
+  "checks": [
+    {
+      "name": "head_equals_reviewed_sha_before_merge",
+      "result": "PASS",
+      "note": "headRefOid d7cd47d == review-01.reviewed_sha; CLEAN; 5/5 checks pass."
+    },
+    {
+      "name": "pr_up_to_date_with_main",
+      "result": "PASS",
+      "note": "origin/main c0b5434 es ancestro del head del PR."
+    },
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "9a7ade5 == 9a7ade5."
+    },
+    {
+      "name": "merge_not_repeated",
+      "result": "PASS",
+      "note": "una sola ejecucion de gh pr merge."
+    }
+  ],
+  "cloud_access": "ninguno (MERGING)"
+}

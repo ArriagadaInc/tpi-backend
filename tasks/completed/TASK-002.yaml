@@ -1,0 +1,46 @@
+schema_version: 1
+task:
+  id: TASK-002
+  title: Aplicar logo oficial PNG en CRM Lite (variante clara y oscura)
+  objective: Reemplazar los SVG reproducidos del logo por los PNG oficiales ya incluidos en app/web/static/img
+    (official-logo-on-light.png en tema claro y official-logo-on-dark.png en tema oscuro) en cabecera
+    y login de CRM Lite, corregir la entrada 0.2.0 del CHANGELOG que describe el logo SVG, y desplegar
+    en DEV.
+  source:
+    type: story
+    ref: Definida con el asistente de tareas el 2026-10-13
+  change_class: A
+  deploy_required: true
+  requires_human_acceptance: true
+  acceptance_criteria:
+  - id: AC-1
+    description: Cabecera y login renderizan los dos PNG oficiales desde recursos estaticos locales con
+      texto alternativo, y los tests y el CI pasan.
+    verification: automated
+  - id: AC-2
+    description: El logo oficial se ve correcto y legible en cabecera y login de DEV, en tema claro y
+      en tema oscuro, igual al logo.png oficial.
+    verification: human
+  constraints:
+  - No modificar los archivos PNG oficiales ni cargar recursos desde origenes externos.
+  - No cambiar autenticacion, autorizacion ni navegacion; retirar logo.svg y logo-dark.svg y actualizar
+    los tests que los referencian.
+  dependencies: []
+  risk:
+    level: low
+    notes: Cambio visual localizado en plantillas, CSS y recursos estaticos
+  status: closed
+closure:
+  closed_at: '2026-10-14T14:46:24Z'
+  final_state: DONE
+  evidence_dir: evidence/TASK-002
+  release:
+    release_sha: cb628dcb7550bed4bd7a5912c22595f650cc53c9
+    pr_number: 68
+    application_version: h3-logo-png-cb628dc-domainlocked-r1
+    bundle_sha256: 22f4f98440bdb822918797a6924ce3b600fd4f246b379880aab72a04a04b32c0
+    lkg: h3-logo-zlib-04e3f1a-domainlocked-r1
+    deployment: success
+    deployed_commit: cb628dcb7550bed4bd7a5912c22595f650cc53c9
+    verification: PASS
+  rework_rounds: 0

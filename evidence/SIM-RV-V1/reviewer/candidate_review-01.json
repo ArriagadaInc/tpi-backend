@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "SIM-RV-V1",
+  "created_at": "2026-10-14T19:16:38Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610141913-reviewer-sup6a7c0d",
+  "release_sha": "13084414558f59a7b1e30dd859199469c2a62318",
+  "reviewed_tree": "ea74ed114de6899f047319143a1dd0e152f4ac0d",
+  "release_tree": "ea74ed114de6899f047319143a1dd0e152f4ac0d",
+  "pr_number": 69,
+  "result": "PASS",
+  "decision": "APPROVED",
+  "cause": null,
+  "candidate_evidence": "evidence/SIM-RV-V1/deployment/candidate-01.json",
+  "merge_evidence": "evidence/SIM-RV-V1/deployment/merge-01.json",
+  "review_evidence": "evidence/SIM-RV-V1/reviewer/review-02.json",
+  "review_scope": "CANDIDATE_REVIEW de SIM-RV-V1 en runtime claude, sesion distinta de Developer y Deployer. Lecturas AWS solo via el guard del Harness (modo candidate_read), una por llamada, secuenciales, sin DENIED. No se ejecuto dry-run de update-environment; el plan se valido por inspeccion de comandos, policies.yaml y contrato.",
+  "identity_chain": {
+    "release_sha": "13084414558f59a7b1e30dd859199469c2a62318",
+    "publish_run": "38618512458 success attempt 1, headSha = release_sha",
+    "app_digest": "sha256:295dbebfc0486f9ca60a23e69a182d6e45020668d570c25905b8610b84fd37d1",
+    "caddy_digest": "sha256:c638212831be19dab098851d590e9fe053b74ff70784efe6049b16d771054436",
+    "bundle_sha256": "b91612eacdd0698661ceca28247199d6dd4254c1a675fbae6af969daa5431895",
+    "s3_checksum_sha256_b64": "uRYS6s3QaYZhzsooJHGZ1t1CVMGmdfuuavlp2qVDGJU=",
+    "s3_key": "tpi-backoffice/dev-releases/h3-sim-rv-v1-1308441-domainlocked-r1/b91612eacdd0698661ceca28247199d6dd4254c1a675fbae6af969daa5431895.zip",
+    "application_version": "h3-sim-rv-v1-1308441-domainlocked-r1",
+    "lkg": "h3-logo-png-cb628dc-domainlocked-r1"
+  },
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "detail": "git rev-parse 1308441^{tree} == ea74ed1 == reviewed_tree de review-02; parent unico cb628dc."
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "detail": "git fetch origin main; origin/main == 1308441."
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "detail": "gh run view 38618512458: success, attempt 1, headSha == release_sha."
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "detail": "ecr describe-images: app 295dbebf y caddy c6382128 ACTIVE con tag == release_sha."
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "detail": "describe-image-scan-findings: COMPLETE y findingSeverityCounts vacio en ambos digests."
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "detail": "Reconstruccion independiente con build_domain_locked_bundle y los digests del manifest: sha256 b91612ea... identico al del candidate y al archivo local."
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "detail": "Entradas: solo docker-compose.yml; sin 'build:' ni genialabs; imagenes solo app/caddy por digest."
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "detail": "head-object: ChecksumSHA256 uRYS6s3Q... FULL_OBJECT, ContentLength 4815 == bundle."
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "detail": "describe-application-versions: SourceBundle bucket/key == s3 del candidate; Status UNPROCESSED."
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "detail": "commit -> publish run -> digests -> bundle sha256 -> S3 key/checksum -> AV, todos los eslabones re-observados."
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "detail": "describe-environments: tpi-backoffice-dev-green VersionLabel h3-logo-png-cb628dc-domainlocked-r1, Ready/Green/Ok, sin operacion abortable; DateUpdated sin cambio (entorno no mutado)."
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "detail": "describe-application-versions del LKG: SourceBundle presente (key 22f4f984...), UNPROCESSED."
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "detail": "app 46868a42 y caddy 79f7a853 ACTIVE en ECR (ECR-LIFECYCLE-KEEP-20 mitigado)."
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "detail": "Inspeccion estructural del compose: variables sensibles (DATABASE_PASSWORD, API_IDEMPOTENCY_HMAC_SECRET, AUTH_USERS_JSON, WEB_SESSION_SECRET) solo como referencias ${...}; literales limitados a direcciones/rutas TPI_* no secretas. Evidencia candidate/merge sin patrones de credenciales. Limitacion: no se ejecuto busqueda por shell prohibida por el guard; no hay scan auxiliar humano."
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "detail": "candidate.smoke_plan con 10 pasos incluyendo anonimo en /leads/1/simulador, cadena de identidad, conteos de logs y AC-19 humano."
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "detail": "Unico comando: update-environment --environment-name ... --version-label h3-sim-rv-v1-...; sin option-settings, template, platform ni tier."
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "detail": "policies.yaml aws.modes.cutover = @read + elasticbeanstalk update-environment (DEPLOYING deployer); rollback igual (ROLLING_BACK). Verificado por inspeccion; sin dry-run."
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "detail": "Plan con un unico update-environment; wait solo por lectura."
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "detail": "rollback_plan: un comando version-only al LKG nombrado h3-logo-png-cb628dc-domainlocked-r1, max_attempts 1, condicionado a rollback_authorization."
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "detail": "Sin migraciones; unica escritura funcional es INSERT append-only en tpi.auditoria con el grant vigente (AC-11, decision humana; review-02 no hallo migracion/grant nuevo)."
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "detail": "Evidencia con identificadores, hashes y estados; sin URLs prefirmadas ni secretos."
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS",
+      "detail": "blast_radius_and_residues: imagenes ECR, objeto S3 content-addressed y AV UNPROCESSED inertes hasta el cutover; entorno sin mutar."
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "detail": "rollback_plan.conditions: un defecto puramente funcional no autoriza rollback (condicion not_purely_functional_defect)."
+    }
+  ],
+  "findings": [
+    {
+      "id": "C1-INFO-1",
+      "severity": "info",
+      "file": "evidence/SIM-RV-V1/deployment/candidate-01.json",
+      "summary": "AC-18 (campana canaria humana) sigue pendiente y la ventana validada vencio el 2026-10-13; los PDF salen con la advertencia de 90 dias hasta que el humano extienda la ventana. Decision del humano en el Gate, no verificable por el Harness.",
+      "required_action": "El humano debe decidir en el Human Gate si procede sin AC-18; AC-19 requiere smoke humano posterior al cutover."
+    },
+    {
+      "id": "C1-INFO-2",
+      "severity": "info",
+      "file": "evidence/SIM-RV-V1/deployment/candidate-01.json",
+      "summary": "Cambio de dependencias y empaquetado (reportlab, datos del motor) validado en review-02 y por build Docker en CI; las imagenes publicadas tienen scan 0/0.",
+      "required_action": "Ninguna."
+    }
+  ],
+  "risks": [
+    "Modelo empirico no normativo entregado en PDF; ventana validada vencida (advertencia activa).",
+    "Unica escritura funcional: INSERT en tpi.auditoria con el grant existente; si en DEV fallara por permisos seria un defecto funcional a observar en el smoke AC-19, no causa de rollback."
+  ]
+}

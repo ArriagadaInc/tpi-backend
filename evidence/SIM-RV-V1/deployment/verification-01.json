@@ -1,0 +1,195 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "SIM-RV-V1",
+  "created_at": "2026-10-14T20:50:57Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610142048-deployer-supd7f38e",
+  "verification_scope": "VERIFYING de SIM-RV-V1 tras aceptacion humana (acceptance-01). Solo lecturas AWS via aws_guard; sin escrituras AWS.",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "13084414558f59a7b1e30dd859199469c2a62318",
+  "deployed_commit": "13084414558f59a7b1e30dd859199469c2a62318",
+  "application_version": "h3-sim-rv-v1-1308441-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "PASS",
+  "failure_class": null,
+  "final_state": {
+    "version_label": "h3-sim-rv-v1-1308441-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-14T19:45:56Z",
+    "observed_at": "2026-10-14T20:52:00Z"
+  },
+  "events": {
+    "observed": 20,
+    "levels": {
+      "INFO": 20
+    },
+    "errors": 0,
+    "note": "describe-events --max-records 20: todos INFO; sin abortos ni degradacion tras el cutover de las 19:45Z."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-sim-rv-v1-1308441-domainlocked-r1/b91612eacdd0698661ceca28247199d6dd4254c1a675fbae6af969daa5431895.zip",
+    "s3_checksum_sha256_b64": "uRYS6s3QaYZhzsooJHGZ1t1CVMGmdfuuavlp2qVDGJU=",
+    "bundle_sha256": "b91612eacdd0698661ceca28247199d6dd4254c1a675fbae6af969daa5431895",
+    "bundle_compose_digests": {
+      "tpi-dev-app": "sha256:295dbebfc0486f9ca60a23e69a182d6e45020668d570c25905b8610b84fd37d1",
+      "tpi-dev-caddy": "sha256:c638212831be19dab098851d590e9fe053b74ff70784efe6049b16d771054436"
+    },
+    "note": "Re-observado: describe-environments, describe-application-versions y head-object --checksum-mode ENABLED; digests sin cambios respecto de deployment-01 (mismo bundle, mismo checksum)."
+  },
+  "smoke_client": "python urllib (cliente independiente), TLS por defecto, sin seguir redirects",
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "simulador_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    }
+  ],
+  "logs": {
+    "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+    "window_start": "2026-10-14T19:45:04Z",
+    "method": "aws_guard logs filter-log-events con --query length(events); solo conteos; no se leyeron lineas; patrones exactos de harness/policies.yaml. La ventana cubre el smoke humano AC-19."
+  },
+  "pii_log_scan": {
+    "matches": 0,
+    "raw_pattern_hits": {
+      "Authorization -REDACTED": 0,
+      "Bearer": 0,
+      "password": 0,
+      "cookie": 0,
+      "raw_payload": 0,
+      "secret": 0,
+      "token": 0,
+      "hash -ACME": 0
+    },
+    "strong_matches": 0,
+    "strong_hits": {},
+    "weak_matches": {},
+    "classification_required": false,
+    "patterns": [
+      "Authorization -REDACTED",
+      "Bearer",
+      "raw_payload",
+      "password",
+      "hash -ACME",
+      "cookie",
+      "secret",
+      "token"
+    ]
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "human",
+      "evidence": "evidence/SIM-RV-V1/approvals/acceptance-01.json"
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "human",
+      "evidence": "evidence/SIM-RV-V1/approvals/acceptance-01.json"
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "method": "human",
+      "evidence": "evidence/SIM-RV-V1/approvals/acceptance-01.json"
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "method": "human",
+      "evidence": "evidence/SIM-RV-V1/approvals/acceptance-01.json"
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "method": "human",
+      "evidence": "evidence/SIM-RV-V1/approvals/acceptance-01.json"
+    },
+    {
+      "id": "AC-9",
+      "status": "met",
+      "method": "human",
+      "evidence": "evidence/SIM-RV-V1/approvals/acceptance-01.json"
+    },
+    {
+      "id": "AC-11",
+      "status": "met",
+      "method": "human",
+      "evidence": "evidence/SIM-RV-V1/approvals/acceptance-01.json"
+    },
+    {
+      "id": "AC-15",
+      "status": "met",
+      "method": "human",
+      "evidence": "evidence/SIM-RV-V1/approvals/acceptance-01.json"
+    },
+    {
+      "id": "AC-17",
+      "status": "met",
+      "method": "human",
+      "evidence": "evidence/SIM-RV-V1/approvals/acceptance-01.json"
+    },
+    {
+      "id": "AC-18",
+      "status": "met",
+      "method": "human",
+      "evidence": "evidence/SIM-RV-V1/approvals/acceptance-01.json"
+    },
+    {
+      "id": "AC-19",
+      "status": "met",
+      "method": "human",
+      "evidence": "evidence/SIM-RV-V1/approvals/acceptance-01.json"
+    }
+  ],
+  "rollback_executed": false,
+  "safety": {
+    "aws_writes": [],
+    "update_environment_executed": false,
+    "secrets_accessed": false,
+    "log_lines_read": false,
+    "denied_events": 0
+  }
+}

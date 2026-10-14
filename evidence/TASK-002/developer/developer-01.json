@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "TASK-002",
+  "created_at": "2026-10-14T04:06:30Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610140338-developer-sup862d5a",
+  "head_sha": "d7cd47d78dfc47765c37f32fdd14235514f8ab38",
+  "branch": "harness/TASK-002-logo-png-crm",
+  "pr_number": 68,
+  "change_class": "A",
+  "tests": {
+    "command": "pytest tests/ --cov=app --cov-fail-under=85 (CI, workflow Tests job)",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "CI del PR #68 verde sobre el SHA d7cd47d78dfc47765c37f32fdd14235514f8ab38: Lint & Format (ruff/black/mypy), Tests (pytest --cov-fail-under=85), Security Audit (pip-audit/bandit), Docker Build y Release Tooling Validation, todos COMPLETED SUCCESS. Localmente: pytest tests/unit/test_web_app.py -> 39 passed (incluye test_official_logo_asset_is_served_locally, test_header_and_login_render_official_logo_with_alt_text, test_official_logo_is_never_loaded_from_an_external_origin, test_dark_theme_has_light_logo_variant); ruff, black, mypy, bandit y pip-audit PASS. base.html y login.html referencian /static/img/official-logo-on-light.png y /static/img/official-logo-on-dark.png con alt='Tu Pensión Inteligente'; logo.svg y logo-dark.svg eliminados."
+    },
+    {
+      "id": "AC-2",
+      "status": "pending_verification",
+      "evidence": "La legibilidad y correccion visual del logo oficial en cabecera y pantalla de acceso de DEV, en tema claro y oscuro, es verificacion humana post-deploy (requires_human_acceptance=true). El codigo ahora referencia los PNG oficiales (official-logo-on-light.png / official-logo-on-dark.png) en lugar de SVG reproducidos."
+    }
+  ],
+  "files_changed": [
+    "CHANGELOG.md",
+    "app/web/static/css/app.css",
+    "app/web/static/img/logo.svg",
+    "app/web/static/img/logo-dark.svg",
+    "app/web/templates/base.html",
+    "app/web/templates/login.html",
+    "tests/unit/test_web_app.py"
+  ],
+  "assumptions": [
+    "Los PNG oficiales (app/web/static/img/official-logo-on-light.png y official-logo-on-dark.png) ya estaban en main (commit c0b5434) y no fueron modificados.",
+    "El cambio es visual localizado en plantillas, CSS y recursos estaticos; no altera autenticacion, autorizacion ni navegacion.",
+    "AC-2 (verificacion visual en DEV) queda a cargo del humano tras el deploy, segun requires_human_acceptance."
+  ],
+  "migrations_included": false
+}

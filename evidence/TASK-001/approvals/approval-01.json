@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "approval",
+  "task_id": "TASK-001",
+  "created_at": "2026-10-13T16:52:53Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "approved_commit": "04e3f1a80aa0c609aef8a0724419f5f21f299c8f",
+  "app_digest": "sha256:86d8e199c83ffe4d3f5bc3c7533b0b6f6dd64cd38c69314fc440c22f103be452",
+  "caddy_digest": "sha256:0aadd6dba8057a5ee06a71c92754e83f087b312c813de265cca986b517804345",
+  "bundle_sha256": "7026a0791cf7ab5c1c0a22cf9021b656b2f98c1a7a93fc568efba34ca8336a76",
+  "s3_key": "tpi-backoffice/dev-releases/h3-logo-zlib-04e3f1a-domainlocked-r1/7026a0791cf7ab5c1c0a22cf9021b656b2f98c1a7a93fc568efba34ca8336a76.zip",
+  "application_version": "h3-logo-zlib-04e3f1a-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "lkg_version_label": "h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1",
+  "candidate_evidence": {
+    "path": "evidence/TASK-001/deployment/candidate-01.json",
+    "sha256": "a8aa18de0c3f6a4377de67bb87b64cb33deb40dc3241f114f5f7e9fc694bf6c9"
+  },
+  "rollback_authorization": {
+    "scope": "single_version_only_rollback_to_named_lkg",
+    "max_attempts": 1,
+    "lkg_version_label": "h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1",
+    "conditions": [
+      "update_environment_accepted",
+      "environment_degraded_inconsistent_or_not_expected_state",
+      "lkg_application_version_usable",
+      "lkg_images_present_in_ecr",
+      "no_option_settings_required",
+      "not_purely_functional_defect",
+      "no_previous_rollback_attempt"
+    ]
+  },
+  "decision": "approved"
+}

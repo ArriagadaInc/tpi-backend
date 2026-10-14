@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "SIM-RV-V1",
+  "created_at": "2026-10-14T18:42:10Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610141840-deployer-sup10a7a7",
+  "pr_number": 69,
+  "pr_url": "https://github.com/ArriagadaInc/tpi-backend/pull/69",
+  "pr_state_after_merge": "MERGED",
+  "reviewed_sha": "733a1eecea6dce38426f7135719e765b96f71cfc",
+  "reviewed_tree": "ea74ed114de6899f047319143a1dd0e152f4ac0d",
+  "release_sha": "13084414558f59a7b1e30dd859199469c2a62318",
+  "release_tree": "ea74ed114de6899f047319143a1dd0e152f4ac0d",
+  "main_parent_sha": "cb628dcb7550bed4bd7a5912c22595f650cc53c9",
+  "main_before_merge": "cb628dcb7550bed4bd7a5912c22595f650cc53c9",
+  "main_after_merge": "13084414558f59a7b1e30dd859199469c2a62318",
+  "method": "squash",
+  "match_head_commit_used": true,
+  "result": "PASS",
+  "change_class": "A",
+  "deploy_required": true,
+  "fast_path": true,
+  "gh_pr_merge_command": "gh pr merge 69 --squash --match-head-commit 733a1eecea6dce38426f7135719e765b96f71cfc",
+  "tree_equivalence": {
+    "reviewed_tree": "ea74ed114de6899f047319143a1dd0e152f4ac0d",
+    "release_tree": "ea74ed114de6899f047319143a1dd0e152f4ac0d",
+    "equal": true,
+    "verification": "git rev-parse origin/main^{tree} == reviewed_tree tras git fetch origin main; parent unico cb628dc."
+  },
+  "references": {
+    "developer_evidence": "evidence/SIM-RV-V1/developer/developer-02.json",
+    "review_evidence": "evidence/SIM-RV-V1/reviewer/review-02.json"
+  },
+  "ci_pr": {
+    "run_id": 38613961919,
+    "sha": "733a1eecea6dce38426f7135719e765b96f71cfc",
+    "conclusion": "success",
+    "jobs": "5/5"
+  },
+  "checks": [
+    {
+      "name": "head_equals_reviewed_sha_before_merge",
+      "result": "PASS",
+      "note": "headRefOid 733a1ee == review-02.reviewed_sha; CLEAN; 5/5 checks pass."
+    },
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "ea74ed1 == ea74ed1."
+    },
+    {
+      "name": "merge_not_repeated",
+      "result": "PASS",
+      "note": "una sola ejecucion de gh pr merge."
+    }
+  ],
+  "cloud_access": "ninguno (MERGING)"
+}

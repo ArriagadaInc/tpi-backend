@@ -1,0 +1,329 @@
+{
+  "schema_version": 1,
+  "kind": "candidate",
+  "task_id": "TASK-002",
+  "created_at": "2026-10-14T04:24:56Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610140409-deployer-supf12168",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "environment": "tpi-backoffice-dev-green",
+  "release_sha": "cb628dcb7550bed4bd7a5912c22595f650cc53c9",
+  "release_tree": "9a7ade53b13aada01bf5490cb03f08e70d080c46",
+  "reviewed_tree": "9a7ade53b13aada01bf5490cb03f08e70d080c46",
+  "release_verification": {
+    "origin_main_after_fetch": "cb628dcb7550bed4bd7a5912c22595f650cc53c9",
+    "parent": "c0b5434c0eb23902ab94e8654fdfc411cf46c70c",
+    "equals_merge_01": true,
+    "equals_review_01_reviewed_tree": true
+  },
+  "ci_main": {
+    "run_id": 38510183475,
+    "head_sha": "cb628dcb7550bed4bd7a5912c22595f650cc53c9",
+    "note": "El publish run re-ejecuta lint, tests, build y security audit sobre el release SHA: 6/6 jobs success."
+  },
+  "publish_run": {
+    "run_id": 38510183475,
+    "conclusion": "success",
+    "status": "completed",
+    "head_sha": "cb628dcb7550bed4bd7a5912c22595f650cc53c9",
+    "attempt": 1,
+    "workflow": "Publish immutable DEV images to ECR",
+    "event": "workflow_dispatch",
+    "url": "https://github.com/ArriagadaInc/tpi-backend/actions/runs/38510183475",
+    "jobs": "6/6 completed/success",
+    "artifact": {
+      "name": "tpi-dev-ecr-cb628dcb7550bed4bd7a5912c22595f650cc53c9",
+      "manifest_runtime_git_sha": "cb628dcb7550bed4bd7a5912c22595f650cc53c9"
+    },
+    "note": "El bundle embebido en el artifact no es el desplegable; el desplegable es el domain-locked construido localmente."
+  },
+  "scan_source": "ecr describe-image-scan-findings via aws_guard: imageScanStatus COMPLETE y findingSeverityCounts vacio en ambos digests.",
+  "images": {
+    "app": {
+      "repository": "tpi-dev-app",
+      "digest": "sha256:46868a42570244aab579b03f2cd1fdafa63861b873385b273f3c26186ff7d4e2",
+      "tag": "cb628dcb7550bed4bd7a5912c22595f650cc53c9",
+      "scan": {
+        "critical": 0,
+        "high": 0
+      },
+      "ecr_describe_images_present": true,
+      "image_status": "ACTIVE"
+    },
+    "caddy": {
+      "repository": "tpi-dev-caddy",
+      "digest": "sha256:79f7a85350c7164940a36bb457e426533c4dcd9b94dd137f4ca9b19f755030c9",
+      "tag": "cb628dcb7550bed4bd7a5912c22595f650cc53c9",
+      "scan": {
+        "critical": 0,
+        "high": 0
+      },
+      "ecr_describe_images_present": true,
+      "image_status": "ACTIVE"
+    }
+  },
+  "bundle": {
+    "sha256": "22f4f98440bdb822918797a6924ce3b600fd4f246b379880aab72a04a04b32c0",
+    "checksum_sha256_b64": "IvT5hEC9uCKRh5emkkzjtgD9TyRrN5iAqrcqBKBLMsA=",
+    "artifact_type": "domain-locked",
+    "reproducible": true,
+    "size_bytes": 4815,
+    "entries": [
+      "docker-compose.yml"
+    ],
+    "path": ".harness-release/cb628dc/h3-logo-png-cb628dc-domainlocked-r1.zip",
+    "builder_manifest": ".harness-release/cb628dc/h3-logo-png-cb628dc-domainlocked-r1.manifest.json",
+    "runtime_git_sha": "cb628dcb7550bed4bd7a5912c22595f650cc53c9",
+    "compose_image_refs": {
+      "other_images": false
+    },
+    "reverification": "Segunda construccion independiente (check-h3-logo-png-cb628dc-domainlocked-r1.zip) con los mismos digests del manifest del publish run: sha256 identico 22f4f98440bdb822918797a6924ce3b600fd4f246b379880aab72a04a04b32c0.",
+    "note": "Construido con build_domain_locked_bundle; imagenes = manifest del publish run."
+  },
+  "s3": {
+    "bucket": "elasticbeanstalk-us-east-2-821656895812",
+    "key": "tpi-backoffice/dev-releases/h3-logo-png-cb628dc-domainlocked-r1/22f4f98440bdb822918797a6924ce3b600fd4f246b379880aab72a04a04b32c0.zip",
+    "checksum_sha256": "IvT5hEC9uCKRh5emkkzjtgD9TyRrN5iAqrcqBKBLMsA=",
+    "checksum_type": "FULL_OBJECT",
+    "version_id": null,
+    "content_length": 4815,
+    "etag": "c0c7ab921d858384dee25c7a2a13464a",
+    "server_side_encryption": "AES256",
+    "if_none_match": "*",
+    "key_absent_before_put": true,
+    "absence_check": "s3api head-object --checksum-mode ENABLED -> 404 Not Found previo al put.",
+    "post_put_head_object": "ChecksumSHA256 IvT5hEC9uCKRh5emkkzjtgD9TyRrN5iAqrcqBKBLMsA=, ContentLength 4815, FULL_OBJECT"
+  },
+  "application_version": {
+    "label": "h3-logo-png-cb628dc-domainlocked-r1",
+    "status": "UNPROCESSED",
+    "created_at": "2026-10-14T04:23:51Z",
+    "flags": "--no-process --no-auto-create-application",
+    "label_absent_before_create": true,
+    "source_bundle": {
+      "bucket": "elasticbeanstalk-us-east-2-821656895812",
+      "key": "tpi-backoffice/dev-releases/h3-logo-png-cb628dc-domainlocked-r1/22f4f98440bdb822918797a6924ce3b600fd4f246b379880aab72a04a04b32c0.zip"
+    },
+    "source_bundle_matches_s3": true
+  },
+  "traceability_chain": {
+    "result": "PASS",
+    "chain": "release cb628dc (tree 9a7ade5 = reviewed_tree) -> publish run 38510183475 success attempt 1, manifest runtime_git_sha = release -> ECR tags = release, digests app 46868a42... / caddy 79f7a853... ACTIVE, scan 0/0 -> bundle sha256 22f4f98440bdb822918797a6924ce3b600fd4f246b379880aab72a04a04b32c0 (reproducible, domain-locked) -> S3 key content-addressed + ChecksumSHA256 IvT5hEC9uCKRh5emkkzjtgD9TyRrN5iAqrcqBKBLMsA= + ContentLength 4815 -> AV h3-logo-png-cb628dc-domainlocked-r1 SourceBundle = key S3, UNPROCESSED"
+  },
+  "environment_observed": {
+    "version_label": "h3-logo-zlib-04e3f1a-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-13T16:55:44Z",
+    "platform": "Docker running on 64bit Amazon Linux 2023/4.13.6",
+    "caller_account": "821656895812",
+    "note": "Observado en preflight y re-observado tras crear la AV: VersionLabel y DateUpdated sin cambio. CodePipeline tpi-backoffice-dev-promotion: Promote inbound transition deshabilitada."
+  },
+  "lkg": {
+    "version_label": "h3-logo-zlib-04e3f1a-domainlocked-r1",
+    "status": "UNPROCESSED",
+    "release_sha": "04e3f1a80aa0c609aef8a0724419f5f21f299c8f",
+    "images": [
+      {
+        "repository": "tpi-dev-app",
+        "digest": "sha256:86d8e199c83ffe4d3f5bc3c7533b0b6f6dd64cd38c69314fc440c22f103be452",
+        "present": true
+      },
+      {
+        "repository": "tpi-dev-caddy",
+        "digest": "sha256:0aadd6dba8057a5ee06a71c92754e83f087b312c813de265cca986b517804345",
+        "present": true
+      }
+    ],
+    "option_settings_required": false,
+    "source_bundle": {
+      "bucket": "elasticbeanstalk-us-east-2-821656895812",
+      "key": "tpi-backoffice/dev-releases/h3-logo-zlib-04e3f1a-domainlocked-r1/7026a0791cf7ab5c1c0a22cf9021b656b2f98c1a7a93fc568efba34ca8336a76.zip",
+      "checksum_sha256": "cCageRz3q1wcCiLPkCG2VrL5jBp6k/xWjvujTKgzanY=",
+      "bundle_sha256": "7026a0791cf7ab5c1c0a22cf9021b656b2f98c1a7a93fc568efba34ca8336a76",
+      "content_length": 4815
+    },
+    "digests_source": "evidence/TASK-001/deployment/candidate-01.json, re-verificados en ECR en preflight (ecr describe-images exit 0); AV SourceBundle observado.",
+    "selected_by": "observacion de describe-environments en el preflight (no por timestamp ni por documento)"
+  },
+  "smoke_plan": [
+    {
+      "name": "public_https",
+      "method": "GET",
+      "url": "https://dev.tupensioninteligente.cl/",
+      "expect_status": 200
+    },
+    {
+      "name": "backoffice_login",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/login",
+      "expect_status": 200
+    },
+    {
+      "name": "api_catalogs",
+      "method": "GET",
+      "url": "https://dev.tupensioninteligente.cl/api/v1/catalogs",
+      "expect_status": 200
+    },
+    {
+      "name": "static_css",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/static/css/app.css",
+      "expect_status": 200
+    },
+    {
+      "name": "leads_requires_auth",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/leads",
+      "expect": "redirect a /login o 401/403 (AC-6: auth sin cambios)"
+    },
+    {
+      "name": "static_logo_on_light",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/static/img/official-logo-on-light.png",
+      "expect_status": 200
+    },
+    {
+      "name": "static_logo_on_dark",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/static/img/official-logo-on-dark.png",
+      "expect_status": 200
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "check": "ninguna respuesta redirige a genialabs.cl"
+    },
+    {
+      "name": "runtime_identity_chain",
+      "check": "VersionLabel = h3-logo-png-cb628dc-domainlocked-r1 -> AV SourceBundle = key S3 del candidate -> ChecksumSHA256 IvT5hEC9uCKRh5emkkzjtgD9TyRrN5iAqrcqBKBLMsA= -> digests app 46868a42... / caddy 79f7a853..."
+    },
+    {
+      "name": "human_acceptance_AC-2",
+      "check": "Revision visual humana autenticada en DEV: logo oficial PNG (claro/oscuro) en cabecera y login de CRM Lite. Pendiente de approve.py accept."
+    }
+  ],
+  "deployment_plan": {
+    "commands": [
+      "python scripts/harness/aws_guard.py elasticbeanstalk update-environment --environment-name tpi-backoffice-dev-green --version-label h3-logo-png-cb628dc-domainlocked-r1"
+    ],
+    "type": "version-only",
+    "option_settings_used": false,
+    "environment_properties_required": [],
+    "database_changes": "Ninguna migracion ni cambio de datos; reemplazo de logos estaticos por PNG oficiales.",
+    "preconditions": [
+      "Human Gate aprobado para release_sha cb628dcb7550bed4bd7a5912c22595f650cc53c9 y AV h3-logo-png-cb628dc-domainlocked-r1.",
+      "Preflight inmediato antes del cutover: cuenta, region, environment Ready/Green/Ok con VersionLabel = LKG (h3-logo-zlib-04e3f1a-domainlocked-r1), sin update en curso, AV existe, digests del candidate y del LKG presentes en ECR."
+    ],
+    "wait": "describe-environments cada 30 s, maximo 30 min; describe-events --max-records 20; exito = VersionLabel exacta h3-logo-png-cb628dc-domainlocked-r1 + Ready/Green/Ok."
+  },
+  "rollback_plan": {
+    "version_label": "h3-logo-zlib-04e3f1a-domainlocked-r1",
+    "commands": [
+      "python scripts/harness/aws_guard.py elasticbeanstalk update-environment --environment-name tpi-backoffice-dev-green --version-label h3-logo-zlib-04e3f1a-domainlocked-r1"
+    ],
+    "max_attempts": 1,
+    "lkg_bundle_intact": true,
+    "database": "Sin migraciones ni cambios de datos.",
+    "conditions": "Un unico rollback version-only al LKG, solo si se cumplen las 7 condiciones de harness/policies.yaml rollback_authorization."
+  },
+  "acceptance_criteria_status": [
+    {
+      "id": "AC-1",
+      "status": "automated_pre_deploy",
+      "note": "CI verde sobre PR #68 (5/5) y publish run 6/6."
+    },
+    {
+      "id": "AC-2",
+      "status": "pending_human",
+      "note": "Revision visual humana tras cutover (approve.py accept)."
+    }
+  ],
+  "blast_radius_and_residues": {
+    "scope": "Solo AWS DEV, environment tpi-backoffice-dev-green; cutover version-only sin option settings.",
+    "stage_residues": "Imagenes ECR tag cb628dc (app/caddy), objeto S3 content-addressed y AV UNPROCESSED nuevos; inertes hasta el cutover. El Harness no puede borrarlos.",
+    "local_artifacts": ".harness-release/cb628dc (no versionado).",
+    "runtime": "Environment sin mutar durante PREPARING_DEPLOYMENT."
+  },
+  "safety": {
+    "update_environment": false,
+    "environment_mutated": false,
+    "option_settings": false,
+    "smoke_executed": false,
+    "rds_access": false,
+    "secrets_accessed": false,
+    "code_or_dependencies_modified": false,
+    "human_decision_tooling_executed": false,
+    "aws_writes": [
+      "s3api put-object (content-addressed, --if-none-match *, checksum SHA256) x1",
+      "elasticbeanstalk create-application-version (--no-process --no-auto-create-application) x1"
+    ],
+    "github_writes": [],
+    "publish_rerun": false
+  },
+  "checks": [
+    {
+      "name": "init_state_role",
+      "result": "PASS"
+    },
+    {
+      "name": "release_on_origin_main_tree_equals_reviewed",
+      "result": "PASS"
+    },
+    {
+      "name": "preflight_account_region",
+      "result": "PASS"
+    },
+    {
+      "name": "preflight_env_ready_green_ok_no_update",
+      "result": "PASS"
+    },
+    {
+      "name": "lkg_av_and_digests_present",
+      "result": "PASS"
+    },
+    {
+      "name": "promote_disabled",
+      "result": "PASS"
+    },
+    {
+      "name": "publish_run_success_attempt1",
+      "result": "PASS"
+    },
+    {
+      "name": "scan_high_critical_zero",
+      "result": "PASS"
+    },
+    {
+      "name": "candidate_digests_in_ecr",
+      "result": "PASS"
+    },
+    {
+      "name": "bundle_reproducible_domain_locked",
+      "result": "PASS"
+    },
+    {
+      "name": "av_label_absent_before_create",
+      "result": "PASS"
+    },
+    {
+      "name": "s3_key_absent_404_head_object",
+      "result": "PASS"
+    },
+    {
+      "name": "s3_key_content_addressed_checksum",
+      "result": "PASS"
+    },
+    {
+      "name": "av_unprocessed_source_matches",
+      "result": "PASS"
+    },
+    {
+      "name": "environment_not_mutated",
+      "result": "PASS"
+    }
+  ]
+}

@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "SIM-RV-V1",
+  "created_at": "2026-10-14T18:25:12Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610141812-developer-sup32adca",
+  "head_sha": "733a1eecea6dce38426f7135719e765b96f71cfc",
+  "branch": "harness/SIM-RV-V1-simulador-rv",
+  "pr_number": 69,
+  "change_class": "A",
+  "tests": {
+    "command": "pytest tests/ --cov=app --cov-report=xml --cov-fail-under=85 (CI, workflow Tests job, Python 3.12 + PostgreSQL)",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "tests/unit/test_sim_rv_web.py::test_panel_visible_solo_para_executive_y_superusuarios, ::test_rol_no_autorizado_recibe_403 y ::test_anonimo_redirige_a_login. Autorizacion server-side en app/web/routes/simulador.py via SimuladorService.can_simulate (is_superuser(ceo/cto) o executive); el resto recibe 403 real (PlainTextResponse) antes de resolver el lead, y el anonimo es redirigido a /login. CI del PR #69 verde. Confirmacion humana de los 3 escenarios 403 en AC-19 (smoke AWS DEV)."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "La simulacion vive bajo /leads/{id}/simulador y resuelve el lead con service.get_solicitud_detalle_masked(lead_id, user=user), exactamente la misma resolucion que el detalle (app/web/routes/leads.py::lead_detail). tests/unit/test_sim_rv_web.py::test_lead_no_visible_404 cubre el lead inexistente/no visible (404). Sin cambios en RBAC ni enmascaramiento de PII."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "app/web/routes/simulador.py precarga sexo y fecha de nacimiento del lead como causante (_sexo_desde_genero / _fecha_desde_valor) en _form_context; el formulario (simulador.html) incluye saldo UF, tasa, conyuge (sexo/nacimiento), hijos (max 4: sexo, nacimiento, comun, invalidez), garantia, aumento temporal, anios de diferimiento (1-10) y relacion RVD/RT (100/50/51-99). La fecha de simulacion es datetime.now(CRM_TZ).date() en el servidor y no es editable. tests/unit/test_sim_rv_web.py::test_formulario_precarga_sexo_y_fecha."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "El alcance V1 esta implementado en el motor (app/simulador_pension/api.py) con NoValidadoError para bono de reconocimiento, vejez anticipada (solo aviso de control), invalidez/sobrevivencia como tipo, renta temporal con conyuge/hijos/garantia/aumento, y mas de 4 hijos. Los rangos por escenario de la matriz seccion 4 se aplican en SimuladorForm._rangos_por_escenario (app/web/routes/simulador.py): saldo minimo 1.000 UF en renta temporal y tasa maxima 7,5% en renta inmediata (8% solo en renta temporal), con 422; los rangos de edad en validar_edades (app/services/simulador_service.py). Correccion del hallazgo R1-MAJOR-1. tests/unit/test_sim_rv_validacion.py cubre cada escenario soportado, cada rechazo y los limites por escenario (dentro y fuera)."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "Motor puro app/simulador_pension sin I/O ni importaciones del resto de app (solo numpy y sus propios modulos). Tablas de mortalidad versionadas en app/simulador_pension/datos/tablas_mortalidad.npz, declaradas como package-data ([tool.setuptools.package-data]) y presentes en la imagen Docker (CI Docker Build PASS). tests/unit/test_sim_rv_regresion_portal.py::test_435_casos_dentro_de_una_uf: 435/435 dentro de +-1 UF."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "evidence": "Ventana fail-closed con constante unica documentada VENTANA_VALIDADA (app/simulador_pension/api.py) y VENTANA_ADVERTENCIA_DIAS=90 (app/services/simulador_service.py::clasificar_ventana): dentro -> normal, hasta 90 dias tras el fin -> advertencia (pantalla y PDF), mas alla -> 422. tests/unit/test_sim_rv_ventana.py. La ventana termina el 2026-10-13; hoy los PDF salen con advertencia hasta que la campana canaria (AC-18) la extienda. Sin extender la constante por el Developer."
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "evidence": "generar_pdf (app/services/simulador_service.py) incluye: logo oficial local, titulo, fecha/hora America/Santiago, ejecutivo, nombre del lead (sin RUT/correo/telefono), parametros, descripcion del escenario, tasa de venta, resultados (pension UF; RT y meses si diferida; equivalente CLP si valor UF), supuestos/advertencias, leyenda no vinculante, version del modelo, codigo de verificacion y paginacion (pie de pagina). Matriz de contenido en docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md seccion 3. tests/unit/test_sim_rv_pdf.py."
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "evidence": "Todo texto proveniente de datos se escapa con _esc() -> xml.sax.saxutils.escape antes de Paragraph (reportlab interpreta marcado). tests/unit/test_sim_rv_pdf.py::test_escape_de_marcado (nombres con <, > y &). El PDF no tiene enlaces activos, scripts ni adjuntos; metadatos genericos (title='Simulacion referencial de pensiOn', author='Tu Pension Inteligente')."
+    },
+    {
+      "id": "AC-9",
+      "status": "met",
+      "evidence": "El PDF se genera en io.BytesIO (memoria), nunca se escribe a disco/S3/RDS; la respuesta usa media_type application/pdf, Content-Disposition attachment con nombre simulacion_rv_YYYYMMDD_HHMMSS.pdf (sin PII), Cache-Control no-store y X-Content-Type-Options nosniff. El contenido del PDF nunca se loguea. tests/unit/test_sim_rv_web.py::test_headers_pdf_y_auditoria."
+    },
+    {
+      "id": "AC-10",
+      "status": "met",
+      "evidence": "La simulacion no persiste entradas ni resultados y no altera estado/notas/asignaciones del lead (solo lectura de detalle enmascarado). La unica escritura es el evento de auditoria de AC-11. tests/integration/test_sim_rv_web.py::test_sin_persistencia (PostgreSQL real, CI)."
+    },
+    {
+      "id": "AC-11",
+      "status": "met",
+      "evidence": "app/services/simulador_auditoria.py::record_simulacion_event inserta append-only en tpi.auditoria (id_usuario, id_persona, id_lead, accion, tabla_afectada, detalle) con accion='simulacion_renta_vitalicia', tabla_afectada='tpi.leads', id_lead = lead simulado, y detalle JSON solo con actor_subject, role, tipo_escenario, version_modelo y codigo_verificacion (sin saldo/tasa/resultados/nombres/PII). Usa el grant vigente (migracion 006), sin migracion/vista/constraint nueva. tests/unit/test_sim_rv_auditoria.py y tests/integration/test_sim_rv_web.py::test_auditoria."
+    },
+    {
+      "id": "AC-12",
+      "status": "met",
+      "evidence": "codigo_verificacion (app/services/simulador_service.py) es sha256 de las entradas canonicas (version del modelo, fecha, saldo, tasa, causante, conyuge, hijos ordenados, garantia, aumento, diferimiento, RVD) truncado a 12 hex. Deterministico: mismas entradas -> mismo codigo. tests/unit/test_sim_rv_codigo_verificacion.py."
+    },
+    {
+      "id": "AC-13",
+      "status": "met",
+      "evidence": "Validacion server-side con Pydantic en el borde web (SimuladorForm/ConyugeForm/HijoForm en app/web/routes/simulador.py): tipos, rangos por escenario, max 4 hijos, fechas, y CSRF en POST con _validate_csrf_token (patron vigente). Correcciones de revision: valor_uf rechaza no finitos (inf/nan) y fija tope de 1.000.000 CLP (R1-MINOR-1); porcentaje_rvd restringido a 100, 50 o entero 51-99 (R1-MINOR-2). Errores 422 con mensaje claro en espanol sin traceback ni PII; fallo inesperado -> 500 generico fail-closed. tests/unit/test_sim_rv_web.py::test_validacion_servidor_422, ::test_csrf_invalido_403 y tests/unit/test_sim_rv_validacion.py."
+    },
+    {
+      "id": "AC-14",
+      "status": "met",
+      "evidence": "Unica dependencia nueva reportlab==5.0.1 (rueda pura Python; pillow y charset-normalizer ya fijadas), declarada en pyproject.toml y requirements/runtime.lock. numpy se declara en pyproject.toml (numpy>=2.5.1,<3.0) sin tocar los lockfiles (ya fijado como transitivo). CI Security Audit (pip-audit) y Docker Build PASS."
+    },
+    {
+      "id": "AC-15",
+      "status": "met",
+      "evidence": "Sin cambios en app/auth/**, ni en flujos de listado/detalle/dashboard/exportacion/asignacion/cartera/RBAC/PII. El unico toque a leads.py es agregar el flag can_simulate al contexto del detalle y un include de plantilla; app/web/main.py solo registra el router nuevo. Suite completa CI (Python 3.12 + PostgreSQL) verde."
+    },
+    {
+      "id": "AC-16",
+      "status": "met",
+      "evidence": "Pruebas cubren autorizacion por rol y anonimo, lead no visible, cada escenario soportado y cada rechazo, rangos por escenario, contrato de 435 simulaciones, ventana (dentro/advertencia/bloqueo), PDF (valido, texto extraible, sin RUT/correo/telefono, escape de marcado), headers, codigo de verificacion, auditoria y fallo durante generacion. CI Tests job con --cov-fail-under=85: PASS (cobertura >= 85%)."
+    },
+    {
+      "id": "AC-17",
+      "status": "met",
+      "evidence": "Documentacion creada antes de tocar codigo funcional: docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md (matriz AC->componente->prueba->evidencia + matriz de contenido PDF + tabla de rangos validados), docs/SIM_RV_V1_MODELO.md (ecuaciones y precision), docs/SIM_RV_V1_PENDIENTES.md (lista de pendientes), CHANGELOG.md y docs/BITACORA.md actualizados. La matriz de requisitos se actualizo en esta ronda para documentar el tope de valor_uf y el entero de RVD."
+    },
+    {
+      "id": "AC-18",
+      "status": "pending_verification",
+      "evidence": "Precondicion de release: el humano ejecuta una campana canaria de revalidacion (>= 30 casos ciegos, procedimiento en docs/SIM_RV_V1_PENDIENTES.md seccion 3) y actualiza la ventana validada via Human Gate. No es verificable por el Developer en DEVELOPING."
+    },
+    {
+      "id": "AC-19",
+      "status": "pending_verification",
+      "evidence": "Smoke humano en AWS DEV (3 escenarios, 403 para advisor/operations/readonly, PDF legible sin RUT/correo/telefono, logs sin PII ni contenido del PDF). Verificacion humana post-deploy."
+    }
+  ],
+  "files_changed": [
+    "CHANGELOG.md",
+    "app/services/simulador_auditoria.py",
+    "app/services/simulador_service.py",
+    "app/simulador_pension/__init__.py",
+    "app/simulador_pension/api.py",
+    "app/simulador_pension/modelos.py",
+    "app/simulador_pension/mortalidad.py",
+    "app/simulador_pension/portal.py",
+    "app/simulador_pension/renta_diferida.py",
+    "app/simulador_pension/renta_inmediata.py",
+    "app/simulador_pension/datos/tablas_mortalidad.npz",
+    "app/web/main.py",
+    "app/web/routes/leads.py",
+    "app/web/routes/simulador.py",
+    "app/web/templates/lead_detail_panel.html",
+    "app/web/templates/simulador.html",
+    "app/web/templates/simulador_panel.html",
+    "docs/BITACORA.md",
+    "docs/SIM_RV_V1_MODELO.md",
+    "docs/SIM_RV_V1_PENDIENTES.md",
+    "docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md",
+    "pyproject.toml",
+    "requirements/runtime.lock",
+    "tests/data/casos_portal.json",
+    "tests/integration/test_sim_rv_web.py",
+    "tests/unit/test_sim_rv_auditoria.py",
+    "tests/unit/test_sim_rv_codigo_verificacion.py",
+    "tests/unit/test_sim_rv_pdf.py",
+    "tests/unit/test_sim_rv_regresion_portal.py",
+    "tests/unit/test_sim_rv_validacion.py",
+    "tests/unit/test_sim_rv_ventana.py",
+    "tests/unit/test_sim_rv_web.py"
+  ],
+  "assumptions": [
+    "El motor fue portado sin cambios numericos desde el paquete de referencia (C:/desarrollos/REA/simulador_pension); solo importaciones, empaquetado, tipos y estilo. El contrato de 435 casos queda como regresion.",
+    "Las tres [DECISION] de la tarea fueron CONFIRMADAS por el humano antes de start_development: (a) ceo/cto (is_superuser) tambien pueden simular; (b) 90 dias de advertencia tras el fin de la ventana; (c) auditoria append-only en tpi.auditoria con el grant vigente.",
+    "AC-11: el escritor de auditoria vive en app/services/simulador_auditoria.py (fuera de app/repositories/**) por decision humana de alcance (el guard no permite editar app/repositories/** en esta tarea). Repite el patron de record_xlsx_export_event; no requiere migracion, grant, vista ni constraint nueva. Deuda documentada en docs/SIM_RV_V1_PENDIENTES.md §2 item 15.",
+    "La ventana validada termino el 2026-10-13; hasta la campana canaria (AC-18) los PDF se generan con advertencia de 90 dias. El Developer no extiende la constante.",
+    "Ronda 1 (REVIEW_REJECTED): se corrigieron solo los hallazgos R1-MAJOR-1 (rangos por escenario), R1-MINOR-1 (valor_uf finito con tope) y R1-MINOR-2 (RVD entero) sin alterar la logica numerica del motor; la regresion de 435 casos sigue verde. El tope de valor_uf (1.000.000 CLP) es un limite defensivo nuevo, documentado en la matriz de requisitos.",
+    "Los fallos locales en Python 3.13.13 (test_h3_3_6_export_web.py 500 y executive_dashboard por falta de DATABASE_*) son preexistentes/ambientales y no regresiones de esta tarea; el CI Python 3.12 es el arbitro de AC-15 y AC-16."
+  ],
+  "migrations_included": false
+}

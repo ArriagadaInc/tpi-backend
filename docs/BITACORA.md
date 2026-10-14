@@ -22,6 +22,19 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-14 - Harness: tarea SIM-RV-V1 cerrada (DONE)
+
+- Titulo: Simulador de renta vitalicia en el CRM con PDF efimero (perfil ejecutivo), V1 solo validado
+- Evidencia: `evidence/SIM-RV-V1/` y `tasks/completed/SIM-RV-V1.yaml`.
+- release_sha: `13084414558f59a7b1e30dd859199469c2a62318`
+- pr_number: `69`
+- application_version: `h3-sim-rv-v1-1308441-domainlocked-r1`
+- bundle_sha256: `b91612eacdd0698661ceca28247199d6dd4254c1a675fbae6af969daa5431895`
+- lkg: `h3-logo-png-cb628dc-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `13084414558f59a7b1e30dd859199469c2a62318`
+- verification: `PASS`
+
 ### 2026-10-14 - SIM-RV-V1: simulador de renta vitalicia (en desarrollo, DEVELOPING)
 
 - Titulo: Simulador de renta vitalicia en el CRM con PDF efimero (perfil ejecutivo), V1 solo validado.
@@ -34,6 +47,38 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
   `detalle` JSON sin PII). Se aparta de la convencion de capas; mover a `app/repositories/` en una tarea posterior
   con ese alcance (ver `docs/SIM_RV_V1_PENDIENTES.md` item 15).
 - Siguiente paso: completar rutas web, plantillas, pruebas, gates de calidad y `submit_for_review`.
+### 2026-10-14 - Harness: tarea TASK-002 cerrada (DONE)
+
+- Titulo: Aplicar logo oficial PNG en CRM Lite (variante clara y oscura)
+- Evidencia: `evidence/TASK-002/` y `tasks/completed/TASK-002.yaml`.
+- release_sha: `cb628dcb7550bed4bd7a5912c22595f650cc53c9`
+- pr_number: `68`
+- application_version: `h3-logo-png-cb628dc-domainlocked-r1`
+- bundle_sha256: `22f4f98440bdb822918797a6924ce3b600fd4f246b379880aab72a04a04b32c0`
+- lkg: `h3-logo-zlib-04e3f1a-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `cb628dcb7550bed4bd7a5912c22595f650cc53c9`
+- verification: `PASS`
+
+### 2026-10-13 - Harness: tarea TASK-001 cancelada
+
+- Titulo: Desplegar logo oficial de CRM Lite a DEV (release)
+- Evidencia: `evidence/TASK-001/` y `tasks/completed/TASK-001.yaml`.
+- release_sha: `04e3f1a80aa0c609aef8a0724419f5f21f299c8f`
+- pr_number: `66`
+- application_version: `h3-logo-zlib-04e3f1a-domainlocked-r1`
+- bundle_sha256: `7026a0791cf7ab5c1c0a22cf9021b656b2f98c1a7a93fc568efba34ca8336a76`
+- lkg: `h3-3-7-tema-claro-oscuro-6f0f5bb-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `04e3f1a80aa0c609aef8a0724419f5f21f299c8f`
+- verification: `FAIL`
+
+### 2026-10-12 - Harness: tarea CRM-LITE-OFFICIAL-LOGO cancelada
+
+- Titulo: Reemplazar logo temporal de CRM Lite por logo oficial
+- Evidencia: `evidence/CRM-LITE-OFFICIAL-LOGO/` y `tasks/completed/CRM-LITE-OFFICIAL-LOGO.yaml`.
+- release_sha: `6a5acd4d23d623c14b67158dd0ef202f1cbfa431`
+- pr_number: `64`
 
 ### 2026-10-01 - Harness: tarea H3.3.7 cerrada (DONE)
 

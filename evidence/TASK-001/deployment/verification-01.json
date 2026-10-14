@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "TASK-001",
+  "created_at": "2026-10-13T17:23:03Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610131720-deployer-sup1736cb",
+  "verification_scope": "final",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "04e3f1a80aa0c609aef8a0724419f5f21f299c8f",
+  "deployed_commit": "04e3f1a80aa0c609aef8a0724419f5f21f299c8f",
+  "application_version": "h3-logo-zlib-04e3f1a-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "FAIL",
+  "failure_class": "functional",
+  "failure_summary": "Rechazo humano de AC-2 (evidence/TASK-001/approvals/acceptance-01.json): el logo desplegado (logo.svg / logo-dark.svg) no es el logo oficial; el oficial es logo.png. Defecto funcional de producto: el release esta sano y la identidad de runtime es correcta. Sin rollback (contrato seccion 9).",
+  "final_state": {
+    "version_label": "h3-logo-zlib-04e3f1a-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "stable": true
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "smoke_client": "Python urllib, TLS por defecto, sin seguir redirects, sin credenciales ni cookies",
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "static_logo_svg",
+      "result": "PASS",
+      "observed": "logo.svg y logo-dark.svg 200 image/svg+xml (servidos; rechazados por el humano como no oficiales)"
+    },
+    {
+      "name": "logo_png_absent",
+      "result": "FAIL",
+      "observed": "/static/img/logo.png 404: el logo oficial no esta desplegado"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "observed": "ninguna respuesta redirige a genialabs.cl"
+    }
+  ],
+  "pii_log_scan": {
+    "matches": 0,
+    "raw_pattern_hits": {
+      "Authorization": 0,
+      "Bearer": 0,
+      "password": 0,
+      "cookie": 0,
+      "raw_payload": 0,
+      "secret": 0,
+      "token": 0,
+      "hash": 0
+    },
+    "strong_matches": 0,
+    "weak_matches": {},
+    "classification_required": false,
+    "false_positives": [],
+    "patterns": [
+      "Authorization",
+      "Bearer",
+      "raw_payload",
+      "password",
+      "hash",
+      "cookie",
+      "secret",
+      "token"
+    ],
+    "note": "Conteos observados en la sesion claude-202610131653-deployer-sup8b9593 (stdouterr.log desde 2026-10-13T16:54:35Z); no re-ejecutados en esta sesion por no ser determinantes del fallo funcional."
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "automated",
+      "evidence": "CI/pruebas del PR (developer-01, review-01)"
+    },
+    {
+      "id": "AC-2",
+      "status": "not_met",
+      "method": "human",
+      "evidence": "evidence/TASK-001/approvals/acceptance-01.json: rejected; 'No es el logo oficial; el oficial es logo.png'"
+    }
+  ],
+  "rollback_executed": false,
+  "safety": {
+    "rds_access": false,
+    "secrets_accessed": false,
+    "credentials_used": false,
+    "aws_writes_this_stage": [],
+    "approve_py_executed": false,
+    "functional_code_modified": false,
+    "redeploy": false
+  }
+}

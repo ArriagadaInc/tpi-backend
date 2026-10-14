@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "TASK-002",
+  "created_at": "2026-10-14T13:20:43Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610141320-deployer",
+  "verification_scope": "VERIFYING de TASK-002 ejecutado por una sesion interactiva de Claude Code (runtime claude), con el Orchestrator detenido por un STOP previo. Lecturas AWS solo via aws_guard; sin escrituras AWS. Aceptacion humana AC-2 ya registrada por el humano (acceptance-01).",
+  "verification_scope_note": "El resultado es FAIL por observabilidad, no por un defecto confirmado: el escaneo de logs devolvio un indicador fuerte (Authorization=3) que la politica obliga a bloquear (log_scan.py classify: classification_required=true; los indicadores fuertes no se degradan ni con clasificacion). El Deployer no lee lineas de log, y las coincidencias no fueron clasificadas por un humano. Si el humano las inspecciona y las clasifica, o decide sobre la politica, puede devolver el estado a VERIFYING con approve.py resolve --to VERIFYING.",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "cb628dcb7550bed4bd7a5912c22595f650cc53c9",
+  "deployed_commit": "cb628dcb7550bed4bd7a5912c22595f650cc53c9",
+  "application_version": "h3-logo-png-cb628dc-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "FAIL",
+  "failure_class": "observability",
+  "final_state": {
+    "version_label": "h3-logo-png-cb628dc-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-14T04:32:24Z",
+    "observed_at": "2026-10-14T13:20:06Z"
+  },
+  "events": {
+    "observed": 20,
+    "levels": {
+      "INFO": 20
+    },
+    "errors": 0,
+    "note": "describe-events --max-records 20: los 20 eventos son INFO; sin abortos ni degradacion."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-logo-png-cb628dc-domainlocked-r1/22f4f98440bdb822918797a6924ce3b600fd4f246b379880aab72a04a04b32c0.zip",
+    "s3_checksum_sha256_b64": "IvT5hEC9uCKRh5emkkzjtgD9TyRrN5iAqrcqBKBLMsA=",
+    "s3_content_length": 4815,
+    "bundle_sha256": "22f4f98440bdb822918797a6924ce3b600fd4f246b379880aab72a04a04b32c0",
+    "digests_equal_approval_01_and_candidate_01": true,
+    "note": "Re-observado en esta sesion: describe-environments, describe-application-versions (solo label desplegado) y head-object --checksum-mode ENABLED; el base64 del sha256 del bundle coincide con el ChecksumSHA256 de S3; digests de approval-01 == candidate-01 == compose del bundle desplegado."
+  },
+  "smoke_client": "python urllib (cliente independiente), TLS por defecto, sin seguir redirects",
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "observed": "unico Location observado: /login"
+    },
+    {
+      "name": "logo_png_assets_served_and_identical",
+      "result": "PASS",
+      "observed": "official-logo-on-light.png y official-logo-on-dark.png: 200, sha256 identico a los PNG aprobados"
+    },
+    {
+      "name": "legacy_svg_removed",
+      "result": "PASS",
+      "observed": "logo.svg y logo-dark.svg: 404"
+    },
+    {
+      "name": "login_markup_png_alt_no_svg",
+      "result": "PASS",
+      "observed": "referencia ambos PNG con alt; sin referencias a logo.svg ni logo-dark.svg"
+    },
+    {
+      "name": "css_theme_switch_rules",
+      "result": "PASS",
+      "observed": "app.css con reglas de alternancia por tema"
+    },
+    {
+      "name": "runtime_identity_chain",
+      "result": "PASS",
+      "observed": "version, AV, checksum S3 y digests coinciden con lo aprobado"
+    }
+  ],
+  "logs": {
+    "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+    "window_start": "2026-10-14T04:31:33Z",
+    "observed_at": "2026-10-14T13:20:06Z",
+    "method": "aws_guard logs filter-log-events con --query length(events); solo conteos; no se leyeron lineas",
+    "invocation_note": "Consultas hechas desde PowerShell: Git Bash convierte /aws/... en C:/Program Files/Git/aws/... y aws_guard lo rechaza (causa de los STOP previos del Orchestrator)."
+  },
+  "pii_log_scan": {
+    "matches": 3,
+    "raw_pattern_hits": {
+      "Authorization": 3,
+      "Bearer": 0,
+      "password": 0,
+      "cookie": 0,
+      "raw_payload": 0,
+      "secret": 0,
+      "token": 0,
+      "hash": 3
+    },
+    "strong_matches": 3,
+    "strong_hits": {
+      "Authorization": 3
+    },
+    "weak_matches": {
+      "hash": 3
+    },
+    "classification_required": true,
+    "patterns": [
+      "Authorization",
+      "Bearer",
+      "raw_payload",
+      "password",
+      "hash",
+      "cookie",
+      "secret",
+      "token"
+    ],
+    "note": "Conteos identicos a los que registro el Deployer anterior (sesion claude-202610141238-deployer-sup0d55ff). Sin clasificacion humana de las lineas; el Deployer no las lee. Hipotesis NO verificada: mensajes de Caddy/ACME al reiniciar el contenedor tras el despliegue."
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "automated",
+      "evidence": "Segun review-01 (evidence/TASK-002/reviewer/review-01.json): CI 5/5 verde sobre el PR #68 en el SHA exacto; publish run 38510183475 con conclusion success (candidate_review-01)."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "human",
+      "evidence": "aceptacion humana: evidence/TASK-002/approvals/acceptance-01.json (approve.py accept, 2026-10-14T12:40:22Z)"
+    }
+  ],
+  "rollback_executed": false,
+  "safety": {
+    "aws_writes": [],
+    "update_environment_executed": false,
+    "secrets_accessed": false,
+    "log_lines_read": false,
+    "denied_events": 0
+  }
+}

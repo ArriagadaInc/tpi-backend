@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "SIM-RV-V1",
+  "created_at": "2026-10-14T18:11:50Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610141809-reviewer-supe0eba9",
+  "reviewed_sha": "c811d318a4b326a8621a7723ebd104d458375801",
+  "reviewed_tree": "2d6b11f435fba02613a3335824554b975c25876e",
+  "pr_number": 69,
+  "ci": {
+    "run_id": 38611328408,
+    "head_sha": "c811d318a4b326a8621a7723ebd104d458375801",
+    "conclusion": "success",
+    "jobs": {
+      "Lint & Format": "pass",
+      "Tests": "pass",
+      "Security Audit": "pass",
+      "Docker Build": "pass",
+      "Release Tooling Validation": "pass"
+    }
+  },
+  "decision": "REJECTED",
+  "findings": [
+    {
+      "id": "R1-MAJOR-1",
+      "severity": "major",
+      "file": "app/web/routes/simulador.py",
+      "summary": "AC-4/AC-13: los rangos validados por escenario de la tabla de docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md seccion 4 no se aplican. La matriz exige 422 para saldo < 1.000 UF en renta temporal y tasa > 7,5% en renta inmediata (0,5-7,5 inmediata; 8 solo renta temporal), pero SimuladorForm acepta saldo 500-100.000 y tasa 0,5-8 para cualquier escenario, y ni validar_edades ni el motor (api.py) los controlan. Una simulacion fuera de lo validado se entrega en PDF sin aproximar-rechazar.",
+      "required_action": "Aplicar los rangos por escenario (saldo minimo 1.000 en renta temporal; tasa maxima 7,5 en renta inmediata, 8 en renta temporal) con 422 y mensaje claro en espanol, sin modificar la logica numerica del motor; agregar pruebas para cada limite (dentro y fuera). Si la matriz es la que esta equivocada, corregir la matriz con respaldo en PENDIENTES seccion 1."
+    },
+    {
+      "id": "R1-MINOR-1",
+      "severity": "minor",
+      "file": "app/web/routes/simulador.py",
+      "summary": "valor_uf acepta inf y nan (solo valida v <= 0); verificado con PDF real que imprime 'inf' como valor UF y equivalente en pesos.",
+      "required_action": "Rechazar valores no finitos y fijar un tope razonable para valor_uf; agregar prueba."
+    },
+    {
+      "id": "R1-MINOR-2",
+      "severity": "minor",
+      "file": "app/web/routes/simulador.py",
+      "summary": "porcentaje_rvd acepta fracciones entre 50 y 51 (p. ej. 50,5) aunque el alcance es 100, 50 o 51 a 99; el motor dice 'entero entre 51 y 99'.",
+      "required_action": "Restringir a 100, 50 o entero 51-99."
+    },
+    {
+      "id": "R1-INFO-1",
+      "severity": "info",
+      "file": "app/services/simulador_auditoria.py",
+      "summary": "Escritor de auditoria fuera de app/repositories (deuda documentada, decision de alcance humana). INSERT con grant vigente, detalle sin PII; sin migracion.",
+      "required_action": "Ninguna."
+    }
+  ],
+  "checks": [
+    {
+      "name": "sha_identity",
+      "result": "PASS",
+      "detail": "headRefOid PR #69 == head_sha de developer-01.json == SHA del run CI 38611328408; branch actualizada con origin/main."
+    },
+    {
+      "name": "ci_green_exact_sha",
+      "result": "PASS",
+      "detail": "5/5 jobs pass (gh pr checks 69)."
+    },
+    {
+      "name": "scope",
+      "result": "PASS",
+      "detail": "32 archivos del PR coinciden con files_changed y con scope.paths de la tarea; sin migraciones, sin app/auth/**."
+    },
+    {
+      "name": "dependencies",
+      "result": "PASS",
+      "detail": "Diff de pyproject.toml/runtime.lock limitado a reportlab==5.0.1, numpy (ya fijado 2.5.1) y package-data de datos .npz; pillow y charset-normalizer ya en lock."
+    },
+    {
+      "name": "authz",
+      "result": "PASS",
+      "detail": "can_simulate (superusuario o executive) evaluado antes de resolver el lead; 403 PlainTextResponse; anonimo -> /login; CSRF validado en POST."
+    },
+    {
+      "name": "pdf_inspection",
+      "result": "PASS",
+      "detail": "PDF real generado (inmediata y renta temporal) e inspeccionado con pymupdf: sin enlaces, sin /URI, /JavaScript ni /EmbeddedFile; metadatos genericos; nombre y ejecutivo con <b>, <i>, & aparecen literales (escape correcto); sin RUT/correo/telefono; acentos correctos."
+    },
+    {
+      "name": "audit_no_pii",
+      "result": "PASS",
+      "detail": "detalle JSON solo con actor_subject, role, tipo_escenario, version_modelo, codigo_verificacion."
+    },
+    {
+      "name": "validated_ranges",
+      "result": "FAIL",
+      "detail": "Ver R1-MAJOR-1: saldo minimo de renta temporal y tasa maxima de renta inmediata no aplicados (grep sin coincidencias en app/ ni tests/)."
+    }
+  ],
+  "risks": [
+    "Resultado empirico entregado a clientes fuera del rango validado (R1-MAJOR-1)."
+  ]
+}

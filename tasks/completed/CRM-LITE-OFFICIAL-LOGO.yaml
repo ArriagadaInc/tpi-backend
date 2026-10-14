@@ -1,0 +1,46 @@
+schema_version: 1
+task:
+  id: CRM-LITE-OFFICIAL-LOGO
+  title: Reemplazar logo temporal de CRM Lite por logo oficial
+  objective: Incorporar el logo oficial de Tu Pensión Inteligente en CRM Lite sin alterar autenticación,
+    navegación ni comportamiento funcional.
+  source:
+    type: story
+    ref: Solicitud del owner 2026-10-08
+  change_class: A
+  deploy_required: true
+  requires_human_acceptance: true
+  allow_lockfile_update: false
+  acceptance_criteria:
+  - id: AC-1
+    description: La cabecera y la pantalla de acceso muestran el logo oficial desde un recurso estático
+      local accesible.
+    verification: automated
+  - id: AC-2
+    description: El logo corresponde visualmente al recurso oficial adjunto y se visualiza correctamente
+      en CRM Lite.
+    verification: human
+  constraints:
+  - No cargar el logo desde servicios externos.
+  - No cambiar autenticación, autorización ni navegación.
+  - Mantener texto alternativo accesible.
+  dependencies: []
+  risk:
+    level: low
+    notes: Cambio visual localizado en plantillas y recursos estáticos.
+  scope:
+    paths:
+    - app/web/templates/base.html
+    - app/web/templates/login.html
+    - app/web/static/**
+    - tests/**
+    - bitacora.md
+  status: cancelled
+closure:
+  closed_at: '2026-10-12T17:52:34Z'
+  final_state: CANCELLED
+  evidence_dir: evidence/CRM-LITE-OFFICIAL-LOGO
+  release:
+    release_sha: 6a5acd4d23d623c14b67158dd0ef202f1cbfa431
+    pr_number: 64
+  rework_rounds: 1

@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "CRM-LITE-OFFICIAL-LOGO",
+  "created_at": "2026-10-09T15:57:02Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610091533-developer-supcf045d",
+  "head_sha": "75bcac51ad8fd5ab7b2388e0ccfd56022e01feeb",
+  "branch": "harness/CRM-LITE-OFFICIAL-LOGO-logo-oficial",
+  "pr_number": 64,
+  "change_class": "A",
+  "tests": {
+    "command": "pytest tests/unit/test_web_app.py -q --no-cov",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "test_official_logo_asset_is_served_locally verifica /static/img/logo.svg (200, image/svg+xml); test_header_and_login_render_official_logo_with_alt_text verifica que cabecera y login lo renderizan con alt text; test_official_logo_is_never_loaded_from_an_external_origin confirma que no se carga desde origen externo; test_dark_theme_has_light_logo_variant verifica que la variante /static/img/logo-dark.svg se sirve localmente, usa texto claro, se renderiza con alt text y que el CSS contiene el tratamiento [data-theme=\"dark\"]."
+    },
+    {
+      "id": "AC-2",
+      "status": "pending_verification",
+      "evidence": "La correspondencia visual con el recurso oficial adjunto es verificacion humana. El logo.svg y logo-dark.svg reproducen el SVG del header del sitio publico (front/index.html). La legibilidad en tema oscuro queda garantizada por la variante clara logo-dark.svg seleccionada via CSS."
+    }
+  ],
+  "files_changed": [
+    "app/web/static/css/app.css",
+    "app/web/static/img/logo.svg",
+    "app/web/static/img/logo-dark.svg",
+    "app/web/templates/base.html",
+    "app/web/templates/login.html",
+    "tests/unit/test_web_app.py"
+  ],
+  "assumptions": [
+    "El logo oficial es el SVG embebido en el header del sitio publico (front/index.html); se reprodujo fielmente como recurso estatico local app/web/static/img/logo.svg.",
+    "La verificacion visual de AC-2 queda a cargo del humano (requires_human_acceptance).",
+    "Hallazgo F-2: se acepta explicitamente el fallback de fuente. Un SVG servido via <img> no puede cargar webfonts de la pagina, por lo que el texto del logo renderiza con Arial/sans-serif de sistema en lugar de Roboto; la diferencia es cosmética y no afecta la legibilidad."
+  ],
+  "migrations_included": false
+}

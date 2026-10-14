@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "kind": "acceptance",
+  "task_id": "TASK-002",
+  "created_at": "2026-10-14T12:40:22Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "decision": "accepted",
+  "criteria": [
+    {
+      "id": "AC-2",
+      "status": "accepted"
+    }
+  ],
+  "notes": ""
+}
