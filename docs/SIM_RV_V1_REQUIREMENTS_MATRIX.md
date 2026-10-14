@@ -67,13 +67,14 @@ contenido del PDF están en las secciones finales.
 |---|---|---|
 | Saldo UF | 500 – 100.000 (renta temporal desde 1.000) | 422 |
 | Tasa de venta (%) | 0,5 – 8 (0,5–7,5 en renta inmediata; 8 en renta temporal) | 422 |
+| Valor UF (CLP, opcional) | mayor que 0, finito, hasta 1.000.000 | 422 |
 | Causante (edad) | individual 60–100; con cónyuge 60–92; con hijos 62–92; RT 59–88 | 422 |
 | Cónyuge (edad) | 46–96 | 422 |
 | Hijos | 0–4; edad 0–41; invalidez no/parcial/total; común o no | más de 4 → 422; edad fuera de 0–41 → 422 |
 | Garantía (meses) | 0 – 480 | 422 |
 | Aumento temporal (meses / %) | 0 – 600 / 0 – 100 | 422 |
 | Diferimiento (años) | 1 – 10 | 422 |
-| Relación RVD/RT (%) | 100, 50, 51–99 | 422 |
+| Relación RVD/RT (%) | 100, 50, entero 51–99 | 422 |
 
 **Rechazos incondicionales de la V1 (422):** bono de reconocimiento, vejez anticipada, invalidez y sobrevivencia como tipo
 de pensión, otros parentescos, cónyuge inválido, renta temporal con cónyuge/hijos/garantía/aumento.

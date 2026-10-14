@@ -11,11 +11,12 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from datetime import date, datetime
+from math import isfinite
 from typing import Any, Literal
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 from app.services.simulador_service import (
     CRM_TZ,
@@ -38,6 +39,10 @@ from app.web.routes.leads import (
 router = APIRouter()
 
 _NO_AUTORIZADO = "No autorizado"
+
+# AC-13: tope razonable para el valor UF opcional (equivalente en pesos en el PDF). La UF ronda
+# los 38.000 CLP; este tope descarta valores absurdos/infinitos sin restringir un uso legítimo.
+VALOR_UF_MAX = 1_000_000.0
 
 
 class ConyugeForm(BaseModel):
@@ -83,8 +88,12 @@ class SimuladorForm(BaseModel):
     @field_validator("valor_uf")
     @classmethod
     def _valor_uf_valido(cls, v: float | None) -> float | None:
-        if v is not None and v <= 0:
-            raise ValueError("El valor UF debe ser mayor que cero.")
+        if v is None:
+            return v
+        if not isfinite(v) or v <= 0:
+            raise ValueError("El valor UF debe ser un número finito mayor que cero.")
+        if v > VALOR_UF_MAX:
+            raise ValueError(f"El valor UF no puede superar {VALOR_UF_MAX:,.0f}.".replace(",", "."))
         return v
 
     @field_validator("meses_garantizados")
@@ -118,9 +127,24 @@ class SimuladorForm(BaseModel):
     @field_validator("porcentaje_rvd")
     @classmethod
     def _rvd_valido(cls, v: float) -> float:
-        if not (v == 100 or 50 <= v < 100):
-            raise ValueError("La relación RVD/RT debe ser 100, 50 o un valor entre 51 y 99.")
-        return v
+        if v == 100 or v == 50:
+            return v
+        if 51 <= v <= 99 and v.is_integer():
+            return v
+        raise ValueError("La relación RVD/RT debe ser 100, 50 o un entero entre 51 y 99.")
+
+    @model_validator(mode="after")
+    def _rangos_por_escenario(self) -> SimuladorForm:
+        """Rangos validados por escenario (matriz §4): saldo mínimo en renta temporal y tasa
+        máxima en renta inmediata. No altera la lógica numérica del motor."""
+        if self.anios_diferidos > 0:  # renta temporal
+            if self.saldo_uf < 1_000:
+                raise ValueError("En renta temporal el saldo en UF debe ser de al menos 1.000.")
+        elif self.tasa_venta_pct > 7.5:  # renta inmediata
+            raise ValueError(
+                "En renta inmediata la tasa de venta debe ser de hasta 7,5% (8% solo en renta temporal)."
+            )
+        return self
 
 
 def _sexo_desde_genero(genero: Any) -> Literal["H", "M"] | None:

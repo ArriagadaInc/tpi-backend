@@ -59,6 +59,69 @@ def test_form_rechaza_mas_de_4_hijos() -> None:
         SimuladorForm(saldo_uf=3000, tasa_venta_pct=4.7, hijos=hijos)
 
 
+# --- Rangos validados por escenario (revisión R1-MAJOR-1) ---------------------
+
+
+@pytest.mark.parametrize("saldo", [999, 800, 500])
+def test_form_rechaza_saldo_insuficiente_en_renta_temporal(saldo: float) -> None:
+    with pytest.raises(ValidationError):
+        _form(saldo_uf=saldo, anios_diferidos=3)
+
+
+def test_form_acepta_saldo_minimo_renta_temporal() -> None:
+    assert _form(saldo_uf=1000, anios_diferidos=3).saldo_uf == 1000
+
+
+def test_form_acepta_saldo_500_renta_inmediata() -> None:
+    assert _form(saldo_uf=500, anios_diferidos=0).saldo_uf == 500
+
+
+@pytest.mark.parametrize("tasa", [7.6, 8.0])
+def test_form_rechaza_tasa_alta_en_renta_inmediata(tasa: float) -> None:
+    with pytest.raises(ValidationError):
+        _form(tasa_venta_pct=tasa, anios_diferidos=0)
+
+
+def test_form_acepta_tasa_7_5_renta_inmediata() -> None:
+    assert _form(tasa_venta_pct=7.5, anios_diferidos=0).tasa_venta_pct == 7.5
+
+
+def test_form_acepta_tasa_8_renta_temporal() -> None:
+    assert _form(tasa_venta_pct=8.0, anios_diferidos=3).tasa_venta_pct == 8.0
+
+
+# --- Valor UF finito y con tope (revisión R1-MINOR-1) -------------------------
+
+
+@pytest.mark.parametrize("valor", [float("inf"), float("-inf"), float("nan"), 0.0, -1.0])
+def test_form_rechaza_valor_uf_no_finito_o_no_positivo(valor: float) -> None:
+    with pytest.raises(ValidationError):
+        _form(valor_uf=valor)
+
+
+def test_form_rechaza_valor_uf_sobre_tope() -> None:
+    with pytest.raises(ValidationError):
+        _form(valor_uf=1_000_001)
+
+
+def test_form_acepta_valor_uf_razonable() -> None:
+    assert _form(valor_uf=37000.0).valor_uf == 37000.0
+
+
+# --- Relación RVD/RT entera (revisión R1-MINOR-2) -----------------------------
+
+
+@pytest.mark.parametrize("rvd", [50.5, 51.5, 75.5, 99.5, 50.1])
+def test_form_rechaza_rvd_fraccionario(rvd: float) -> None:
+    with pytest.raises(ValidationError):
+        _form(porcentaje_rvd=rvd)
+
+
+@pytest.mark.parametrize("rvd", [100.0, 50.0, 51.0, 99.0, 75.0])
+def test_form_acepta_rvd_valido(rvd: float) -> None:
+    assert _form(porcentaje_rvd=rvd).porcentaje_rvd == rvd
+
+
 def test_validar_edades_rechaza_causante_fuera_de_rango() -> None:
     causante = Persona("H", date(1990, 1, 1))  # 36 años en la fecha de simulación
     with pytest.raises(SimulacionInvalidaError):
