@@ -286,3 +286,469 @@ items:
       - docs/SIM_RV_V1_MODELO.md
       - docs/BITACORA.md
     status: active
+- id: SIM-UX-AJUSTES
+  title: 'CRM y simulador: aviso de edad en pantalla, navegacion y nombre sin ''Lite'''
+  priority: P1
+  category: functional
+  status: pending
+  change_class: A
+  summary: 'Cinco ajustes de uso: aviso de edad en la misma pantalla, quitar el boton ''Abrir simulacion''
+    antiguo, ''Home'', ''Cerrar sesion'' y quitar ''Lite'' de CRM Lite.'
+  evidence: &id001
+  - definida en sesion interactiva con Claude el 2026-10-15 a pedido del humano; agregada al backlog por
+    PR (no con approve.py define); se activa con approve.py activate
+  task:
+    id: SIM-UX-AJUSTES
+    title: 'CRM y simulador: aviso de edad en pantalla, navegacion y nombre sin ''Lite'''
+    objective: 'Cinco ajustes de uso pedidos por el humano: los errores del formulario del simulador (p.
+      ej. edad fuera de rango) se muestran en la misma pantalla y no en una pantalla de texto aparte;
+      se quita el boton antiguo ''Abrir simulacion'' y queda solo ''Abrir simulador''; ''Volver al sitio''
+      pasa a ''Home'' y ''Salir'' a ''Cerrar sesion''; y el CRM deja de llamarse ''CRM Lite''. Sin cambios
+      funcionales.'
+    source:
+      type: story
+      ref: Observaciones del humano sobre el simulador y el CRM (2026-10-15); definida en sesion interactiva
+        con Claude.
+    change_class: A
+    deploy_required: true
+    requires_human_acceptance: true
+    acceptance_criteria:
+    - id: AC-1
+      verification: automated
+      description: Los errores de validacion del POST de /leads/{id}/simulador (edad del causante, conyuge
+        o hijos fuera de rango, saldo, tasa, grupo familiar, etc.) se muestran en la misma pantalla del
+        formulario, en un aviso arriba y/o junto al campo, conservando lo ingresado, con HTTP 422 y mensaje
+        claro en espanol; ya no se responde con una pantalla de texto aparte. 403, 404, CSRF y el flujo
+        anonimo no cambian.
+    - id: AC-2
+      verification: both
+      description: En el detalle del lead se elimina el boton antiguo 'Abrir simulacion' (el que abre
+        el simulador publico antiguo, simulator_url) y queda solo 'Abrir simulador' del panel nuevo, visible
+        solo para executive, ceo y cto; se ajustan las pruebas que afirmaban el boton antiguo.
+    - id: AC-3
+      verification: both
+      description: En la cabecera del CRM la etiqueta 'Volver al sitio' pasa a 'Home' y 'Salir' pasa a
+        'Cerrar sesión'; los destinos de ambos enlaces no cambian.
+    - id: AC-4
+      verification: automated
+      description: '''CRM Lite'' pasa a ''CRM'' en todo texto visible para el usuario (titulos de pagina,
+        cabecera, insignia, kickers, login y la app Streamlit) y en las pruebas que lo afirman; no se
+        renombran rutas, modulos, archivos de prueba ni identificadores, ni se reescribe la documentacion
+        historica (docs/ y entradas pasadas de CHANGELOG y BITACORA).'
+    - id: AC-5
+      verification: automated
+      description: 'Sin regresion: RBAC, enmascaramiento de PII, listado, detalle, dashboard ejecutivo,
+        exportacion XLSX y simulador (PDF y auditoria) intactos; cobertura total >= 85%; CHANGELOG y BITACORA
+        actualizados.'
+    - id: AC-6
+      verification: human
+      description: 'Smoke humano en AWS DEV: un ejecutivo ve solo ''Abrir simulador'' en el detalle del
+        lead; un dato fuera de rango (p. ej. la edad) muestra el aviso en la misma pantalla; la cabecera
+        dice ''Home'' y ''Cerrar sesión''; ya no aparece ''Lite'' en ninguna pantalla del CRM.'
+    constraints:
+    - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
+      desde ramas o worktrees antiguos.'
+    - 'Tarea unica; no mezclar otros cambios ni dejar alcance diferido sin documentarlo. Clase A (fast
+      path version-only): sin migraciones, grants, vistas, constraints ni infraestructura; si hicieran
+      falta es BLOCKER: detenerse y escalar al humano.'
+    - No modificar app/simulador_pension/** (motor), app/auth/**, dependencias ni lockfiles; no cambiar
+      la logica numerica, los rangos validados, la autorizacion (403 fuera de executive, ceo y cto) ni
+      el escape de marcado del PDF.
+    - No reducir la cobertura minima (85%).
+    - 'Cambios esperados: los POST de app/web/routes/simulador.py que hoy responden PlainTextResponse
+      422; el bloque lead-hero-actions de lead_detail_panel.html (boton antiguo); las dos etiquetas de
+      base.html; y las 15 apariciones de ''CRM Lite'' en app/backoffice_app.py, app/pages/2_solicitudes_registradas.py
+      y app/web/**.'
+    - Conservar get_public_simulator_url y simulator_url en la configuracion si algo mas los usa; solo
+      se quita el boton de la plantilla del detalle del lead (y su contexto si queda sin uso).
+    - 'Reviewer: comprobar con grep que ''CRM Lite'' solo sobrevive en documentacion historica, y generar
+      un caso de edad fuera de rango para ver el aviso en pantalla.'
+    dependencies: []
+    risk:
+      level: low
+      notes: Cambios de texto y de plantilla; el unico con logica es mostrar los errores del simulador
+        en el mismo formulario.
+    scope:
+      paths:
+      - app/web/**
+      - app/services/**
+      - app/pages/**
+      - app/backoffice_app.py
+      - tests/**
+      - CHANGELOG.md
+      - docs/BITACORA.md
+      - docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md
+    status: active
+- id: SIM-WIZARD-3-PASOS
+  title: 'Simulador: asistente de 3 pasos (datos, grupo familiar, resultado) con la marca de TPI'
+  priority: P2
+  category: functional
+  status: pending
+  change_class: A
+  summary: Asistente de 3 pasos del simulador (datos, grupo familiar, resultado) con marca TPI; especificacion
+    en docs/specs/SIM_WIZARD_SPEC.md.
+  evidence: *id001
+  task:
+    id: SIM-WIZARD-3-PASOS
+    title: 'Simulador: asistente de 3 pasos (datos, grupo familiar, resultado) con la marca de TPI'
+    objective: Rehacer la pantalla del simulador como un asistente de 3 pasos (Datos de la simulacion,
+      Grupo familiar, Resultado) con el flujo y la estructura del simulador de referencia y la marca de
+      TPI (logo oficial y colores del CRM y de la ficha). El resultado se ve en pantalla antes de descargar
+      el PDF. Sin cambios en el motor, el alcance validado ni la autorizacion.
+    source:
+      type: story
+      ref: Observaciones del humano sobre el simulador y el CRM (2026-10-15); definida en sesion interactiva
+        con Claude.
+    change_class: A
+    deploy_required: true
+    requires_human_acceptance: true
+    acceptance_criteria:
+    - id: AC-1
+      verification: both
+      description: El simulador es un asistente de 3 pasos con indicador (Datos de la simulacion, Grupo
+        familiar, Resultado) y los botones Continuar, Volver, Simular y Descargar PDF, segun docs/specs/SIM_WIZARD_SPEC.md.
+    - id: AC-2
+      verification: automated
+      description: 'Paso 1: fecha de simulacion de solo lectura (fecha actual de America/Santiago en el
+        servidor), tipo de pension, tasa de venta, meses garantizados, anios de periodo diferido, meses
+        y % de aumento temporal, saldo en UF y valor UF opcional, con los rangos validados de la V1; los
+        errores se muestran en el mismo paso.'
+    - id: AC-3
+      verification: both
+      description: 'Paso 2: el causante (el lead) aparece como primera fila sin poder editarse ni eliminarse;
+        el conyuge y hasta 4 hijos se agregan, editan y eliminan con un modal (parentesco, tipo de relacion
+        con padre o madre solo para hijos, sexo, condicion de invalidez, fecha de nacimiento y edad calculada);
+        se respetan las reglas de la V1 (un conyuge, maximo 4 hijos, conyuge invalido rechazado).'
+    - id: AC-4
+      verification: both
+      description: 'Paso 3: tres tarjetas (Monto pension, Saldo total, Tasa de venta; mas Renta temporal
+        y Meses de diferimiento en renta temporal), resumen de la simulacion, grupo familiar y el aviso
+        ''Valores referenciales, no vinculantes''; ''Descargar PDF'' genera el PDF en memoria y registra
+        el evento de auditoria; calcular el resultado en pantalla no persiste ni audita nada.'
+    - id: AC-5
+      verification: automated
+      description: 'Marca de TPI: logo oficial y colores del CRM y de la ficha; ningun logo, nombre ni
+        color naranja del simulador de referencia en pantallas ni PDF; sin librerias ni CDN nuevos (JavaScript
+        propio en app/web/static/js/).'
+    - id: AC-6
+      verification: automated
+      description: 'Sin regresion: motor intacto (435 casos), validacion y calculo en el servidor, CSRF,
+        403 y 404, escape de marcado, headers del PDF y auditoria sin PII; usable a 1280 px y a 768 px;
+        cobertura total >= 85%; docs y CHANGELOG y BITACORA actualizados.'
+    - id: AC-7
+      verification: human
+      description: 'Smoke humano en AWS DEV: un ejecutivo recorre los 3 pasos con un caso solo y uno familiar,
+        ve el resultado en pantalla, descarga el PDF y los valores coinciden con el simulador de referencia.'
+    constraints:
+    - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
+      desde ramas o worktrees antiguos.'
+    - 'Tarea unica; no mezclar otros cambios ni dejar alcance diferido sin documentarlo. Clase A (fast
+      path version-only): sin migraciones, grants, vistas, constraints ni infraestructura; si hicieran
+      falta es BLOCKER: detenerse y escalar al humano.'
+    - No modificar app/simulador_pension/** (motor), app/auth/**, dependencias ni lockfiles; no cambiar
+      la logica numerica, los rangos validados, la autorizacion (403 fuera de executive, ceo y cto) ni
+      el escape de marcado del PDF.
+    - No reducir la cobertura minima (85%).
+    - 'Fuente de verdad del diseno: docs/specs/SIM_WIZARD_SPEC.md (el Developer no ve imagenes, por eso
+      las capturas se tradujeron a texto). Se replica el flujo y la estructura, no la marca: nada del
+      simulador de referencia (logo, nombre, naranja).'
+    - Los datos de los pasos se conservan al volver sin guardarse en base de datos; la persistencia como
+      evidencia es la tarea SIM-EVIDENCIA-ENTRADAS.
+    - 'Reviewer: recorrer el flujo completo y generar un PDF real para comprobar que el resultado en pantalla
+      y el PDF coinciden.'
+    dependencies:
+    - SIM-UX-AJUSTES
+    risk:
+      level: medium
+      notes: Cambio grande de interfaz que toca el flujo del formulario y la generacion del PDF; mitigado
+        con el servidor como fuente de verdad y las pruebas de la V1.
+    scope:
+      paths:
+      - app/web/**
+      - app/services/**
+      - tests/**
+      - CHANGELOG.md
+      - docs/BITACORA.md
+      - docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md
+      - docs/specs/SIM_WIZARD_SPEC.md
+    status: active
+- id: SIM-FICHA-PDF
+  title: 'Simulador: ficha PDF con el formato ''Estudio de pension'' de TPI'
+  priority: P2
+  category: functional
+  status: pending
+  change_class: A
+  summary: PDF con el formato 'Estudio de pension' de TPI; especificacion en docs/specs/SIM_FICHA_PDF_SPEC.md
+    (sin datos del ejemplo).
+  evidence: *id001
+  task:
+    id: SIM-FICHA-PDF
+    title: 'Simulador: ficha PDF con el formato ''Estudio de pension'' de TPI'
+    objective: 'Hacer que el PDF del simulador tenga el formato de la ficha ''Estudio de pension'' de
+      TPI: pagina apaisada, banda azul marino con nombre, titulo y fecha, tablas de Opcion I y II con
+      Rescate Total, bloque de contacto y logo oficial. Se conservan la leyenda referencial, el codigo
+      de verificacion y la prohibicion de RUT, correo y telefono del lead.'
+    source:
+      type: story
+      ref: Observaciones del humano sobre el simulador y el CRM (2026-10-15); definida en sesion interactiva
+        con Claude.
+    change_class: A
+    deploy_required: true
+    requires_human_acceptance: true
+    acceptance_criteria:
+    - id: AC-1
+      verification: both
+      description: 'El PDF sigue docs/specs/SIM_FICHA_PDF_SPEC.md: Carta apaisada; banda azul marino #0f243e
+        con tratamiento y nombre del cliente, titulo ''ESTUDIO DE PENSIÓN'' y fecha; fila de datos (fecha
+        de nacimiento, conyuge, tasa T y valor UF si se informo); tabla de ''OPCIÓN I'' con ''Renta Vitalicia
+        Inmediata'' y ''Rescate Total''; y ''OPCIÓN II'' con ''Aumento Temporal de Pensión'' e ''Inflación
+        Futura 4%'' cuando hay aumento temporal.'
+    - id: AC-2
+      verification: automated
+      description: 'Los calculos derivados siguen la especificacion y se prueban con datos sinteticos:
+        Rescate Total = pension UF x meses garantizados; $ Valor Actual = pension UF x valor UF; Valor
+        Futuro = Valor Actual x 1,04^anios del aumento; Rescate Total de la Opcion II = pension aumentada
+        x meses del aumento + pension base x (meses garantizados - meses del aumento).'
+    - id: AC-3
+      verification: both
+      description: Pie con el nombre del ejecutivo y los datos de contacto corporativos de TPI como texto
+        plano (sin enlaces activos), y banda azul marino inferior con el logo oficial (official-logo-on-dark.png);
+        sin telefono personal, sin RUT ni correo del lead, sin bloque PGU/BAC, sin fila 'RP (AFP)' y sin
+        comparativa de varias opciones.
+    - id: AC-4
+      verification: automated
+      description: 'Se conservan: la leyenda ''Estimacion referencial no vinculante'', la version del
+        modelo, el codigo de verificacion, el escape de marcado de todo texto de datos, los metadatos
+        genericos sin PII, la ausencia de enlaces, scripts y adjuntos, el nombre de archivo y los headers
+        (no-store, nosniff) y el evento de auditoria; la renta temporal con RVD conserva su seccion con
+        la nueva apariencia.'
+    - id: AC-5
+      verification: automated
+      description: 'Sin regresion: motor intacto, autorizacion y CSRF sin cambios; cobertura total >=
+        85%; docs y CHANGELOG y BITACORA actualizados.'
+    - id: AC-6
+      verification: human
+      description: 'Smoke humano en AWS DEV: el humano genera un PDF y lo compara con la ficha de ejemplo
+        (apaisado, banda, tablas, pie y logo); se lee bien en pantalla y al imprimir, y no contiene RUT,
+        correo ni telefono del lead.'
+    constraints:
+    - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
+      desde ramas o worktrees antiguos.'
+    - 'Tarea unica; no mezclar otros cambios ni dejar alcance diferido sin documentarlo. Clase A (fast
+      path version-only): sin migraciones, grants, vistas, constraints ni infraestructura; si hicieran
+      falta es BLOCKER: detenerse y escalar al humano.'
+    - No modificar app/simulador_pension/** (motor), app/auth/**, dependencias ni lockfiles; no cambiar
+      la logica numerica, los rangos validados, la autorizacion (403 fuera de executive, ceo y cto) ni
+      el escape de marcado del PDF.
+    - No reducir la cobertura minima (85%).
+    - 'Fuente de verdad del diseno: docs/specs/SIM_FICHA_PDF_SPEC.md. La ficha de ejemplo contiene datos
+      de una persona real: NO se copia al repositorio ni se usa en pruebas; las pruebas usan datos sinteticos.'
+    - 'Tipografia Helvetica (equivalente PDF de Arial) con reportlab; sin fuentes ni dependencias nuevas.
+      Las decisiones de la seccion ''Fuera de alcance'' de la especificacion no se inventan: quedan documentadas
+      en PENDIENTES.'
+    - 'Reviewer: generar un PDF real y compararlo con la especificacion (inspeccion con pymupdf: sin enlaces,
+      metadatos genericos, sin RUT, correo ni telefono).'
+    dependencies: []
+    risk:
+      level: medium
+      notes: El PDF se entrega a clientes; un error de formato o de calculo derivado (Rescate Total, Valor
+        Futuro) llegaria al cliente. Mitigado con reglas verificadas contra el ejemplo y pruebas con datos
+        sinteticos.
+    scope:
+      paths:
+      - app/services/**
+      - app/web/**
+      - tests/**
+      - CHANGELOG.md
+      - docs/BITACORA.md
+      - docs/specs/SIM_FICHA_PDF_SPEC.md
+      - docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md
+      - docs/SIM_RV_V1_PENDIENTES.md
+      - docs/SIM_RV_V1_MODELO.md
+    status: active
+- id: SIM-EVIDENCIA-ENTRADAS
+  title: 'Simulador: guardar entradas y resultado como evidencia (solo escritura)'
+  priority: P2
+  category: functional
+  status: pending
+  change_class: A
+  summary: Guardar entradas y resultado de cada simulacion como evidencia en tpi.auditoria.detalle (solo
+    escritura, sin cambio de esquema, sin nombres ni RUT).
+  evidence: *id001
+  task:
+    id: SIM-EVIDENCIA-ENTRADAS
+    title: 'Simulador: guardar entradas y resultado como evidencia (solo escritura)'
+    objective: 'Guardar como evidencia, mas alla del PDF, las entradas y el resultado de cada simulacion
+      generada: se amplia el evento de auditoria append-only de la generacion del PDF (tpi.auditoria.detalle)
+      con los datos de la simulacion, sin cambiar el esquema y sin guardar nombres, RUT, correo ni telefono.'
+    source:
+      type: story
+      ref: Observaciones del humano sobre el simulador y el CRM (2026-10-15); definida en sesion interactiva
+        con Claude.
+    change_class: A
+    deploy_required: true
+    requires_human_acceptance: true
+    acceptance_criteria:
+    - id: AC-1
+      verification: automated
+      description: 'Cada PDF generado con exito registra, en el mismo evento append-only (accion simulacion_renta_vitalicia),
+        un detalle versionado (detalle.schema_version) con: ejecutivo (actor_subject y role), tipo_escenario,
+        version_modelo y codigo_verificacion; las entradas (sexo y fecha de nacimiento del causante, saldo_uf,
+        tasa_venta_pct, meses_garantizados, anios_diferidos, meses_aumento_temporal, pct_aumento_temporal,
+        valor_uf si se informo, y por cada beneficiario: parentesco, sexo, fecha de nacimiento, condicion
+        de invalidez y si es comun); y el resultado (pension_uf y, en renta temporal, renta_temporal_uf
+        y meses de diferimiento). El lead va en la columna id_lead.'
+    - id: AC-2
+      verification: automated
+      description: El detalle no contiene nombres de personas, RUT, correo ni telefono, ni el contenido
+        del PDF; las pruebas lo verifican con datos sinteticos que incluyen nombres con marcado y caracteres
+        especiales.
+    - id: AC-3
+      verification: automated
+      description: 'Las entradas guardadas bastan para reproducir el resultado: una prueba toma el detalle
+        de un evento, vuelve a calcular con el motor y obtiene la misma pension y el mismo codigo_verificacion.'
+    - id: AC-4
+      verification: automated
+      description: 'Si el INSERT falla, la generacion del PDF falla cerrada como hasta ahora; los intentos
+        no autorizados siguen sin generar evento; sin migracion, grant, vista ni constraint nueva (si
+        hicieran falta es BLOCKER: detenerse y escalar al humano).'
+    - id: AC-5
+      verification: both
+      description: 'Documentacion: la decision del humano del 2026-10-15 reemplaza el AC-10 de SIM-RV-V1
+        (''no se persiste ninguna entrada ni resultado''); la matriz de requisitos (AC-10 y AC-11), PENDIENTES
+        (#6) y MODELO lo reflejan, y documentan que la evidencia es de solo escritura, que la politica
+        de retencion queda pendiente y que mostrarla en la linea de tiempo es SIM-HISTORIAL-LINEA-TIEMPO;
+        CHANGELOG y BITACORA actualizados.'
+    - id: AC-6
+      verification: human
+      description: 'Smoke humano en AWS DEV: tras generar un PDF, una consulta de solo lectura (patron
+        de scripts/sql/inspect_*_readonly.sql, ejecutada por el humano) muestra el nuevo evento con las
+        entradas y el resultado y sin datos personales directos; los logs no contienen el detalle.'
+    constraints:
+    - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
+      desde ramas o worktrees antiguos.'
+    - 'Tarea unica; no mezclar otros cambios ni dejar alcance diferido sin documentarlo. Clase A (fast
+      path version-only): sin migraciones, grants, vistas, constraints ni infraestructura; si hicieran
+      falta es BLOCKER: detenerse y escalar al humano.'
+    - No modificar app/simulador_pension/** (motor), app/auth/**, dependencias ni lockfiles; no cambiar
+      la logica numerica, los rangos validados, la autorizacion (403 fuera de executive, ceo y cto) ni
+      el escape de marcado del PDF.
+    - No reducir la cobertura minima (85%).
+    - 'Seguir el patron de record_simulacion_event en app/services/simulador_auditoria.py (INSERT con
+      el grant vigente en tpi.auditoria). No tocar app/repositories/**: no esta en el alcance.'
+    - 'Datos personales: la fecha de nacimiento y la composicion familiar son datos personales; se guardan
+      solo en tpi.auditoria.detalle (solo escritura: la aplicacion no lo lee), sin nombres ni identificadores
+      directos. La politica de retencion queda pendiente de decision del humano y se documenta.'
+    - El detalle debe ser pequeno (menos de 4 KB) y con claves estables y versionadas.
+    dependencies: []
+    risk:
+      level: medium
+      notes: Se guardan datos personales minimos (fechas de nacimiento y composicion familiar) que SIM-RV-V1
+        decidio no persistir; mitigado con solo escritura, sin nombres ni identificadores y detalle versionado.
+    scope:
+      paths:
+      - app/services/**
+      - app/web/**
+      - tests/**
+      - CHANGELOG.md
+      - docs/BITACORA.md
+      - docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md
+      - docs/SIM_RV_V1_PENDIENTES.md
+      - docs/SIM_RV_V1_MODELO.md
+    status: active
+- id: SIM-HISTORIAL-LINEA-TIEMPO
+  title: 'Linea de tiempo del lead: mostrar las simulaciones generadas'
+  priority: P3
+  category: functional
+  status: pending
+  change_class: D
+  summary: 'Vista saneada y linea de tiempo del lead con las simulaciones generadas (clase D: migracion
+    009, la aplica el humano).'
+  evidence: *id001
+  task:
+    id: SIM-HISTORIAL-LINEA-TIEMPO
+    title: 'Linea de tiempo del lead: mostrar las simulaciones generadas'
+    objective: Mostrar en la linea de tiempo del detalle del lead cada simulacion generada (fecha, ejecutivo,
+      escenario, pension mensual estimada y codigo de verificacion), leyendola de una vista saneada sobre
+      tpi.auditoria, como ya se hace con las asignaciones y los cambios de estado.
+    source:
+      type: story
+      ref: Observaciones del humano sobre el simulador y el CRM (2026-10-15); definida en sesion interactiva
+        con Claude.
+    change_class: D
+    deploy_required: true
+    requires_human_acceptance: true
+    acceptance_criteria:
+    - id: AC-1
+      verification: automated
+      description: 'Migracion 009 (create y drop) que crea la vista tpi.v_historial_simulaciones sobre
+        tpi.auditoria filtrando accion=''simulacion_renta_vitalicia'', con solo estas columnas saneadas:
+        id_auditoria, id_lead, fecha_hora, actor_subject, tipo_escenario, version_modelo, codigo_verificacion
+        y pension_uf; sin entradas personales ni el detalle completo; GRANT SELECT solo sobre la vista
+        a tpi_app (sin SELECT sobre tpi.auditoria); scripts/init_test_database.py crea la vista para las
+        pruebas.'
+    - id: AC-2
+      verification: both
+      description: 'El detalle del lead muestra las simulaciones en la linea de tiempo, junto a asignaciones,
+        cambios de estado, comentarios y actividad, ordenadas por fecha: ''Simulacion generada'' con ejecutivo,
+        escenario, pension mensual (UF) y codigo. La aplicacion lee solo la vista, nunca tpi.auditoria.'
+    - id: AC-3
+      verification: automated
+      description: Visibilidad igual a la del detalle del lead (un advisor solo ve leads de su cartera;
+        404 si no es visible); el nombre del ejecutivo se muestra segun las reglas vigentes de la linea
+        de tiempo; sin RUT, correo ni telefono.
+    - id: AC-4
+      verification: automated
+      description: Pruebas unitarias y de integracion (PostgreSQL en CI) de la vista, el repositorio y
+        la presentacion; un lead sin simulaciones no cambia su linea de tiempo; cobertura total >= 85%.
+    - id: AC-5
+      verification: both
+      description: Documentacion de la base (docs/database), CHANGELOG y BITACORA, con el procedimiento
+        de aplicacion y de reversa de la migracion 009 en AWS DEV para el humano.
+    - id: AC-6
+      verification: human
+      description: Tras aplicar la migracion 009 en AWS DEV y desplegar, un ejecutivo genera un PDF y
+        la simulacion aparece en la linea de tiempo del lead; un advisor sin acceso al lead no la ve.
+    constraints:
+    - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
+      desde ramas o worktrees antiguos.'
+    - 'change_class D: la migracion 009 y su aplicacion en AWS DEV no siguen ningun fast path; tras el
+      merge la transicion obligatoria es merged_non_fast_path hacia BLOCKED_HUMAN, sin excepcion. El humano
+      aplica la migracion en DEV y resuelve el estado segun el procedimiento de H3.3.4.'
+    - 'No asumir el numero de migracion: inspeccionar todo scripts/sql y la historia git antes de crearla
+      (009 debe estar libre). No modificar las migraciones 005 a 008.'
+    - La aplicacion lee solo la vista saneada, nunca tpi.auditoria; el GRANT es solo SELECT sobre la vista;
+      sin SELECT, UPDATE ni DELETE sobre la tabla.
+    - No modificar app/simulador_pension/** ni app/auth/**, ni dependencias; no reducir la cobertura minima
+      (85%).
+    - 'Dependencia funcional: SIM-EVIDENCIA-ENTRADAS (el evento ya trae tipo_escenario, version_modelo,
+      codigo_verificacion y pension_uf).'
+    dependencies:
+    - SIM-EVIDENCIA-ENTRADAS
+    risk:
+      level: medium
+      notes: Migracion de base de datos aplicada por el humano en AWS DEV; mitigado con vista saneada,
+        grant minimo, script de reversa y el procedimiento ya probado en H3.3.4.
+    scope:
+      paths:
+      - scripts/sql/**
+      - scripts/init_test_database.py
+      - app/repositories/**
+      - app/services/**
+      - app/web/**
+      - tests/**
+      - docs/database/**
+      - CHANGELOG.md
+      - docs/BITACORA.md
+    status: active
+- id: CRM-LOOK-AND-FEEL
+  title: Mejorar el look and feel del CRM
+  priority: P3
+  category: functional
+  status: pending
+  change_class: A
+  summary: Diferido por el humano el 2026-10-15. Hacerlo despues de SIM-WIZARD-3-PASOS y SIM-FICHA-PDF
+    para heredar el mismo lenguaje visual. Requiere un brief de diseno (referencias, paleta, tipografia)
+    antes de definir criterios comprobables.
+  evidence:
+  - observacion del humano el 2026-10-15; diferida; sin definicion de tarea
