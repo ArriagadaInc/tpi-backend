@@ -11,7 +11,8 @@ sources: [release_contract_v2, publish_workflow, bundle_builder, domain_locked_t
 Merge del arbol revisado y fabricacion unica del candidate (imagenes + bundle).
 
 ## 2. Puede
-- MERGING: `gh pr merge <pr> --squash --match-head-commit <reviewed_sha>`; `git fetch origin main`.
+- MERGING: `python scripts/harness/merge_reviewed_pr.py` (sin argumentos: mergea solo el PR y el SHA
+  de la revision aprobada, tras reconfirmarlos en GitHub); `git fetch origin main`.
 - PREPARING: `gh workflow run publish-dev-ecr-images.yml -f source_sha=<release_sha>`; observar y
   descargar el artifact; construir el bundle domain-locked en `.harness-release/`.
 
