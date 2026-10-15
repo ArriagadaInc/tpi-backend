@@ -408,7 +408,6 @@ def _resolve_detail_context(
         "can_cleanup": _can_cleanup(user),
         "web_env_label": getattr(request.app.state, "web_env_label", ""),
         "web_cleanup_enabled": bool(getattr(request.app.state, "web_cleanup_enabled", False)),
-        "simulator_url": getattr(request.app.state, "web_simulator_url", None),
         "public_site_url": getattr(request.app.state, "web_public_site_url", None),
         "mask_pii": not (user is not None and service.can_view_full_pii(user)),
         "selected_lead": selected_lead,

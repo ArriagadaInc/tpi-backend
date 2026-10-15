@@ -1,4 +1,4 @@
-// Light/dark theme for CRM Lite (H3.3.7). Client-side only: the preference lives
+// Light/dark theme for CRM (H3.3.7). Client-side only: the preference lives
 // in localStorage and is never sent to the server.
 //
 // Loaded synchronously from <head> (not deferred) so the stored theme is applied

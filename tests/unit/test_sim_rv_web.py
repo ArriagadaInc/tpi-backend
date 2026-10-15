@@ -240,6 +240,23 @@ def test_validacion_servidor_422() -> None:
             data={**_valid_form(csrf), "saldo_uf": "0"},
         )
     assert response.status_code == 422
+    assert response.headers["content-type"].startswith("text/html")
+    assert "El saldo en UF debe estar entre 500 y 100.000." in response.text
+    # El aviso se muestra en la misma pantalla del formulario, conservando lo ingresado.
+    assert 'name="saldo_uf" value="0"' in response.text
+
+
+def test_edad_fuera_de_rango_muestra_aviso_en_pantalla() -> None:
+    repo = _Repo()
+    repo.row["fecha_nacimiento"] = date(1990, 1, 1)  # ~36 años: fuera del rango validado
+    client = _client("executive", repo)
+    csrf = _csrf_token(client)
+    with patch("app.services.simulador_service.record_simulacion_event"):
+        response = client.post(f"/leads/{LEAD_ID_STR}/simulador", data=_valid_form(csrf))
+    assert response.status_code == 422
+    assert response.headers["content-type"].startswith("text/html")
+    assert "fuera del rango validado" in response.text
+    assert 'name="saldo_uf" value="3000"' in response.text
 
 
 def test_csrf_invalido_403() -> None:

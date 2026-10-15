@@ -17,6 +17,14 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
   - Evento funcional append-only en `tpi.auditoria` sin PII (`app/services/simulador_auditoria.py`).
   - Dependencia nueva: `reportlab==5.0.1`.
 
+### 🔄 Cambiado
+
+- **Ajustes de uso del CRM y del simulador** (SIM-UX-AJUSTES)
+  - Los errores de validación del formulario del simulador (p. ej. edad fuera de rango) se muestran en la misma pantalla, en un aviso arriba del formulario, conservando lo ingresado, con HTTP 422 y mensaje claro en español; ya no se responde con una pantalla de texto aparte.
+  - En el detalle del lead se elimina el botón antiguo «Abrir simulación» y queda solo «Abrir simulador» del panel nuevo (visible para `executive`, `ceo` y `cto`).
+  - Cabecera del CRM: «Volver al sitio» pasa a «Home» y «Salir» pasa a «Cerrar sesión».
+  - El CRM deja de llamarse «CRM Lite»: ahora se muestra «CRM» en títulos de página, cabecera, insignia, kickers, login y la app Streamlit.
+
 ---
 
 ## [0.2.0] - 2026-10-12
