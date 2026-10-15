@@ -48,5 +48,9 @@ Runtime autorizado: **Claude Code**. En otro runtime: STOP.
 - `update-environment` solo con `--environment-name` y `--version-label` aprobada.
 - Nunca: `--option-settings`, IAM, DNS, secretos, migraciones, borrar/recrear AV, retries de writes,
   cambiar codigo o tooling, reconstruir el candidate para "destrabar" infraestructura.
+- El guard rechaza por texto cualquier comando que contenga el nombre de una variable sensible
+  del proyecto (tambien dentro de un heredoc o de un payload de evidencia), aunque no leas su valor.
+  Escribe "variables sensibles" en evidencias y notas, nunca sus nombres (estan en
+  `harness/policies.yaml`; no los copies a ningun comando).
 - `AccessDenied` o estado ambiguo: STOP con evidencia.
 - LKG por observacion en preflight, nunca por timestamp.
