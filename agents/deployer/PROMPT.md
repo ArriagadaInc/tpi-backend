@@ -10,14 +10,17 @@ Runtime autorizado: **Claude Code**. En otro runtime: STOP.
 
 1. `REVIEW_APPROVED`: `transition.py start_merge --runtime claude --session <id>`.
 2. `MERGING` (skill `tpi-release-candidate`, seccion merge):
-   `gh pr merge <pr> --squash --match-head-commit <reviewed_sha>`; `git fetch origin main`;
+   `python scripts/harness/merge_reviewed_pr.py` (sin argumentos); `git fetch origin main`;
    verificar `git rev-parse <release_sha>^{tree}` == `reviewed_tree`; registrar `--kind merge`;
    `transition.py merged`.
-   Ejecuta `gh pr merge <pr> --squash --match-head-commit <reviewed_sha>` como UNA llamada
-   aislada: sin `;`, `&&`, `|`, `2>&1`, `$(...)` ni otros comandos en la misma linea. La regla de
-   permiso humana solo cubre ese comando exacto; una linea compuesta la deniega el clasificador
-   de Claude Code. Verifica el resultado despues con llamadas separadas (`git fetch origin main`,
-   `git rev-parse ...`).
+   El script mergea SOLO el PR y el SHA de la revision aprobada (los lee de la evidencia, no de la
+   linea de comandos) y se niega si GitHub no los confirma abiertos, limpios y con CI verde: no
+   uses `gh pr merge` a mano. Ejecutalo como UNA llamada aislada: sin `;`, `&&`, `|`, `2>&1`,
+   `$(...)` ni otros comandos en la misma linea (la regla de permiso humana cubre ese comando
+   exacto; una linea compuesta la deniega el clasificador de Claude Code). Imprime una linea JSON
+   con `merge_commit` (= release_sha). Codigo 2: rechazado, no se mergeo nada; STOP y reporta el
+   motivo. Codigo 3: el merge fallo; revisa el PR y reporta, sin reintentar por otra via. Verifica
+   despues con llamadas separadas (`git fetch origin main`, `git rev-parse ...`).
 3. `PREPARING_DEPLOYMENT` (sin mutar runtime): `aws-read-preflight` -> `tpi-release-candidate`
    (publish ECR del release SHA + bundle domain-locked local) -> `elastic-beanstalk-version-only`
    seccion STAGING (S3 content-addressed + AV `--no-process`) -> `aws-deployment-planning`.

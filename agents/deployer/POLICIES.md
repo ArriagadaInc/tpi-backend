@@ -4,7 +4,7 @@ Resumen legible. Fuente maquina: `harness/policies.yaml` (`roles.deployer`, `aws
 
 | Estado | AWS (via aws_guard) | Otras capacidades |
 | --- | --- | --- |
-| MERGING | Ninguno | `gh pr merge --squash --match-head-commit <reviewed_sha>` |
+| MERGING | Ninguno | `python scripts/harness/merge_reviewed_pr.py` (via normal; el guard sigue admitiendo `gh pr merge --squash --match-head-commit <reviewed_sha>`, que no se usa a mano) |
 | PREPARING_DEPLOYMENT | read + `s3api put-object` content-addressed + `create-application-version --no-process` | `gh workflow run publish-dev-ecr-images.yml`, build local en `.harness-release/` |
 | WAITING_HUMAN_APPROVAL | Ninguno | Ninguna (estado humano) |
 | DEPLOYING | read + `update-environment` a la version aprobada (1 intento) | — |
