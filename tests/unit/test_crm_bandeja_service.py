@@ -1,4 +1,4 @@
-"""Unit tests for CRM Lite board service behavior."""
+"""Unit tests for CRM board service behavior."""
 
 from __future__ import annotations
 

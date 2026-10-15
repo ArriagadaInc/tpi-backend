@@ -1,4 +1,4 @@
-"""Authentication routes for the CRM Lite web UX."""
+"""Authentication routes for the CRM web UX."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ def login_form(request: Request):
         "login.html",
         {
             "request": request,
-            "page_title": "Acceso CRM Lite",
+            "page_title": "Acceso CRM",
             "error": None,
             "provisional_mode": True,
         },
@@ -45,7 +45,7 @@ async def login_submit(request: Request):
             "login.html",
             {
                 "request": request,
-                "page_title": "Acceso CRM Lite",
+                "page_title": "Acceso CRM",
                 "error": error,
                 "provisional_mode": False,
             },
@@ -77,7 +77,7 @@ async def login_submit(request: Request):
         "login.html",
         {
             "request": request,
-            "page_title": "Acceso CRM Lite",
+            "page_title": "Acceso CRM",
             "error": error,
             "provisional_mode": False,
         },

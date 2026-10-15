@@ -1,4 +1,4 @@
-"""Unit tests for CRM Lite presentation helpers."""
+"""Unit tests for CRM presentation helpers."""
 
 from datetime import datetime
 

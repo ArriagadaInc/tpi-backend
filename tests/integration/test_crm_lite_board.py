@@ -1,4 +1,4 @@
-"""Integration tests for CRM Lite lead board queries."""
+"""Integration tests for CRM lead board queries."""
 
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
@@ -42,7 +42,7 @@ def test_crm_board_searches_newly_created_lead_and_keeps_existing_columns(servic
     request = RegistrarSolicitudRequest(
         persona=PersonaData(
             rut=rut,
-            nombre_completo="CRM Lite Test",
+            nombre_completo="CRM Test",
             email="crm.lite.test@example.com",
             telefono="+56911112222",
             fecha_nacimiento=date(1990, 1, 1),
@@ -52,7 +52,7 @@ def test_crm_board_searches_newly_created_lead_and_keeps_existing_columns(servic
             estado_civil_id=estado_civil_id,
             afp_id=afp_id,
             saldo_afp=Decimal("2500000"),
-            comentarios="Lead de prueba para CRM Lite",
+            comentarios="Lead de prueba para CRM",
         ),
         consentimientos=ConsentimientosData(
             acepta_terminos=True,
@@ -68,7 +68,7 @@ def test_crm_board_searches_newly_created_lead_and_keeps_existing_columns(servic
         assert any(row["id_lead"] == response.id_lead for row in result["solicitudes"])
         lead = next(row for row in result["solicitudes"] if row["id_lead"] == response.id_lead)
         assert lead["rut"] == rut
-        assert lead["nombre_completo"] == "CRM Lite Test"
+        assert lead["nombre_completo"] == "CRM Test"
         assert "saldo_afp" in lead
         assert "estado_lead" in lead
         assert "created_at" in lead
@@ -100,7 +100,7 @@ def test_crm_board_combines_afp_estado_and_date_filters(service):
     request = RegistrarSolicitudRequest(
         persona=PersonaData(
             rut=rut,
-            nombre_completo="CRM Lite Filter",
+            nombre_completo="CRM Filter",
             email="crm.lite.filter@example.com",
             telefono="+56933334444",
             fecha_nacimiento=date(1991, 1, 1),
@@ -110,7 +110,7 @@ def test_crm_board_combines_afp_estado_and_date_filters(service):
             estado_civil_id=estado_civil_id,
             afp_id=afp_id,
             saldo_afp=Decimal("3100000"),
-            comentarios="Filtro combinado CRM Lite",
+            comentarios="Filtro combinado CRM",
         ),
         consentimientos=ConsentimientosData(
             acepta_terminos=True,
@@ -121,9 +121,7 @@ def test_crm_board_combines_afp_estado_and_date_filters(service):
 
     response = service.registrar_solicitud(request)
     try:
-        by_name = service.get_crm_bandeja(
-            page=1, page_size=10, masked=False, search="CRM Lite Filter"
-        )
+        by_name = service.get_crm_bandeja(page=1, page_size=10, masked=False, search="CRM Filter")
         assert by_name["total"] == 1
 
         lead = by_name["solicitudes"][0]
@@ -175,7 +173,7 @@ def test_crm_board_date_filters_use_santiago_day_boundary(service):
     request = RegistrarSolicitudRequest(
         persona=PersonaData(
             rut=rut,
-            nombre_completo="CRM Lite TZ Boundary",
+            nombre_completo="CRM TZ Boundary",
             email="crm.lite.tz.boundary@example.com",
             telefono="+56944445555",
             fecha_nacimiento=date(1991, 1, 1),
@@ -265,7 +263,7 @@ def test_crm_estado_options_are_present_and_non_empty(service):
     request = RegistrarSolicitudRequest(
         persona=PersonaData(
             rut=rut,
-            nombre_completo="CRM Lite Estado Test",
+            nombre_completo="CRM Estado Test",
             email="crm.lite.estado@example.com",
             telefono="+56999998888",
             fecha_nacimiento=date(1992, 2, 2),
@@ -275,7 +273,7 @@ def test_crm_estado_options_are_present_and_non_empty(service):
             estado_civil_id=estado_civil_id,
             afp_id=afp_id,
             saldo_afp=Decimal("1500000"),
-            comentarios="Lead de prueba para estados CRM Lite",
+            comentarios="Lead de prueba para estados CRM",
         ),
         consentimientos=ConsentimientosData(
             acepta_terminos=True,

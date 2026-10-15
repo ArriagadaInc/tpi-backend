@@ -1,4 +1,4 @@
-"""H3.3.7 — tema claro y oscuro para CRM Lite.
+"""H3.3.7 — tema claro y oscuro para CRM.
 
 The theme is client-side only: ``app/web/static/js/theme.js`` sets
 ``<html data-theme="light|dark">`` from ``localStorage`` and ``app.css`` overrides

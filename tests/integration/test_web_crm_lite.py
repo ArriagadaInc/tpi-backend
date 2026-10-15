@@ -141,7 +141,7 @@ def test_web_board_shows_real_lead_and_paginates(
         assert "Buscar por nombre o RUT" not in detail.text
         assert "Mostrando" not in detail.text
         assert "Web CRM Integration" in detail.text
-        assert "Abrir simulación" in detail.text
+        assert "Abrir simulador" not in detail.text
         assert "Fecha de nacimiento" in detail.text or "Fecha solicitud" in detail.text
     finally:
         _cleanup(response.id_lead)

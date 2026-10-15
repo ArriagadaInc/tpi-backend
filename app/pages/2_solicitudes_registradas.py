@@ -1,4 +1,4 @@
-"""CRM Lite backoffice board for lead operations."""
+"""CRM backoffice board for lead operations."""
 
 from __future__ import annotations
 

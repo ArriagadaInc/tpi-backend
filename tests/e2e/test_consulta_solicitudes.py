@@ -1,4 +1,4 @@
-"""E2E tests for the CRM Lite lead board."""
+"""E2E tests for the CRM lead board."""
 
 from __future__ import annotations
 
