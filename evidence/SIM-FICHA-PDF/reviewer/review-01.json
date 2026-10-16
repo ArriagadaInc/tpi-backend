@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "SIM-FICHA-PDF",
+  "created_at": "2026-10-16T02:29:01Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610160226-reviewer-sup20621d",
+  "reviewed_sha": "f95c72c3cb0aaad759bef5f5f3e5fa8b738a47a2",
+  "reviewed_tree": "a24aecd015abe91bb6c788af3a8d5b6a64bec871",
+  "pr_number": 79,
+  "change_class": "A",
+  "ci": {
+    "run_id": 38839895140,
+    "head_sha": "f95c72c3cb0aaad759bef5f5f3e5fa8b738a47a2",
+    "conclusion": "success",
+    "jobs": {
+      "docker_build": "pass",
+      "lint_format": "pass",
+      "release_tooling_validation": "pass",
+      "security_audit": "pass",
+      "tests": "pass"
+    }
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "minor",
+      "file": "app/services/simulador_service.py",
+      "summary": "El Valor Futuro de la Opcion II se calcula sobre el Valor Actual de la pension aumentada (bloque izquierdo). La especificacion dice 'Valor Actual x 1,04^anios' sin precisar cual de los dos Valor Actual; la interpretacion es razonable y coincide con el ejemplo sintetico, pero es ambigua.",
+      "required_action": "Humano: confirmar en el smoke de AC-6 que la base del Valor Futuro coincide con la ficha de ejemplo."
+    },
+    {
+      "id": "F-2",
+      "severity": "info",
+      "file": "app/services/simulador_service.py",
+      "summary": "Con meses garantizados = 0 la Opcion I muestra Rescate Total 0,00 UF (formula de la especificacion aplicada literalmente).",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F-3",
+      "severity": "info",
+      "file": "tests/unit/test_sim_rv_pdf.py",
+      "summary": "AC-6 (smoke humano en AWS DEV) queda pendiente de verificacion humana.",
+      "required_action": "Humano: validar AC-6 tras el deploy."
+    }
+  ],
+  "checks": [
+    {
+      "name": "ci_green_exact_sha",
+      "result": "PASS"
+    },
+    {
+      "name": "pr_head_equals_delivered_sha",
+      "result": "PASS"
+    },
+    {
+      "name": "functional_compliance_with_spec",
+      "result": "PASS"
+    },
+    {
+      "name": "derived_calculations_ac2",
+      "result": "PASS"
+    },
+    {
+      "name": "real_pdf_generated_and_inspected_pymupdf",
+      "result": "PASS"
+    },
+    {
+      "name": "pdf_single_page_letter_landscape_792x612",
+      "result": "PASS"
+    },
+    {
+      "name": "pdf_no_links_generic_metadata_no_lead_pii",
+      "result": "PASS"
+    },
+    {
+      "name": "rvd_section_preserved",
+      "result": "PASS"
+    },
+    {
+      "name": "engine_and_auth_untouched",
+      "result": "PASS"
+    },
+    {
+      "name": "scope_no_unrelated_changes",
+      "result": "PASS"
+    },
+    {
+      "name": "no_secrets_in_diff",
+      "result": "PASS"
+    },
+    {
+      "name": "documentation_changelog_bitacora",
+      "result": "PASS"
+    },
+    {
+      "name": "coverage_85",
+      "result": "PASS"
+    },
+    {
+      "name": "local_pytest_pdf_and_web_29_passed",
+      "result": "PASS"
+    },
+    {
+      "name": "no_migrations_class_a",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "AC-6 depende de verificacion humana en AWS DEV.",
+    "Base del Valor Futuro de la Opcion II ambigua en la especificacion (F-1)."
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "SIM-FICHA-PDF",
+  "created_at": "2026-10-16T02:26:10Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610160213-developer-sup45a47f",
+  "head_sha": "f95c72c3cb0aaad759bef5f5f3e5fa8b738a47a2",
+  "branch": "harness/SIM-FICHA-PDF-ficha-pdf",
+  "pr_number": 79,
+  "change_class": "A",
+  "tests": {
+    "command": "Local (worktree, Python 3.13.13): pytest tests/unit/test_sim_rv_pdf.py tests/unit/test_sim_rv_web.py tests/unit/test_sim_rv_auditoria.py tests/unit/test_sim_rv_codigo_verificacion.py tests/unit/test_sim_rv_validacion.py tests/unit/test_sim_rv_ventana.py --no-cov (86 passed). CI PR #79 (Python 3.12 + PostgreSQL): pytest tests/ --cov=app --cov-fail-under=85 (PASS).",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "generar_pdf (app/services/simulador_service.py) usa landscape(letter) (792x612 pt, MediaBox [0 0 792 612]) con banda superior azul marino #0f243e (tratamiento Sr./Sra. + nombre del cliente, titulo 'ESTUDIO DE PENSIÓN' y fecha dd-mm-aaaa), fila de datos (FECHA DE NAC, CÓNYUGE si hay, T y valor UF destacado #b7dee8), tabla OPCIÓN I (Renta Vitalicia Inmediata + Rescate Total) y OPCIÓN II (Aumento Temporal de Pensión + Inflación Futura 4% + Rescate Total) cuando hay aumento temporal. Tests: test_pdf_es_carta_apaisada, test_ficha_opcion_i_simple, test_ficha_opcion_i_periodo_garantizado, test_ficha_opcion_ii_con_aumento_temporal. CI PR #79 verde."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "Cálculos derivados en app/services/simulador_service.py: _rescate_opcion_i (pensión x meses garantizados), _valor_actual (pensión x valor UF), _valor_futuro (Valor Actual x 1,04^años del aumento), _rescate_opcion_ii (aumentada x meses aumento + base x (garantía - aumento)) y _pension_aumentada. Verificados con datos sintéticos de la especificación §4: test_rescate_total_opcion_i (10x120=1200), test_valor_actual (10x20000=200000), test_valor_futuro (400000x1,04^3=449946), test_rescate_total_opcion_ii (20x36+10x204=2760), test_pension_aumentada."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "Pie con nombre del ejecutivo en negrita azul marino y 'Tu Pensión Inteligente', contacto corporativo en texto plano (Email/Web/Dirección, sin enlaces activos) y banda inferior azul marino con official-logo-on-dark.png (ancho 270 pt). Sin teléfono personal, sin RUT/correo/teléfono del lead, sin bloque PGU/BAC, sin fila 'RP (AFP)' y sin comparativa de varias opciones. Tests: test_ficha_pie_y_contacto, test_pdf_no_contiene_enlaces_ni_scripts (/URI, /JavaScript, /EmbeddedFile, /Annots, /AA ausentes). CI PR #79 verde."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "Se conservan: leyenda 'Estimación referencial no vinculante', versión del modelo (MODELO_VERSION), código de verificación, escape de marcado (_esc sin cambios), metadatos genéricos sin PII (title 'Estudio de pensión', author 'Tu Pensión Inteligente', subject 'Estimación referencial no vinculante'), ausencia de enlaces/scripts/adjuntos, nombre de archivo _simulacion_filename y headers Cache-Control no-store + X-Content-Type-Options nosniff (test_sim_rv_web.py::test_headers_pdf_y_auditoria), y evento de auditoría record_event. La renta temporal con RVD conserva su sección con la nueva apariencia (test_ficha_renta_temporal_rvd_conserva_seccion). Tests: test_leyenda_version_y_codigo_conservados, test_escape_de_marcado, test_nombre_adversarial_no_rompe_el_pdf, test_pdf_no_contiene_enlaces_ni_scripts."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "Motor intacto (app/simulador_pension/** sin cambios), autorización y CSRF sin cambios (app/auth/** sin cambios; 403 fuera de executive/ceo/cto y validación CSRF intactos en test_sim_rv_web.py). Cobertura total >= 85% verificada por CI (pytest --cov=app --cov-fail-under=85 PASS). Docs actualizados: CHANGELOG.md, docs/BITACORA.md, docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md (matriz de contenido) y docs/SIM_RV_V1_PENDIENTES.md (fuera de alcance §5). CI PR #79 verde."
+    },
+    {
+      "id": "AC-6",
+      "status": "pending_verification",
+      "evidence": "Smoke humano en AWS DEV post-deploy: el humano genera un PDF y lo compara con la ficha de ejemplo (apaisado, banda, tablas, pie y logo); se lee bien en pantalla y al imprimir, y no contiene RUT, correo ni teléfono del lead. requires_human_acceptance."
+    }
+  ],
+  "files_changed": [
+    "CHANGELOG.md",
+    "app/services/simulador_service.py",
+    "app/web/routes/simulador.py",
+    "docs/BITACORA.md",
+    "docs/SIM_RV_V1_PENDIENTES.md",
+    "docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md",
+    "tests/unit/test_sim_rv_pdf.py"
+  ],
+  "assumptions": [
+    "La ficha de ejemplo contiene datos de una persona real: no se copia al repositorio ni se usa en pruebas; las pruebas usan datos sintéticos (constraint de la tarea y docs/specs/SIM_FICHA_PDF_SPEC.md).",
+    "La fila de datos muestra 'CÓNYUGE: Sí' cuando el formulario trae cónyuge; la especificación §3b lista '«CÓNYUGE:» (solo si hay)' y no prescribe el valor exacto, por lo que se muestra la presencia.",
+    "La descripción del escenario solo aparece en la rama renta temporal + RVD (que conserva su sección); para Opción I/II la especificación §3 no incluye una línea de descripción de escenario, así que la ficha la omite por diseño.",
+    "Docker build y la cobertura total (>= 85%) se verifican en CI (el daemon de Docker y PostgreSQL no están disponibles en el runner local); bandit/pip-audit sí corrieron local.",
+    "El hallazgo bandit B406 (xml.sax.saxutils.escape) es un aviso preexistente de severidad Low y la función _esc no se modifica (constraint 'no cambiar el escape de marcado del PDF'); bandit con --severity-level medium --confidence-level medium pasa sin issues."
+  ],
+  "migrations_included": false
+}

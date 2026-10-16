@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "kind": "acceptance",
+  "task_id": "SIM-FICHA-PDF",
+  "created_at": "2026-10-16T13:12:30Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "decision": "accepted",
+  "criteria": [
+    {
+      "id": "AC-1",
+      "status": "accepted"
+    },
+    {
+      "id": "AC-3",
+      "status": "accepted"
+    },
+    {
+      "id": "AC-6",
+      "status": "accepted"
+    }
+  ],
+  "notes": ""
+}
