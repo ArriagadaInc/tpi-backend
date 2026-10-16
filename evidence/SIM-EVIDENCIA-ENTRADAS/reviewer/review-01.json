@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "SIM-EVIDENCIA-ENTRADAS",
+  "created_at": "2026-10-16T20:37:55Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610162036-reviewer-sup5ef538",
+  "reviewed_sha": "c657c0c79b01ae48e79c921d30b69c0a8076b42a",
+  "reviewed_tree": "dcf66c85ae78a98cee71606953d233d7a8c5faf8",
+  "pr_number": 83,
+  "ci": {
+    "run_id": 38962543497,
+    "head_sha": "c657c0c79b01ae48e79c921d30b69c0a8076b42a",
+    "conclusion": "success",
+    "jobs": {
+      "docker_build": "pass",
+      "lint_format": "pass",
+      "release_tooling_validation": "pass",
+      "security_audit": "pass",
+      "tests": "pass"
+    }
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "info",
+      "file": "app/services/simulador_auditoria.py",
+      "summary": "El detalle versionado (schema_version=1) incluye entradas, resultado y metadatos sin nombres, RUT, correo ni telefono; tamano acotado (max 4 hijos, test < 4 KB).",
+      "required_action": "ninguna"
+    }
+  ],
+  "checks": [
+    {
+      "name": "ci_green_exact_sha",
+      "result": "PASS"
+    },
+    {
+      "name": "scope_no_unrelated_changes_engine_auth_deps_untouched",
+      "result": "PASS"
+    },
+    {
+      "name": "fail_closed_insert_preserved",
+      "result": "PASS"
+    },
+    {
+      "name": "acceptance_criteria_1_to_5_covered_by_tests",
+      "result": "PASS"
+    },
+    {
+      "name": "no_pii_in_detalle_and_size_under_4kb",
+      "result": "PASS"
+    },
+    {
+      "name": "no_migrations_grants_class_a",
+      "result": "PASS"
+    },
+    {
+      "name": "documentation_changelog_bitacora_matrix",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "Se guardan fechas de nacimiento y composicion familiar en tpi.auditoria.detalle (solo escritura); politica de retencion pendiente de decision humana y documentada"
+  ],
+  "change_class": "A"
+}

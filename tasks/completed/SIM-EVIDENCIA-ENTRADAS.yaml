@@ -1,0 +1,96 @@
+schema_version: 1
+task:
+  id: SIM-EVIDENCIA-ENTRADAS
+  title: 'Simulador: guardar entradas y resultado como evidencia (solo escritura)'
+  objective: 'Guardar como evidencia, mas alla del PDF, las entradas y el resultado de cada simulacion
+    generada: se amplia el evento de auditoria append-only de la generacion del PDF (tpi.auditoria.detalle)
+    con los datos de la simulacion, sin cambiar el esquema y sin guardar nombres, RUT, correo ni telefono.'
+  source:
+    type: story
+    ref: Observaciones del humano sobre el simulador y el CRM (2026-10-15); definida en sesion interactiva
+      con Claude.
+  change_class: A
+  deploy_required: true
+  requires_human_acceptance: true
+  acceptance_criteria:
+  - id: AC-1
+    verification: automated
+    description: 'Cada PDF generado con exito registra, en el mismo evento append-only (accion simulacion_renta_vitalicia),
+      un detalle versionado (detalle.schema_version) con: ejecutivo (actor_subject y role), tipo_escenario,
+      version_modelo y codigo_verificacion; las entradas (sexo y fecha de nacimiento del causante, saldo_uf,
+      tasa_venta_pct, meses_garantizados, anios_diferidos, meses_aumento_temporal, pct_aumento_temporal,
+      valor_uf si se informo, y por cada beneficiario: parentesco, sexo, fecha de nacimiento, condicion
+      de invalidez y si es comun); y el resultado (pension_uf y, en renta temporal, renta_temporal_uf
+      y meses de diferimiento). El lead va en la columna id_lead.'
+  - id: AC-2
+    verification: automated
+    description: El detalle no contiene nombres de personas, RUT, correo ni telefono, ni el contenido
+      del PDF; las pruebas lo verifican con datos sinteticos que incluyen nombres con marcado y caracteres
+      especiales.
+  - id: AC-3
+    verification: automated
+    description: 'Las entradas guardadas bastan para reproducir el resultado: una prueba toma el detalle
+      de un evento, vuelve a calcular con el motor y obtiene la misma pension y el mismo codigo_verificacion.'
+  - id: AC-4
+    verification: automated
+    description: 'Si el INSERT falla, la generacion del PDF falla cerrada como hasta ahora; los intentos
+      no autorizados siguen sin generar evento; sin migracion, grant, vista ni constraint nueva (si hicieran
+      falta es BLOCKER: detenerse y escalar al humano).'
+  - id: AC-5
+    verification: both
+    description: 'Documentacion: la decision del humano del 2026-10-15 reemplaza el AC-10 de SIM-RV-V1
+      (''no se persiste ninguna entrada ni resultado''); la matriz de requisitos (AC-10 y AC-11), PENDIENTES
+      (#6) y MODELO lo reflejan, y documentan que la evidencia es de solo escritura, que la politica de
+      retencion queda pendiente y que mostrarla en la linea de tiempo es SIM-HISTORIAL-LINEA-TIEMPO; CHANGELOG
+      y BITACORA actualizados.'
+  - id: AC-6
+    verification: human
+    description: 'Smoke humano en AWS DEV: tras generar un PDF, una consulta de solo lectura (patron de
+      scripts/sql/inspect_*_readonly.sql, ejecutada por el humano) muestra el nuevo evento con las entradas
+      y el resultado y sin datos personales directos; los logs no contienen el detalle.'
+  constraints:
+  - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
+    desde ramas o worktrees antiguos.'
+  - 'Tarea unica; no mezclar otros cambios ni dejar alcance diferido sin documentarlo. Clase A (fast path
+    version-only): sin migraciones, grants, vistas, constraints ni infraestructura; si hicieran falta
+    es BLOCKER: detenerse y escalar al humano.'
+  - No modificar app/simulador_pension/** (motor), app/auth/**, dependencias ni lockfiles; no cambiar
+    la logica numerica, los rangos validados, la autorizacion (403 fuera de executive, ceo y cto) ni el
+    escape de marcado del PDF.
+  - No reducir la cobertura minima (85%).
+  - 'Seguir el patron de record_simulacion_event en app/services/simulador_auditoria.py (INSERT con el
+    grant vigente en tpi.auditoria). No tocar app/repositories/**: no esta en el alcance.'
+  - 'Datos personales: la fecha de nacimiento y la composicion familiar son datos personales; se guardan
+    solo en tpi.auditoria.detalle (solo escritura: la aplicacion no lo lee), sin nombres ni identificadores
+    directos. La politica de retencion queda pendiente de decision del humano y se documenta.'
+  - El detalle debe ser pequeno (menos de 4 KB) y con claves estables y versionadas.
+  dependencies: []
+  risk:
+    level: medium
+    notes: Se guardan datos personales minimos (fechas de nacimiento y composicion familiar) que SIM-RV-V1
+      decidio no persistir; mitigado con solo escritura, sin nombres ni identificadores y detalle versionado.
+  scope:
+    paths:
+    - app/services/**
+    - app/web/**
+    - tests/**
+    - CHANGELOG.md
+    - docs/BITACORA.md
+    - docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md
+    - docs/SIM_RV_V1_PENDIENTES.md
+    - docs/SIM_RV_V1_MODELO.md
+  status: closed
+closure:
+  closed_at: '2026-10-16T22:45:57Z'
+  final_state: DONE
+  evidence_dir: evidence/SIM-EVIDENCIA-ENTRADAS
+  release:
+    release_sha: a7859af73491a050b8c327cf21a0004acf995ae0
+    pr_number: 83
+    application_version: h3-sim-evidencia-entradas-a7859af-domainlocked-r1
+    bundle_sha256: 0a495da76209e6becde56b5036732a162a69238f68d26fd61a4d94fe8b18d9f2
+    lkg: h3-sim-rv-v1-ventana-5024922-domainlocked-r1
+    deployment: success
+    deployed_commit: a7859af73491a050b8c327cf21a0004acf995ae0
+    verification: PASS
+  rework_rounds: 0

@@ -22,6 +22,19 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-16 - Harness: tarea SIM-EVIDENCIA-ENTRADAS cerrada (DONE)
+
+- Titulo: Simulador: guardar entradas y resultado como evidencia (solo escritura)
+- Evidencia: `evidence/SIM-EVIDENCIA-ENTRADAS/` y `tasks/completed/SIM-EVIDENCIA-ENTRADAS.yaml`.
+- release_sha: `a7859af73491a050b8c327cf21a0004acf995ae0`
+- pr_number: `83`
+- application_version: `h3-sim-evidencia-entradas-a7859af-domainlocked-r1`
+- bundle_sha256: `0a495da76209e6becde56b5036732a162a69238f68d26fd61a4d94fe8b18d9f2`
+- lkg: `h3-sim-rv-v1-ventana-5024922-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `a7859af73491a050b8c327cf21a0004acf995ae0`
+- verification: `PASS`
+
 ### 2026-10-16 - SIM-EVIDENCIA-ENTRADAS: guardar entradas y resultado como evidencia (en desarrollo, DEVELOPING)
 
 - Titulo: Simulador: guardar entradas y resultado como evidencia (solo escritura).

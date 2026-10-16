@@ -6,16 +6,16 @@
 - Tarea: ninguna
 - Proximo paso: Humano elige tarea: python scripts/harness/approve.py activate --task <ID>
 - Ultima transicion: close (DONE -> IDLE)
-- Actualizado: 2026-10-16T20:09:34Z
+- Actualizado: 2026-10-16T22:46:02Z
 <!-- harness:projection:end -->
-- Ultima sesion archivada: progress/sessions/2026-10-16-SIM-RV-V1-VENTANA-closure.md
+- Ultima sesion archivada: progress/sessions/2026-10-16-SIM-EVIDENCIA-ENTRADAS-closure.md
 
 ## Estado reciente
-- DECISION (CANDIDATE_REVIEW, SIM-RV-V1-VENTANA, sesion claude-202610161725-reviewer-sup81c84b): APPROVED. Arbol 6d82620 == reviewed_tree, release en main, publish run 38937525741 success, digests ACTIVE con scan 0/0, bundle reconstruido sha256 c1fd91f2... identico, S3 checksum y AV coinciden, LKG h3-sim-ficha-pdf-dd6be12 sano con digests presentes, plan version-only. Evidencia candidate_review-01; `candidate_approve` a Human Gate (AC-5 humano pendiente tras el deploy).
-- DECISION (DEPLOYING, SIM-RV-V1-VENTANA, sesion claude-202610161806-deployer-supc6d01d): preflight PASS (cuenta 821656895812, env en LKG Ready/Green/Ok, AV candidata UNPROCESSED con key aprobada); un unico update-environment version-only a h3-sim-rv-v1-ventana-5024922-domainlocked-r1 aceptado, convergio en ~52 s a Ready/Green/Ok, eventos EB todos INFO; cadena VersionLabel -> AV -> S3 checksum (== bundle c1fd91f2...) verificada. Evidencia deployment-01; `deploy_succeeded` a VERIFYING (conteos de logs, smoke y AC-5 humano pendientes).
-- DECISION (VERIFYING, SIM-RV-V1-VENTANA, sesion claude-202610161806-deployer-supc6d01d): `deploy_succeeded` registrado; verification-01 PASS (environment Ready/Green/Ok en la version aprobada, eventos INFO, smoke HTTP 6/6 PASS, conteos de logs 0 en los 8 patrones). PENDIENTE HUMANO (AC-5, y confirmacion de AC-2): un ejecutivo genera un PDF en DEV y ve el aviso de valores referenciales en pantalla y PDF, sin advertencia de ventana vencida; un rol no autorizado recibe 403; logs sin PII ni contenido del PDF. Luego el humano ejecuta `python scripts/harness/approve.py accept --decision accept --criteria AC-2,AC-5`; despues el Deployer registra la verificacion final y `verified`.
-- DECISION (VERIFYING, SIM-RV-V1-VENTANA, sesion claude-202610162006-deployer-supe05b07): aceptacion humana registrada (acceptance-01: AC-2, AC-4, AC-5). Re-verificacion PASS: environment Ready/Green/Ok en la version aprobada sin updates posteriores, eventos INFO, smoke HTTP PASS, conteos de logs 0 en los 8 patrones. Evidencia verification-02; `verified`.
-- 2026-10-16: Tarea SIM-RV-V1-VENTANA cerrada; resumen en tasks/completed/SIM-RV-V1-VENTANA.yaml
+- DECISION (CANDIDATE_REVIEW, SIM-EVIDENCIA-ENTRADAS, sesion claude-202610162137-reviewer-sup39a4b3): candidate APPROVED. Arbol a7859af == reviewed_tree dcf66c8; publish run 38964107386 success para el SHA; digests app 6bcc72a3 / caddy 75d48ea4 ACTIVE, scan 0/0; bundle reconstruido sha256 0a495da7 identico; S3 ChecksumSHA256 y AV SourceBundle coinciden; LKG sano con digests presentes; plan version-only, rollback unico al LKG. Sin dry-run (no permitido en candidate_read). Evidencia candidate_review-01.
+- DECISION (DEPLOYING, SIM-EVIDENCIA-ENTRADAS, sesion claude-202610162143-deployer-supacfe99): preflight PASS (cuenta/region, env Ready/Green/Ok en el LKG, AV candidata con SourceBundle aprobado). Un unico update-environment version-only a h3-sim-evidencia-entradas-a7859af-domainlocked-r1 (aceptado 21:44:36Z, completado 21:45:27Z, sin reintentos ni option settings). Final Ready/Green/Ok con VersionLabel exacta; cadena de identidad VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 coincide con approval-01. Sin rollback. Evidencia deployment-01; AC-6 (smoke humano) pendiente para VERIFYING.
+- DECISION (VERIFYING, SIM-EVIDENCIA-ENTRADAS, sesion claude-202610162143-deployer-supacfe99): env Ready/Green/Ok con la VersionLabel exacta; eventos EB todos INFO; smoke HTTP 7/7 PASS (200 en publico/login/catalogs/css; 307 -> /login en leads y simulador anonimos); conteos de logs 0 en los 8 patrones. Evidencia verification-01. NO se emite `verified`: queda pendiente el criterio humano AC-6.
+- DECISION (VERIFYING, SIM-EVIDENCIA-ENTRADAS, sesion claude-202610162242-deployer-sup2d1b77): el humano acepto AC-5 y AC-6 (acceptance-01, 22:42:24Z). Re-observacion: env Ready/Green/Ok en la VersionLabel exacta, eventos EB todos INFO, smoke 7/7 PASS (simulador anonimo verificado en /leads/1/simulador: 307 -> /login), conteos de logs 0 en los 8 patrones desde el cutover. Evidencia verification-02; se emite `verified`.
+- 2026-10-16: Tarea SIM-EVIDENCIA-ENTRADAS cerrada; resumen en tasks/completed/SIM-EVIDENCIA-ENTRADAS.yaml
 
 ## Bloqueos
 - Ninguno.
