@@ -87,6 +87,8 @@ Total: 435/435 dentro de ±1 UF; 335 exactos a 2 decimales.
   catálogo que cambia con el tiempo: 2,63% el 13/10/2026, 2,88% antes).
 * Renta temporal con capital entre ~3.000 y ~25.000 UF, diferimiento de 6+ años y `Prima/S` bajo: el error llega a ~0,16 UF.
 * Ventana de fechas validada: 15-oct-2025 a 13-oct-2026 (el propio portal solo acepta fechas hasta hoy y hasta un año atrás).
-  Edades del causante cubiertas: individual 60–100, con cónyuge 60–92, con hijos 62–92, renta temporal 59–88; cónyuge 46–96;
+  Desde `SIM-RV-V1-VENTANA` (decisión del humano 2026-10-14) la ventana queda abierta: la simulación se genera para cualquier fecha
+  con aviso de valores referenciales; el motor conserva `VENTANA_VALIDADA` y un `warnings.warn` informativo que no llega a pantalla
+  ni al PDF. Edades del causante cubiertas: individual 60–100, con cónyuge 60–92, con hijos 62–92, renta temporal 59–88; cónyuge 46–96;
   hijos 0–41; saldo 500–100.000 UF (renta temporal desde 1.000); tasa 0,5–7,5% (8% en renta temporal); garantía hasta 480 meses;
   aumento hasta 600 meses y 100%; diferimiento de 1 a 10 años. Fuera de esos rangos el motor extrapola sin evidencia.

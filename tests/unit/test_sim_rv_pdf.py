@@ -62,7 +62,6 @@ def _pdf(**kwargs: object) -> bytes:
         "meses_aumento_temporal": 0,
         "porcentaje_aumento_temporal": 0.0,
         "anios_diferidos": 0,
-        "advertencia_ventana": False,
         "codigo": "0123456789ab",
     }
     base.update(kwargs)

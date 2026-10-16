@@ -197,6 +197,12 @@ def test_formulario_precarga_sexo_y_fecha() -> None:
     assert "15/01/1960" in body
 
 
+def test_formulario_muestra_aviso_referencial_permanente() -> None:
+    body = _client("executive").get(f"/leads/{LEAD_ID_STR}/simulador").text
+    assert "valores referenciales (no vinculantes)" in body
+    assert "ventana de validación" not in body
+
+
 # --- Headers y entrega efímera (AC-9) -----------------------------------------
 
 

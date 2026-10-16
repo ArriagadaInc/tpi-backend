@@ -22,6 +22,29 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-16 - SIM-RV-V1-VENTANA: ventana de validacion abierta con aviso de valores referenciales (en desarrollo, DEVELOPING)
+
+- Titulo: Simulador RV: ventana de validacion abierta, con aviso de valores referenciales.
+- Clase A (fast path, solo aplicacion): sin migraciones, grants, vistas, constraints ni infraestructura.
+- Decision del humano (2026-10-14): la ventana validada del simulador queda abierta; ya no bloquea ni advierte por fecha y solo se
+  mantiene el aviso de que los valores son referenciales (no vinculantes).
+- Cambios:
+  - `app/services/simulador_service.py`: se eliminan `clasificar_ventana` y `VENTANA_ADVERTENCIA_DIAS`; `generar_pdf` pierde el
+    parametro `advertencia_ventana` y su parrafo, y en la leyenda se agrega la seccion «Supuestos y advertencias» con el aviso
+    permanente de valores referenciales (no vinculantes).
+  - `app/web/routes/simulador.py`: se eliminan las lineas que usaban `clasificar_ventana` y el 422 por vencimiento de la ventana;
+    el contexto del formulario ya no expone `advertencia_ventana`.
+  - `app/web/templates/simulador.html`: el bloque condicional de aviso de ventana vencida se reemplaza por un aviso permanente de
+    valores referenciales (no vinculantes).
+  - `tests/unit/test_sim_rv_ventana.py` reemplazado por pruebas de que cualquier fecha genera y de que el aviso referencial esta en
+    el PDF; `tests/unit/test_sim_rv_web.py` y `tests/unit/test_sim_rv_pdf.py` ajustados al nuevo contrato.
+  - `docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md` (AC-6 y matriz de contenido del PDF), `docs/SIM_RV_V1_PENDIENTES.md` (§1 y #1) y
+    `docs/SIM_RV_V1_MODELO.md` (§5) reflejan la decision del humano; `CHANGELOG.md` actualizado.
+- No cambia el motor `app/simulador_pension/**` (conserva `VENTANA_VALIDADA` y su `warnings.warn` informativo) ni el alcance
+  validado de la V1 (435/435 casos dentro de ±1 UF, rangos por escenario, autorizacion, CSRF, escape de marcado, headers del PDF
+  y auditoria sin PII).
+- Siguiente paso: correr gates de calidad, abrir/actualizar PR y `submit_for_review`.
+
 ### 2026-10-16 - Harness: tarea SIM-FICHA-PDF cerrada (DONE)
 
 - Titulo: Simulador: ficha PDF con el formato 'Estudio de pension' de TPI

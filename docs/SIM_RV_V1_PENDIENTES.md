@@ -15,7 +15,9 @@ La V1 incluye **solo lo validado**; todo lo demás está aquí, con su estado, l
 
 Rangos realmente cubiertos (fuera de ellos el motor extrapola sin evidencia): causante 60–100 años (con cónyuge 60–92, con hijos
 62–92, renta temporal 59–88); cónyuge 46–96; hijos 0–41; saldo 500–100.000 UF (renta temporal desde 1.000); tasa de venta 0,5–7,5%
-(8% en renta temporal); garantía hasta 480 meses; aumento hasta 600 meses y 100%; fechas de simulación 15-oct-2025 a 13-oct-2026.
+(8% en renta temporal); garantía hasta 480 meses; aumento hasta 600 meses y 100%; fechas de simulación validadas 15-oct-2025 a
+13-oct-2026 (desde SIM-RV-V1-VENTANA la ventana queda abierta por decisión del humano: se genera para cualquier fecha con aviso de
+valores referenciales).
 
 ## 2. Fuera de la V1: qué falta y cómo retomarlo
 
@@ -23,7 +25,7 @@ Prioridad sugerida: A (alto valor comercial), B (medio), C (bajo o depende de te
 
 | # | Pendiente | Estado hoy | Qué se necesita para retomarlo | Prio. |
 |---|---|---|---|---|
-| 1 | **Revalidación de la ventana de fechas** | Validado hasta el 13-oct-2026. El portal solo acepta fechas hasta hoy y un año atrás, así que la ventana se vence sola. | Campaña canaria periódica (≥ 30 casos ciegos, ver §3) y actualizar `VENTANA_VALIDADA`. Es **precondición de cada release** y debe repetirse (sugerido: mensual). | A |
+| 1 | **Revalidación periódica de la ventana de fechas (recomendable, ya no bloqueante)** | Validado hasta el 13-oct-2026. Desde `SIM-RV-V1-VENTANA` (decisión del humano 2026-10-14) la ventana queda abierta: la simulación se genera para cualquier fecha con aviso de valores referenciales; el motor conserva `VENTANA_VALIDADA` y un `warnings.warn` informativo que no llega a pantalla ni al PDF. | Campaña canaria periódica (≥ 30 casos ciegos, ver §3) y actualizar `VENTANA_VALIDADA`. Ya no es precondición de cada release; se recomienda repetirla (sugerido: mensual) para acotar la extrapolación fuera del periodo validado. | A |
 | 2 | **Tasa de venta administrada por el backoffice** | V1: la ingresa el ejecutivo en el formulario. | Tabla `tpi.tasas_venta` (tipo de pensión, vigencia, tasa, autor) = migración clase D, bloqueada en AWS (decisión humana), más pantalla de administración y auditoría. Hasta entonces la tasa es un dato de entrada. | A |
 | 3 | **Bono de reconocimiento** | El portal devuelve error de servidor (`NullReference`) en toda consulta con bono > 0: 19 intentos con montos, fechas, sexos, edades, tipos de pensión y tasas distintos. No hay un solo valor de cesión observado. | Una fuente externa: Excel de la aseguradora, tablas de valor de cesión de la Superintendencia de Pensiones o un ejemplo válido de otro simulador; o que Penta corrija el error. Sin eso no se puede modelar. | A |
 | 4 | **Vejez anticipada** | Un solo caso de control (idéntico a vejez edad). La API del paquete avisa. | Campaña ciega de ≥ 24 casos con causantes en edades anticipadas (mujeres bajo 60, hombres bajo 65). | B |
