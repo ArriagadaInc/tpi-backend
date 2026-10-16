@@ -36,6 +36,19 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Fuera de alcance documentado (no se inventa): fila «RP (AFP)», bloque «PGU / BAC / TOTAL», comparativa de varias opciones, teléfono personal del ejecutivo, estado civil y renta temporal con RVD (ver `docs/SIM_RV_V1_PENDIENTES.md` §5).
 - Siguiente paso: correr gates de calidad, abrir/actualizar PR y `submit_for_review`.
 
+### 2026-10-16 - Harness: tarea SIM-UX-AJUSTES cerrada (DONE)
+
+- Titulo: CRM y simulador: aviso de edad en pantalla, navegacion y nombre sin 'Lite'
+- Evidencia: `evidence/SIM-UX-AJUSTES/` y `tasks/completed/SIM-UX-AJUSTES.yaml`.
+- release_sha: `1f5050537e44d631c685dd78e7277932284c81fa`
+- pr_number: `75`
+- application_version: `h3-sim-ux-ajustes-1f50505-domainlocked-r1`
+- bundle_sha256: `82cfe13688bdad7614501b93c3bdc7d10693eee920b4788da22795e2c46da555`
+- lkg: `h3-sim-rv-v1-1308441-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `1f5050537e44d631c685dd78e7277932284c81fa`
+- verification: `PASS`
+
 ### 2026-10-15 - SIM-UX-AJUSTES: aviso de edad en pantalla, navegacion y nombre sin 'Lite' (en desarrollo, DEVELOPING)
 
 - Titulo: CRM y simulador: aviso de edad en pantalla, navegacion y nombre sin 'Lite'.

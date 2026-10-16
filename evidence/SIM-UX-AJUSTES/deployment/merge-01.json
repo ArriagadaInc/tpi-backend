@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "SIM-UX-AJUSTES",
+  "created_at": "2026-10-15T20:10:50Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610152009-deployer-supb512e5",
+  "pr_number": 75,
+  "pr_url": "https://github.com/ArriagadaInc/tpi-backend/pull/75",
+  "pr_state_after_merge": "MERGED",
+  "reviewed_sha": "01b8d50c684cdb287063de6c36ffc7e11e73051b",
+  "reviewed_tree": "1c648e6323fe7c7a76fd8cc16e5df9a5fbd802e4",
+  "release_sha": "1f5050537e44d631c685dd78e7277932284c81fa",
+  "release_tree": "1c648e6323fe7c7a76fd8cc16e5df9a5fbd802e4",
+  "main_parent_sha": "0c47fa5e9ed95a56091b6ac6ec57fb02872bcdb0",
+  "main_before_merge": "0c47fa5e9ed95a56091b6ac6ec57fb02872bcdb0",
+  "main_after_merge": "1f5050537e44d631c685dd78e7277932284c81fa",
+  "method": "squash",
+  "match_head_commit_used": true,
+  "result": "PASS",
+  "change_class": "A",
+  "deploy_required": true,
+  "fast_path": true,
+  "gh_pr_merge_command": "python scripts/harness/merge_reviewed_pr.py",
+  "tree_equivalence": {
+    "reviewed_tree": "1c648e6323fe7c7a76fd8cc16e5df9a5fbd802e4",
+    "release_tree": "1c648e6323fe7c7a76fd8cc16e5df9a5fbd802e4",
+    "equal": true,
+    "verification": "git rev-parse origin/main^{tree} == reviewed_tree tras git fetch origin main; parent unico 0c47fa5."
+  },
+  "references": {
+    "developer_evidence": "evidence/SIM-UX-AJUSTES/developer/developer-01.json",
+    "review_evidence": "evidence/SIM-UX-AJUSTES/reviewer/review-01.json"
+  },
+  "ci_pr": {
+    "run_id": 38798233762,
+    "sha": "01b8d50c684cdb287063de6c36ffc7e11e73051b",
+    "conclusion": "success"
+  },
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "1c648e6 == 1c648e6."
+    },
+    {
+      "name": "merge_not_repeated",
+      "result": "PASS",
+      "note": "una sola ejecucion de merge_reviewed_pr.py; already_merged=false."
+    }
+  ],
+  "cloud_access": "ninguno (MERGING)"
+}

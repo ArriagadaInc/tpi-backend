@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "SIM-UX-AJUSTES",
+  "created_at": "2026-10-15T20:08:58Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610152007-reviewer-sup0721c6",
+  "reviewed_sha": "01b8d50c684cdb287063de6c36ffc7e11e73051b",
+  "reviewed_tree": "1c648e6323fe7c7a76fd8cc16e5df9a5fbd802e4",
+  "pr_number": 75,
+  "change_class": "A",
+  "ci": {
+    "run_id": 38798233762,
+    "head_sha": "01b8d50c684cdb287063de6c36ffc7e11e73051b",
+    "conclusion": "success",
+    "jobs": {
+      "docker_build": "pass",
+      "lint_format": "pass",
+      "release_tooling_validation": "pass",
+      "security_audit": "pass",
+      "tests": "pass"
+    }
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "info",
+      "file": "app/web/routes/leads.py",
+      "summary": "El contexto de la bandeja de leads sigue exponiendo simulator_url, sin uso en plantillas; es inocuo y la constraint pide conservar la configuracion.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F-2",
+      "severity": "info",
+      "file": "harness/state.json",
+      "summary": "start_review quedo registrado con session_id malformado 'claude-202610151EOF'; esta revision se registra con la sesion claude-202610152007-reviewer-sup0721c6, distinta de la del Developer.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F-3",
+      "severity": "info",
+      "file": "app/web/templates/simulador.html",
+      "summary": "AC-6 (smoke humano en AWS DEV) queda pendiente de verificacion humana.",
+      "required_action": "Humano: validar AC-6 tras el deploy."
+    }
+  ],
+  "checks": [
+    {
+      "name": "ci_green_exact_sha",
+      "result": "PASS"
+    },
+    {
+      "name": "pr_head_equals_delivered_sha",
+      "result": "PASS"
+    },
+    {
+      "name": "functional_compliance",
+      "result": "PASS"
+    },
+    {
+      "name": "layering",
+      "result": "PASS"
+    },
+    {
+      "name": "maintainability",
+      "result": "PASS"
+    },
+    {
+      "name": "compatibility",
+      "result": "PASS"
+    },
+    {
+      "name": "scope_no_unrelated_changes",
+      "result": "PASS"
+    },
+    {
+      "name": "documentation",
+      "result": "PASS"
+    },
+    {
+      "name": "pii_server_side",
+      "result": "PASS"
+    },
+    {
+      "name": "no_pii_in_html_for_restricted_roles",
+      "result": "PASS"
+    },
+    {
+      "name": "csrf_and_session",
+      "result": "PASS"
+    },
+    {
+      "name": "no_secrets_in_diff",
+      "result": "PASS"
+    },
+    {
+      "name": "safe_logging",
+      "result": "PASS"
+    },
+    {
+      "name": "authz_fail_closed",
+      "result": "PASS"
+    },
+    {
+      "name": "coverage_85",
+      "result": "PASS"
+    },
+    {
+      "name": "tests_cover_acceptance_criteria",
+      "result": "PASS"
+    },
+    {
+      "name": "tests_validate_behavior_not_coverage",
+      "result": "PASS"
+    },
+    {
+      "name": "no_skipped_without_cause",
+      "result": "PASS"
+    },
+    {
+      "name": "crm_lite_absent_in_app_and_tests",
+      "result": "PASS"
+    },
+    {
+      "name": "local_pytest_253_passed_unit_and_security",
+      "result": "PASS"
+    },
+    {
+      "name": "no_migrations_class_a",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "Autoescape Jinja activo por defecto en Jinja2Templates: los valores reinyectados en atributos value quedan escapados.",
+    "AC-6 depende de verificacion humana en AWS DEV."
+  ]
+}
