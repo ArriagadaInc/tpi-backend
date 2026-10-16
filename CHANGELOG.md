@@ -25,6 +25,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
   - Cabecera del CRM: «Volver al sitio» pasa a «Home» y «Salir» pasa a «Cerrar sesión».
   - El CRM deja de llamarse «CRM Lite»: ahora se muestra «CRM» en títulos de página, cabecera, insignia, kickers, login y la app Streamlit.
 
+- **Ficha PDF «Estudio de pensión»** (SIM-FICHA-PDF)
+  - El PDF del simulador pasa a carta apaisada (792 × 612 pt) con el formato de la ficha «Estudio de pensión» de TPI: banda azul marino `#0f243e` con tratamiento y nombre del cliente, título «ESTUDIO DE PENSIÓN» y fecha; fila de datos (fecha de nacimiento, cónyuge, tasa de venta y valor UF); tablas de «OPCIÓN I» (Renta Vitalicia Inmediata + Rescate Total) y «OPCIÓN II» (Aumento Temporal de Pensión + Inflación Futura 4% + Rescate Total) cuando hay aumento temporal; pie con el nombre del ejecutivo y el contacto corporativo en texto plano; y banda inferior azul marino con el logo oficial (`official-logo-on-dark.png`).
+  - Cálculos derivados verificados con datos sintéticos: Rescate Total = pensión × meses garantizados; `$` Valor Actual = pensión × valor UF; Valor Futuro = Valor Actual × 1,04^años del aumento; Rescate Total de la Opción II = pensión aumentada × meses del aumento + pensión base × (meses garantizados − meses del aumento).
+  - Se conservan la leyenda «Estimación referencial no vinculante», la versión del modelo, el código de verificación, el escape de marcado, los metadatos genéricos sin PII y la ausencia de RUT, correo y teléfono del lead; la renta temporal con RVD conserva su sección con la nueva apariencia.
+
 ---
 
 ## [0.2.0] - 2026-10-12

@@ -183,44 +183,6 @@ def _simulacion_filename(now: datetime) -> str:
     return f"simulacion_rv_{now.strftime('%Y%m%d_%H%M%S')}.pdf"
 
 
-def _parametros_pdf(
-    *,
-    form: SimuladorForm,
-    causante: Persona,
-    edad_causante: int,
-) -> list[tuple[str, str]]:
-    parametros: list[tuple[str, str]] = [
-        ("Saldo en UF", f"{form.saldo_uf:,.2f}".replace(",", ".")),
-        ("Tasa de venta", f"{form.tasa_venta_pct:.2f}%"),
-    ]
-    if form.valor_uf is not None:
-        parametros.append(("Valor UF de referencia (CLP)", f"{form.valor_uf:.2f}"))
-    parametros.append(("Causante", f"{causante.sexo}, {edad_causante} años"))
-    if form.conyuge is not None:
-        parametros.append(
-            ("Cónyuge", f"{form.conyuge.sexo}, {form.conyuge.nacimiento.isoformat()}")
-        )
-    for i, hijo in enumerate(form.hijos, 1):
-        invalidez = {
-            "no": "sin invalidez",
-            "parcial": "invalidez parcial",
-            "total": "invalidez total",
-        }[hijo.invalidez]
-        comun = "común" if hijo.comun else "no común"
-        parametros.append(
-            (f"Hijo {i}", f"{hijo.sexo}, {hijo.nacimiento.isoformat()}, {comun}, {invalidez}")
-        )
-    if form.meses_garantizados:
-        parametros.append(("Garantía (meses)", str(form.meses_garantizados)))
-    if form.meses_aumento_temporal:
-        parametros.append(("Aumento temporal", f"{form.meses_aumento_temporal} meses"))
-        parametros.append(("Porcentaje de aumento", f"{form.porcentaje_aumento_temporal:.2f}%"))
-    if form.anios_diferidos:
-        parametros.append(("Años de diferimiento", str(form.anios_diferidos)))
-        parametros.append(("Relación RVD/RT", f"{form.porcentaje_rvd:.0f}%"))
-    return parametros
-
-
 def _parse_simulador_form(raw: Mapping[str, Any]) -> SimuladorForm:
     data: dict[str, Any] = {
         "saldo_uf": raw.get("saldo_uf"),
@@ -448,23 +410,24 @@ async def simulador_generar(request: Request, lead_id: str):
         porcentaje_rvd=simulador_form.porcentaje_rvd,
     )
 
-    edad_causante = (fecha_simulacion.year - causante.nacimiento.year) - (
-        (fecha_simulacion.month, fecha_simulacion.day)
-        < (causante.nacimiento.month, causante.nacimiento.day)
-    )
     now = datetime.now(CRM_TZ)
     try:
         pdf = generar_pdf(
             fecha_hora=now,
             ejecutivo=user.display_name,
             lead_nombre=str(lead.get("nombre_completo") or ""),
+            sexo_causante=causante.sexo,
+            causante_nacimiento=causante.nacimiento,
+            tiene_conyuge=conyuge is not None,
             escenario=escenario,
-            parametros=_parametros_pdf(
-                form=simulador_form, causante=causante, edad_causante=edad_causante
-            ),
             resultado=resultado,
             tasa_venta_pct=simulador_form.tasa_venta_pct,
             valor_uf=simulador_form.valor_uf,
+            saldo_uf=simulador_form.saldo_uf,
+            meses_garantizados=simulador_form.meses_garantizados,
+            meses_aumento_temporal=simulador_form.meses_aumento_temporal,
+            porcentaje_aumento_temporal=simulador_form.porcentaje_aumento_temporal,
+            anios_diferidos=simulador_form.anios_diferidos,
             advertencia_ventana=estado_ventana == "advertencia",
             codigo=codigo,
         )
