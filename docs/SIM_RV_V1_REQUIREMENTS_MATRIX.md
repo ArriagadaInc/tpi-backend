@@ -40,26 +40,25 @@ contenido del PDF están en las secciones finales.
 | AC-18 | Campaña canaria de revalidación (≥30 casos ciegos) antes del release | — | — | human (evidencia de revalidación) |
 | AC-19 | Smoke humano en AWS DEV (3 escenarios + 403 + PDF legible + sin PII en logs) | — | — | human (evidencia de smoke) |
 
-## 3. Matriz de contenido del PDF (AC-7)
+## 3. Matriz de contenido del PDF (AC-7 de SIM-RV-V1, con el formato de `SIM-FICHA-PDF`)
+
+Desde `SIM-FICHA-PDF` el PDF es la ficha «Estudio de pensión» (carta apaisada 792 × 612 pt, diseño en
+`docs/specs/SIM_FICHA_PDF_SPEC.md`). El contenido, de arriba a abajo:
 
 | # | Elemento | Origen | PII |
 |---|---|---|---|
-| 1 | Logo oficial local | `app/web/static/img/official-logo-on-light.png` | no |
-| 2 | Título "Simulación referencial de pensión" | literal | no |
-| 3 | Fecha y hora (America/Santiago) | servidor | no |
-| 4 | Ejecutivo | `AuthenticatedUser.display_name` | no (nombre funcional) |
-| 5 | Nombre del lead | `lead.nombre_completo` | **sí** (permitido por matriz; sin RUT/correo/teléfono) |
-| 6 | Parámetros ingresados | formulario | parcial (nombres de personas) |
-| 7 | Descripción del escenario | clasificador | no |
-| 8 | Tasa de venta usada | formulario | no |
-| 9 | Resultados (pensión UF; RT y meses si diferida; equivalente CLP si valor UF) | motor | no |
-| 10 | Supuestos y advertencias | literal | no |
-| 11 | Leyenda "estimación referencial no vinculante" | literal | no |
-| 12 | Versión del modelo | `app.simulador_pension.__version__` | no |
-| 13 | Código de verificación | `codigo_verificacion()` | no |
-| 14 | Paginación | reportlab | no |
+| 1 | Banda superior azul marino `#0f243e`: tratamiento (`Sr.`/`Sra.`) + nombre del cliente, título «ESTUDIO DE PENSIÓN» y fecha de generación (dd-mm-aaaa) | `lead.nombre_completo`, sexo del causante y servidor | nombre **sí** (permitido; sin RUT/correo/teléfono) |
+| 2 | Fila de datos con borde: «FECHA DE NAC», «CÓNYUGE» (solo si hay), «T» (tasa de venta) y celda destacada con el valor UF (solo si se informó) | lead y formulario | fecha de nacimiento (dato del causante); sin RUT/correo/teléfono |
+| 3 | «OPCIÓN I»: tabla «Renta Vitalicia Inmediata» + «Rescate Total» (Capital, T, Años, `[UF]`, `[$]Valor Actual`, flecha `>>>>`, rescate en UF) | motor + formulario | no |
+| 4 | «OPCIÓN II» (solo con aumento temporal): «Aumento Temporal de Pensión» + «Renta Vitalicia Inmediata» («Sin Excedente», «Inflación Futura 4%», «Rescate Total») | motor + formulario | no |
+| 5 | Pie: nombre del ejecutivo y contacto corporativo en texto plano (correo, sitio, dirección), sin enlaces activos | `AuthenticatedUser.display_name` + literal | no (nombre funcional) |
+| 6 | Banda inferior azul marino con el logo oficial | `app/web/static/img/official-logo-on-dark.png` | no |
+| 7 | Leyenda «Estimación referencial no vinculante», versión del modelo y código de verificación | literal, `app.simulador_pension.__version__`, `codigo_verificacion()` | no |
+| 8 | Paginación (una página) | reportlab | no |
 
-**Excluido del PDF:** RUT, correo, teléfono (ni siquiera enmascarados), saldo del lead, enlaces activos, scripts, adjuntos.
+**Excluido del PDF:** RUT, correo y teléfono del lead (ni siquiera enmascarados), saldo del lead, enlaces
+activos, scripts, adjuntos, la fila «RP (AFP)», el bloque «PGU / BAC / TOTAL», el estado civil, el teléfono
+personal del ejecutivo y la comparativa de varias opciones (ver `docs/SIM_RV_V1_PENDIENTES.md`).
 
 ## 4. Tabla de rangos validados (AC-4/AC-13)
 

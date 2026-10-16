@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import math
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -16,10 +17,9 @@ from xml.sax.saxutils import escape
 from zoneinfo import ZoneInfo
 
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.lib.pagesizes import landscape, letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import mm
 from reportlab.platypus import (
     Image,
     Paragraph,
@@ -55,11 +55,22 @@ EDAD_CAUSANTE_RENTA_TEMPORAL = (59, 88)
 EDAD_CONYUGE = (46, 96)
 EDAD_HIJO = (0, 41)
 
-_LOGO_PATH = (
-    Path(__file__).resolve().parent.parent / "web" / "static" / "img" / "official-logo-on-light.png"
+_LOGO_DARK_PATH = (
+    Path(__file__).resolve().parent.parent / "web" / "static" / "img" / "official-logo-on-dark.png"
 )
 
-_A4_WIDTH, _A4_HEIGHT = A4
+# Carta apaisada (792 × 612 pt) con márgenes de 20 pt (ver docs/specs/SIM_FICHA_PDF_SPEC.md §1).
+_PAGE_W, _PAGE_H = landscape(letter)
+_MARGEN = 20
+
+# Paleta de la marca TPI (docs/specs/SIM_FICHA_PDF_SPEC.md §2).
+_NAVY = colors.HexColor("#0f243e")
+_NAVY_LIGHT = colors.HexColor("#b8cce4")
+_HIGHLIGHT = colors.HexColor("#b7dee8")
+_BODY = colors.HexColor("#1d1b10")
+
+# Intercambio de separadores de miles/decimales al formato es-CL (punto de miles, coma decimal).
+_SWAP_MILES = str.maketrans({",": ".", ".": ","})
 
 
 class SimulacionInvalidaError(ValueError):
@@ -204,15 +215,60 @@ def _esc(texto: Any) -> str:
     return escape(str(texto))
 
 
-def _pie_pagina(canvas: Any, doc: Any) -> None:
-    canvas.saveState()
-    canvas.setFont("Helvetica", 8)
-    canvas.setFillColor(colors.grey)
-    canvas.drawCentredString(_A4_WIDTH / 2, 12 * mm, f"Página {canvas.getPageNumber()}")
-    canvas.drawCentredString(
-        _A4_WIDTH / 2, 8 * mm, "Documento referencial no vinculante — Tu Pensión Inteligente"
+def _uf(valor: float) -> str:
+    """Formato es-CL de montos en UF: punto de miles y coma decimal, 2 decimales."""
+    return f"{valor:,.2f}".translate(_SWAP_MILES)
+
+
+def _clp(valor: float) -> str:
+    """Formato es-CL de montos en pesos: punto de miles, sin decimales."""
+    return f"{valor:,.0f}".translate(_SWAP_MILES)
+
+
+def _tratamiento(sexo: Literal["H", "M"]) -> str:
+    """Tratamiento para la banda superior de la ficha (Sr./Sra.)."""
+    return "Sr." if sexo == "H" else "Sra."
+
+
+def _anios(meses: int) -> str:
+    """Años como entero si es exacto, o con 1 decimal es-CL en otro caso."""
+    anios = meses / 12.0
+    if anios.is_integer():
+        return str(int(anios))
+    return f"{anios:.1f}".replace(".", ",")
+
+
+def _pension_aumentada(pension: float, porcentaje_aumento_temporal: float) -> float:
+    """Pensión mensual durante el aumento temporal: base × (1 + %/100)."""
+    return pension * (1 + porcentaje_aumento_temporal / 100.0)
+
+
+def _rescate_opcion_i(pension: float, meses_garantizados: int) -> float:
+    """Rescate Total de la Opción I = pensión mensual × meses garantizados."""
+    return pension * meses_garantizados
+
+
+def _valor_actual(pension: float, valor_uf: float | None) -> float | None:
+    """$ Valor Actual = pensión × valor UF (solo si hay valor UF informado)."""
+    return pension * valor_uf if valor_uf is not None else None
+
+
+def _valor_futuro(valor_actual: float, meses_aumento_temporal: int) -> float:
+    """Valor Futuro = Valor Actual × 1,04 elevado a los años de aumento temporal."""
+    return valor_actual * math.pow(1.04, meses_aumento_temporal / 12.0)
+
+
+def _rescate_opcion_ii(
+    pension: float,
+    porcentaje_aumento_temporal: float,
+    meses_aumento_temporal: int,
+    meses_garantizados: int,
+) -> float:
+    """Rescate Total de la Opción II = aumentada × meses aumento + base × (garantía − aumento)."""
+    aumentada = _pension_aumentada(pension, porcentaje_aumento_temporal)
+    return aumentada * meses_aumento_temporal + pension * (
+        meses_garantizados - meses_aumento_temporal
     )
-    canvas.restoreState()
 
 
 def generar_pdf(
@@ -220,135 +276,427 @@ def generar_pdf(
     fecha_hora: datetime,
     ejecutivo: str,
     lead_nombre: str,
+    sexo_causante: Literal["H", "M"],
+    causante_nacimiento: date,
+    tiene_conyuge: bool,
     escenario: Escenario,
-    parametros: list[tuple[str, str]],
     resultado: Resultado,
     tasa_venta_pct: float,
     valor_uf: float | None,
+    saldo_uf: float,
+    meses_garantizados: int,
+    meses_aumento_temporal: int,
+    porcentaje_aumento_temporal: float,
+    anios_diferidos: int,
     advertencia_ventana: bool,
     codigo: str,
 ) -> bytes:
-    """Genera el PDF efímero en memoria (sin escribir a disco)."""
+    """Genera en memoria la ficha PDF «Estudio de pensión» (carta apaisada) sin escribir a disco."""
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
         buf,
-        pagesize=A4,
-        leftMargin=18 * mm,
-        rightMargin=18 * mm,
-        topMargin=16 * mm,
-        bottomMargin=18 * mm,
-        title="Simulación referencial de pensión",
+        pagesize=landscape(letter),
+        leftMargin=_MARGEN,
+        rightMargin=_MARGEN,
+        topMargin=_MARGEN,
+        bottomMargin=_MARGEN,
+        title="Estudio de pensión",
         author="Tu Pensión Inteligente",
         subject="Estimación referencial no vinculante",
     )
+
     styles = getSampleStyleSheet()
-    titulo = ParagraphStyle(
-        "Titulo", parent=styles["Title"], fontSize=17, leading=21, spaceAfter=2 * mm
+
+    def _ps(
+        name: str,
+        *,
+        font: str,
+        size: float,
+        leading: float,
+        color: Any = _BODY,
+        align: int = TA_LEFT,
+    ) -> ParagraphStyle:
+        return ParagraphStyle(
+            name,
+            parent=styles["Normal"],
+            fontName=font,
+            fontSize=size,
+            leading=leading,
+            textColor=color,
+            alignment=align,
+        )
+
+    banda_nombre = _ps(
+        "BandaNombre", font="Helvetica-Bold", size=14, leading=16, color=colors.white
     )
-    subtitulo = ParagraphStyle(
-        "Subtitulo", parent=styles["Normal"], fontSize=9, textColor=colors.grey
+    banda_titulo = _ps(
+        "BandaTitulo",
+        font="Helvetica-Bold",
+        size=14,
+        leading=16,
+        color=colors.white,
+        align=TA_CENTER,
     )
-    seccion = ParagraphStyle(
-        "Seccion", parent=styles["Heading2"], fontSize=11, spaceBefore=4 * mm, spaceAfter=1.5 * mm
+    banda_fecha = _ps(
+        "BandaFecha", font="Helvetica-Bold", size=12, leading=14, color=colors.white, align=TA_RIGHT
     )
-    normal = ParagraphStyle("NormalR", parent=styles["Normal"], fontSize=9.5, leading=13)
-    pie_legal = ParagraphStyle(
-        "PieLegal",
-        parent=styles["Normal"],
-        fontSize=8,
-        textColor=colors.grey,
-        leading=11,
-        alignment=TA_CENTER,
+    dato = _ps("Dato", font="Helvetica-Bold", size=9, leading=11)
+    opcion_titulo = _ps("OpcionTitulo", font="Helvetica-Bold", size=12, leading=14)
+    cabecera = _ps("Cabecera", font="Helvetica-Bold", size=9, leading=11, color=colors.white)
+    rotulo = _ps("Rotulo", font="Helvetica-Bold", size=8, leading=10)
+    celda_dato = _ps("CeldaDato", font="Helvetica-BoldOblique", size=9, leading=11)
+    nota = _ps("Nota", font="Helvetica-Bold", size=8, leading=10)
+    pie_ejecutivo = _ps("PieEjecutivo", font="Helvetica-Bold", size=10, leading=12, color=_NAVY)
+    pie_texto = _ps("PieTexto", font="Helvetica", size=8, leading=10)
+    leyenda = _ps(
+        "Leyenda", font="Helvetica", size=8, leading=10, color=colors.grey, align=TA_CENTER
     )
+
+    ancho = _PAGE_W - 2 * _MARGEN
 
     story: list[Any] = []
-    if _LOGO_PATH.exists():
-        logo = Image(str(_LOGO_PATH))
-        ratio = logo.imageWidth / logo.imageHeight
-        logo.drawWidth = 58 * mm
-        logo.drawHeight = 58 * mm / ratio
-        story.append(logo)
-        story.append(Spacer(1, 3 * mm))
 
-    story.append(Paragraph("Simulación referencial de pensión de renta vitalicia", titulo))
-    story.append(
-        Paragraph(
-            f"Generado el {fecha_hora.strftime('%d/%m/%Y %H:%M')} (America/Santiago) — Ejecutivo: {_esc(ejecutivo)}",
-            subtitulo,
-        )
+    # a) Banda superior: tratamiento + nombre, título y fecha de generación.
+    banda = Table(
+        [
+            [
+                Paragraph(f"{_tratamiento(sexo_causante)} {_esc(lead_nombre)}", banda_nombre),
+                Paragraph("ESTUDIO DE PENSIÓN", banda_titulo),
+                Paragraph(_esc(fecha_hora.strftime("%d-%m-%Y")), banda_fecha),
+            ]
+        ],
+        colWidths=[ancho // 3] * 3,
+        hAlign="LEFT",
     )
-    story.append(Spacer(1, 3 * mm))
-
-    # Datos del lead (solo nombre; sin RUT, correo ni teléfono).
-    story.append(Paragraph("Cliente", seccion))
-    story.append(Paragraph(_esc(lead_nombre), normal))
-
-    story.append(Paragraph("Escenario", seccion))
-    story.append(Paragraph(_esc(escenario.descripcion), normal))
-    story.append(Paragraph(f"Tasa de venta utilizada: {round(tasa_venta_pct, 2)}%", normal))
-
-    story.append(Paragraph("Parámetros ingresados", seccion))
-    tabla_parametros = Table(
-        [[Paragraph(_esc(k), normal), Paragraph(_esc(v), normal)] for k, v in parametros],
-        colWidths=[70 * mm, 102 * mm],
-    )
-    tabla_parametros.setStyle(
+    banda.setStyle(
         TableStyle(
             [
-                ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
-                ("BACKGROUND", (0, 0), (0, -1), colors.whitesmoke),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 4),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-                ("TOPPADDING", (0, 0), (-1, -1), 2),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+                ("BACKGROUND", (0, 0), (-1, -1), _NAVY),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
             ]
         )
     )
-    story.append(tabla_parametros)
+    story.append(banda)
+    story.append(Spacer(1, 8))
 
-    story.append(Paragraph("Resultados", seccion))
-    resultados: list[tuple[str, str]] = [
-        ("Pensión mensual estimada (UF)", f"{resultado.pension_mensual:.2f}"),
-    ]
-    if resultado.meses_diferidos:
-        resultados.append(("Meses de diferimiento", f"{resultado.meses_diferidos}"))
-        if resultado.renta_temporal_mensual is not None:
-            resultados.append(
-                ("Renta temporal mensual (UF)", f"{resultado.renta_temporal_mensual:.2f}")
-            )
+    # b) Fila de datos bajo la banda (celdas con borde; la celda del valor UF va destacada).
+    celdas = [Paragraph(f"FECHA DE NAC: {causante_nacimiento.strftime('%Y/%m/%d')}", dato)]
+    if tiene_conyuge:
+        celdas.append(Paragraph("CÓNYUGE: Sí", dato))
+    celdas.append(Paragraph(f"T: {_uf(tasa_venta_pct)}%", dato))
     if valor_uf is not None:
-        resultados.append(("Valor UF de referencia (CLP)", f"{valor_uf:.2f}"))
-        resultados.append(
-            ("Equivalente en pesos (CLP)", f"{resultado.pension_mensual * valor_uf:,.0f}")
+        celdas.append(Paragraph(f"VALOR UF: ${_clp(valor_uf)}", dato))
+
+    fila_datos = Table([celdas], colWidths=[ancho // len(celdas)] * len(celdas), hAlign="LEFT")
+    estilo_datos: list[Any] = [
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]
+    if valor_uf is not None:
+        estilo_datos.append(("BACKGROUND", (len(celdas) - 1, 0), (len(celdas) - 1, 0), _HIGHLIGHT))
+    fila_datos.setStyle(TableStyle(estilo_datos))
+    story.append(fila_datos)
+    story.append(Spacer(1, 10))
+
+    pension = resultado.pension_mensual
+    valor_actual_base = _valor_actual(pension, valor_uf)
+
+    if anios_diferidos > 0:
+        # Renta temporal + RVD: se conserva su sección, con la nueva apariencia (AC-4).
+        story.append(Paragraph("RENTA TEMPORAL + RENTA VITALICIA DIFERIDA", opcion_titulo))
+        story.append(Paragraph(_esc(escenario.descripcion), pie_texto))
+        story.append(Spacer(1, 4))
+        filas_rvd: list[list[Any]] = [
+            [
+                Paragraph("Pensión mensual estimada (UF)", rotulo),
+                Paragraph(_uf(pension), celda_dato),
+            ],
+        ]
+        if resultado.meses_diferidos:
+            filas_rvd.append(
+                [
+                    Paragraph("Meses de diferimiento", rotulo),
+                    Paragraph(str(resultado.meses_diferidos), celda_dato),
+                ]
+            )
+        if resultado.renta_temporal_mensual is not None:
+            filas_rvd.append(
+                [
+                    Paragraph("Renta temporal mensual (UF)", rotulo),
+                    Paragraph(_uf(resultado.renta_temporal_mensual), celda_dato),
+                ]
+            )
+        if valor_uf is not None:
+            filas_rvd.append(
+                [
+                    Paragraph("Valor UF de referencia (CLP)", rotulo),
+                    Paragraph(_clp(valor_uf), celda_dato),
+                ]
+            )
+            filas_rvd.append(
+                [
+                    Paragraph("Equivalente en pesos (CLP)", rotulo),
+                    Paragraph(_clp(pension * valor_uf), celda_dato),
+                ]
+            )
+        tabla_rvd = Table(filas_rvd, colWidths=[260, 160], hAlign="LEFT")
+        tabla_rvd.setStyle(
+            TableStyle(
+                [
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                    ("BACKGROUND", (0, 0), (0, -1), _NAVY_LIGHT),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ]
+            )
         )
-    tabla_resultados = Table(
-        [[Paragraph(_esc(k), normal), Paragraph(_esc(v), normal)] for k, v in resultados],
-        colWidths=[70 * mm, 102 * mm],
-    )
-    tabla_resultados.setStyle(
+        story.append(tabla_rvd)
+    else:
+        # c) OPCIÓN I (renta vitalicia inmediata + rescate total).
+        story.append(Paragraph("OPCIÓN I", opcion_titulo))
+        rescate_i = _rescate_opcion_i(pension, meses_garantizados)
+        if meses_garantizados:
+            etiqueta_i = f"Periodo Garantizado<br/>{_anios(meses_garantizados)} años"
+        else:
+            etiqueta_i = "Simple"
+        tabla_i = Table(
+            [
+                [
+                    Paragraph("Renta Vitalicia Inmediata", cabecera),
+                    "",
+                    "",
+                    "",
+                    Paragraph("Rescate Total", cabecera),
+                ],
+                [
+                    Paragraph(f"Capital: {_uf(saldo_uf)} UF", dato),
+                    "",
+                    Paragraph(f"T: {_uf(tasa_venta_pct)}%", dato),
+                    "",
+                    "",
+                ],
+                [
+                    Paragraph("Años", rotulo),
+                    Paragraph("[UF]", rotulo),
+                    Paragraph("[$]Valor Actual", rotulo),
+                    "",
+                    Paragraph("[UF]", rotulo),
+                ],
+                [
+                    Paragraph(etiqueta_i, celda_dato),
+                    Paragraph(_uf(pension), celda_dato),
+                    Paragraph(
+                        _clp(valor_actual_base) if valor_actual_base is not None else "", celda_dato
+                    ),
+                    Paragraph(">>>>", celda_dato),
+                    Paragraph(_uf(rescate_i), celda_dato),
+                ],
+            ],
+            colWidths=[140, 90, 120, 70, 120],
+            hAlign="LEFT",
+        )
+        tabla_i.setStyle(
+            TableStyle(
+                [
+                    ("SPAN", (0, 0), (2, 0)),
+                    ("SPAN", (0, 1), (1, 1)),
+                    ("BACKGROUND", (0, 0), (2, 0), _NAVY),
+                    ("BACKGROUND", (4, 0), (4, 0), _NAVY),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+                    ("TOPPADDING", (0, 0), (-1, -1), 3),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                    ("ALIGN", (3, 3), (3, 3), "CENTER"),
+                ]
+            )
+        )
+        story.append(tabla_i)
+        story.append(Paragraph("Esta Opción es vitalicia sin recálculo", nota))
+
+        # d) OPCIÓN II (solo si la simulación incluye aumento temporal).
+        if meses_aumento_temporal > 0:
+            story.append(Spacer(1, 8))
+            story.append(Paragraph("OPCIÓN II", opcion_titulo))
+            pension_aumentada = _pension_aumentada(pension, porcentaje_aumento_temporal)
+            valor_actual_aumentada = _valor_actual(pension_aumentada, valor_uf)
+            valor_futuro = (
+                _valor_futuro(valor_actual_aumentada, meses_aumento_temporal)
+                if valor_actual_aumentada is not None
+                else None
+            )
+            rescate_ii = _rescate_opcion_ii(
+                pension, porcentaje_aumento_temporal, meses_aumento_temporal, meses_garantizados
+            )
+
+            izquierda = Table(
+                [
+                    [Paragraph("Aumento Temporal de Pensión", cabecera), "", "", ""],
+                    [
+                        Paragraph(f"Capital: {_uf(saldo_uf)} UF", dato),
+                        "",
+                        Paragraph(f"T: {_uf(tasa_venta_pct)}%", dato),
+                        "",
+                    ],
+                    [
+                        Paragraph("Años", rotulo),
+                        Paragraph("Meses", rotulo),
+                        Paragraph("[UF]", rotulo),
+                        Paragraph("[$]", rotulo),
+                    ],
+                    [
+                        Paragraph(_anios(meses_aumento_temporal), celda_dato),
+                        Paragraph(str(meses_aumento_temporal), celda_dato),
+                        Paragraph(_uf(pension_aumentada), celda_dato),
+                        Paragraph(
+                            (
+                                _clp(valor_actual_aumentada)
+                                if valor_actual_aumentada is not None
+                                else ""
+                            ),
+                            celda_dato,
+                        ),
+                    ],
+                ],
+                colWidths=[90, 60, 80, 90],
+                hAlign="LEFT",
+            )
+            izquierda.setStyle(
+                TableStyle(
+                    [
+                        ("SPAN", (0, 0), (3, 0)),
+                        ("SPAN", (0, 1), (1, 1)),
+                        ("BACKGROUND", (0, 0), (3, 0), _NAVY),
+                        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+                        ("TOPPADDING", (0, 0), (-1, -1), 3),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                    ]
+                )
+            )
+
+            derecha = Table(
+                [
+                    [Paragraph("Renta Vitalicia Inmediata", cabecera), "", ""],
+                    [
+                        Paragraph(f"Capital: {_uf(saldo_uf)} UF", dato),
+                        "",
+                        Paragraph(f"T: {_uf(tasa_venta_pct)}%", dato),
+                    ],
+                    [Paragraph("Sin Excedente", rotulo), "", ""],
+                    [
+                        Paragraph("Años", rotulo),
+                        Paragraph("[UF]", rotulo),
+                        Paragraph("[$]Valor Actual", rotulo),
+                    ],
+                    [
+                        Paragraph(_anios(meses_garantizados), celda_dato),
+                        Paragraph(_uf(pension), celda_dato),
+                        Paragraph(
+                            _clp(valor_actual_base) if valor_actual_base is not None else "",
+                            celda_dato,
+                        ),
+                    ],
+                    [
+                        Paragraph("Inflación Futura 4%", rotulo),
+                        "",
+                        Paragraph(
+                            _clp(valor_futuro) if valor_futuro is not None else "", celda_dato
+                        ),
+                    ],
+                    [
+                        Paragraph("Rescate Total", rotulo),
+                        "",
+                        Paragraph(_uf(rescate_ii), celda_dato),
+                    ],
+                ],
+                colWidths=[130, 80, 110],
+                hAlign="LEFT",
+            )
+            derecha.setStyle(
+                TableStyle(
+                    [
+                        ("SPAN", (0, 0), (2, 0)),
+                        ("SPAN", (0, 1), (1, 1)),
+                        ("SPAN", (0, 2), (2, 2)),
+                        ("BACKGROUND", (0, 0), (2, 0), _NAVY),
+                        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+                        ("TOPPADDING", (0, 0), (-1, -1), 3),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                    ]
+                )
+            )
+
+            tabla_ii = Table(
+                [[izquierda, Paragraph(">>>>", celda_dato), derecha]],
+                colWidths=[320, 60, 320],
+                hAlign="LEFT",
+            )
+            tabla_ii.setStyle(
+                TableStyle(
+                    [
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                        ("ALIGN", (1, 0), (1, 0), "CENTER"),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                        ("TOPPADDING", (0, 0), (-1, -1), 0),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                    ]
+                )
+            )
+            story.append(tabla_ii)
+            story.append(Paragraph("Esta Opción es vitalicia sin recálculo", nota))
+
+    story.append(Spacer(1, 10))
+
+    # e) Pie: nombre del ejecutivo y contacto corporativo como texto plano (sin enlaces activos).
+    contacto_izq = [
+        Paragraph(_esc(ejecutivo), pie_ejecutivo),
+        Paragraph("Tu Pensión Inteligente", pie_texto),
+    ]
+    contacto_der = [
+        Paragraph("Email: contacto@tupensioninteligente.cl", pie_texto),
+        Paragraph("Web: www.tupensioninteligente.cl", pie_texto),
+        Paragraph("Dirección: Dr. Sotero del Río 508, Of. 612, Santiago", pie_texto),
+    ]
+    pie = Table([[contacto_izq, contacto_der]], colWidths=[ancho // 2, ancho // 2], hAlign="LEFT")
+    pie.setStyle(
         TableStyle(
             [
-                ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
-                ("BACKGROUND", (0, 0), (0, -1), colors.whitesmoke),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 4),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
                 ("TOPPADDING", (0, 0), (-1, -1), 2),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
             ]
         )
     )
-    story.append(tabla_resultados)
+    story.append(pie)
 
-    story.append(Paragraph("Supuestos y advertencias", seccion))
+    # g) Leyenda, versión y código de verificación conservados de SIM-RV-V1.
+    story.append(Spacer(1, 6))
+    story.append(Paragraph("Estimación referencial no vinculante", leyenda))
     story.append(
         Paragraph(
-            "Este documento es una estimación referencial calculada con un modelo empírico que reproduce "
-            "el simulador de referencia dentro de ±1 UF, y no constituye una oferta ni un compromiso "
-            "contractual. Los valores pueden variar según la normativa vigente, las tablas de mortalidad "
-            "y las condiciones comerciales de la aseguradora.",
-            normal,
+            f"Versión del modelo: {MODELO_VERSION} — Código de verificación: {codigo}",
+            leyenda,
         )
     )
     if advertencia_ventana:
@@ -356,26 +704,33 @@ def generar_pdf(
             Paragraph(
                 "Advertencia: la ventana de validación del modelo ha vencido recientemente; los resultados "
                 "deben contrastarse con el simulador de referencia antes de entregarlos.",
-                normal,
+                leyenda,
             )
         )
-    story.append(
-        Paragraph(
-            "Modelo empírico, no normativo. No reemplaza la asesoría previsional regulada.",
-            normal,
-        )
-    )
+    story.append(Paragraph("Documento referencial no vinculante — Tu Pensión Inteligente", leyenda))
 
-    story.append(Spacer(1, 4 * mm))
-    story.append(Paragraph("Estimación referencial no vinculante", pie_legal))
-    story.append(
-        Paragraph(
-            f"Versión del modelo: {MODELO_VERSION} — Código de verificación: {codigo}",
-            pie_legal,
+    # f) Banda inferior con el logo oficial.
+    story.append(Spacer(1, 6))
+    if _LOGO_DARK_PATH.exists():
+        logo = Image(str(_LOGO_DARK_PATH))
+        ratio = logo.imageWidth / logo.imageHeight
+        logo.drawWidth = 270
+        logo.drawHeight = 270 / ratio
+        banda_inferior = Table([[logo]], colWidths=[ancho], hAlign="LEFT")
+        banda_inferior.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, -1), _NAVY),
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("TOPPADDING", (0, 0), (-1, -1), 6),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ]
+            )
         )
-    )
+        story.append(banda_inferior)
 
-    doc.build(story, onFirstPage=_pie_pagina, onLaterPages=_pie_pagina)
+    doc.build(story)
     return buf.getvalue()
 
 
