@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "SIM-EVIDENCIA-ENTRADAS",
+  "created_at": "2026-10-16T20:35:16Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610162013-developer-sup6cbf35",
+  "head_sha": "c657c0c79b01ae48e79c921d30b69c0a8076b42a",
+  "branch": "harness/SIM-EVIDENCIA-ENTRADAS-evidencia-entradas",
+  "pr_number": 83,
+  "change_class": "A",
+  "tests": {
+    "command": "Local (worktree, Python 3.13.13): pytest tests/unit/test_sim_rv_auditoria.py tests/unit/test_sim_rv_evidencia_entradas.py tests/unit/test_sim_rv_web.py tests/unit/test_sim_rv_codigo_verificacion.py tests/unit/test_sim_rv_pdf.py tests/unit/test_sim_rv_validacion.py tests/unit/test_sim_rv_ventana.py tests/unit/test_sim_rv_regresion_portal.py --no-cov (96 passed). CI PR #83 (Python 3.12 + PostgreSQL): pytest tests/ --cov=app --cov-fail-under=85 (PASS, job Tests). Los 11 fallos locales de tests/unit/test_executive_dashboard_* son previos y requieren PostgreSQL local; en CI pasan.",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "El detalle pasa a ser versionado (schema_version=1) y record_simulacion_event recibe y guarda ejecutivo (actor_subject, role), tipo_escenario, version_modelo, codigo_verificacion, las entradas (causante sexo/fecha_nacimiento, saldo_uf, tasa_venta_pct, valor_uf, meses_garantizados, meses_aumento_temporal, pct_aumento_temporal, anios_diferidos, porcentaje_rvd y beneficiarios con parentesco/sexo/fecha_nacimiento/invalidez/comun) y el resultado (pension_uf y, en renta temporal, renta_temporal_uf y meses_diferidos). El lead queda en la columna id_lead. Tests: test_sim_rv_auditoria.py::test_insert_append_only_con_evidencia_versionada, test_sim_rv_web.py::test_auditoria_recibe_entradas_y_resultado, integration test_sim_rv_web.py::test_auditoria_sin_pii."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "El detalle no recibe nombres, RUT, correo ni telefono ni el contenido del PDF (build_detalle solo recibe objetos Persona/Hijo y escalares). Tests con datos sinteticos con marcado y caracteres especiales: test_sim_rv_auditoria.py::test_detalle_sin_nombres_ni_pii y integration test_sim_rv_web.py::test_auditoria_sin_pii (lead con nombre '<b>Lead</b> & \"Álvaro\" ñ <script>alert(1)</script>': el detalle serializado no contiene el nombre, el RUT ni esos fragmentos)."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "Las entradas guardadas bastan para reproducir el resultado y el codigo de verificacion. tests/unit/test_sim_rv_evidencia_entradas.py reconstruye desde el detalle y vuelve a calcular con el motor (renta temporal con RVD y renta inmediata con familia) obteniendo la misma pension_uf, renta_temporal_uf, meses_diferidos y codigo_verificacion; integration test_sim_rv_web.py::test_evidencia_reproducible lo verifica leyendo el detalle desde PostgreSQL."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "Se conserva el fail-closed: la ruta registra el evento dentro del mismo try/except que responde 500 si falla el INSERT (sin auditoria no se entrega el PDF); test_sim_rv_auditoria.py::test_rollback_y_propaga_fallo. Los roles no autorizados siguen sin generar evento (tests/unit/test_sim_rv_web.py). Sin migracion, grant, vista ni constraint nueva (clase A; solo se reutiliza el INSERT con el grant vigente de la migracion 006)."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "La decision del humano (2026-10-15) reemplaza el AC-10 de SIM-RV-V1. Actualizados docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md (AC-10 y AC-11), docs/SIM_RV_V1_PENDIENTES.md (#6), docs/SIM_RV_V1_MODELO.md (nota de evidencia de solo escritura, retencion pendiente y linea de tiempo SIM-HISTORIAL-LINEA-TIEMPO), CHANGELOG.md y docs/BITACORA.md."
+    },
+    {
+      "id": "AC-6",
+      "status": "pending_verification",
+      "evidence": "Smoke humano en AWS DEV post-deploy: tras generar un PDF, una consulta de solo lectura (patron scripts/sql/inspect_*_readonly.sql, ejecutada por el humano) muestra el nuevo evento con entradas y resultado y sin datos personales directos; los logs no contienen el detalle. requires_human_acceptance."
+    }
+  ],
+  "files_changed": [
+    "CHANGELOG.md",
+    "app/services/simulador_auditoria.py",
+    "app/services/simulador_service.py",
+    "app/web/routes/simulador.py",
+    "docs/BITACORA.md",
+    "docs/SIM_RV_V1_MODELO.md",
+    "docs/SIM_RV_V1_PENDIENTES.md",
+    "docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md",
+    "tests/integration/test_sim_rv_web.py",
+    "tests/unit/test_sim_rv_auditoria.py",
+    "tests/unit/test_sim_rv_evidencia_entradas.py",
+    "tests/unit/test_sim_rv_web.py"
+  ],
+  "assumptions": [
+    "Las fechas de nacimiento y la composicion familiar son datos personales minimos que se guardan solo en tpi.auditoria.detalle (solo escritura: la aplicacion no lo lee), sin nombres ni identificadores directos, segun la decision del humano 2026-10-15.",
+    "La clave 'pct_aumento_temporal' del detalle corresponde al campo 'porcentaje_aumento_temporal' del motor/formulario; las claves 'invalidez' y 'comun' de los beneficiarios corresponden a 'condicion de invalidez' y 'si es comun' del AC-1 (nombres de dominio estables).",
+    "No se modifica app/simulador_pension/** (motor), app/auth/**, dependencias ni lockfiles; no se cambia la logica numerica, los rangos validados, la autorizacion ni el escape de marcado del PDF (constraint de la tarea).",
+    "docker build, pip-audit y la cobertura total (>= 85%) se verifican en CI (el daemon de Docker y PostgreSQL no estan disponibles en el runner local); ruff, black, mypy y bandit si corrieron local sobre los archivos cambiados.",
+    "La politica de retencion del detalle queda pendiente de decision del humano; mostrarlo en la linea de tiempo del lead es la tarea SIM-HISTORIAL-LINEA-TIEMPO (clase D)."
+  ],
+  "migrations_included": false
+}

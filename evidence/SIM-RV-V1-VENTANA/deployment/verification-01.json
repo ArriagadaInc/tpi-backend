@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "SIM-RV-V1-VENTANA",
+  "created_at": "2026-10-16T18:20:58Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610161806-deployer-supc6d01d",
+  "verification_scope": "VERIFYING inicial de SIM-RV-V1-VENTANA: identidad de runtime, estado EB, smoke HTTP no autenticado y conteos de logs. Solo lecturas AWS via aws_guard. AC-5 (smoke humano autenticado) queda pendiente de aceptacion humana.",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "502492257e505884716d14c2529dd0d08bcb421d",
+  "deployed_commit": "502492257e505884716d14c2529dd0d08bcb421d",
+  "application_version": "h3-sim-rv-v1-ventana-5024922-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "PASS",
+  "failure_class": null,
+  "final_state": {
+    "version_label": "h3-sim-rv-v1-ventana-5024922-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-16T18:08:37Z",
+    "observed_at": "2026-10-16T18:20:00Z"
+  },
+  "events": {
+    "observed": 20,
+    "levels": {
+      "INFO": 20
+    },
+    "errors": 0,
+    "note": "describe-events --max-records 20: todos INFO; update completado con exito a las 18:08:37Z; sin abortos ni degradacion."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "note": "Ver deployment-01: label observado, SourceBundle = key aprobada, ChecksumSHA256 b64 decodificado == bundle_sha256 c1fd91f2..., digests segun approval-01/candidate-01."
+  },
+  "smoke_client": "python urllib (cliente independiente), TLS por defecto, sin seguir redirects",
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "simulador_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login (ruta /leads/{id}/simulador)"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "observed": "ningun redirect a dominio legacy"
+    }
+  ],
+  "logs": {
+    "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+    "window_start": "2026-10-16T18:07:45Z",
+    "method": "aws_guard logs filter-log-events con --query length(events); solo conteos; no se leyeron lineas; patrones exactos de harness/policies.yaml."
+  },
+  "pii_log_scan": {
+    "matches": 0,
+    "raw_pattern_hits": {
+      "Authorization -REDACTED": 0,
+      "Bearer": 0,
+      "password": 0,
+      "cookie": 0,
+      "raw_payload": 0,
+      "secret": 0,
+      "token": 0,
+      "hash -ACME": 0
+    },
+    "strong_matches": 0,
+    "strong_hits": {},
+    "weak_matches": {},
+    "classification_required": false,
+    "patterns": [
+      "Authorization -REDACTED",
+      "Bearer",
+      "raw_payload",
+      "password",
+      "hash -ACME",
+      "cookie",
+      "secret",
+      "token"
+    ]
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde (PR #81)."
+    },
+    {
+      "id": "AC-2",
+      "status": "pending_human",
+      "method": "both",
+      "evidence": "parte automatizada en review-01; el aviso referencial en pantalla y PDF reales lo confirma el humano en AC-5."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "method": "both",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-5",
+      "status": "pending_human",
+      "method": "human",
+      "evidence": "Smoke humano en DEV: PDF con aviso referencial, sin advertencia de ventana vencida; rol no autorizado 403; logs sin PII."
+    }
+  ],
+  "rollback_executed": false,
+  "safety": {
+    "aws_writes": [],
+    "update_environment_executed": false,
+    "secrets_accessed": false,
+    "log_lines_read": false,
+    "denied_events": 0
+  }
+}

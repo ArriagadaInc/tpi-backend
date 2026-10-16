@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "resolution",
+  "task_id": "SIM-EVIDENCIA-ENTRADAS",
+  "created_at": "2026-10-16T21:31:26Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "from_state": "BLOCKED_HUMAN",
+  "to_state": "PREPARING_DEPLOYMENT",
+  "reason": "Escaneo de tpi-dev-app COMPLETE sin hallazgos. El publish agoto el tiempo de espera del escaneo. Imagenes del release borradas de ECR y publish relanzado con exito (run 38964107386, intento 2)."
+}

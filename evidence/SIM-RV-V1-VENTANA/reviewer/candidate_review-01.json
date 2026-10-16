@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "SIM-RV-V1-VENTANA",
+  "created_at": "2026-10-16T17:28:07Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610161725-reviewer-sup81c84b",
+  "release_sha": "502492257e505884716d14c2529dd0d08bcb421d",
+  "reviewed_tree": "6d826204ea2717238cf2390d0e2149e8eb0b1847",
+  "release_tree": "6d826204ea2717238cf2390d0e2149e8eb0b1847",
+  "decision": "APPROVED",
+  "cause": null,
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse 5024922^{tree} == 6d82620 == reviewed_tree de review-01; origin/main == release_sha tras fetch."
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "merge-base --is-ancestor OK."
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "gh run view 38937525741: success, headSha = release_sha."
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "describe-images ACTIVE: app 086f87fa... y caddy 972cb6e6..., tag = release_sha."
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "scan COMPLETE, findingSeverityCounts vacio en ambos digests."
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "Reconstruccion independiente: sha256 c1fd91f2...0db, 4815 bytes, base64 wf2R8o31...CSgNs=; template y constructor sin diferencias con el release."
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "Entrada unica docker-compose.yml; sin build ni dominio legado; 3 referencias @sha256 (app x2, caddy x1)."
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "head-object: ChecksumSHA256 == base64 del sha256 del bundle, 4815 bytes, FULL_OBJECT."
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "AV h3-sim-rv-v1-ventana-5024922-domainlocked-r1 UNPROCESSED con SourceBundle = bucket/key del candidate."
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "commit -> digests -> bundle -> key S3 -> AV -> label: coherente."
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "Environment Ready/Green/Ok, sin operacion en curso, VersionLabel h3-sim-ficha-pdf-dd6be12-domainlocked-r1 re-observado."
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "AV del LKG UNPROCESSED con SourceBundle de97beb6... presente."
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "describe-images ACTIVE para app 885fefa8... y caddy 1c7346d9... del LKG."
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "Inspeccion estructural: el template no tiene valores literales en variables sensibles (solo referencias); evidencia sin secretos. No se hizo scan de texto por shell."
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "smoke_plan con checks publicos, auth, identidad de runtime, conteos de logs y AC-5 humano."
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "Plan: update-environment con --environment-name y --version-label; sin option settings, template, platform ni tier."
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "Comando update-environment permitido al Deployer en DEPLOYING (aws.modes.cutover); no se ejecuto dry-run."
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "note": "Un unico update-environment; espera por describe-environments sin reintentos de escritura."
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "Rollback version-only al LKG nombrado, max_attempts 1, condicionado a rollback_authorization."
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": "Sin IAM, DNS, secretos ni migraciones; clase A."
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "note": "Plan usa conteos/estados; sin salidas sensibles."
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS",
+      "note": "Residuos de etapa (ECR, S3, AV) inertes y declarados; environment sin mutar."
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "note": "conditions del rollback_plan: un defecto puramente funcional no autoriza rollback."
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "info",
+      "file": "evidence/SIM-RV-V1-VENTANA/deployment/candidate-01.json",
+      "summary": "AC-5 (smoke humano autenticado en DEV) queda pendiente tras el cutover.",
+      "required_action": "Humano: approve.py accept tras el deploy."
+    }
+  ]
+}

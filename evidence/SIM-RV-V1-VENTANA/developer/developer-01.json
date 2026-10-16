@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "SIM-RV-V1-VENTANA",
+  "created_at": "2026-10-16T17:02:34Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610161641-developer-supac14c3",
+  "head_sha": "bbc43e2f6df9577a1057b920088973134671f23f",
+  "branch": "harness/SIM-RV-V1-VENTANA-ventana",
+  "pr_number": 81,
+  "change_class": "A",
+  "tests": {
+    "command": "Local (worktree, Python 3.13.13): pytest tests/unit/test_sim_rv_ventana.py tests/unit/test_sim_rv_pdf.py tests/unit/test_sim_rv_web.py --no-cov (35 passed). CI PR #81 (Python 3.12 + PostgreSQL): pytest tests/ --cov=app --cov-fail-under=85 (PASS, job Tests). Los 11 fallos locales de tests/unit/test_executive_dashboard_* son previos y requieren PostgreSQL local; en CI pasan.",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "Se eliminan clasificar_ventana y VENTANA_ADVERTENCIA_DIAS (app/services/simulador_service.py), el estado 'bloqueado', el corte de 90 dias y el 422 por vencimiento (app/web/routes/simulador.py ya no llama clasificar_ventana ni devuelve 422 por fecha). La fecha de simulacion sigue siendo datetime.now(CRM_TZ).date() en el servidor y la generacion ya no esta condicionada por ella. Tests: tests/unit/test_sim_rv_ventana.py::test_cualquier_fecha_genera_pdf (2020, 2026-10-13, 2027-01-12 y 2030 generan PDF valido). CI PR #81 verde."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "El formulario (app/web/templates/simulador.html) muestra siempre el aviso 'Los resultados de esta simulacion son valores referenciales (no vinculantes)' y el PDF (generar_pdf) incluye la seccion 'Supuestos y advertencias' con 'Los resultados de esta simulacion son valores referenciales y no vinculantes'. Desaparece el aviso condicional de ventana vencida en pantalla (contexto advertencia_ventana eliminado de _form_context) y en el PDF (parametro advertencia_ventana y su parrafo eliminados). Tests: test_sim_rv_web.py::test_formulario_muestra_aviso_referencial_permanente, test_sim_rv_ventana.py::test_aviso_referencial_siempre_en_pdf. Confirmacion visual humana en AC-5 (smoke AWS DEV)."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "app/simulador_pension/** no se modifica (el motor conserva VENTANA_VALIDADA y su warnings.warn informativo, que no llega a pantalla ni al PDF); contrato de 435 casos dentro de +-1 UF intacto (tests/unit/test_sim_rv_regresion_portal.py::test_435_casos_dentro_de_una_uf). Sin cambios en rangos validados por escenario (validar_edades), autorizacion (403 fuera de executive/ceo/cto, tests/unit/test_sim_rv_web.py), CSRF, escape de marcado (_esc), headers del PDF ni auditoria sin PII. CI PR #81 verde."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "tests/unit/test_sim_rv_ventana.py reemplazado por pruebas de que cualquier fecha genera y de que el aviso referencial esta en el PDF; test_sim_rv_web.py agrega el aviso referencial en pantalla y test_sim_rv_pdf.py se ajusta al nuevo contrato de generar_pdf (sin advertencia_ventana). Matriz (AC-6 y matriz de contenido del PDF), PENDIENTES (#1), MODELO (§5), CHANGELOG y BITACORA actualizados. Cobertura total >= 85% verificada por CI (pytest --cov=app --cov-fail-under=85 PASS)."
+    },
+    {
+      "id": "AC-5",
+      "status": "pending_verification",
+      "evidence": "Smoke humano en AWS DEV post-deploy: un ejecutivo genera un PDF y ve el aviso de valores referenciales en pantalla y en el PDF, sin advertencia de ventana vencida; un rol no autorizado sigue recibiendo 403; los logs no contienen PII ni el contenido del PDF. requires_human_acceptance."
+    }
+  ],
+  "files_changed": [
+    "CHANGELOG.md",
+    "app/services/simulador_service.py",
+    "app/web/routes/simulador.py",
+    "app/web/templates/simulador.html",
+    "docs/BITACORA.md",
+    "docs/SIM_RV_V1_MODELO.md",
+    "docs/SIM_RV_V1_PENDIENTES.md",
+    "docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md",
+    "tests/unit/test_sim_rv_pdf.py",
+    "tests/unit/test_sim_rv_ventana.py",
+    "tests/unit/test_sim_rv_web.py"
+  ],
+  "assumptions": [
+    "El motor app/simulador_pension/** conserva VENTANA_VALIDADA y su warnings.warn informativo; ese aviso no llega a pantalla ni al PDF (constraint de la tarea: no modificar app/simulador_pension/**).",
+    "La revalidacion periodica de la ventana queda recomendada (no bloqueante) en docs/SIM_RV_V1_PENDIENTES.md #1; no se extiende VENTANA_VALIDADA en el motor.",
+    "docker build y la cobertura total (>= 85%) se verifican en CI (el daemon de Docker y PostgreSQL no estan disponibles en el runner local); ruff, black, mypy, bandit, pip-audit y docker compose config --quiet si corrieron local.",
+    "El aviso referencial del PDF vive en la seccion 'Supuestos y advertencias' (titulo en negrita + frase explicita), conservando la leyenda 'Estimacion referencial no vinculante', la version del modelo y el codigo de verificacion existentes."
+  ],
+  "migrations_included": false
+}

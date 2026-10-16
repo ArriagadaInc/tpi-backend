@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "SIM-RV-V1-VENTANA",
+  "created_at": "2026-10-16T17:07:09Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610161705-reviewer-supc58a10",
+  "reviewed_sha": "bbc43e2f6df9577a1057b920088973134671f23f",
+  "reviewed_tree": "6d826204ea2717238cf2390d0e2149e8eb0b1847",
+  "pr_number": 81,
+  "change_class": "A",
+  "ci": {
+    "run_id": 38935385447,
+    "head_sha": "bbc43e2f6df9577a1057b920088973134671f23f",
+    "conclusion": "success",
+    "jobs": {
+      "docker_build": "pass",
+      "lint_format": "pass",
+      "release_tooling_validation": "pass",
+      "security_audit": "pass",
+      "tests": "pass"
+    }
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "info",
+      "file": "app/simulador_pension/api.py",
+      "summary": "El motor conserva VENTANA_VALIDADA y su warnings.warn informativo, que no llega a pantalla ni al PDF (conforme a las restricciones de la tarea).",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F-2",
+      "severity": "info",
+      "file": "tests/unit/test_sim_rv_web.py",
+      "summary": "AC-5 (smoke humano en AWS DEV) queda pendiente de verificacion humana tras el deploy.",
+      "required_action": "Humano: validar AC-5 tras el deploy."
+    }
+  ],
+  "checks": [
+    {
+      "name": "ci_green_exact_sha",
+      "result": "PASS"
+    },
+    {
+      "name": "pr_head_equals_delivered_sha",
+      "result": "PASS"
+    },
+    {
+      "name": "functional_compliance",
+      "result": "PASS"
+    },
+    {
+      "name": "no_remaining_refs_to_removed_symbols",
+      "result": "PASS"
+    },
+    {
+      "name": "real_pdf_generated_and_inspected_referential_notice_present_no_window_warning_no_lead_pii",
+      "result": "PASS"
+    },
+    {
+      "name": "engine_and_auth_untouched",
+      "result": "PASS"
+    },
+    {
+      "name": "authz_csrf_ranges_unchanged",
+      "result": "PASS"
+    },
+    {
+      "name": "scope_no_unrelated_changes",
+      "result": "PASS"
+    },
+    {
+      "name": "no_secrets_in_diff",
+      "result": "PASS"
+    },
+    {
+      "name": "tests_cover_acceptance_criteria",
+      "result": "PASS"
+    },
+    {
+      "name": "local_pytest_sim_rv_37_passed_incl_435_cases",
+      "result": "PASS"
+    },
+    {
+      "name": "bandit_changed_files",
+      "result": "PASS"
+    },
+    {
+      "name": "coverage_85",
+      "result": "PASS"
+    },
+    {
+      "name": "documentation_changelog_bitacora_matrix",
+      "result": "PASS"
+    },
+    {
+      "name": "no_migrations_class_a",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "Fuera del periodo validado el modelo extrapola sin evidencia directa; mitigado por el aviso permanente de valores referenciales (decision del humano).",
+    "AC-5 depende de verificacion humana en AWS DEV."
+  ]
+}

@@ -13,54 +13,32 @@
     "deployer": null
   },
   "worktrees": [],
-  "updated_at": "2026-10-16T13:17:36Z",
+  "updated_at": "2026-10-16T22:46:02Z",
   "last_transition": {
-    "at": "2026-10-16T13:17:36Z",
+    "at": "2026-10-16T22:46:02Z",
     "transition": "close",
     "event": "close",
     "from": "DONE",
     "to": "IDLE",
     "actor": "system",
     "runtime": "claude",
-    "session_id": "claude-202610161313-deployer-sup297f89",
+    "session_id": "claude-202610162242-deployer-sup2d1b77",
     "evidence": null
   },
   "history": [
     {
-      "at": "2026-10-15T20:10:58Z",
-      "transition": "merged_deploy",
-      "event": "merged",
-      "from": "MERGING",
-      "to": "PREPARING_DEPLOYMENT",
-      "actor": "deployer",
-      "runtime": "claude",
-      "session_id": "claude-202610152009-deployer-supb512e5",
-      "evidence": "evidence/SIM-UX-AJUSTES/deployment/merge-01.json"
-    },
-    {
-      "at": "2026-10-15T21:07:37Z",
-      "transition": "candidate_ready",
-      "event": "candidate_ready",
-      "from": "PREPARING_DEPLOYMENT",
-      "to": "CANDIDATE_REVIEW",
-      "actor": "deployer",
-      "runtime": "claude",
-      "session_id": "claude-202610152053-deployer-sup72e445",
-      "evidence": "evidence/SIM-UX-AJUSTES/deployment/candidate-01.json"
-    },
-    {
-      "at": "2026-10-15T21:21:12Z",
+      "at": "2026-10-16T17:28:21Z",
       "transition": "candidate_approve",
       "event": "candidate_approve",
       "from": "CANDIDATE_REVIEW",
       "to": "WAITING_HUMAN_APPROVAL",
       "actor": "reviewer",
       "runtime": "claude",
-      "session_id": "claude-202610152118-reviewer-supcc398d",
-      "evidence": "evidence/SIM-UX-AJUSTES/reviewer/candidate_review-01.json"
+      "session_id": "claude-202610161725-reviewer-sup81c84b",
+      "evidence": "evidence/SIM-RV-V1-VENTANA/reviewer/candidate_review-01.json"
     },
     {
-      "at": "2026-10-15T22:01:20Z",
+      "at": "2026-10-16T18:06:05Z",
       "transition": "human_approve",
       "event": "human_approve",
       "from": "WAITING_HUMAN_APPROVAL",
@@ -68,43 +46,43 @@
       "actor": "human",
       "runtime": null,
       "session_id": null,
-      "evidence": "evidence/SIM-UX-AJUSTES/approvals/approval-01.json"
+      "evidence": "evidence/SIM-RV-V1-VENTANA/approvals/approval-01.json"
     },
     {
-      "at": "2026-10-15T22:05:50Z",
+      "at": "2026-10-16T18:19:05Z",
       "transition": "deploy_succeeded",
       "event": "deploy_succeeded",
       "from": "DEPLOYING",
       "to": "VERIFYING",
       "actor": "deployer",
       "runtime": "claude",
-      "session_id": "claude-202610152201-deployer-sup3bedf9",
-      "evidence": "evidence/SIM-UX-AJUSTES/deployment/deployment-01.json"
+      "session_id": "claude-202610161806-deployer-supc6d01d",
+      "evidence": "evidence/SIM-RV-V1-VENTANA/deployment/deployment-01.json"
     },
     {
-      "at": "2026-10-16T01:44:49Z",
+      "at": "2026-10-16T20:09:31Z",
       "transition": "verified",
       "event": "verified",
       "from": "VERIFYING",
       "to": "DONE",
       "actor": "deployer",
       "runtime": "claude",
-      "session_id": "claude-202610160141-deployer-supb8d2df",
-      "evidence": "evidence/SIM-UX-AJUSTES/deployment/verification-02.json"
+      "session_id": "claude-202610162006-deployer-supe05b07",
+      "evidence": "evidence/SIM-RV-V1-VENTANA/deployment/verification-02.json"
     },
     {
-      "at": "2026-10-16T01:44:51Z",
+      "at": "2026-10-16T20:09:34Z",
       "transition": "close",
       "event": "close",
       "from": "DONE",
       "to": "IDLE",
       "actor": "system",
       "runtime": "claude",
-      "session_id": "claude-202610160141-deployer-supb8d2df",
+      "session_id": "claude-202610162006-deployer-supe05b07",
       "evidence": null
     },
     {
-      "at": "2026-10-16T01:48:05Z",
+      "at": "2026-10-16T20:13:02Z",
       "transition": "activate_task",
       "event": "activate_task",
       "from": "IDLE",
@@ -115,95 +93,117 @@
       "evidence": null
     },
     {
-      "at": "2026-10-16T01:49:19Z",
+      "at": "2026-10-16T20:18:02Z",
       "transition": "start_development",
       "event": "start_development",
       "from": "NEW",
       "to": "DEVELOPING",
       "actor": "developer",
       "runtime": "other",
-      "session_id": "other-202610160148-developer-supb5b14a",
+      "session_id": "other-202610162013-developer-sup6cbf35",
       "evidence": null
     },
     {
-      "at": "2026-10-16T02:26:45Z",
+      "at": "2026-10-16T20:35:51Z",
       "transition": "submit_for_review",
       "event": "submit_for_review",
       "from": "DEVELOPING",
       "to": "READY_FOR_REVIEW",
       "actor": "developer",
       "runtime": "other",
-      "session_id": "other-202610160213-developer-sup45a47f",
-      "evidence": "evidence/SIM-FICHA-PDF/developer/developer-01.json"
+      "session_id": "other-202610162013-developer-sup6cbf35",
+      "evidence": "evidence/SIM-EVIDENCIA-ENTRADAS/developer/developer-01.json"
     },
     {
-      "at": "2026-10-16T02:27:26Z",
+      "at": "2026-10-16T20:36:44Z",
       "transition": "start_review",
       "event": "start_review",
       "from": "READY_FOR_REVIEW",
       "to": "REVIEWING",
       "actor": "reviewer",
       "runtime": "claude",
-      "session_id": "claude-202610160226-reviewer-sup20621d",
+      "session_id": "claude-202610162036-reviewer-sup5ef538",
       "evidence": null
     },
     {
-      "at": "2026-10-16T02:29:18Z",
+      "at": "2026-10-16T20:38:06Z",
       "transition": "review_approve",
       "event": "review_approve",
       "from": "REVIEWING",
       "to": "REVIEW_APPROVED",
       "actor": "reviewer",
       "runtime": "claude",
-      "session_id": "claude-202610160226-reviewer-sup20621d",
-      "evidence": "evidence/SIM-FICHA-PDF/reviewer/review-01.json"
+      "session_id": "claude-202610162036-reviewer-sup5ef538",
+      "evidence": "evidence/SIM-EVIDENCIA-ENTRADAS/reviewer/review-01.json"
     },
     {
-      "at": "2026-10-16T02:29:51Z",
+      "at": "2026-10-16T20:38:57Z",
       "transition": "start_merge",
       "event": "start_merge",
       "from": "REVIEW_APPROVED",
       "to": "MERGING",
       "actor": "deployer",
       "runtime": "claude",
-      "session_id": "claude-202610160229-deployer-supee50b8",
+      "session_id": "claude-202610162038-deployer-supc4fadc",
       "evidence": null
     },
     {
-      "at": "2026-10-16T02:30:42Z",
+      "at": "2026-10-16T20:40:13Z",
       "transition": "merged_deploy",
       "event": "merged",
       "from": "MERGING",
       "to": "PREPARING_DEPLOYMENT",
       "actor": "deployer",
       "runtime": "claude",
-      "session_id": "claude-202610160229-deployer-supee50b8",
-      "evidence": "evidence/SIM-FICHA-PDF/deployment/merge-01.json"
+      "session_id": "claude-202610162038-deployer-supc4fadc",
+      "evidence": "evidence/SIM-EVIDENCIA-ENTRADAS/deployment/merge-01.json"
     },
     {
-      "at": "2026-10-16T02:48:49Z",
+      "at": "2026-10-16T21:00:56Z",
+      "transition": "preparation_failed",
+      "event": "preparation_failed",
+      "from": "PREPARING_DEPLOYMENT",
+      "to": "BLOCKED_HUMAN",
+      "actor": "deployer",
+      "runtime": "claude",
+      "session_id": "claude-202610162038-deployer-supc4fadc",
+      "evidence": "evidence/SIM-EVIDENCIA-ENTRADAS/deployment/failure-01.json"
+    },
+    {
+      "at": "2026-10-16T21:31:27Z",
+      "transition": "resolve_to_preparing",
+      "event": "human_resolve",
+      "from": "BLOCKED_HUMAN",
+      "to": "PREPARING_DEPLOYMENT",
+      "actor": "human",
+      "runtime": null,
+      "session_id": null,
+      "evidence": "evidence/SIM-EVIDENCIA-ENTRADAS/approvals/resolution-01.json"
+    },
+    {
+      "at": "2026-10-16T21:37:31Z",
       "transition": "candidate_ready",
       "event": "candidate_ready",
       "from": "PREPARING_DEPLOYMENT",
       "to": "CANDIDATE_REVIEW",
       "actor": "deployer",
       "runtime": "claude",
-      "session_id": "claude-202610160242-deployer-sup3f5ba1",
-      "evidence": "evidence/SIM-FICHA-PDF/deployment/candidate-01.json"
+      "session_id": "claude-202610162131-deployer-sup5b27ee",
+      "evidence": "evidence/SIM-EVIDENCIA-ENTRADAS/deployment/candidate-01.json"
     },
     {
-      "at": "2026-10-16T02:53:00Z",
+      "at": "2026-10-16T21:41:51Z",
       "transition": "candidate_approve",
       "event": "candidate_approve",
       "from": "CANDIDATE_REVIEW",
       "to": "WAITING_HUMAN_APPROVAL",
       "actor": "reviewer",
       "runtime": "claude",
-      "session_id": "claude-202610160250-reviewer-sup168f0b",
-      "evidence": "evidence/SIM-FICHA-PDF/reviewer/candidate_review-01.json"
+      "session_id": "claude-202610162137-reviewer-sup39a4b3",
+      "evidence": "evidence/SIM-EVIDENCIA-ENTRADAS/reviewer/candidate_review-01.json"
     },
     {
-      "at": "2026-10-16T03:46:20Z",
+      "at": "2026-10-16T21:43:05Z",
       "transition": "human_approve",
       "event": "human_approve",
       "from": "WAITING_HUMAN_APPROVAL",
@@ -211,39 +211,39 @@
       "actor": "human",
       "runtime": null,
       "session_id": null,
-      "evidence": "evidence/SIM-FICHA-PDF/approvals/approval-01.json"
+      "evidence": "evidence/SIM-EVIDENCIA-ENTRADAS/approvals/approval-01.json"
     },
     {
-      "at": "2026-10-16T03:59:15Z",
+      "at": "2026-10-16T21:55:28Z",
       "transition": "deploy_succeeded",
       "event": "deploy_succeeded",
       "from": "DEPLOYING",
       "to": "VERIFYING",
       "actor": "deployer",
       "runtime": "claude",
-      "session_id": "claude-202610160346-deployer-sup1ecc7b",
-      "evidence": "evidence/SIM-FICHA-PDF/deployment/deployment-01.json"
+      "session_id": "claude-202610162143-deployer-supacfe99",
+      "evidence": "evidence/SIM-EVIDENCIA-ENTRADAS/deployment/deployment-01.json"
     },
     {
-      "at": "2026-10-16T13:17:34Z",
+      "at": "2026-10-16T22:45:57Z",
       "transition": "verified",
       "event": "verified",
       "from": "VERIFYING",
       "to": "DONE",
       "actor": "deployer",
       "runtime": "claude",
-      "session_id": "claude-202610161313-deployer-sup297f89",
-      "evidence": "evidence/SIM-FICHA-PDF/deployment/verification-02.json"
+      "session_id": "claude-202610162242-deployer-sup2d1b77",
+      "evidence": "evidence/SIM-EVIDENCIA-ENTRADAS/deployment/verification-02.json"
     },
     {
-      "at": "2026-10-16T13:17:36Z",
+      "at": "2026-10-16T22:46:02Z",
       "transition": "close",
       "event": "close",
       "from": "DONE",
       "to": "IDLE",
       "actor": "system",
       "runtime": "claude",
-      "session_id": "claude-202610161313-deployer-sup297f89",
+      "session_id": "claude-202610162242-deployer-sup2d1b77",
       "evidence": null
     }
   ]
