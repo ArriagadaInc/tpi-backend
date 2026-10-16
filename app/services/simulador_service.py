@@ -1,7 +1,9 @@
 """Servicio de aplicación del simulador de renta vitalicia (SIM-RV-V1).
 
 Orquesta el motor puro (:mod:`app.simulador_pension`), la generación del PDF efímero y el
-evento funcional de auditoría. No persiste entradas ni resultados de la simulación.
+evento funcional de auditoría. Las entradas y el resultado se guardan únicamente como
+evidencia append-only en ``tpi.auditoria.detalle`` (solo escritura, sin nombres ni
+identificadores directos); no se altera el lead.
 """
 
 from __future__ import annotations
@@ -772,6 +774,19 @@ class SimuladorService:
         actor: AuthenticatedUser,
         tipo_escenario: str,
         codigo: str,
+        fecha_simulacion: date,
+        saldo_uf: float,
+        tasa_venta_pct: float,
+        valor_uf: float | None,
+        meses_garantizados: int,
+        meses_aumento_temporal: int,
+        porcentaje_aumento_temporal: float,
+        anios_diferidos: int,
+        porcentaje_rvd: float,
+        causante: Persona,
+        conyuge: Persona | None,
+        hijos: tuple[Hijo, ...],
+        resultado: Resultado,
     ) -> None:
         record_simulacion_event(
             id_lead=id_lead,
@@ -780,4 +795,17 @@ class SimuladorService:
             tipo_escenario=tipo_escenario,
             version_modelo=MODELO_VERSION,
             codigo_verificacion=codigo,
+            fecha_simulacion=fecha_simulacion,
+            saldo_uf=saldo_uf,
+            tasa_venta_pct=tasa_venta_pct,
+            valor_uf=valor_uf,
+            meses_garantizados=meses_garantizados,
+            meses_aumento_temporal=meses_aumento_temporal,
+            pct_aumento_temporal=porcentaje_aumento_temporal,
+            anios_diferidos=anios_diferidos,
+            porcentaje_rvd=porcentaje_rvd,
+            causante=causante,
+            conyuge=conyuge,
+            hijos=hijos,
+            resultado=resultado,
         )

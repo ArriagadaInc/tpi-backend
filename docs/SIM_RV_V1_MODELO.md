@@ -6,6 +6,11 @@ consultar). **No es la normativa de la CMF/SP ni el código de Penta.** Constant
 reproducen el portal, no hechos confirmados. El motor vive en `app/simulador_pension` (módulo puro, sin I/O ni
 importaciones del resto de `app`).
 
+Desde `SIM-EVIDENCIA-ENTRADAS` (decisión del humano 2026-10-15), las entradas y el resultado de cada simulación se
+guardan como evidencia de solo escritura en `tpi.auditoria.detalle` (append-only, sin nombres, RUT, correo ni teléfono).
+La aplicación no lee ese detalle: no es un modelo de persistencia legible ni un historial. La política de retención queda
+pendiente de decisión del humano y mostrar la evidencia en la línea de tiempo es `SIM-HISTORIAL-LINEA-TIEMPO`.
+
 ## 1. Tiempo, edad y mortalidad (comunes a todo)
 
 * **Tiempo mensual.** Solo importan el mes y el año de la fecha de simulación; el día no influye.

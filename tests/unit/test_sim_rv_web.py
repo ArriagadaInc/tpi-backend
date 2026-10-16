@@ -234,6 +234,37 @@ def test_pdf_sin_rut_correo_telefono() -> None:
     assert b"+56 9 1234 5678" not in body
 
 
+def test_auditoria_recibe_entradas_y_resultado() -> None:
+    """El evento recibe las entradas (causante, cónyuge e hijos) y el resultado (AC-1)."""
+    client = _client("executive")
+    csrf = _csrf_token(client)
+    form = {
+        **_valid_form(csrf),
+        "conyuge_sexo": "M",
+        "conyuge_nacimiento": "1962-05-20",
+        "hijo_sexo_1": "H",
+        "hijo_nacimiento_1": "2000-03-10",
+        "hijo_comun_1": "on",
+        "hijo_invalidez_1": "no",
+    }
+    with patch("app.services.simulador_service.record_simulacion_event") as audit:
+        response = client.post(f"/leads/{LEAD_ID_STR}/simulador", data=form)
+    assert response.status_code == 200
+    audit.assert_called_once()
+    kwargs = audit.call_args.kwargs
+    assert kwargs["tipo_escenario"] == "renta_inmediata_familia"
+    assert kwargs["saldo_uf"] == 3000.0
+    assert kwargs["tasa_venta_pct"] == 4.7
+    assert kwargs["causante"].sexo == "H"
+    assert kwargs["causante"].nacimiento == date(1960, 1, 15)
+    assert kwargs["conyuge"].sexo == "M"
+    assert kwargs["conyuge"].nacimiento == date(1962, 5, 20)
+    assert len(kwargs["hijos"]) == 1
+    assert kwargs["hijos"][0].comun is True
+    assert kwargs["hijos"][0].invalidez == "no"
+    assert kwargs["resultado"].pension_mensual > 0
+
+
 # --- Validación del borde (AC-13) ---------------------------------------------
 
 
