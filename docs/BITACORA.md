@@ -22,6 +22,19 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-16 - Harness: tarea SIM-RV-V1-VENTANA cerrada (DONE)
+
+- Titulo: Simulador RV: ventana de validacion abierta, con aviso de valores referenciales
+- Evidencia: `evidence/SIM-RV-V1-VENTANA/` y `tasks/completed/SIM-RV-V1-VENTANA.yaml`.
+- release_sha: `502492257e505884716d14c2529dd0d08bcb421d`
+- pr_number: `81`
+- application_version: `h3-sim-rv-v1-ventana-5024922-domainlocked-r1`
+- bundle_sha256: `c1fd91f28df57caf85978d23540a620e1b7d8557195ebe46a7be631dc09280db`
+- lkg: `h3-sim-ficha-pdf-dd6be12-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `502492257e505884716d14c2529dd0d08bcb421d`
+- verification: `PASS`
+
 ### 2026-10-16 - SIM-RV-V1-VENTANA: ventana de validacion abierta con aviso de valores referenciales (en desarrollo, DEVELOPING)
 
 - Titulo: Simulador RV: ventana de validacion abierta, con aviso de valores referenciales.

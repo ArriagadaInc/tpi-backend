@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "SIM-RV-V1-VENTANA",
+  "created_at": "2026-10-16T17:08:46Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610161707-deployer-sup26e304",
+  "pr_number": 81,
+  "pr_url": "https://github.com/ArriagadaInc/tpi-backend/pull/81",
+  "pr_state_after_merge": "MERGED",
+  "reviewed_sha": "bbc43e2f6df9577a1057b920088973134671f23f",
+  "reviewed_tree": "6d826204ea2717238cf2390d0e2149e8eb0b1847",
+  "release_sha": "502492257e505884716d14c2529dd0d08bcb421d",
+  "release_tree": "6d826204ea2717238cf2390d0e2149e8eb0b1847",
+  "main_parent_sha": "ae6cc40a1404171b3efc6c494cf46c02b0ddc4eb",
+  "main_before_merge": "ae6cc40a1404171b3efc6c494cf46c02b0ddc4eb",
+  "main_after_merge": "502492257e505884716d14c2529dd0d08bcb421d",
+  "method": "squash",
+  "match_head_commit_used": true,
+  "result": "PASS",
+  "change_class": "A",
+  "deploy_required": true,
+  "fast_path": true,
+  "gh_pr_merge_command": "python scripts/harness/merge_reviewed_pr.py",
+  "tree_equivalence": {
+    "reviewed_tree": "6d826204ea2717238cf2390d0e2149e8eb0b1847",
+    "release_tree": "6d826204ea2717238cf2390d0e2149e8eb0b1847",
+    "equal": true,
+    "verification": "git rev-parse 502492257e505884716d14c2529dd0d08bcb421d^{tree} == reviewed_tree tras git fetch origin main; parent unico ae6cc40."
+  },
+  "references": {
+    "developer_evidence": "evidence/SIM-RV-V1-VENTANA/developer/developer-01.json",
+    "review_evidence": "evidence/SIM-RV-V1-VENTANA/reviewer/review-01.json"
+  },
+  "ci_pr": {
+    "run_id": 38935385447,
+    "sha": "bbc43e2f6df9577a1057b920088973134671f23f",
+    "conclusion": "success"
+  },
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "6d82620 == 6d82620."
+    },
+    {
+      "name": "merge_not_repeated",
+      "result": "PASS",
+      "note": "una sola ejecucion de merge_reviewed_pr.py; already_merged=false."
+    }
+  ],
+  "cloud_access": "ninguno (MERGING)"
+}

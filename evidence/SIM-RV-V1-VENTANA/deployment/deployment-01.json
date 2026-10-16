@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "kind": "deployment",
+  "task_id": "SIM-RV-V1-VENTANA",
+  "created_at": "2026-10-16T18:18:47Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610161806-deployer-supc6d01d",
+  "approved_commit": "502492257e505884716d14c2529dd0d08bcb421d",
+  "deployed_commit": "502492257e505884716d14c2529dd0d08bcb421d",
+  "application_version": "h3-sim-rv-v1-ventana-5024922-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "update_accepted": true,
+  "result": "success",
+  "started_at": "2026-10-16T18:07:45Z",
+  "finished_at": "2026-10-16T18:08:37Z",
+  "failure_class": null,
+  "previous_version_label": "h3-sim-ficha-pdf-dd6be12-domainlocked-r1",
+  "final_state": {
+    "version_label": "h3-sim-rv-v1-ventana-5024922-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "observed_at": "2026-10-16T18:20:00Z"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-sim-rv-v1-ventana-5024922-domainlocked-r1/c1fd91f28df57caf85978d23540a620e1b7d8557195ebe46a7be631dc09280db.zip",
+    "s3_checksum_sha256_b64": "wf2R8o31fK+Fl40jVApiDht9hVcZXr5Gp75jHcCSgNs=",
+    "s3_content_length": 4815,
+    "bundle_sha256": "c1fd91f28df57caf85978d23540a620e1b7d8557195ebe46a7be631dc09280db",
+    "digests_equal_approval_01": true,
+    "note": "AV SourceBundle y head-object re-observados post-cutover; checksum base64 decodificado coincide con bundle_sha256 de approval-01 y candidate-01; digests app 086f87fa... / caddy 972cb6e6... segun approval-01 y candidate-01."
+  },
+  "preflight": {
+    "at": "2026-10-16T18:07Z",
+    "result": "PASS",
+    "checks": [
+      "init PASS (DEPLOYING, rol deployer)",
+      "approval-01 approved para 5024922 coincide con candidate-01 (bundle, key, digests, AV)",
+      "sts account 821656895812; region us-east-2 por aws_guard",
+      "environment en LKG h3-sim-ficha-pdf-dd6be12, Ready/Green/Ok, AbortableOperationInProgress false",
+      "AV candidata y AV del LKG UNPROCESSED, SourceBundle candidata = key aprobada"
+    ]
+  },
+  "cutover": {
+    "mechanism": "aws_guard update-environment version-label only",
+    "executed_by": "deployer",
+    "updates_applied": 1,
+    "retries": 0,
+    "option_settings": false,
+    "restart_app_server": false,
+    "rollback_executed": false,
+    "convergence": "exitosa en ~52 s (start 18:07:45Z, completed 18:08:37Z)"
+  },
+  "events": {
+    "levels_observed": [
+      "INFO"
+    ],
+    "errors": 0,
+    "note": "Environment update completed successfully; transicion Ok->Info durante el despliegue y luego Ready/Green/Ok."
+  },
+  "warnings": [
+    "AC-5 (smoke humano) sigue pendiente; conteos de logs y smoke HTTP corresponden a VERIFYING."
+  ]
+}
