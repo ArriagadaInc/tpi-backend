@@ -13,9 +13,14 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 - **Simulador de renta vitalicia en el CRM (perfil ejecutivo)** (SIM-RV-V1)
   - Motor puro `app/simulador_pension` que reproduce el simulador de referencia dentro de ±1 UF (435/435 casos del fixture).
   - Panel y formulario en el detalle del lead, visible solo para `executive` y superusuarios `ceo`/`cto` (403 real para el resto).
-  - PDF efímero en memoria con escape de marcado, sin persistencia de entradas ni resultados.
+  - PDF efímero en memoria con escape de marcado, sin RUT, correo ni teléfono del lead.
   - Evento funcional append-only en `tpi.auditoria` sin PII (`app/services/simulador_auditoria.py`).
   - Dependencia nueva: `reportlab==5.0.1`.
+
+- **Evidencia de entradas y resultado del simulador** (SIM-EVIDENCIA-ENTRADAS)
+  - El evento append-only de la generación del PDF (`tpi.auditoria.detalle`, acción `simulacion_renta_vitalicia`) pasa a ser un detalle versionado (`schema_version`) que guarda, además de los metadatos funcionales (ejecutivo, escenario, versión del modelo y código de verificación), las entradas de la simulación (causante, saldo, tasa, garantía, aumento, diferimiento, relación RVD/RT, valor UF y beneficiarios: cónyuge e hijos) y el resultado (pensión y, en renta temporal, renta temporal y meses de diferimiento).
+  - El detalle es de solo escritura (la aplicación no lo lee), no altera el lead y no contiene nombres, RUT, correo ni teléfono; la política de retención queda pendiente de decisión del humano.
+  - Las entradas guardadas bastan para reproducir el resultado y el código de verificación.
 
 ### 🔄 Cambiado
 

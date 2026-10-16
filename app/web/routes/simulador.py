@@ -423,13 +423,27 @@ async def simulador_generar(request: Request, lead_id: str):
         )
 
     # AC-11: evento append-only tras un PDF generado con éxito (fail-closed: sin auditoría
-    # no se entrega el PDF).
+    # no se entrega el PDF). El detalle guarda las entradas y el resultado como evidencia
+    # de solo escritura (SIM-EVIDENCIA-ENTRADAS).
     try:
         sim_service.record_event(
             id_lead=lead_id,
             actor=user,
             tipo_escenario=escenario.tipo,
             codigo=codigo,
+            fecha_simulacion=fecha_simulacion,
+            saldo_uf=simulador_form.saldo_uf,
+            tasa_venta_pct=simulador_form.tasa_venta_pct,
+            valor_uf=simulador_form.valor_uf,
+            meses_garantizados=simulador_form.meses_garantizados,
+            meses_aumento_temporal=simulador_form.meses_aumento_temporal,
+            porcentaje_aumento_temporal=simulador_form.porcentaje_aumento_temporal,
+            anios_diferidos=simulador_form.anios_diferidos,
+            porcentaje_rvd=simulador_form.porcentaje_rvd,
+            causante=causante,
+            conyuge=conyuge,
+            hijos=hijos,
+            resultado=resultado,
         )
     except Exception:
         return PlainTextResponse(
