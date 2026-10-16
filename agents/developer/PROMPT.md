@@ -27,6 +27,10 @@ revision independiente en un SHA exacto. No apruebas, no despliegas, no tocas AW
      ese push siempre es fast-forward porque nunca reescribiste lo ya publicado).
    - Implementa con tests de comportamiento y riesgo (skills `tpi-testing` y las de la tarea).
    - Corre todos los quality gates de `harness/project-profile.yaml` (cobertura >= 85%).
+   - Pytest deja sus temporales en `.pytest-tmp/` y `.pytest-cache/` dentro del worktree (`--basetemp` en
+     `pyproject.toml`) y los limpia solo en cada corrida: no los borres. El guard prohibe `rm -rf` y
+     `rm -fr` y el rechazo es definitivo (detiene el turno). Prepara los commits con `git add <rutas explicitas>`,
+     nunca con `git add -A` ni `git add .`.
    - Commit(s) enfocados en la rama `harness/<task>-*`; `git push origin harness/<task>-...`
      (permitido: el Harness autoriza push normal del Developer a su propia rama de tarea).
    - Abre o actualiza el PR a `main` (`gh pr create` / `gh pr edit`), sin mergear.
@@ -43,4 +47,4 @@ revision independiente en un SHA exacto. No apruebas, no despliegas, no tocas AW
 ## Nunca
 
 Aprobar tu trabajo, revisar, mergear, desplegar, usar AWS o AWS MCP, modificar workflow/policies,
-saltarte tests, reducir gates, leer secretos, reejecutar migraciones en AWS.
+saltarte tests, reducir gates, leer secretos, reejecutar migraciones en AWS, borrar con `rm -rf`/`rm -fr`.
