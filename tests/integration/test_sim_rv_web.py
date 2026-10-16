@@ -20,6 +20,8 @@ from app.auth.models import AuthenticatedUser, AuthenticationResult, UserRole
 from app.config import Settings
 from app.database.connection import get_db_connection
 from app.database.healthcheck import full_health_check
+from app.services.simulador_service import codigo_verificacion
+from app.simulador_pension import Persona, simular
 from app.web.main import create_web_app
 
 pytestmark = pytest.mark.integration
@@ -38,6 +40,8 @@ class _World:
         self.lead_id: Any = None
         self.persona_id: Any = None
         self.rut = f"7{int(uuid4().hex[:8], 16) % 90000000 + 10000000}-1"
+        # Nombre con marcado y caracteres especiales (AC-2): el detalle no debe contenerlo.
+        self.nombre = f'Simulador <b>Lead</b> & "Álvaro" ñ {self.suffix} <script>alert(1)</script>'
 
 
 @pytest.fixture
@@ -51,7 +55,7 @@ def world() -> _World:
             cur.execute(
                 "INSERT INTO tpi.personas (rut, nombre_completo, fecha_nacimiento, created_at) "
                 "VALUES (%s, %s, %s, now()) RETURNING id_persona",
-                (w.rut, f"Simulador Lead {w.suffix}", date(1960, 1, 15)),
+                (w.rut, w.nombre, date(1960, 1, 15)),
             )
             w.persona_id = cur.fetchone()["id_persona"]
             cur.execute(
@@ -149,19 +153,75 @@ def test_auditoria_sin_pii(world: _World) -> None:
     detalle = evento["detalle"]
     assert isinstance(detalle, dict)
     assert set(detalle.keys()) == {
+        "schema_version",
         "actor_subject",
         "role",
         "tipo_escenario",
         "version_modelo",
         "codigo_verificacion",
+        "entradas",
+        "resultado",
     }
+    assert detalle["schema_version"] == 1
     assert detalle["role"] == "executive"
     assert detalle["tipo_escenario"] == "renta_inmediata_causante"
-    serialized = json.dumps(detalle)
-    assert "saldo" not in serialized
-    assert "tasa" not in serialized
+
+    entradas = detalle["entradas"]
+    assert entradas["saldo_uf"] == 3000.0
+    assert entradas["tasa_venta_pct"] == 4.7
+    assert entradas["valor_uf"] is None
+    assert entradas["meses_garantizados"] == 0
+    assert entradas["meses_aumento_temporal"] == 0
+    assert entradas["anios_diferidos"] == 0
+    assert entradas["causante"] == {"sexo": "H", "fecha_nacimiento": "1960-01-15"}
+    assert entradas["beneficiarios"] == []
+    assert detalle["resultado"]["pension_uf"] > 0
+    assert detalle["resultado"]["renta_temporal_uf"] is None
+    assert detalle["resultado"]["meses_diferidos"] == 0
+
+    serialized = json.dumps(detalle, ensure_ascii=False)
     assert world.rut not in serialized
-    assert "Simulador Lead" not in serialized
+    # El nombre (con marcado y caracteres especiales) no aparece en el detalle.
+    assert world.nombre not in serialized
+    for fragmento in ("Simulador", "<b>", "Álvaro", "<script>", "alert"):
+        assert fragmento not in serialized
+
+
+def test_evidencia_reproducible(world: _World) -> None:
+    """Las entradas guardadas reproducen la pensión y el código de verificación (AC-3)."""
+    client = _client("executive")
+    csrf = _csrf_token(client, str(world.lead_id))
+    response = client.post(f"/leads/{str(world.lead_id)}/simulador", data=_valid_form(csrf))
+    assert response.status_code == 200
+
+    eventos = _auditoria(world.lead_id)
+    assert len(eventos) == 1
+    detalle = eventos[0]["detalle"]
+
+    entradas = detalle["entradas"]
+    kwargs = {
+        "fecha_simulacion": date.fromisoformat(entradas["fecha_simulacion"]),
+        "saldo_uf": entradas["saldo_uf"],
+        "tasa_venta_pct": entradas["tasa_venta_pct"],
+        "causante": Persona(
+            entradas["causante"]["sexo"],
+            date.fromisoformat(entradas["causante"]["fecha_nacimiento"]),
+        ),
+        "conyuge": None,
+        "hijos": (),
+        "meses_garantizados": entradas["meses_garantizados"],
+        "meses_aumento_temporal": entradas["meses_aumento_temporal"],
+        "porcentaje_aumento_temporal": entradas["pct_aumento_temporal"],
+        "anios_diferidos": entradas["anios_diferidos"],
+        "porcentaje_rvd": entradas["porcentaje_rvd"],
+    }
+    assert entradas["beneficiarios"] == []
+
+    resultado = simular(**kwargs)
+    codigo = codigo_verificacion(**kwargs)
+
+    assert resultado.pension_mensual == detalle["resultado"]["pension_uf"]
+    assert codigo == detalle["codigo_verificacion"]
 
 
 def test_sin_persistencia(world: _World) -> None:

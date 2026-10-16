@@ -22,6 +22,30 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-16 - SIM-EVIDENCIA-ENTRADAS: guardar entradas y resultado como evidencia (en desarrollo, DEVELOPING)
+
+- Titulo: Simulador: guardar entradas y resultado como evidencia (solo escritura).
+- Clase A (fast path, solo aplicacion): sin migraciones, grants, vistas, constraints ni infraestructura.
+- Decision del humano (2026-10-15): reemplaza el AC-10 de `SIM-RV-V1` («no se persiste ninguna entrada ni resultado»). Las
+  entradas y el resultado de cada simulacion se guardan como evidencia append-only de solo escritura en
+  `tpi.auditoria.detalle`, sin nombres, RUT, correo ni telefono. La politica de retencion queda pendiente de decision del
+  humano y mostrarla en la linea de tiempo es `SIM-HISTORIAL-LINEA-TIEMPO`.
+- Cambios:
+  - `app/services/simulador_auditoria.py`: el `detalle` pasa a ser versionado (`schema_version`) y `record_simulacion_event`
+    recibe las entradas (causante, saldo, tasa, garantia, aumento, diferimiento, relacion RVD/RT, valor UF y beneficiarios) y
+    el resultado (pension y, en renta temporal, renta temporal y meses de diferimiento); se agrega `build_detalle` puro.
+  - `app/services/simulador_service.py` y `app/web/routes/simulador.py`: el evento se registra con las entradas y el resultado
+    reales de la simulacion, conservando el fail-closed (si el INSERT falla no se entrega el PDF).
+  - `tests/unit/test_sim_rv_auditoria.py` y `tests/unit/test_sim_rv_web.py` ajustados; nuevo
+    `tests/unit/test_sim_rv_evidencia_entradas.py` (estructura versionada, sin PII y reproducibilidad del resultado y del
+    codigo); `tests/integration/test_sim_rv_web.py` verifica el detalle sin PII (nombre con marcado y caracteres especiales)
+    y la reproducibilidad desde PostgreSQL.
+  - `docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md` (AC-10 y AC-11), `docs/SIM_RV_V1_PENDIENTES.md` (#6) y `docs/SIM_RV_V1_MODELO.md`
+    reflejan la decision del humano; `CHANGELOG.md` actualizado.
+- No cambia el motor `app/simulador_pension/**`, la logica numerica, los rangos validados, la autorizacion ni el escape de
+  marcado del PDF; no se toca `app/repositories/**`.
+- Siguiente paso: correr gates de calidad, abrir/actualizar PR y `submit_for_review`.
+
 ### 2026-10-16 - Harness: tarea SIM-RV-V1-VENTANA cerrada (DONE)
 
 - Titulo: Simulador RV: ventana de validacion abierta, con aviso de valores referenciales
