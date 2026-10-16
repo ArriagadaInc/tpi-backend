@@ -10,7 +10,7 @@ import hashlib
 import io
 import math
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Literal
 from xml.sax.saxutils import escape
@@ -39,13 +39,9 @@ from app.simulador_pension import (
     simular,
 )
 from app.simulador_pension import __version__ as MODELO_VERSION  # noqa: N812
-from app.simulador_pension.api import VENTANA_VALIDADA
 from app.simulador_pension.mortalidad import edad_en_meses
 
 CRM_TZ = ZoneInfo("America/Santiago")
-
-# AC-6: ventana validada (constante única documentada). NO extender sin campaña canaria (AC-18).
-VENTANA_ADVERTENCIA_DIAS = 90
 
 # Rangos validados por edad (fuente de la ingeniería inversa; ver docs/SIM_RV_V1_PENDIENTES.md §1).
 EDAD_CAUSANTE_INDIVIDUAL = (60, 100)
@@ -87,20 +83,6 @@ class Escenario:
 
 def _edad_anios(nacimiento: date, referencia: date) -> int:
     return edad_en_meses(nacimiento, referencia) // 12
-
-
-def clasificar_ventana(fecha: date) -> Literal["ok", "advertencia", "bloqueado"]:
-    """Estado de la ventana validada respecto a una fecha de simulación.
-
-    Dentro de la ventana se genera normal; hasta ``VENTANA_ADVERTENCIA_DIAS`` después del fin se
-    genera con advertencia; más allá se bloquea (fail-closed, AC-6).
-    """
-    inicio, fin = VENTANA_VALIDADA
-    if inicio <= fecha <= fin:
-        return "ok"
-    if fecha <= fin + timedelta(days=VENTANA_ADVERTENCIA_DIAS):
-        return "advertencia"
-    return "bloqueado"
 
 
 def clasificar_escenario(
@@ -288,7 +270,6 @@ def generar_pdf(
     meses_aumento_temporal: int,
     porcentaje_aumento_temporal: float,
     anios_diferidos: int,
-    advertencia_ventana: bool,
     codigo: str,
 ) -> bytes:
     """Genera en memoria la ficha PDF «Estudio de pensión» (carta apaisada) sin escribir a disco."""
@@ -690,8 +671,16 @@ def generar_pdf(
     )
     story.append(pie)
 
-    # g) Leyenda, versión y código de verificación conservados de SIM-RV-V1.
+    # g) Leyenda: supuestos y advertencias con aviso permanente de valores referenciales
+    # (SIM-RV-V1-VENTANA: la ventana validada queda abierta; ya no hay advertencia por fecha).
     story.append(Spacer(1, 6))
+    story.append(Paragraph("Supuestos y advertencias", nota))
+    story.append(
+        Paragraph(
+            "Los resultados de esta simulación son valores referenciales y no vinculantes.",
+            leyenda,
+        )
+    )
     story.append(Paragraph("Estimación referencial no vinculante", leyenda))
     story.append(
         Paragraph(
@@ -699,14 +688,6 @@ def generar_pdf(
             leyenda,
         )
     )
-    if advertencia_ventana:
-        story.append(
-            Paragraph(
-                "Advertencia: la ventana de validación del modelo ha vencido recientemente; los resultados "
-                "deben contrastarse con el simulador de referencia antes de entregarlos.",
-                leyenda,
-            )
-        )
     story.append(Paragraph("Documento referencial no vinculante — Tu Pensión Inteligente", leyenda))
 
     # f) Banda inferior con el logo oficial.

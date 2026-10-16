@@ -25,7 +25,7 @@ contenido del PDF están en las secciones finales.
 | AC-3 | Formulario precarga sexo/nacimiento; campos por escenario; fecha del servidor | `app/web/routes/simulador.py`, `simulador.html` | `tests/unit/test_sim_rv_web.py::test_formulario_precarga_sexo_y_fecha` | automated + human |
 | AC-4 | Alcance V1 exacto; rechazos con 422 y mensaje claro | `app/simulador_pension/api.py` (`NoValidadoError`), `simulador_service.py` | `tests/unit/test_sim_rv_validacion.py` | automated |
 | AC-5 | Motor puro, datos versionados en el paquete; 435/435 ±1 UF | `app/simulador_pension/`, `pyproject.toml` (package-data) | `tests/unit/test_sim_rv_regresion_portal.py` | automated |
-| AC-6 | Ventana fail-closed (normal/advertencia/bloqueo) | `simulador_service.py` (constante `VENTANA_VALIDADA`) | `tests/unit/test_sim_rv_ventana.py` | automated + human |
+| AC-6 | Ventana abierta con aviso permanente de valores referenciales (reemplaza el fail-closed original por decisión del humano 2026-10-14) | `simulador_service.py` (`generar_pdf`), `app/web/routes/simulador.py`, `simulador.html` | `tests/unit/test_sim_rv_ventana.py`, `test_sim_rv_web.py`, `test_sim_rv_pdf.py` | automated + human (smoke AC-19) |
 | AC-7 | Contenido del PDF según matriz | `simulador_service.py::generar_pdf` | `tests/unit/test_sim_rv_pdf.py` | automated + human (smoke AC-19) |
 | AC-8 | Escape de marcado, español, sin enlaces/scripts, metadatos genéricos | `simulador_service.py::generar_pdf` | `tests/unit/test_sim_rv_pdf.py::test_escape_de_marcado` | automated |
 | AC-9 | PDF en memoria, headers efímeros, sin logs | `app/web/routes/simulador.py` (POST) | `tests/unit/test_sim_rv_web.py::test_headers_pdf_y_auditoria` | automated + human |
@@ -53,7 +53,7 @@ Desde `SIM-FICHA-PDF` el PDF es la ficha «Estudio de pensión» (carta apaisada
 | 4 | «OPCIÓN II» (solo con aumento temporal): «Aumento Temporal de Pensión» + «Renta Vitalicia Inmediata» («Sin Excedente», «Inflación Futura 4%», «Rescate Total») | motor + formulario | no |
 | 5 | Pie: nombre del ejecutivo y contacto corporativo en texto plano (correo, sitio, dirección), sin enlaces activos | `AuthenticatedUser.display_name` + literal | no (nombre funcional) |
 | 6 | Banda inferior azul marino con el logo oficial | `app/web/static/img/official-logo-on-dark.png` | no |
-| 7 | Leyenda «Estimación referencial no vinculante», versión del modelo y código de verificación | literal, `app.simulador_pension.__version__`, `codigo_verificacion()` | no |
+| 7 | «Supuestos y advertencias»: aviso permanente de que los resultados son valores referenciales (no vinculantes), la leyenda «Estimación referencial no vinculante», la versión del modelo y el código de verificación | literal, `app.simulador_pension.__version__`, `codigo_verificacion()` | no |
 | 8 | Paginación (una página) | reportlab | no |
 
 **Excluido del PDF:** RUT, correo y teléfono del lead (ni siquiera enmascarados), saldo del lead, enlaces

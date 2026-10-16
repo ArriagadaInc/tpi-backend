@@ -24,7 +24,6 @@ from app.services.simulador_service import (
     SimulacionInvalidaError,
     SimuladorService,
     clasificar_escenario,
-    clasificar_ventana,
     codigo_verificacion,
     generar_pdf,
 )
@@ -241,7 +240,6 @@ def _form_context(
         "public_site_url": getattr(request.app.state, "web_public_site_url", None),
         "csrf_token": _get_csrf_token(request),
         "return_to_url": f"/leads/{lead_id}",
-        "advertencia_ventana": clasificar_ventana(datetime.now(CRM_TZ).date()) == "advertencia",
         "form_values": dict(form_values) if form_values else {},
         "simulador_errores": simulador_errores or [],
     }
@@ -337,17 +335,6 @@ async def simulador_generar(request: Request, lead_id: str):
         )
 
     fecha_simulacion = datetime.now(CRM_TZ).date()
-    estado_ventana = clasificar_ventana(fecha_simulacion)
-    if estado_ventana == "bloqueado":
-        return _simulador_error_response(
-            request,
-            lead_id,
-            lead,
-            form,
-            [
-                "La ventana de validación del modelo ha vencido. No es posible generar la simulación."
-            ],
-        )
 
     sim_service = SimuladorService()
     try:
@@ -428,7 +415,6 @@ async def simulador_generar(request: Request, lead_id: str):
             meses_aumento_temporal=simulador_form.meses_aumento_temporal,
             porcentaje_aumento_temporal=simulador_form.porcentaje_aumento_temporal,
             anios_diferidos=simulador_form.anios_diferidos,
-            advertencia_ventana=estado_ventana == "advertencia",
             codigo=codigo,
         )
     except Exception:

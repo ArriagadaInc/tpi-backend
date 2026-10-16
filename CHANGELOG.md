@@ -19,6 +19,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ### 🔄 Cambiado
 
+- **Ventana de validación abierta con aviso de valores referenciales** (SIM-RV-V1-VENTANA)
+  - Por decisión del humano (2026-10-14) la ventana validada del simulador queda abierta: se eliminan el estado «bloqueado», el corte de 90 días y el 422 por vencimiento, y la simulación se genera para cualquier fecha de simulación (la fecha actual de `America/Santiago`).
+  - El formulario muestra siempre un aviso de que los resultados son valores referenciales (no vinculantes) y el PDF lo indica de forma explícita en la sección «Supuestos y advertencias»; desaparece el aviso condicional de ventana de validación vencida en pantalla y en el PDF.
+  - El motor `app/simulador_pension/**` no cambia: conserva `VENTANA_VALIDADA` y su `warnings.warn` informativo (no llega a pantalla ni al PDF).
+
 - **Ajustes de uso del CRM y del simulador** (SIM-UX-AJUSTES)
   - Los errores de validación del formulario del simulador (p. ej. edad fuera de rango) se muestran en la misma pantalla, en un aviso arriba del formulario, conservando lo ingresado, con HTTP 422 y mensaje claro en español; ya no se responde con una pantalla de texto aparte.
   - En el detalle del lead se elimina el botón antiguo «Abrir simulación» y queda solo «Abrir simulador» del panel nuevo (visible para `executive`, `ceo` y `cto`).
