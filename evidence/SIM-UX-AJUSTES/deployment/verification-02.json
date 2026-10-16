@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "SIM-UX-AJUSTES",
+  "created_at": "2026-10-16T01:44:34Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610160141-deployer-supb8d2df",
+  "verification_scope": "VERIFYING final de SIM-UX-AJUSTES tras la aceptacion humana (acceptance-01: AC-2, AC-3, AC-6). Solo lecturas AWS via aws_guard; sin escrituras AWS.",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "1f5050537e44d631c685dd78e7277932284c81fa",
+  "deployed_commit": "1f5050537e44d631c685dd78e7277932284c81fa",
+  "application_version": "h3-sim-ux-ajustes-1f50505-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "PASS",
+  "failure_class": null,
+  "final_state": {
+    "version_label": "h3-sim-ux-ajustes-1f50505-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-15T22:04:16Z",
+    "observed_at": "2026-10-16T01:45:00Z"
+  },
+  "events": {
+    "observed": 20,
+    "levels": {
+      "INFO": 20
+    },
+    "errors": 0,
+    "note": "Eventos del verification-01 (update completado a las 22:04:15Z, sin abortos); el environment sigue Ready/Green/Ok con la misma version y DateUpdated."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "note": "VersionLabel re-observada en describe-environments (igual a la aprobada, DateUpdated sin cambios); SourceBundle, ChecksumSHA256 y digests verificados en verification-01 sobre la misma version sin nuevos updates.",
+    "bundle_sha256": "82cfe13688bdad7614501b93c3bdc7d10693eee920b4788da22795e2c46da555"
+  },
+  "smoke_client": "python urllib (cliente independiente), TLS por defecto, sin seguir redirects; resultados de verification-01 (8/8 PASS); el smoke autenticado fue humano (AC-6).",
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "simulador_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "login_no_lite",
+      "result": "PASS",
+      "observed": "GET /login 200 sin el texto 'CRM Lite'"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "observed": "ningun redirect a dominio legacy"
+    }
+  ],
+  "logs": {
+    "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+    "window_start": "2026-10-15T22:03:23Z",
+    "method": "aws_guard logs filter-log-events con --query length(events); solo conteos; no se leyeron lineas; ventana ampliada hasta despues del smoke humano AC-6."
+  },
+  "pii_log_scan": {
+    "matches": 0,
+    "raw_pattern_hits": {
+      "Authorization -REDACTED": 0,
+      "Bearer": 0,
+      "password": 0,
+      "cookie": 0,
+      "raw_payload": 0,
+      "secret": 0,
+      "token": 0,
+      "hash -ACME": 0
+    },
+    "strong_matches": 0,
+    "strong_hits": {},
+    "weak_matches": {},
+    "classification_required": false,
+    "patterns": [
+      "Authorization -REDACTED",
+      "Bearer",
+      "raw_payload",
+      "password",
+      "hash -ACME",
+      "cookie",
+      "secret",
+      "token"
+    ]
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "automated",
+      "evidence": "evidence/SIM-UX-AJUSTES/reviewer/review-01.json: revision aprobada; CI verde en PR #75; arbol del release == reviewed_tree."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "both",
+      "evidence": "review-01 (automatizado) y evidence/SIM-UX-AJUSTES/approvals/acceptance-01.json (AC-2 accepted por el humano)."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "method": "both",
+      "evidence": "review-01 (automatizado) y evidence/SIM-UX-AJUSTES/approvals/acceptance-01.json (AC-3 accepted por el humano)."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 y smoke login_no_lite: GET /login sin 'CRM Lite'."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01: CI verde en PR #75 y publish run 38805792647 6/6 success con scan HIGH/CRITICAL=0."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "method": "human",
+      "evidence": "evidence/SIM-UX-AJUSTES/approvals/acceptance-01.json: AC-6 accepted por el humano (interactive)."
+    }
+  ],
+  "rollback_executed": false,
+  "safety": {
+    "aws_writes": [],
+    "update_environment_executed": false,
+    "secrets_accessed": false,
+    "log_lines_read": false,
+    "denied_events": 0
+  }
+}

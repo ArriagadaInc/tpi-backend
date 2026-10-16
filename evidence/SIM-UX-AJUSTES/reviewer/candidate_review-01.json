@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "SIM-UX-AJUSTES",
+  "created_at": "2026-10-15T21:21:03Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610152118-reviewer-supcc398d",
+  "release_sha": "1f5050537e44d631c685dd78e7277932284c81fa",
+  "reviewed_tree": "1c648e6323fe7c7a76fd8cc16e5df9a5fbd802e4",
+  "release_tree": "1c648e6323fe7c7a76fd8cc16e5df9a5fbd802e4",
+  "decision": "APPROVED",
+  "cause": null,
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse: release 1f50505 tree 1c648e6 == reviewed_tree; origin/main == release_sha tras fetch."
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "Reconstruccion independiente con digests verificados en ECR: sha256 82cfe136...da555, 4815 bytes, entrada unica docker-compose.yml, sin build ni genialabs."
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "AV SourceBundle == key S3 content-addressed; status UNPROCESSED."
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "note": "Plan inspeccionado; no se ejecuto update-environment ni dry-run."
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "note": ""
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "Inspeccion estructural del compose del bundle: variables sensibles solo como referencias ${VAR}; literales solo dominios publicos y un id de hosted zone no secreto; evidencia sin valores sensibles. No se ejecuto scan por shell."
+    }
+  ],
+  "findings": [
+    {
+      "id": "CF-1",
+      "severity": "info",
+      "file": "harness/state.json",
+      "summary": "Imagenes ECR: inmutabilidad inferida por tags unicos por SHA y digests ACTIVE; no se consulto la configuracion del repositorio.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "CF-2",
+      "severity": "info",
+      "file": "evidence/SIM-UX-AJUSTES/deployment/candidate-01.json",
+      "summary": "AC-6 (smoke humano autenticado) queda pendiente tras el cutover.",
+      "required_action": "Humano: approve.py accept tras verificar."
+    }
+  ],
+  "risks": [
+    "LKG h3-sim-rv-v1-1308441-domainlocked-r1 observado Ready/Green/Ok; digests presentes en ECR (riesgo de lifecycle keep-20 vigente).",
+    "AC-6 depende de verificacion humana en AWS DEV."
+  ]
+}

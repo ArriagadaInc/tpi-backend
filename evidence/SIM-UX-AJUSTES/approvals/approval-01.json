@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "approval",
+  "task_id": "SIM-UX-AJUSTES",
+  "created_at": "2026-10-15T22:01:18Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "approved_commit": "1f5050537e44d631c685dd78e7277932284c81fa",
+  "app_digest": "sha256:846ea174e119461edb3c5a8bf572f4b1c187ad6bcb7983de280a944b67b3cd93",
+  "caddy_digest": "sha256:6e60ebc3af8db984b3d7bb2c05395b35eab4478a02b40d2f01fba50880c62c28",
+  "bundle_sha256": "82cfe13688bdad7614501b93c3bdc7d10693eee920b4788da22795e2c46da555",
+  "s3_key": "tpi-backoffice/dev-releases/h3-sim-ux-ajustes-1f50505-domainlocked-r1/82cfe13688bdad7614501b93c3bdc7d10693eee920b4788da22795e2c46da555.zip",
+  "application_version": "h3-sim-ux-ajustes-1f50505-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "lkg_version_label": "h3-sim-rv-v1-1308441-domainlocked-r1",
+  "candidate_evidence": {
+    "path": "evidence/SIM-UX-AJUSTES/deployment/candidate-01.json",
+    "sha256": "042bbe9cabea16cd8beb2baa9d7fc0d63fe5c7ba1e9f0cd45c62d2ca1e276cd4"
+  },
+  "rollback_authorization": {
+    "scope": "single_version_only_rollback_to_named_lkg",
+    "max_attempts": 1,
+    "lkg_version_label": "h3-sim-rv-v1-1308441-domainlocked-r1",
+    "conditions": [
+      "update_environment_accepted",
+      "environment_degraded_inconsistent_or_not_expected_state",
+      "lkg_application_version_usable",
+      "lkg_images_present_in_ecr",
+      "no_option_settings_required",
+      "not_purely_functional_defect",
+      "no_previous_rollback_attempt"
+    ]
+  },
+  "decision": "approved"
+}

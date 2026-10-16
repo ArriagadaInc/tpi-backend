@@ -1,0 +1,97 @@
+schema_version: 1
+task:
+  id: SIM-UX-AJUSTES
+  title: 'CRM y simulador: aviso de edad en pantalla, navegacion y nombre sin ''Lite'''
+  objective: 'Cinco ajustes de uso pedidos por el humano: los errores del formulario del simulador (p.
+    ej. edad fuera de rango) se muestran en la misma pantalla y no en una pantalla de texto aparte; se
+    quita el boton antiguo ''Abrir simulacion'' y queda solo ''Abrir simulador''; ''Volver al sitio''
+    pasa a ''Home'' y ''Salir'' a ''Cerrar sesion''; y el CRM deja de llamarse ''CRM Lite''. Sin cambios
+    funcionales.'
+  source:
+    type: story
+    ref: Observaciones del humano sobre el simulador y el CRM (2026-10-15); definida en sesion interactiva
+      con Claude.
+  change_class: A
+  deploy_required: true
+  requires_human_acceptance: true
+  acceptance_criteria:
+  - id: AC-1
+    verification: automated
+    description: Los errores de validacion del POST de /leads/{id}/simulador (edad del causante, conyuge
+      o hijos fuera de rango, saldo, tasa, grupo familiar, etc.) se muestran en la misma pantalla del
+      formulario, en un aviso arriba y/o junto al campo, conservando lo ingresado, con HTTP 422 y mensaje
+      claro en espanol; ya no se responde con una pantalla de texto aparte. 403, 404, CSRF y el flujo
+      anonimo no cambian.
+  - id: AC-2
+    verification: both
+    description: En el detalle del lead se elimina el boton antiguo 'Abrir simulacion' (el que abre el
+      simulador publico antiguo, simulator_url) y queda solo 'Abrir simulador' del panel nuevo, visible
+      solo para executive, ceo y cto; se ajustan las pruebas que afirmaban el boton antiguo.
+  - id: AC-3
+    verification: both
+    description: En la cabecera del CRM la etiqueta 'Volver al sitio' pasa a 'Home' y 'Salir' pasa a 'Cerrar
+      sesión'; los destinos de ambos enlaces no cambian.
+  - id: AC-4
+    verification: automated
+    description: '''CRM Lite'' pasa a ''CRM'' en todo texto visible para el usuario (titulos de pagina,
+      cabecera, insignia, kickers, login y la app Streamlit) y en las pruebas que lo afirman; no se renombran
+      rutas, modulos, archivos de prueba ni identificadores, ni se reescribe la documentacion historica
+      (docs/ y entradas pasadas de CHANGELOG y BITACORA).'
+  - id: AC-5
+    verification: automated
+    description: 'Sin regresion: RBAC, enmascaramiento de PII, listado, detalle, dashboard ejecutivo,
+      exportacion XLSX y simulador (PDF y auditoria) intactos; cobertura total >= 85%; CHANGELOG y BITACORA
+      actualizados.'
+  - id: AC-6
+    verification: human
+    description: 'Smoke humano en AWS DEV: un ejecutivo ve solo ''Abrir simulador'' en el detalle del
+      lead; un dato fuera de rango (p. ej. la edad) muestra el aviso en la misma pantalla; la cabecera
+      dice ''Home'' y ''Cerrar sesión''; ya no aparece ''Lite'' en ninguna pantalla del CRM.'
+  constraints:
+  - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
+    desde ramas o worktrees antiguos.'
+  - 'Tarea unica; no mezclar otros cambios ni dejar alcance diferido sin documentarlo. Clase A (fast path
+    version-only): sin migraciones, grants, vistas, constraints ni infraestructura; si hicieran falta
+    es BLOCKER: detenerse y escalar al humano.'
+  - No modificar app/simulador_pension/** (motor), app/auth/**, dependencias ni lockfiles; no cambiar
+    la logica numerica, los rangos validados, la autorizacion (403 fuera de executive, ceo y cto) ni el
+    escape de marcado del PDF.
+  - No reducir la cobertura minima (85%).
+  - 'Cambios esperados: los POST de app/web/routes/simulador.py que hoy responden PlainTextResponse 422;
+    el bloque lead-hero-actions de lead_detail_panel.html (boton antiguo); las dos etiquetas de base.html;
+    y las 15 apariciones de ''CRM Lite'' en app/backoffice_app.py, app/pages/2_solicitudes_registradas.py
+    y app/web/**.'
+  - Conservar get_public_simulator_url y simulator_url en la configuracion si algo mas los usa; solo se
+    quita el boton de la plantilla del detalle del lead (y su contexto si queda sin uso).
+  - 'Reviewer: comprobar con grep que ''CRM Lite'' solo sobrevive en documentacion historica, y generar
+    un caso de edad fuera de rango para ver el aviso en pantalla.'
+  dependencies: []
+  risk:
+    level: low
+    notes: Cambios de texto y de plantilla; el unico con logica es mostrar los errores del simulador en
+      el mismo formulario.
+  scope:
+    paths:
+    - app/web/**
+    - app/services/**
+    - app/pages/**
+    - app/backoffice_app.py
+    - tests/**
+    - CHANGELOG.md
+    - docs/BITACORA.md
+    - docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md
+  status: closed
+closure:
+  closed_at: '2026-10-16T01:44:50Z'
+  final_state: DONE
+  evidence_dir: evidence/SIM-UX-AJUSTES
+  release:
+    release_sha: 1f5050537e44d631c685dd78e7277932284c81fa
+    pr_number: 75
+    application_version: h3-sim-ux-ajustes-1f50505-domainlocked-r1
+    bundle_sha256: 82cfe13688bdad7614501b93c3bdc7d10693eee920b4788da22795e2c46da555
+    lkg: h3-sim-rv-v1-1308441-domainlocked-r1
+    deployment: success
+    deployed_commit: 1f5050537e44d631c685dd78e7277932284c81fa
+    verification: PASS
+  rework_rounds: 0
