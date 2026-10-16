@@ -1,4 +1,4 @@
-"""FastAPI application for the CRM Lite web UX."""
+"""FastAPI application for the CRM web UX."""
 
 from __future__ import annotations
 

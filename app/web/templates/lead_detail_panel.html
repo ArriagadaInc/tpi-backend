@@ -32,23 +32,6 @@
           </span>
         </div>
       </div>
-
-      <div class="lead-hero-actions">
-        {% if simulator_url %}
-          <a
-            class="btn-primary-simulator"
-            href="{{ simulator_url }}"
-            target="_blank"
-            rel="noopener noreferrer"
-            data-simulator-link
-            data-simulator-url="{{ simulator_url }}"
-          >
-            Abrir simulación →
-          </a>
-        {% else %}
-          <span class="btn-primary-simulator disabled">Abrir simulación →</span>
-        {% endif %}
-      </div>
     </section>
 
     {% include "simulador_panel.html" %}

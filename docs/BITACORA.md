@@ -35,6 +35,23 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - deployed_commit: `1f5050537e44d631c685dd78e7277932284c81fa`
 - verification: `PASS`
 
+### 2026-10-15 - SIM-UX-AJUSTES: aviso de edad en pantalla, navegacion y nombre sin 'Lite' (en desarrollo, DEVELOPING)
+
+- Titulo: CRM y simulador: aviso de edad en pantalla, navegacion y nombre sin 'Lite'.
+- Clase A (fast path, solo aplicacion): sin migraciones, grants, vistas, constraints ni infraestructura.
+- Cambios:
+  - `app/web/routes/simulador.py`: los POST del simulador ya no responden `PlainTextResponse` 422; ahora
+    re-renderizan `simulador.html` en la misma pantalla con un aviso arriba (`simulador_errores`) y los valores
+    ingresados (`form_values`), conservando HTTP 422 y los flujos 403/404/CSRF/anónimo.
+  - `app/web/templates/simulador.html`: aviso de errores y re-poblado de los campos del formulario.
+  - `app/web/templates/lead_detail_panel.html`: se elimina el bloque `lead-hero-actions` con el botón antiguo
+    «Abrir simulación»; queda solo el panel nuevo «Abrir simulador» (executive/ceo/cto).
+  - `app/web/templates/base.html`: «Volver al sitio» → «Home» y «Salir» → «Cerrar sesión».
+  - «CRM Lite» → «CRM» en todo texto visible (títulos, cabecera, insignia, kickers, login y app Streamlit) y en
+    las pruebas que lo afirmaban; no se renombran rutas, módulos, archivos de prueba ni identificadores, y no se
+    reescribe la documentación histórica.
+- Siguiente paso: correr gates de calidad, abrir/actualizar PR y `submit_for_review`.
+
 ### 2026-10-14 - Harness: tarea SIM-RV-V1 cerrada (DONE)
 
 - Titulo: Simulador de renta vitalicia en el CRM con PDF efimero (perfil ejecutivo), V1 solo validado

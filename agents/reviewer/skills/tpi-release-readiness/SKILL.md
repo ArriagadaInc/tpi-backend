@@ -28,8 +28,14 @@ CANDIDATE_REVIEW: revision automatica del release candidate real antes del Human
 - Si una plantilla requiere una opcion no autorizada, informar la incompatibilidad antes de invocarla.
 - `git rev-parse <release_sha>^{tree}` == `reviewed_tree` de la revision.
 - `gh run view <publish_run_id> --json conclusion,headSha`.
-- Reconstruccion: `python -c` con `build_domain_locked_bundle(template=deployment/aws/docker-compose.domainlocked.yml, ...)`
-  en un directorio temporal y `sha256sum`.
+- Reconstruccion: UN solo `python -c` con `build_domain_locked_bundle(template=deployment/aws/docker-compose.domainlocked.yml, ...)`.
+  Sin redirecciones de shell (`>`, `>>`, `tee`) ni `mktemp` o `$VAR` como destino: el guard las rechaza
+  cuando el comando menciona rutas protegidas del Harness (p. ej. `git show <sha>:... > $T/archivo`). El directorio
+  temporal sale de `tempfile.mkdtemp()` dentro del mismo script, el hash de `hashlib.sha256` y el contenido del
+  zip de `zipfile`, todo impreso por el script.
+- Antes de reconstruir, comprobar que el template y el constructor del arbol de trabajo son los del release, con un
+  comando aparte y sin redirecciones: `git diff --quiet <release_sha> -- deployment/aws/docker-compose.domainlocked.yml deployment/build_eb_ecr_bundle.py`
+  (salida vacia y codigo 0 = iguales). Si difieren, informar y no aprobar; no extraer el template con `git show`.
 - `python scripts/harness/aws_guard.py ecr describe-images --repository-name tpi-dev-app --image-ids imageDigest=<digest>`
 - `python scripts/harness/aws_guard.py ecr describe-image-scan-findings --repository-name <repo> --image-id imageDigest=<digest>`
 - Consultar candidate y LKG en DOS llamadas secuenciales, con un solo label por llamada:

@@ -257,7 +257,14 @@ def _parse_simulador_form(raw: Mapping[str, Any]) -> SimuladorForm:
     return SimuladorForm(**data)
 
 
-def _form_context(request: Request, lead_id: str, lead: dict[str, Any] | None) -> dict[str, Any]:
+def _form_context(
+    request: Request,
+    lead_id: str,
+    lead: dict[str, Any] | None,
+    *,
+    form_values: Mapping[str, Any] | None = None,
+    simulador_errores: list[str] | None = None,
+) -> dict[str, Any]:
     user = _require_web_user(request)
     context: dict[str, Any] = {
         "request": request,
@@ -273,11 +280,49 @@ def _form_context(request: Request, lead_id: str, lead: dict[str, Any] | None) -
         "csrf_token": _get_csrf_token(request),
         "return_to_url": f"/leads/{lead_id}",
         "advertencia_ventana": clasificar_ventana(datetime.now(CRM_TZ).date()) == "advertencia",
+        "form_values": dict(form_values) if form_values else {},
+        "simulador_errores": simulador_errores or [],
     }
     if lead is not None:
         context["sexo_precargado"] = _sexo_desde_genero(lead.get("genero"))
         context["fecha_nacimiento_precargada"] = _fecha_desde_valor(lead.get("fecha_nacimiento"))
     return context
+
+
+def _validation_error_messages(exc: ValidationError) -> list[str]:
+    """Mensajes claros en español de un ``ValidationError`` de Pydantic (sin el prefijo técnico).
+
+    Pydantic v2 antepone ``"Value error, "`` al mensaje de los ``ValueError`` levantados en los
+    validadores; se recupera el texto original para mostrarlo al usuario.
+    """
+    messages: list[str] = []
+    for error in exc.errors():
+        ctx = error.get("ctx") or {}
+        original = ctx.get("error")
+        if isinstance(original, Exception):
+            messages.append(str(original))
+            continue
+        msg = str(error.get("msg", ""))
+        if msg.startswith("Value error, "):
+            msg = msg[len("Value error, ") :]
+        messages.append(msg)
+    return messages or ["Los datos del formulario no son válidos. Revisa los campos ingresados."]
+
+
+def _simulador_error_response(
+    request: Request,
+    lead_id: str,
+    lead: dict[str, Any] | None,
+    form: Mapping[str, Any],
+    errores: list[str],
+):
+    """Re-renderiza el formulario en la misma pantalla (422) conservando lo ingresado (AC-1)."""
+    context = _form_context(
+        request, lead_id, lead, form_values=dict(form), simulador_errores=errores
+    )
+    return request.app.state.templates.TemplateResponse(
+        request, "simulador.html", context, status_code=422
+    )
 
 
 @router.get("/leads/{lead_id}/simulador", response_class=HTMLResponse)
@@ -324,25 +369,29 @@ async def simulador_generar(request: Request, lead_id: str):
 
     try:
         simulador_form = _parse_simulador_form(form)
-    except ValidationError:
-        return PlainTextResponse(
-            "Los datos del formulario no son validos. Revisa los campos ingresados.",
-            status_code=422,
+    except ValidationError as exc:
+        return _simulador_error_response(
+            request, lead_id, lead, form, _validation_error_messages(exc)
         )
 
     fecha_simulacion = datetime.now(CRM_TZ).date()
     estado_ventana = clasificar_ventana(fecha_simulacion)
     if estado_ventana == "bloqueado":
-        return PlainTextResponse(
-            "La ventana de validación del modelo ha vencido. No es posible generar la simulación.",
-            status_code=422,
+        return _simulador_error_response(
+            request,
+            lead_id,
+            lead,
+            form,
+            [
+                "La ventana de validación del modelo ha vencido. No es posible generar la simulación."
+            ],
         )
 
     sim_service = SimuladorService()
     try:
         causante = _causante_desde_lead(lead)
     except SimulacionInvalidaError as exc:
-        return PlainTextResponse(str(exc), status_code=422)
+        return _simulador_error_response(request, lead_id, lead, form, [str(exc)])
 
     conyuge = (
         Persona(sexo=simulador_form.conyuge.sexo, nacimiento=simulador_form.conyuge.nacimiento)
@@ -383,7 +432,7 @@ async def simulador_generar(request: Request, lead_id: str):
             porcentaje_rvd=simulador_form.porcentaje_rvd,
         )
     except SimulacionInvalidaError as exc:
-        return PlainTextResponse(str(exc), status_code=422)
+        return _simulador_error_response(request, lead_id, lead, form, [str(exc)])
 
     codigo = codigo_verificacion(
         fecha_simulacion=fecha_simulacion,

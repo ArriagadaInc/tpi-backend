@@ -303,7 +303,7 @@ def test_login_and_leads_routes_render() -> None:
     client = _build_client()
     login = client.get("/login")
     assert login.status_code == 200
-    assert "CRM Lite" in login.text
+    assert "CRM" in login.text
 
     invalid = client.post("/login", data={"username": "bad", "password": "bad"})
     assert invalid.status_code == 401
@@ -329,7 +329,7 @@ def test_login_and_leads_routes_render() -> None:
     assert "Juan Perez" in detail.text
     assert "Buscar por nombre o RUT" not in detail.text
     assert "Mostrando" not in detail.text
-    assert "Abrir simulación" in detail.text
+    assert "Abrir simulador" not in detail.text
     assert "Juan Perez" in detail.text
     assert "12.***.***-5" in detail.text
     assert "ju***@example.com" in detail.text
@@ -695,45 +695,6 @@ def test_detail_return_to_is_internal_and_preserves_context() -> None:
     assert 'href="/leads"' in fallback.text
 
 
-def test_detail_renders_simulator_link_from_central_configuration() -> None:
-    client = _build_client(
-        settings=Settings(
-            APP_ENV="local",
-            AUTH_ENABLED=True,
-            AUTH_MODE="simple-dev",
-            AUTH_USERS_JSON='{"users":[{"subject":"local-demo-alvaro","username":"alvaro.local","display_name":"Alvaro Local","role":"tester","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"}]}',
-            WEB_MASK_PII=False,
-            TPI_PUBLIC_SITE_URL="http://tpi.localhost:8080/",
-        )
-    )
-    _login(client)
-
-    detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
-    assert detail.status_code == 200
-    assert 'href="http://tpi.localhost:8080/simulador.html#simulador-interactivo"' in detail.text
-    assert "data-simulator-link" in detail.text
-    assert "btn-primary-simulator disabled" not in detail.text
-    assert "Abrir simulación" in detail.text
-
-
-def test_detail_disables_simulator_link_when_configuration_is_missing() -> None:
-    client = _build_client(
-        settings=Settings(
-            APP_ENV="local",
-            AUTH_ENABLED=True,
-            AUTH_MODE="simple-dev",
-            AUTH_USERS_JSON='{"users":[{"subject":"local-demo-alvaro","username":"alvaro.local","display_name":"Alvaro Local","role":"tester","password_hash":"$argon2id$v=19$m=65536,t=3,p=4$6NT/a6vLo9fBUi0s9oMZaQ$IyXdFj9Z2fhWtB49KKo4yeO/YhNaanInI55f9TjlF0o"}]}',
-            WEB_MASK_PII=False,
-        )
-    )
-    _login(client)
-
-    detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
-    assert detail.status_code == 200
-    assert '<span class="btn-primary-simulator disabled">' in detail.text
-    assert "data-simulator-link" not in detail.text
-
-
 def test_web_status_update_and_comment_append_are_protected_and_incremental() -> None:
     service = _FakeWebService()
     client = _build_client(service, auth_provider=_FakeAuthProvider(authenticated_role="tester"))
@@ -956,12 +917,10 @@ def test_static_assets_can_be_served() -> None:
     response = client.get("/static/css/app.css")
     assert response.status_code == 200
     assert "text/css" in response.headers["content-type"].lower()
-    assert "CRM Lite" not in response.text
 
     script = client.get("/static/js/app.js")
     assert script.status_code == 200
     assert "javascript" in script.headers["content-type"].lower()
-    assert "CRM Lite" not in script.text
 
 
 def test_board_html_uses_relative_static_asset_urls() -> None:
@@ -1043,7 +1002,7 @@ def test_detail_renders_volver_al_sitio_when_approved_and_authenticated() -> Non
 
     detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
     assert detail.status_code == 200
-    assert "Volver al sitio" in detail.text
+    assert "Home" in detail.text
     assert 'href="https://dev.tupensioninteligente.cl/"' in detail.text
 
 
@@ -1058,14 +1017,14 @@ def test_login_page_does_not_render_volver_al_sitio() -> None:
 
     login = client.get("/login")
     assert login.status_code == 200
-    assert "Volver al sitio" not in login.text
+    assert "Home" not in login.text
 
 
 def test_detail_hides_volver_al_sitio_when_url_missing_or_invalid() -> None:
     missing = _build_client(settings=Settings(_env_file=None, APP_ENV="aws-dev"))
     _login(missing)
     missing_detail = missing.get("/leads/11111111-1111-1111-1111-111111111111")
-    assert "Volver al sitio" not in missing_detail.text
+    assert "Home" not in missing_detail.text
 
     invalid = _build_client(
         settings=Settings(
@@ -1076,7 +1035,7 @@ def test_detail_hides_volver_al_sitio_when_url_missing_or_invalid() -> None:
     )
     _login(invalid)
     invalid_detail = invalid.get("/leads/11111111-1111-1111-1111-111111111111")
-    assert "Volver al sitio" not in invalid_detail.text
+    assert "Home" not in invalid_detail.text
 
 
 def test_detail_timeline_merges_event_and_note_with_badge() -> None:

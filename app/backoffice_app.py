@@ -67,14 +67,14 @@ def main() -> None:
             "total_solicitudes": stats.get("total_solicitudes", 0),
         }
     )
-    st.title("CRM Lite")
+    st.title("CRM")
     if stats["error"]:
         show_error_message("Error", stats["error"])
 
     col1, col2, col3 = st.columns(3)
     col1.metric("Solicitudes registradas", stats["total_solicitudes"])
     col2.metric("Estado BD", "Conectada" if health.get("connected") else "Desconectada")
-    col3.metric("Modo", "CRM Lite")
+    col3.metric("Modo", "CRM")
 
     st.markdown("## Operacion privada")
     st.page_link("pages/2_solicitudes_registradas.py", label="Abrir bandeja de leads")

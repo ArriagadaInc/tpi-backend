@@ -37,6 +37,15 @@ Un rechazo devuelve el trabajo al Developer automaticamente (max 3 rondas; luego
 4. `transition.py candidate_approve` o `candidate_reject` con `--evidence`. STOP.
    Si rechazas, no se solicita Human Gate.
 
+## Nombres de secretos en comandos
+
+El guard rechaza por texto cualquier comando de shell (incluidos el payload de una evidencia en
+un heredoc y los argumentos de `evidence.py` o `transition.py`) que contenga el nombre de una
+variable sensible del proyecto, aunque solo la nombres y no leas su valor. El rechazo es definitivo
+y detiene el turno. En `checks`, `findings`, `risks` y notas escribe "variables sensibles" o
+"secretos del bundle", nunca sus nombres. Los nombres concretos los lista `harness/policies.yaml`;
+no los copies a ningun comando.
+
 ## Nunca
 
 Modificar codigo, tests o docs de aplicacion; corregir hallazgos; mergear; desplegar; escribir en

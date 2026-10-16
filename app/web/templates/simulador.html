@@ -20,6 +20,17 @@
           </div>
         </div>
 
+        {% if simulador_errores %}
+          <div class="notice alert-error" role="alert">
+            <strong>No se pudo generar la simulación.</strong>
+            <ul class="error-list">
+              {% for error in simulador_errores %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
         {% if advertencia_ventana %}
           <div class="notice notice-soft">
             La ventana de validación del modelo ha vencido recientemente; los resultados deben
@@ -55,15 +66,15 @@
             <div class="simulator-grid">
               <label>
                 Saldo en UF *
-                <input type="number" step="any" min="0" name="saldo_uf" required>
+                <input type="number" step="any" min="0" name="saldo_uf" value="{{ form_values.get('saldo_uf', '') }}" required>
               </label>
               <label>
                 Tasa de venta (%) *
-                <input type="number" step="any" min="0" max="100" name="tasa_venta_pct" required>
+                <input type="number" step="any" min="0" max="100" name="tasa_venta_pct" value="{{ form_values.get('tasa_venta_pct', '') }}" required>
               </label>
               <label>
                 Valor UF (opcional, para equivalentes en CLP)
-                <input type="number" step="any" min="0" name="valor_uf">
+                <input type="number" step="any" min="0" name="valor_uf" value="{{ form_values.get('valor_uf', '') }}">
               </label>
             </div>
           </fieldset>
@@ -75,13 +86,13 @@
                 Sexo
                 <select name="conyuge_sexo">
                   <option value="">Sin cónyuge</option>
-                  <option value="H">Masculino</option>
-                  <option value="M">Femenino</option>
+                  <option value="H" {% if form_values.get('conyuge_sexo') == 'H' %}selected{% endif %}>Masculino</option>
+                  <option value="M" {% if form_values.get('conyuge_sexo') == 'M' %}selected{% endif %}>Femenino</option>
                 </select>
               </label>
               <label>
                 Fecha de nacimiento
-                <input type="date" name="conyuge_nacimiento">
+                <input type="date" name="conyuge_nacimiento" value="{{ form_values.get('conyuge_nacimiento', '') }}">
               </label>
             </div>
           </fieldset>
@@ -94,24 +105,24 @@
                   Hijo {{ i }} — Sexo
                   <select name="hijo_sexo_{{ i }}">
                     <option value=""></option>
-                    <option value="H">Masculino</option>
-                    <option value="M">Femenino</option>
+                    <option value="H" {% if form_values.get('hijo_sexo_' ~ i) == 'H' %}selected{% endif %}>Masculino</option>
+                    <option value="M" {% if form_values.get('hijo_sexo_' ~ i) == 'M' %}selected{% endif %}>Femenino</option>
                   </select>
                 </label>
                 <label>
                   Hijo {{ i }} — Fecha de nacimiento
-                  <input type="date" name="hijo_nacimiento_{{ i }}">
+                  <input type="date" name="hijo_nacimiento_{{ i }}" value="{{ form_values.get('hijo_nacimiento_' ~ i, '') }}">
                 </label>
                 <label class="simulator-check">
-                  <input type="checkbox" name="hijo_comun_{{ i }}" value="1">
+                  <input type="checkbox" name="hijo_comun_{{ i }}" value="1" {% if form_values.get('hijo_comun_' ~ i) %}checked{% endif %}>
                   Común con el cónyuge
                 </label>
                 <label>
                   Hijo {{ i }} — Invalidez
                   <select name="hijo_invalidez_{{ i }}">
-                    <option value="no">Sin invalidez</option>
-                    <option value="parcial">Parcial</option>
-                    <option value="total">Total</option>
+                    <option value="no" {% if form_values.get('hijo_invalidez_' ~ i, 'no') == 'no' %}selected{% endif %}>Sin invalidez</option>
+                    <option value="parcial" {% if form_values.get('hijo_invalidez_' ~ i) == 'parcial' %}selected{% endif %}>Parcial</option>
+                    <option value="total" {% if form_values.get('hijo_invalidez_' ~ i) == 'total' %}selected{% endif %}>Total</option>
                   </select>
                 </label>
               </div>
@@ -123,15 +134,15 @@
             <div class="simulator-grid">
               <label>
                 Garantía (meses)
-                <input type="number" step="1" min="0" name="meses_garantizados" value="0">
+                <input type="number" step="1" min="0" name="meses_garantizados" value="{{ form_values.get('meses_garantizados', '0') }}">
               </label>
               <label>
                 Aumento temporal (meses)
-                <input type="number" step="1" min="0" name="meses_aumento_temporal" value="0">
+                <input type="number" step="1" min="0" name="meses_aumento_temporal" value="{{ form_values.get('meses_aumento_temporal', '0') }}">
               </label>
               <label>
                 Aumento temporal (%)
-                <input type="number" step="any" min="0" max="100" name="porcentaje_aumento_temporal" value="0">
+                <input type="number" step="any" min="0" max="100" name="porcentaje_aumento_temporal" value="{{ form_values.get('porcentaje_aumento_temporal', '0') }}">
               </label>
             </div>
           </fieldset>
@@ -141,11 +152,11 @@
             <div class="simulator-grid">
               <label>
                 Años de diferimiento (0 = renta inmediata, 1–10 = renta temporal)
-                <input type="number" step="1" min="0" max="10" name="anios_diferidos" value="0">
+                <input type="number" step="1" min="0" max="10" name="anios_diferidos" value="{{ form_values.get('anios_diferidos', '0') }}">
               </label>
               <label>
                 Relación RVD/RT (%)
-                <input type="number" step="any" min="50" max="100" name="porcentaje_rvd" value="100">
+                <input type="number" step="any" min="50" max="100" name="porcentaje_rvd" value="{{ form_values.get('porcentaje_rvd', '100') }}">
               </label>
             </div>
           </fieldset>
