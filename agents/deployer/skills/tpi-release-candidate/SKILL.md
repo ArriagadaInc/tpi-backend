@@ -30,6 +30,10 @@ Merge del arbol revisado y fabricacion unica del candidate (imagenes + bundle).
 - `gh run list --workflow publish-dev-ecr-images.yml --limit 5 --json databaseId,headSha,conclusion`
 - `gh run watch <run_id>`; `gh run download <run_id> --dir .harness-release/<release_sha7>/artifact`
 - Digests desde el manifest descargado (nunca escritos a mano).
+- Escaneo de cada imagen (HIGH y CRITICAL deben ser 0), una llamada por imagen y con la plantilla tal cual:
+  `python scripts/harness/aws_guard.py ecr describe-image-scan-findings --repository-name <repo> --image-id imageDigest=<digest>`
+  NO agregar `--max-results`, paginacion ni ninguna opcion fuera de la plantilla: el guard la rechaza y el
+  rechazo detiene el turno aunque la lectura no cambie nada. No optimizar la consulta por iniciativa propia.
 - Bundle: `python -c "from pathlib import Path; from deployment.build_eb_ecr_bundle import build_domain_locked_bundle as b; print(b(template=Path('deployment/aws/docker-compose.domainlocked.yml'), output=Path('.harness-release/<label>.zip'), app_image='<repo>@<digest>', caddy_image='<repo>@<digest>', runtime_git_sha='<release_sha>'))"`
 - Version label: `h3-<slug>-<release_sha7>-domainlocked-r1` (patron de `environments/dev.yaml`; nunca reutilizar).
 
