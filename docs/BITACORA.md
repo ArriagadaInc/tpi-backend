@@ -22,6 +22,20 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-16 - SIM-FICHA-PDF: ficha PDF «Estudio de pensión» (en desarrollo, DEVELOPING)
+
+- Titulo: Simulador: ficha PDF con el formato «Estudio de pensión» de TPI.
+- Clase A (fast path, solo aplicacion): sin migraciones, grants, vistas, constraints ni infraestructura.
+- Diseño fuente de verdad: `docs/specs/SIM_FICHA_PDF_SPEC.md` (la ficha de ejemplo no se copia ni se usa en pruebas por contener datos de una persona real).
+- Cambios:
+  - `app/services/simulador_service.py`: `generar_pdf` pasa de A4 a carta apaisada (792×612 pt) con el formato de la ficha «Estudio de pensión»: banda superior azul marino `#0f243e` (tratamiento + nombre, título «ESTUDIO DE PENSIÓN» y fecha), fila de datos (fecha de nacimiento, cónyuge, tasa de venta y valor UF destacado), tablas «OPCIÓN I» (Renta Vitalicia Inmediata + Rescate Total) y «OPCIÓN II» (Aumento Temporal de Pensión + Inflación Futura 4% + Rescate Total) cuando hay aumento temporal, pie de contacto corporativo en texto plano y banda inferior con `official-logo-on-dark.png`. Se agregan los cálculos derivados (`_rescate_opcion_i`, `_valor_actual`, `_valor_futuro`, `_rescate_opcion_ii`, `_pension_aumentada`) y el formato es-CL (`_uf`, `_clp`).
+  - `app/web/routes/simulador.py`: `generar_pdf` ahora recibe `sexo_causante`, `causante_nacimiento`, `tiene_conyuge`, `saldo_uf`, meses de garantía/aumento, porcentaje de aumento y años diferidos; se eliminan `_parametros_pdf` y el cálculo de `edad_causante` (ya no se usan).
+  - `tests/unit/test_sim_rv_pdf.py`: estructura de la ficha (AC-1), cálculos derivados con datos sintéticos (AC-2), pie y contacto sin PII (AC-3) y conservación de SIM-RV-V1 (AC-4).
+  - `docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md` (matriz de contenido del PDF) y `docs/SIM_RV_V1_PENDIENTES.md` (fuera de alcance §5) actualizados.
+- Se conservan de SIM-RV-V1: leyenda «Estimación referencial no vinculante», versión del modelo, código de verificación, escape de marcado, metadatos genéricos sin PII y ausencia de RUT, correo y teléfono del lead; la renta temporal con RVD conserva su sección con la nueva apariencia.
+- Fuera de alcance documentado (no se inventa): fila «RP (AFP)», bloque «PGU / BAC / TOTAL», comparativa de varias opciones, teléfono personal del ejecutivo, estado civil y renta temporal con RVD (ver `docs/SIM_RV_V1_PENDIENTES.md` §5).
+- Siguiente paso: correr gates de calidad, abrir/actualizar PR y `submit_for_review`.
+
 ### 2026-10-16 - Harness: tarea SIM-UX-AJUSTES cerrada (DONE)
 
 - Titulo: CRM y simulador: aviso de edad en pantalla, navegacion y nombre sin 'Lite'

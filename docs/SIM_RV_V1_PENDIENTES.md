@@ -58,3 +58,17 @@ Todas las consultas usan datos ficticios; hasta hoy se hicieron 457 simulaciones
 * Motor portado: `app/simulador_pension` (sin cambios en la lógica numérica respecto del paquete de referencia).
 * Fixture de regresión: `tests/data/casos_portal.json` (435 casos del portal).
 * Paquete de referencia (fuente de la ingeniería inversa): `C:\desarrollos\REA\simulador_pension`.
+
+## 5. Fuera de alcance de la ficha «Estudio de pensión» (SIM-FICHA-PDF)
+
+Decisiones documentadas en `docs/specs/SIM_FICHA_PDF_SPEC.md` §5; no se inventan y quedan aquí para
+retomarlas cuando existan los datos o la decisión de producto:
+
+| # | Elemento del ejemplo omitido | Motivo |
+|---|---|---|
+| 1 | Fila «RP (AFP)» (retiro programado) | Dato de la AFP que el sistema no tiene. |
+| 2 | Bloque «PGU / BAC / TOTAL» | Beneficios del Estado que el sistema no modela. |
+| 3 | Comparativa de varias opciones a la vez | El MVP muestra una fila con la opción simulada. |
+| 4 | Teléfono personal del ejecutivo | El modelo de usuario no lo tiene. |
+| 5 | Estado civil | El modelo no lo tiene. |
+| 6 | Renta temporal con renta vitalicia diferida | El ejemplo no la cubre; se conserva la sección actual con la nueva apariencia. |
