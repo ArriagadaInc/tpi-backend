@@ -22,6 +22,19 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-16 - Harness: tarea SIM-FICHA-PDF cerrada (DONE)
+
+- Titulo: Simulador: ficha PDF con el formato 'Estudio de pension' de TPI
+- Evidencia: `evidence/SIM-FICHA-PDF/` y `tasks/completed/SIM-FICHA-PDF.yaml`.
+- release_sha: `dd6be124595426e6646b94d5b19c19a864e2c5a8`
+- pr_number: `79`
+- application_version: `h3-sim-ficha-pdf-dd6be12-domainlocked-r1`
+- bundle_sha256: `de97beb63b279bc07ae4d154e1054a1b99409c597c6acc413939e01a40bb6c9e`
+- lkg: `h3-sim-ux-ajustes-1f50505-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `dd6be124595426e6646b94d5b19c19a864e2c5a8`
+- verification: `PASS`
+
 ### 2026-10-16 - SIM-FICHA-PDF: ficha PDF «Estudio de pensión» (en desarrollo, DEVELOPING)
 
 - Titulo: Simulador: ficha PDF con el formato «Estudio de pensión» de TPI.

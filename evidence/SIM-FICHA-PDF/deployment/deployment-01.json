@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "kind": "deployment",
+  "task_id": "SIM-FICHA-PDF",
+  "created_at": "2026-10-16T03:58:50Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610160346-deployer-sup1ecc7b",
+  "approved_commit": "dd6be124595426e6646b94d5b19c19a864e2c5a8",
+  "deployed_commit": "dd6be124595426e6646b94d5b19c19a864e2c5a8",
+  "application_version": "h3-sim-ficha-pdf-dd6be12-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "update_accepted": true,
+  "result": "success",
+  "started_at": "2026-10-16T03:47:45Z",
+  "finished_at": "2026-10-16T03:48:35Z",
+  "failure_class": null,
+  "previous_version_label": "h3-sim-ux-ajustes-1f50505-domainlocked-r1",
+  "final_state": {
+    "version_label": "h3-sim-ficha-pdf-dd6be12-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "observed_at": "2026-10-16T03:52:00Z"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-sim-ficha-pdf-dd6be12-domainlocked-r1/de97beb63b279bc07ae4d154e1054a1b99409c597c6acc413939e01a40bb6c9e.zip",
+    "s3_checksum_sha256_b64": "3pe+tjsnm8B65NFU4QVKG5lAnFl8asxBOTngGkC7bJ4=",
+    "s3_content_length": 4815,
+    "bundle_sha256": "de97beb63b279bc07ae4d154e1054a1b99409c597c6acc413939e01a40bb6c9e",
+    "digests_equal_approval_01": true,
+    "note": "AV SourceBundle y head-object re-observados post-cutover; digests app 885fefa8... / caddy 1c7346d9... segun approval-01 y candidate-01."
+  },
+  "preflight": {
+    "at": "2026-10-16T03:47Z",
+    "result": "PASS",
+    "checks": [
+      "init PASS (DEPLOYING, rol deployer)",
+      "approval-01 approved para dd6be12 coincide con candidate-01 (bundle, key, digests, AV)",
+      "sts account 821656895812; region us-east-2 por aws_guard",
+      "environment en LKG h3-sim-ux-ajustes-1f50505, Ready/Green/Ok, AbortableOperationInProgress false",
+      "AV candidata UNPROCESSED, SourceBundle = key aprobada"
+    ]
+  },
+  "cutover": {
+    "mechanism": "aws_guard update-environment version-label only",
+    "executed_by": "deployer",
+    "updates_applied": 1,
+    "retries": 0,
+    "option_settings": false,
+    "restart_app_server": false,
+    "rollback_executed": false,
+    "convergence": "exitosa en ~50 s (start 03:47:45Z, completed 03:48:35Z)"
+  },
+  "events": {
+    "levels_observed": [
+      "INFO"
+    ],
+    "errors": 0,
+    "note": "Environment update completed successfully; transicion Ok->Info durante el despliegue y luego Ready/Green/Ok."
+  },
+  "warnings": [
+    "AC-6 (smoke humano autenticado) sigue pendiente; se verifica en VERIFYING. Conteos de logs y smoke HTTP corresponden a VERIFYING."
+  ]
+}

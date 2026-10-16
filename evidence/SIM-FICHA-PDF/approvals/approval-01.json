@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "approval",
+  "task_id": "SIM-FICHA-PDF",
+  "created_at": "2026-10-16T03:46:18Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "approved_commit": "dd6be124595426e6646b94d5b19c19a864e2c5a8",
+  "app_digest": "sha256:885fefa8e249217b3de3b087c568b781eed1cc277eae4e29c05f8024cfb40bce",
+  "caddy_digest": "sha256:1c7346d92a79ecf27d01262a8975ee98e5530361a613527db4c4e23fb08bb372",
+  "bundle_sha256": "de97beb63b279bc07ae4d154e1054a1b99409c597c6acc413939e01a40bb6c9e",
+  "s3_key": "tpi-backoffice/dev-releases/h3-sim-ficha-pdf-dd6be12-domainlocked-r1/de97beb63b279bc07ae4d154e1054a1b99409c597c6acc413939e01a40bb6c9e.zip",
+  "application_version": "h3-sim-ficha-pdf-dd6be12-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "lkg_version_label": "h3-sim-ux-ajustes-1f50505-domainlocked-r1",
+  "candidate_evidence": {
+    "path": "evidence/SIM-FICHA-PDF/deployment/candidate-01.json",
+    "sha256": "446f80355d01917ecf4ec8c49c5e109d4c9ab3d99675fab16318d54b33b4a863"
+  },
+  "rollback_authorization": {
+    "scope": "single_version_only_rollback_to_named_lkg",
+    "max_attempts": 1,
+    "lkg_version_label": "h3-sim-ux-ajustes-1f50505-domainlocked-r1",
+    "conditions": [
+      "update_environment_accepted",
+      "environment_degraded_inconsistent_or_not_expected_state",
+      "lkg_application_version_usable",
+      "lkg_images_present_in_ecr",
+      "no_option_settings_required",
+      "not_purely_functional_defect",
+      "no_previous_rollback_attempt"
+    ]
+  },
+  "decision": "approved"
+}

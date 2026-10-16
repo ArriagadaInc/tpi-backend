@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "SIM-FICHA-PDF",
+  "created_at": "2026-10-16T02:52:49Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610160250-reviewer-sup168f0b",
+  "release_sha": "dd6be124595426e6646b94d5b19c19a864e2c5a8",
+  "reviewed_tree": "a24aecd015abe91bb6c788af3a8d5b6a64bec871",
+  "release_tree": "a24aecd015abe91bb6c788af3a8d5b6a64bec871",
+  "decision": "APPROVED",
+  "cause": null,
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse dd6be12^{tree} == a24aecd == reviewed_tree; origin/main == release_sha tras fetch."
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "merge-base --is-ancestor OK."
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "gh run view 38840886539: success, headSha = release_sha."
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "describe-images ACTIVE para app 885fefa8... y caddy 1c7346d9..., tag = release_sha."
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "scan COMPLETE, findingSeverityCounts vacio en ambos digests."
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "Reconstruccion independiente con los digests verificados: sha256 de97beb6...6c9e, 4815 bytes; template y constructor sin diferencias con el release."
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "Entrada unica docker-compose.yml; sin build ni dominio legado; solo 2 imagenes por digest."
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "head-object: ChecksumSHA256 3pe+tjsn... == base64 del sha256 del bundle, 4815 bytes, FULL_OBJECT."
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "AV h3-sim-ficha-pdf-dd6be12-domainlocked-r1 UNPROCESSED con SourceBundle = bucket/key del candidate."
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "commit -> digests -> bundle -> key S3 -> AV -> label: coherente."
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "Environment Ready/Green/Ok con VersionLabel h3-sim-ux-ajustes-1f50505-domainlocked-r1, sin operacion en curso."
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "AV del LKG existe (UNPROCESSED) con SourceBundle intacto."
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "app 846ea174... y caddy 6e60ebc3... ACTIVE en ECR."
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "Inspeccion estructural: el compose usa referencias a variables y valores no sensibles; evidencia del candidate sin valores sensibles."
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "10 pasos incluido el smoke humano AC-6."
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "Un unico update-environment con --version-label; sin option settings."
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "Comando permitido al Deployer en DEPLOYING (aws.modes.cutover); rollback en ROLLING_BACK."
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "note": "Una sola promocion, sin reintentos."
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "max_attempts 1, version-only al LKG nombrado, condiciones de rollback_authorization."
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": "Sin IAM, DNS, secretos ni migraciones."
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "note": "Plan minimiza y redacta salidas; solo conteos de logs."
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS",
+      "note": "Residuos de S3, AV, ECR clasificados en blast_radius_and_residues."
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "note": "Defecto puramente funcional no autoriza rollback (conditions del plan)."
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "info",
+      "file": "evidence/SIM-FICHA-PDF/deployment/candidate-01.json",
+      "summary": "No se ejecuto dry-run de update-environment (no permitido en candidate_read); el plan se valido por inspeccion.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F-2",
+      "severity": "info",
+      "file": "evidence/SIM-FICHA-PDF/reviewer/review-01.json",
+      "summary": "AC-6 y la base del Valor Futuro (F-1 de la revision de software) quedan para el smoke humano posterior al deploy.",
+      "required_action": "Humano: validar AC-6 con approve.py accept."
+    }
+  ]
+}
