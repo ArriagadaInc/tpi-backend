@@ -36,7 +36,7 @@ autorizacion/PII/persistencia.
 - Mismo error de infraestructura dos veces -> STOP (POLICY seccion 4).
 - Validar TLS con cliente independiente (curl de Windows puede fallar por schannel, LL-15).
 - Orden de diagnostico: estado EB -> EB events -> CloudTrail -> logs -> resumenes (extracto v1).
-- ECR lifecycle keep-20 puede borrar imagenes del LKG: verificar todos sus digests antes del gate.
+- ECR lifecycle keep-100 (desde 2026-10-19; antes keep-20) conserva las 100 imagenes mas recientes por repositorio: el riesgo de expirar imagenes del LKG baja pero no desaparece, asi que sigue vigente verificar todos sus digests antes del gate.
 
 ## Rollback condicionado (aprobado en el mismo Human Gate)
 
