@@ -3,15 +3,25 @@ schema_version: 1
 items:
 - id: AUTOMATED_AUTHENTICATED_SMOKE
   title: Smoke autenticado automatizado con identidad sintetica
-  priority: P0
+  priority: P3
   category: h3.2
   status: pending
   change_class: E
-  summary: Cuenta sintetica de minimo privilegio y ejecucion del smoke sin revelar secretos al LLM (p.
-    ej. asm-exec) para eliminar la aceptacion humana excepcional en VERIFYING.
+  summary: 'DIFERIDA por decision del humano (2026-10-19): no se hara por ahora ni es necesaria. Es clase
+    E: crea una credencial permanente en DEV, exige ejecutar secretos fuera del LLM y tocaria rutas protegidas
+    del Harness (scripts/harness/**), y el riesgo no compensa el beneficio. Sigue vigente la aceptacion
+    humana del smoke autenticado en VERIFYING. Alternativa mas segura, a considerar solo si el smoke manual
+    se vuelve un cuello de botella: un script que ejecuta el humano en su terminal con su propia clave
+    (getpass o su entorno), que recorre el smoke autenticado e imprime PASS o FAIL, sin credenciales nuevas,
+    sin identidad sintetica y sin cambios al guard. Pedia, originalmente: cuenta sintetica de minimo privilegio
+    y ejecucion del smoke sin revelar secretos al LLM (p. ej. asm-exec) para eliminar la aceptacion humana
+    excepcional en VERIFYING.'
   evidence:
   - docs/cicd/TPI_Contrato_CICD_AWS_v2.md secciones 11 y 16
   - decision owner 2026-09-14
+  - 'decision del humano el 2026-10-19, en sesion interactiva con Claude: diferida y bajada de P0 a P3;
+    el contrato docs/cicd/TPI_Contrato_CICD_AWS_v2.md (secciones 11 y 16) sigue mencionando la automatizacion
+    y no se modifica aqui'
 - id: H3.2-ECR-LIFECYCLE
   title: Lifecycle de ECR compatible con rollback
   priority: P0
