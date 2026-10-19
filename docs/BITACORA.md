@@ -22,6 +22,21 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-19 - Simulador: la evidencia de entradas se retiene de forma indefinida
+
+- Decision del humano (2026-10-19): la evidencia de entradas y resultado del simulador (`tpi.auditoria.detalle`, accion
+  `simulacion_renta_vitalicia`, creada por `SIM-EVIDENCIA-ENTRADAS`) se conserva **de forma indefinida**, sin purga ni
+  expiracion. Cierra la politica de retencion que estaba pendiente.
+- Efecto en el trabajo pendiente: `SIM-HISTORIAL-LINEA-TIEMPO` ya no depende de esa decision.
+- Sin cambios de codigo, de base de datos ni de despliegue: solo documentacion
+  (`docs/SIM_RV_V1_MODELO.md`, `docs/SIM_RV_V1_PENDIENTES.md`, `CHANGELOG.md`).
+- Riesgo abierto: el detalle guarda fechas de nacimiento vinculadas a un lead por `id_lead` (sin nombres, RUT, correo ni
+  telefono). Queda anotada la revision normativa de la retencion indefinida con asesoria legal (Ley 19.628 y su reemplazo,
+  Ley 21.719): si se exigiera un plazo o un mecanismo de supresion, se decide en una tarea nueva; una purga de un registro
+  append-only requiere migracion (clase D) aplicada por el humano. No es asesoria legal.
+- La entrada del 2026-10-15 de `SIM-EVIDENCIA-ENTRADAS` que dice «retencion pendiente» es historia y no se reescribe; esta
+  entrada la reemplaza.
+
 ### 2026-10-19 - Harness: tarea H3.2-ECR-LIFECYCLE cerrada (DONE)
 
 - Titulo: Lifecycle de ECR compatible con rollback: conservar 100 imagenes
