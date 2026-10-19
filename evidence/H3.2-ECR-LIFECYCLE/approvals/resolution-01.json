@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "resolution",
+  "task_id": "H3.2-ECR-LIFECYCLE",
+  "created_at": "2026-10-19T18:29:10Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "from_state": "BLOCKED_HUMAN",
+  "to_state": "VERIFYING",
+  "reason": "Politica de lifecycle de ECR aplicada en tpi-dev-app y tpi-dev-caddy desde deployment/ecr/lifecycle-policy.json. Vista previa previa: 0 imagenes expiradas con 20 imagenes por repositorio. Verificado c"
+}
