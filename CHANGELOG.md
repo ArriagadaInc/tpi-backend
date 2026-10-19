@@ -24,6 +24,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ### 🔄 Cambiado
 
+- **Lifecycle de ECR compatible con rollback: conservar 100 imágenes** (H3.2-ECR-LIFECYCLE)
+  - La política de lifecycle de ECR de AWS DEV (`deployment/ecr/lifecycle-policy.json`) pasa la regla de retención de `imageCountMoreThan: 20` a `imageCountMoreThan: 100`, para que el LKG y los candidatos de rollback no se expiren al acumularse publicaciones. La regla 1 (capas sin etiqueta a los 7 días) no cambia.
+  - Nuevo test sin AWS (`tests/unit/test_ecr_lifecycle_policy.py`) que lee la política y rompe CI si no hay reglas, hay prioridades repetidas, una regla expira por antigüedad imágenes con etiqueta o el conteo de retención baja de 100.
+  - Nuevo `docs/ECR_LIFECYCLE_POLICY.md` con el procedimiento de aplicación (put/get-lifecycle-policy y vista previa), verificación, reversa y las comprobaciones de digests del LKG que se mantienen. La aplicación en AWS DEV la ejecuta el humano.
+
 - **Ventana de validación abierta con aviso de valores referenciales** (SIM-RV-V1-VENTANA)
   - Por decisión del humano (2026-10-14) la ventana validada del simulador queda abierta: se eliminan el estado «bloqueado», el corte de 90 días y el 422 por vencimiento, y la simulación se genera para cualquier fecha de simulación (la fecha actual de `America/Santiago`).
   - El formulario muestra siempre un aviso de que los resultados son valores referenciales (no vinculantes) y el PDF lo indica de forma explícita en la sección «Supuestos y advertencias»; desaparece el aviso condicional de ventana de validación vencida en pantalla y en el PDF.

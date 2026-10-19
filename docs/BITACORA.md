@@ -22,6 +22,32 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-19 - H3.2-ECR-LIFECYCLE: lifecycle de ECR conserva 100 imagenes (en desarrollo, DEVELOPING)
+
+- Título: Lifecycle de ECR compatible con rollback: conservar 100 imágenes.
+- Clase C (infraestructura): sin fast path; tras el merge la transición obligatoria es `merged_non_fast_path`
+  hacia `BLOCKED_HUMAN` y el humano aplica la política en AWS DEV.
+- Riesgo documentado desde 2026-09-14: la política anterior (`imageCountMoreThan: 20`) podía expirar imágenes
+  requeridas por el LKG. Decisión del humano (2026-10-19): elevar el tope a 100; la aplicación la ejecuta el
+  humano (el Harness no la aplica: `ecr put-lifecycle-policy` está denegado a los agentes).
+- Cambios:
+  - `deployment/ecr/lifecycle-policy.json`: regla 1 sin cambios (capas sin etiqueta a los 7 días); regla 2 pasa
+    de `imageCountMoreThan: 20` a `imageCountMoreThan: 100` (`tagStatus: any`, acción `expire`). Un único archivo
+    sirve a `tpi-dev-app` y `tpi-dev-caddy`.
+  - Nuevo `tests/unit/test_ecr_lifecycle_policy.py` (sin AWS, corre en CI): falla si no hay reglas, hay prioridades
+    repetidas, una regla expira por antigüedad imágenes con etiqueta o el conteo de retención baja de 100.
+  - Nuevo `docs/ECR_LIFECYCLE_POLICY.md`: por qué 100, procedimiento de aplicación y verificación
+    (put/get-lifecycle-policy y vista previa start/get-lifecycle-policy-preview) para `tpi-dev-app` y
+    `tpi-dev-caddy`, reversa (reaplicar el JSON anterior desde git) y constancia de que las comprobaciones de
+    digests del LKG en el preflight y en la revisión del candidato se mantienen. Lista las notas `keep-20` en
+    `agents/` (rutas protegidas) para actualizarlas aparte.
+  - `docs/INDEX.md` y `CHANGELOG.md` actualizados.
+- Impacto y rollback: conserva más imágenes, no menos; costo residual de almacenamiento marginal. Reversa:
+  reaplicar el JSON anterior desde git (documentado en `docs/ECR_LIFECYCLE_POLICY.md`).
+- No se tocan `app/**`, `.github/**`, `Dockerfile`, `deployment/` fuera de `deployment/ecr/`, `environments/**`,
+  `agents/**`, `harness/**` ni `scripts/harness/**`.
+- Siguiente paso: correr gates de calidad, abrir/actualizar PR y `submit_for_review`.
+
 ### 2026-10-16 - Harness: tarea SIM-EVIDENCIA-ENTRADAS cerrada (DONE)
 
 - Titulo: Simulador: guardar entradas y resultado como evidencia (solo escritura)

@@ -29,6 +29,7 @@ Guia de todos los documentos del proyecto. Comienza por el que corresponda a tu 
 - [H2_5_SIMPLE_DEV_AUTH_PREFLIGHT.md](H2_5_SIMPLE_DEV_AUTH_PREFLIGHT.md): approved H2.5 topology and DNS prerequisite.
 - [H2_5_CEO_VALIDATION_GUIDE.md](H2_5_CEO_VALIDATION_GUIDE.md): DEV validation flow without credentials.
 - [DEV_EB_DEPLOYMENT_RUNBOOK.md](DEV_EB_DEPLOYMENT_RUNBOOK.md): deployment controlado del candidato DEV.
+- [ECR_LIFECYCLE_POLICY.md](ECR_LIFECYCLE_POLICY.md): politica de lifecycle de ECR (retencion de 100 imagenes) y procedimiento de aplicacion.
 - [TPI_Contrato_CICD_AWS_v2.md](TPI_Contrato_CICD_AWS_v2.md): golden path operativo version-only (referencia vigente desde 2026-09-12).
 - [cicd/](cicd/README.md): contrato CI/CD v2 completo (canonico) y lecciones de deploy AWS versionadas.
 - [../AGENTS.md](../AGENTS.md): protocolo del Harness multiagente (entrada para cualquier runtime).
