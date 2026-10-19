@@ -31,10 +31,11 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Solo documentación: sin cambios de código, base de datos ni despliegue. Se enlaza desde `docs/INDEX.md`.
 - Hallazgos que quedan anotados en el documento (§9), sin acción obligatoria:
   - La ventana de fechas validada terminó el 2026-10-13; el motor avisa internamente pero la pantalla y el PDF no.
-  - El PDF no lista el grupo familiar: solo imprime «CÓNYUGE: Sí» y no recibe los hijos.
+  - El PDF no lista el grupo familiar: solo imprime «CÓNYUGE: Sí» y no recibe los hijos. Decisión del humano
+    (2026-10-19): se mantiene así, no se agrega.
   - El script que construye las tablas de mortalidad y el Excel de la CMF no están en el repositorio.
   - Con cónyuge e hijos el código admite causantes desde 60 años y la evidencia empieza en 62.
-- Siguiente paso: decidir la tarea «el PDF incluye el grupo familiar» y programar la campaña canaria mensual.
+- Siguiente paso: programar la campaña canaria mensual (ventana de fechas) y ubicar el script y el Excel de las tablas.
 
 ### 2026-10-19 - Simulador: asistente de 3 pasos con la marca de TPI (en desarrollo, DEVELOPING)
 

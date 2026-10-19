@@ -131,8 +131,8 @@ rescate total = pensión × meses garantizados; valor futuro con **inflación fi
 (`simulador_service.py`); rescate de la Opción II = pensión aumentada × meses del aumento + pensión base × (meses
 garantizados − meses del aumento).
 
-**Lo que el PDF no muestra:** el grupo familiar. Solo imprime «CÓNYUGE: Sí»; no recibe la lista de hijos ni sus datos.
-La pensión depende de ellos, y hoy el documento no deja constancia. Sí quedan en pantalla (paso 3) y en la auditoría.
+**Lo que el PDF no muestra, por decisión del humano (2026-10-19):** el grupo familiar. Solo imprime «CÓNYUGE: Sí»; no
+recibe la lista de hijos ni sus datos. Quedan en pantalla (paso 3) y en la auditoría.
 
 ## 7. Precisión conocida
 
@@ -254,8 +254,8 @@ reales en DEV.
 Hallazgos al revisar el código; ninguno bloquea el uso actual.
 
 1. **La ventana de fechas ya venció y el usuario no lo sabe** (§8.5).
-2. **El PDF no lista el grupo familiar** (§6). Candidato a tarea nueva: incluir una tabla «Grupo familiar»; falta decidir
-   columnas y si las fechas de nacimiento de terceros deben ir en un documento que se entrega al cliente.
+2. **El PDF no lista el grupo familiar** (§6). Decisión del humano (2026-10-19): se mantiene así; no se agrega. Se anota
+   para que quien lea un PDF sepa que la pensión depende de un grupo familiar que el documento no detalla.
 3. **Rango de edad con cónyuge e hijos:** el código aplica 60–92 y la evidencia empieza en 62 (§5).
 4. **El script de tablas y el Excel de la CMF están fuera del repositorio** (§8.2).
 5. **Opción II del PDF con aumento mayor que la garantía:** la fórmula de la ficha resta
