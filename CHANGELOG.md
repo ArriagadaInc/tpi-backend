@@ -10,6 +10,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ### ✅ Agregado
 
+- **Documento de uso y mantención del simulador** (`docs/SIMULADOR_USO.md`)
+  - Casos soportados y fuera de alcance, rangos de entrada, qué entrega el PDF y la precisión medida.
+  - Qué hay que hacer para mantener el simulador vigente: tablas de mortalidad (origen, procedimiento de actualización), constantes empíricas y legales, tasa de venta, ventana de fechas y campaña canaria.
+  - Solo documentación: sin cambios de código, base de datos ni despliegue.
+
 - **Simulador: asistente de 3 pasos con la marca de TPI** (SIM-WIZARD-3-PASOS)
   - La pantalla del simulador (`/leads/{id}/simulador`) se rehace como un asistente de 3 pasos: 1 «Datos de la simulación», 2 «Grupo familiar» y 3 «Resultado», con un indicador de pasos conectados por una línea; los pasos completados muestran un lápiz y permiten volver conservando lo ingresado.
   - Paso 1: fecha de simulación de solo lectura (fecha actual de `America/Santiago` calculada en el servidor), tipo de pensión («Vejez edad»), tasa de venta, meses garantizados, años de período diferido, meses y % de aumento temporal, saldo en UF y valor UF opcional, con los rangos validados de la V1. «Continuar» valida este paso en el servidor y muestra los errores en el mismo paso.

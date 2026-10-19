@@ -22,6 +22,20 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-19 - Simulador: documento de uso y mantención (`docs/SIMULADOR_USO.md`)
+
+- Pedido del humano durante la verificación de `SIM-WIZARD-3-PASOS`: documentar qué casos soporta el simulador, cuáles
+  quedan fuera y qué hay que hacer para mantenerlo vigente (por ejemplo, las tablas de mortalidad).
+- Se revisó el motor (`app/simulador_pension`), el servicio, la ruta y el asistente; se ejecutaron las pruebas de
+  regresión, validación y ventana (55 en verde) y se midió la cobertura real del fixture de 435 casos.
+- Solo documentación: sin cambios de código, base de datos ni despliegue. Se enlaza desde `docs/INDEX.md`.
+- Hallazgos que quedan anotados en el documento (§9), sin acción obligatoria:
+  - La ventana de fechas validada terminó el 2026-10-13; el motor avisa internamente pero la pantalla y el PDF no.
+  - El PDF no lista el grupo familiar: solo imprime «CÓNYUGE: Sí» y no recibe los hijos.
+  - El script que construye las tablas de mortalidad y el Excel de la CMF no están en el repositorio.
+  - Con cónyuge e hijos el código admite causantes desde 60 años y la evidencia empieza en 62.
+- Siguiente paso: decidir la tarea «el PDF incluye el grupo familiar» y programar la campaña canaria mensual.
+
 ### 2026-10-19 - Simulador: asistente de 3 pasos con la marca de TPI (en desarrollo, DEVELOPING)
 
 - Tarea `SIM-WIZARD-3-PASOS` (clase A, fast path version-only): rehacer la pantalla del simulador como un asistente de
