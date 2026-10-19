@@ -22,6 +22,15 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-19 - Harness: tarea H3.2-ECR-LIFECYCLE cerrada (DONE)
+
+- Titulo: Lifecycle de ECR compatible con rollback: conservar 100 imagenes
+- Evidencia: `evidence/H3.2-ECR-LIFECYCLE/` y `tasks/completed/H3.2-ECR-LIFECYCLE.yaml`.
+- release_sha: `2b0fea25cd9e6b1ad336121719f4fb6362740f58`
+- pr_number: `85`
+- Aplicacion en AWS DEV (humano, 2026-10-19): politica de `deployment/ecr/lifecycle-policy.json` aplicada en `tpi-dev-app` y `tpi-dev-caddy` (regla de retencion de 20 a 100 imagenes); vista previa previa con 20 imagenes por repositorio: 0 expiraciones; verificada con `get-lifecycle-policy`.
+- Cierre MANUAL (humano): la tarea, de infraestructura y sin cambio de la aplicacion, se definio con `deploy_required: true`. Tras aplicar y verificar la politica, el humano resolvio hacia `VERIFYING`, que no tiene salida valida sin evidencia de aprobacion y de despliegue que la tarea nunca tuvo (`verified` la exige; `verify_failed` habria sido un fallo inventado), y el Deployer quedo detenido por una lectura de `ecr get-lifecycle-policy` no permitida en `VERIFYING`. Se cerro con un script de una sola vez que registra `manual_close` (actor humano) en el historial y ejecuta el cierre oficial del Harness. Leccion: una tarea de infraestructura que aplica el humano sin cambio de la aplicacion debe definirse con `deploy_required: false` (cierra sola al hacer merge, `merged_no_deploy`) o resolverse hacia `PREPARING_DEPLOYMENT`.
+
 ### 2026-10-19 - H3.2-ECR-LIFECYCLE: lifecycle de ECR conserva 100 imagenes (en desarrollo, DEVELOPING)
 
 - Título: Lifecycle de ECR compatible con rollback: conservar 100 imágenes.

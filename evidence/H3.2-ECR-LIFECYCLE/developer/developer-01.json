@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "H3.2-ECR-LIFECYCLE",
+  "created_at": "2026-10-19T17:48:33Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610191734-developer-supa8f514",
+  "head_sha": "fc1110b43ac1db6fc41f10686ed4b172d990e969",
+  "branch": "harness/H3.2-ECR-LIFECYCLE-ecr-lifecycle",
+  "pr_number": 85,
+  "change_class": "C",
+  "tests": {
+    "command": "Local (worktree, Python 3.13.13): pytest tests/unit/test_ecr_lifecycle_policy.py --no-cov -x -q (5 passed). CI PR #85 (Python 3.12): pytest tests/ --cov=app --cov-fail-under=85 (PASS, job Tests). La prueba es nueva, sin AWS ni PostgreSQL.",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "deployment/ecr/lifecycle-policy.json mantiene la regla 1 sin cambios (tagStatus untagged, sinceImagePushed 7 dias, expire) y la regla 2 pasa de imageCountMoreThan 20 a imageCountMoreThan 100 (tagStatus any, accion expire). Las prioridades siguen siendo 1 y 2, no se agregan reglas y el archivo es JSON valido. Tests: test_rule_2_retains_100_images_with_tag_any_and_expire, test_rule_1_untagged_seven_day_expiry_is_unchanged, test_policy_has_rules_with_unique_priorities."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "Nuevo tests/unit/test_ecr_lifecycle_policy.py (sin AWS, corre en CI) lee la politica y falla si no hay reglas, si hay prioridades repetidas, si alguna regla expira por antiguedad imagenes con etiqueta (sinceImagePushed con tagStatus != untagged) o si el conteo de retencion (imageCountMoreThan) es menor que 100. 5 tests, PASS local y en CI."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "Nuevo docs/ECR_LIFECYCLE_POLICY.md: por que 100, procedimiento de aplicacion y verificacion para tpi-dev-app y tpi-dev-caddy (put-lifecycle-policy, get-lifecycle-policy y vista previa start-lifecycle-policy-preview con get-lifecycle-policy-preview), reversa (reaplicar el JSON anterior desde git) y constancia de que las comprobaciones de digests del LKG en preflight (aws-read-preflight) y candidate review (tpi-release-readiness, lkg_all_digests_present_in_ecr) se mantienen. Lista las notas keep-20 en agents/deployer/CONTEXT.md, agents/reviewer/CONTEXT.md y agents/reviewer/skills/tpi-release-readiness/SKILL.md (rutas protegidas) para actualizarlas aparte. docs/INDEX.md, CHANGELOG.md y docs/BITACORA.md actualizados."
+    },
+    {
+      "id": "AC-4",
+      "status": "pending_verification",
+      "evidence": "Aplicacion en AWS DEV: el humano aplica la politica a tpi-dev-app y tpi-dev-caddy, comprueba con get-lifecycle-policy que lleva 100 y con la vista previa que no expira ninguna imagen existente. requires_human_acceptance; el Harness no aplica la politica (ecr put-lifecycle-policy denegado a agentes)."
+    }
+  ],
+  "files_changed": [
+    "CHANGELOG.md",
+    "deployment/ecr/lifecycle-policy.json",
+    "docs/BITACORA.md",
+    "docs/ECR_LIFECYCLE_POLICY.md",
+    "docs/INDEX.md",
+    "tests/unit/test_ecr_lifecycle_policy.py"
+  ],
+  "assumptions": [
+    "La aplicacion de la politica en AWS DEV la ejecuta el humano (AC-4); ningun agente aplica ecr put-lifecycle-policy (denegado en harness/policies.yaml).",
+    "mypy, bandit, pip-audit, docker build y la cobertura total (>= 85%) se verifican en CI (PR #85 verde) porque el cambio no toca app/**; ruff, black y pytest del archivo afectado corrieron localmente.",
+    "No se reduce la cobertura minima: no se modifica app/** y el test nuevo no depende de PostgreSQL ni de AWS.",
+    "Las notas keep-20 de agents/*/CONTEXT.md y de la skill tpi-release-readiness son rutas protegidas del Harness: no se editan aqui, solo se listan en docs/ECR_LIFECYCLE_POLICY.md para actualizarlas en un mantenimiento aparte."
+  ],
+  "migrations_included": false
+}
