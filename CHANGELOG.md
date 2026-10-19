@@ -19,7 +19,7 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 - **Evidencia de entradas y resultado del simulador** (SIM-EVIDENCIA-ENTRADAS)
   - El evento append-only de la generación del PDF (`tpi.auditoria.detalle`, acción `simulacion_renta_vitalicia`) pasa a ser un detalle versionado (`schema_version`) que guarda, además de los metadatos funcionales (ejecutivo, escenario, versión del modelo y código de verificación), las entradas de la simulación (causante, saldo, tasa, garantía, aumento, diferimiento, relación RVD/RT, valor UF y beneficiarios: cónyuge e hijos) y el resultado (pensión y, en renta temporal, renta temporal y meses de diferimiento).
-  - El detalle es de solo escritura (la aplicación no lo lee), no altera el lead y no contiene nombres, RUT, correo ni teléfono; la política de retención queda pendiente de decisión del humano.
+  - El detalle es de solo escritura (la aplicación no lo lee), no altera el lead y no contiene nombres, RUT, correo ni teléfono; la retención es indefinida (decisión del humano, 2026-10-19), sin purga ni expiración, y queda pendiente su revisión normativa.
   - Las entradas guardadas bastan para reproducir el resultado y el código de verificación.
 
 ### 🔄 Cambiado

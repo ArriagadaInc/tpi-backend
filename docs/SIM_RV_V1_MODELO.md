@@ -8,8 +8,10 @@ importaciones del resto de `app`).
 
 Desde `SIM-EVIDENCIA-ENTRADAS` (decisión del humano 2026-10-15), las entradas y el resultado de cada simulación se
 guardan como evidencia de solo escritura en `tpi.auditoria.detalle` (append-only, sin nombres, RUT, correo ni teléfono).
-La aplicación no lee ese detalle: no es un modelo de persistencia legible ni un historial. La política de retención queda
-pendiente de decisión del humano y mostrar la evidencia en la línea de tiempo es `SIM-HISTORIAL-LINEA-TIEMPO`.
+La aplicación no lee ese detalle: no es un modelo de persistencia legible ni un historial. La retención es **indefinida**
+(decisión del humano 2026-10-19): el detalle se conserva mientras exista `tpi.auditoria`, sin purga ni expiración. Queda
+pendiente la revisión normativa de esa decisión (ver `docs/SIM_RV_V1_PENDIENTES.md`, punto 6) y mostrar la evidencia en la
+línea de tiempo es `SIM-HISTORIAL-LINEA-TIEMPO`.
 
 ## 1. Tiempo, edad y mortalidad (comunes a todo)
 
