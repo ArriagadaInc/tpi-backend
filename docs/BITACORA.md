@@ -22,6 +22,29 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-19 - Simulador: asistente de 3 pasos con la marca de TPI (en desarrollo, DEVELOPING)
+
+- Tarea `SIM-WIZARD-3-PASOS` (clase A, fast path version-only): rehacer la pantalla del simulador como un asistente de
+  3 pasos (Datos de la simulación, Grupo familiar, Resultado) con el flujo y la estructura del simulador de referencia y
+  la marca de TPI, sin cambios en el motor, el alcance validado ni la autorización.
+- Cambios:
+  - `app/web/routes/simulador.py`: el POST despacha por `intent` (`continuar`, `volver_paso1`/`volver_paso2`, `simular`,
+    `descargar_pdf`); `simular` calcula en el servidor y muestra el resultado en el paso 3 sin persistir ni auditar, y
+    `descargar_pdf` conserva la generación del PDF efímero con su evento append-only de auditoría. Se agrega
+    `tipo_pension` y el rechazo del cónyuge inválido (pendiente #8 de `docs/SIM_RV_V1_PENDIENTES.md`).
+  - `app/web/templates/simulador.html`: asistente de 3 pasos, indicador de pasos, tabla del grupo familiar con modal de
+    beneficiario, tarjetas de resultado, resumen y aviso «Valores referenciales, no vinculantes».
+  - `app/web/static/js/simulador_wizard.js`: JavaScript propio (sin CDN) que gestiona el modal y la tabla de beneficiarios
+    a partir de los inputs ocultos del formulario.
+  - `app/web/static/css/app.css`: estilos del asistente con los tokens del CRM y el azul marino `#0f243e` de la ficha; sin
+    el naranja del simulador de referencia.
+- Decisión documentada: la relación RVD/RT queda oculta en 100 en el asistente, porque el simulador de referencia no la
+  expone en su paso de datos; el motor y la API siguen aceptando 50/51–99 (sin cambios en el alcance validado).
+- Sin migraciones, grants, vistas, constraints ni infraestructura (clase A); el motor `app/simulador_pension/**`,
+  `app/auth/**` y las dependencias no cambian.
+- Pruebas nuevas: `tests/unit/test_sim_wizard.py` (flujo del asistente, validación por paso, no auditoría en `simular`,
+  marca TPI y JS propio). La cobertura y la suite completa las valida el CI del PR.
+
 ### 2026-10-19 - Simulador: la evidencia de entradas se retiene de forma indefinida
 
 - Decision del humano (2026-10-19): la evidencia de entradas y resultado del simulador (`tpi.auditoria.detalle`, accion

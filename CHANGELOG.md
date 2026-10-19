@@ -10,6 +10,14 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ### ✅ Agregado
 
+- **Simulador: asistente de 3 pasos con la marca de TPI** (SIM-WIZARD-3-PASOS)
+  - La pantalla del simulador (`/leads/{id}/simulador`) se rehace como un asistente de 3 pasos: 1 «Datos de la simulación», 2 «Grupo familiar» y 3 «Resultado», con un indicador de pasos conectados por una línea; los pasos completados muestran un lápiz y permiten volver conservando lo ingresado.
+  - Paso 1: fecha de simulación de solo lectura (fecha actual de `America/Santiago` calculada en el servidor), tipo de pensión («Vejez edad»), tasa de venta, meses garantizados, años de período diferido, meses y % de aumento temporal, saldo en UF y valor UF opcional, con los rangos validados de la V1. «Continuar» valida este paso en el servidor y muestra los errores en el mismo paso.
+  - Paso 2: el causante (el lead) aparece como primera fila sin editarse ni eliminarse; el cónyuge y hasta 4 hijos se agregan, editan y eliminan con un modal (parentesco, tipo de relación con padre/madre solo para hijos, sexo, condición de invalidez, fecha de nacimiento y edad calculada). Se respetan las reglas de la V1 (un cónyuge, máximo 4 hijos, cónyuge inválido rechazado).
+  - Paso 3: tarjetas de Monto pensión, Saldo total y Tasa de venta (más Renta temporal y Meses de diferimiento en renta temporal), resumen de la simulación, grupo familiar y el aviso «Valores referenciales, no vinculantes». «Simular» calcula el resultado en pantalla **sin persistir ni auditar**; «Descargar PDF» genera el PDF en memoria y registra el evento de auditoría (como hasta ahora).
+  - Marca de TPI: logo oficial (topbar compartido), paleta del CRM y azul marino `#0f243e` de la ficha (paso activo y cabecera del modal). Sin logos, nombres ni el naranja del simulador de referencia; sin librerías ni CDN nuevos (JavaScript propio en `app/web/static/js/simulador_wizard.js`).
+  - El motor, la autorización (403 fuera de executive/ceo/cto), la validación, el cálculo y el escape del PDF no cambian. La relación RVD/RT queda oculta en 100 (el asistente replica la estructura del simulador de referencia, que no la expone; el motor y la API siguen aceptando 50/51–99).
+
 - **Simulador de renta vitalicia en el CRM (perfil ejecutivo)** (SIM-RV-V1)
   - Motor puro `app/simulador_pension` que reproduce el simulador de referencia dentro de ±1 UF (435/435 casos del fixture).
   - Panel y formulario en el detalle del lead, visible solo para `executive` y superusuarios `ceo`/`cto` (403 real para el resto).

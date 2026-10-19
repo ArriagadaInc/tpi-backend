@@ -12,27 +12,12 @@
         <a class="secondary" href="/leads">Volver a Leads</a>
       </section>
     {% else %}
-      <section class="card">
+      <section class="card wizard-card">
         <div class="story-card-head">
           <div>
             <p class="section-kicker">Simulador de renta vitalicia</p>
-            <h2>Simulación referencial de pensión mensual</h2>
+            <h2>Simulador de pensión mensual</h2>
           </div>
-        </div>
-
-        {% if simulador_errores %}
-          <div class="notice alert-error" role="alert">
-            <strong>No se pudo generar la simulación.</strong>
-            <ul class="error-list">
-              {% for error in simulador_errores %}
-                <li>{{ error }}</li>
-              {% endfor %}
-            </ul>
-          </div>
-        {% endif %}
-
-        <div class="notice notice-soft">
-          Los resultados de esta simulación son valores referenciales (no vinculantes).
         </div>
 
         {% if selected_lead %}
@@ -41,128 +26,343 @@
           </p>
         {% endif %}
 
-        <form method="post" action="/leads/{{ lead_id }}/simulador" class="note-form">
+        <div class="notice notice-soft">
+          Los resultados de esta simulación son valores referenciales (no vinculantes).
+        </div>
+
+        {% if simulador_errores %}
+          <div class="notice alert-error" role="alert">
+            <strong>No se pudo continuar.</strong>
+            <ul class="error-list">
+              {% for error in simulador_errores %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <form method="post" action="/leads/{{ lead_id }}/simulador" class="wizard-form"
+              data-fecha-simulacion="{{ fecha_simulacion.isoformat() }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="porcentaje_rvd" value="{{ form_values.get('porcentaje_rvd', '100') }}">
 
-          <fieldset class="simulator-fieldset">
-            <legend>Causante (el lead)</legend>
-            <div class="simulator-grid">
-              <label>
-                Sexo
-                <input type="text" value="{{ sexo_precargado or '' }}" readonly>
-              </label>
-              <label>
-                Fecha de nacimiento
-                <input type="text" value="{{ fecha_nacimiento_precargada.strftime('%d/%m/%Y') if fecha_nacimiento_precargada else '' }}" readonly>
-              </label>
-            </div>
-          </fieldset>
+          <ol class="wizard-steps" aria-label="Pasos del simulador">
+            <li class="wizard-step {% if active_step == 1 %}is-active{% elif active_step > 1 %}is-done{% endif %}">
+              {% if active_step > 1 %}
+                <button type="submit" name="intent" value="volver_paso1" class="wizard-step-button">
+                  <span class="wizard-step-circle" aria-hidden="true">✎</span>
+                  <span class="wizard-step-label">Datos de la simulación</span>
+                </button>
+              {% else %}
+                <span class="wizard-step-circle" aria-hidden="true">1</span>
+                <span class="wizard-step-label">Datos de la simulación</span>
+              {% endif %}
+            </li>
+            <li class="wizard-step {% if active_step == 2 %}is-active{% elif active_step > 2 %}is-done{% endif %}">
+              {% if active_step > 2 %}
+                <button type="submit" name="intent" value="volver_paso2" class="wizard-step-button">
+                  <span class="wizard-step-circle" aria-hidden="true">✎</span>
+                  <span class="wizard-step-label">Grupo familiar</span>
+                </button>
+              {% else %}
+                <span class="wizard-step-circle" aria-hidden="true">2</span>
+                <span class="wizard-step-label">Grupo familiar</span>
+              {% endif %}
+            </li>
+            <li class="wizard-step {% if active_step == 3 %}is-active{% endif %}">
+              <span class="wizard-step-circle" aria-hidden="true">3</span>
+              <span class="wizard-step-label">Resultado</span>
+            </li>
+          </ol>
 
-          <fieldset class="simulator-fieldset">
-            <legend>Datos de la simulación</legend>
-            <div class="simulator-grid">
-              <label>
-                Saldo en UF *
-                <input type="number" step="any" min="0" name="saldo_uf" value="{{ form_values.get('saldo_uf', '') }}" required>
-              </label>
-              <label>
-                Tasa de venta (%) *
-                <input type="number" step="any" min="0" max="100" name="tasa_venta_pct" value="{{ form_values.get('tasa_venta_pct', '') }}" required>
-              </label>
-              <label>
-                Valor UF (opcional, para equivalentes en CLP)
-                <input type="number" step="any" min="0" name="valor_uf" value="{{ form_values.get('valor_uf', '') }}">
-              </label>
-            </div>
-          </fieldset>
-
-          <fieldset class="simulator-fieldset">
-            <legend>Cónyuge (opcional)</legend>
-            <div class="simulator-grid">
-              <label>
-                Sexo
-                <select name="conyuge_sexo">
-                  <option value="">Sin cónyuge</option>
-                  <option value="H" {% if form_values.get('conyuge_sexo') == 'H' %}selected{% endif %}>Masculino</option>
-                  <option value="M" {% if form_values.get('conyuge_sexo') == 'M' %}selected{% endif %}>Femenino</option>
-                </select>
-              </label>
-              <label>
-                Fecha de nacimiento
-                <input type="date" name="conyuge_nacimiento" value="{{ form_values.get('conyuge_nacimiento', '') }}">
-              </label>
-            </div>
-          </fieldset>
-
-          <fieldset class="simulator-fieldset">
-            <legend>Hijos (máximo 4)</legend>
-            {% for i in [1, 2, 3, 4] %}
-              <div class="simulator-grid">
-                <label>
-                  Hijo {{ i }} — Sexo
-                  <select name="hijo_sexo_{{ i }}">
-                    <option value=""></option>
-                    <option value="H" {% if form_values.get('hijo_sexo_' ~ i) == 'H' %}selected{% endif %}>Masculino</option>
-                    <option value="M" {% if form_values.get('hijo_sexo_' ~ i) == 'M' %}selected{% endif %}>Femenino</option>
+          {# ------------------------------------------------ Paso 1 ---------- #}
+          <section class="wizard-pane" data-step="1" {% if active_step != 1 %}hidden{% endif %}>
+            <div class="wizard-section">
+              <div class="wizard-section-head">
+                <h3>Datos de la renta vitalicia a simular</h3>
+              </div>
+              <div class="wizard-grid wizard-grid-4">
+                <label class="wizard-field">
+                  <span class="wizard-field-label">Fecha de simulación *</span>
+                  <input type="text" value="{{ fecha_simulacion_label }}" readonly class="wizard-readonly">
+                </label>
+                <label class="wizard-field">
+                  <span class="wizard-field-label">Tipo de pensión *</span>
+                  <select name="tipo_pension">
+                    {% for value, label in tipo_pension_options %}
+                      <option value="{{ value }}" {% if form_values.get('tipo_pension', 'vejez_edad') == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
                   </select>
                 </label>
-                <label>
-                  Hijo {{ i }} — Fecha de nacimiento
-                  <input type="date" name="hijo_nacimiento_{{ i }}" value="{{ form_values.get('hijo_nacimiento_' ~ i, '') }}">
+                <label class="wizard-field">
+                  <span class="wizard-field-label">Tasa de venta (%) *</span>
+                  <input type="number" step="any" min="0.5" max="8" name="tasa_venta_pct" value="{{ form_values.get('tasa_venta_pct', '') }}" required>
                 </label>
-                <label class="simulator-check">
-                  <input type="checkbox" name="hijo_comun_{{ i }}" value="1" {% if form_values.get('hijo_comun_' ~ i) %}checked{% endif %}>
-                  Común con el cónyuge
+                <label class="wizard-field">
+                  <span class="wizard-field-label">Meses garantizados</span>
+                  <input type="number" step="1" min="0" max="480" name="meses_garantizados" value="{{ form_values.get('meses_garantizados', '0') }}">
                 </label>
-                <label>
-                  Hijo {{ i }} — Invalidez
-                  <select name="hijo_invalidez_{{ i }}">
-                    <option value="no" {% if form_values.get('hijo_invalidez_' ~ i, 'no') == 'no' %}selected{% endif %}>Sin invalidez</option>
-                    <option value="parcial" {% if form_values.get('hijo_invalidez_' ~ i) == 'parcial' %}selected{% endif %}>Parcial</option>
-                    <option value="total" {% if form_values.get('hijo_invalidez_' ~ i) == 'total' %}selected{% endif %}>Total</option>
-                  </select>
+                <label class="wizard-field">
+                  <span class="wizard-field-label">Años período diferido</span>
+                  <input type="number" step="1" min="0" max="10" name="anios_diferidos" value="{{ form_values.get('anios_diferidos', '0') }}">
+                </label>
+                <label class="wizard-field">
+                  <span class="wizard-field-label">Meses de aumento temporal</span>
+                  <input type="number" step="1" min="0" max="600" name="meses_aumento_temporal" value="{{ form_values.get('meses_aumento_temporal', '0') }}">
+                </label>
+                <label class="wizard-field">
+                  <span class="wizard-field-label">% aumento temporal</span>
+                  <input type="number" step="any" min="0" max="100" name="porcentaje_aumento_temporal" value="{{ form_values.get('porcentaje_aumento_temporal', '0') }}">
                 </label>
               </div>
-            {% endfor %}
-          </fieldset>
-
-          <fieldset class="simulator-fieldset">
-            <legend>Garantía y aumento temporal</legend>
-            <div class="simulator-grid">
-              <label>
-                Garantía (meses)
-                <input type="number" step="1" min="0" name="meses_garantizados" value="{{ form_values.get('meses_garantizados', '0') }}">
-              </label>
-              <label>
-                Aumento temporal (meses)
-                <input type="number" step="1" min="0" name="meses_aumento_temporal" value="{{ form_values.get('meses_aumento_temporal', '0') }}">
-              </label>
-              <label>
-                Aumento temporal (%)
-                <input type="number" step="any" min="0" max="100" name="porcentaje_aumento_temporal" value="{{ form_values.get('porcentaje_aumento_temporal', '0') }}">
-              </label>
             </div>
-          </fieldset>
 
-          <fieldset class="simulator-fieldset">
-            <legend>Renta temporal (opcional)</legend>
-            <div class="simulator-grid">
-              <label>
-                Años de diferimiento (0 = renta inmediata, 1–10 = renta temporal)
-                <input type="number" step="1" min="0" max="10" name="anios_diferidos" value="{{ form_values.get('anios_diferidos', '0') }}">
-              </label>
-              <label>
-                Relación RVD/RT (%)
-                <input type="number" step="any" min="50" max="100" name="porcentaje_rvd" value="{{ form_values.get('porcentaje_rvd', '100') }}">
-              </label>
+            <div class="wizard-section">
+              <div class="wizard-section-head">
+                <h3>Datos previsionales</h3>
+              </div>
+              <div class="wizard-grid wizard-grid-4">
+                <label class="wizard-field">
+                  <span class="wizard-field-label">Saldo cuenta AFP (UF) *</span>
+                  <input type="number" step="any" min="500" max="100000" name="saldo_uf" value="{{ form_values.get('saldo_uf', '') }}" required>
+                </label>
+                <label class="wizard-field">
+                  <span class="wizard-field-label">Valor UF ($) — opcional</span>
+                  <input type="number" step="any" min="0" name="valor_uf" value="{{ form_values.get('valor_uf', '') }}">
+                </label>
+              </div>
             </div>
-          </fieldset>
 
-          <div class="note-actions">
-            <button class="primary note-submit" type="submit">Generar PDF</button>
-          </div>
+            <div class="wizard-actions">
+              <button class="primary note-submit" type="submit" name="intent" value="continuar">Continuar</button>
+            </div>
+          </section>
+
+          {# ------------------------------------------------ Paso 2 ---------- #}
+          <section class="wizard-pane" data-step="2" {% if active_step != 2 %}hidden{% endif %}>
+            <div class="wizard-section">
+              <div class="wizard-section-head">
+                <h3>Grupo familiar</h3>
+                <button type="button" class="primary" id="btn-agregar-beneficiario">Agregar beneficiario</button>
+              </div>
+
+              <p class="wizard-empty" id="familia-empty" hidden>
+                No se han agregado beneficiarios. Utilice el botón para agregar.
+              </p>
+
+              <div class="table-wrap">
+                <table class="board-table wizard-table" id="familia-tabla">
+                  <thead>
+                    <tr>
+                      <th>N°</th>
+                      <th>Parentesco</th>
+                      <th>Fecha nacimiento</th>
+                      <th>Sexo</th>
+                      <th>Condición invalidez</th>
+                      <th>Padre/Madre</th>
+                      <th>Edad</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody id="familia-causante">
+                    <tr class="row-causante">
+                      <td>1</td>
+                      <td>Causante</td>
+                      <td>{{ fecha_nacimiento_precargada.strftime('%d/%m/%Y') if fecha_nacimiento_precargada else '' }}</td>
+                      <td>{{ 'Masculino' if sexo_precargado == 'H' else ('Femenino' if sexo_precargado == 'M' else '') }}</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>{{ familia[0].edad if familia and familia[0].edad is not none else '' }}</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                  <tbody id="familia-beneficiarios"></tbody>
+                </table>
+              </div>
+
+              {# Estado de beneficiarios (fuente de verdad del DOM para el modal). #}
+              <input type="hidden" name="conyuge_sexo" id="conyuge_sexo" value="{{ form_values.get('conyuge_sexo', '') }}">
+              <input type="hidden" name="conyuge_nacimiento" id="conyuge_nacimiento" value="{{ form_values.get('conyuge_nacimiento', '') }}">
+              <input type="hidden" name="conyuge_invalidez" id="conyuge_invalidez" value="{{ form_values.get('conyuge_invalidez', 'no') }}">
+              {% for i in [1, 2, 3, 4] %}
+                <input type="hidden" name="hijo_sexo_{{ i }}" id="hijo_sexo_{{ i }}" value="{{ form_values.get('hijo_sexo_' ~ i, '') }}">
+                <input type="hidden" name="hijo_nacimiento_{{ i }}" id="hijo_nacimiento_{{ i }}" value="{{ form_values.get('hijo_nacimiento_' ~ i, '') }}">
+                <input type="hidden" name="hijo_comun_{{ i }}" id="hijo_comun_{{ i }}" value="{{ form_values.get('hijo_comun_' ~ i, '') }}">
+                <input type="hidden" name="hijo_invalidez_{{ i }}" id="hijo_invalidez_{{ i }}" value="{{ form_values.get('hijo_invalidez_' ~ i, 'no') }}">
+              {% endfor %}
+            </div>
+
+            <div class="wizard-actions">
+              <button class="secondary" type="submit" name="intent" value="volver_paso1">Volver</button>
+              <button class="primary note-submit" type="submit" name="intent" value="simular">Simular</button>
+            </div>
+          </section>
+
+          {# ------------------------------------------------ Paso 3 ---------- #}
+          <section class="wizard-pane" data-step="3" {% if active_step != 3 %}hidden{% endif %}>
+            <div class="wizard-section">
+              <div class="wizard-section-head">
+                <h3>Resultado de la simulación</h3>
+              </div>
+              <div class="wizard-result-cards">
+                <div class="wizard-result-card">
+                  <span class="wizard-result-value">{{ resultado.pension_mensual }}</span>
+                  <span class="wizard-result-unit">UF</span>
+                  <span class="wizard-result-label">Monto pensión</span>
+                </div>
+                <div class="wizard-result-card">
+                  <span class="wizard-result-value">{{ resultado.saldo_total }}</span>
+                  <span class="wizard-result-unit">UF</span>
+                  <span class="wizard-result-label">Saldo total</span>
+                </div>
+                <div class="wizard-result-card">
+                  <span class="wizard-result-value">{{ resultado.tasa_venta }}</span>
+                  <span class="wizard-result-unit">%</span>
+                  <span class="wizard-result-label">Tasa de venta</span>
+                </div>
+                {% if resultado.es_renta_temporal %}
+                  <div class="wizard-result-card">
+                    <span class="wizard-result-value">{{ resultado.renta_temporal }}</span>
+                    <span class="wizard-result-unit">UF</span>
+                    <span class="wizard-result-label">Renta temporal</span>
+                  </div>
+                  <div class="wizard-result-card">
+                    <span class="wizard-result-value">{{ resultado.meses_diferidos }}</span>
+                    <span class="wizard-result-unit">meses</span>
+                    <span class="wizard-result-label">Meses de diferimiento</span>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="wizard-section">
+              <div class="wizard-section-head">
+                <h3>Resumen de simulación</h3>
+              </div>
+              <dl class="wizard-resumen wizard-grid wizard-grid-4">
+                <div class="wizard-resumen-item"><dt>Fecha simulación</dt><dd>{{ resumen.fecha_simulacion }}</dd></div>
+                <div class="wizard-resumen-item"><dt>Tipo pensión</dt><dd>{{ resumen.tipo_pension }}</dd></div>
+                <div class="wizard-resumen-item"><dt>Saldo cuenta AFP (UF)</dt><dd>{{ resumen.saldo_uf }}</dd></div>
+                <div class="wizard-resumen-item"><dt>Tasa de venta</dt><dd>{{ resumen.tasa_venta_pct }}</dd></div>
+                <div class="wizard-resumen-item"><dt>Meses garantizados</dt><dd>{{ resumen.meses_garantizados }}</dd></div>
+                <div class="wizard-resumen-item"><dt>Meses aumento temporal</dt><dd>{{ resumen.meses_aumento_temporal }}</dd></div>
+                <div class="wizard-resumen-item"><dt>% aumento temporal</dt><dd>{{ resumen.porcentaje_aumento_temporal }}</dd></div>
+                <div class="wizard-resumen-item"><dt>Años diferidos</dt><dd>{{ resumen.anios_diferidos }}</dd></div>
+              </dl>
+            </div>
+
+            <div class="wizard-section">
+              <div class="wizard-section-head">
+                <h3>Grupo familiar</h3>
+              </div>
+              <div class="table-wrap">
+                <table class="board-table wizard-table">
+                  <thead>
+                    <tr>
+                      <th>N°</th>
+                      <th>Parentesco</th>
+                      <th>Fecha nacimiento</th>
+                      <th>Sexo</th>
+                      <th>Condición invalidez</th>
+                      <th>Padre/Madre</th>
+                      <th>Edad</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for fila in familia %}
+                      <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ fila.parentesco }}</td>
+                        <td>{{ fila.nacimiento_label }}</td>
+                        <td>{{ fila.sexo_label }}</td>
+                        <td>{{ fila.invalidez_label or '—' }}</td>
+                        <td>{{ fila.relacion_label or '—' }}</td>
+                        <td>{{ fila.edad if fila.edad is not none else '' }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="notice notice-soft">
+              <strong>Valores referenciales, no vinculantes.</strong>
+            </div>
+
+            <div class="wizard-actions">
+              <button class="secondary" type="submit" name="intent" value="volver_paso2">Volver</button>
+              <button class="primary note-submit" type="submit" name="intent" value="descargar_pdf">Descargar PDF</button>
+            </div>
+          </section>
         </form>
       </section>
     {% endif %}
   </div>
+
+  {% if not lead_not_found %}
+    {# Modal de beneficiario: los datos viven en los inputs ocultos del formulario. #}
+    <div class="modal" id="beneficiario-modal" hidden role="dialog" aria-modal="true" aria-labelledby="beneficiario-modal-title">
+      <div class="modal-card modal-card-dev wizard-modal">
+        <div class="wizard-modal-head">
+          <p class="section-kicker">Grupo familiar</p>
+          <h3 id="beneficiario-modal-title">Agregar beneficiario</h3>
+          <button type="button" class="wizard-modal-close" id="btn-modal-cerrar" aria-label="Cerrar">×</button>
+        </div>
+
+        <div class="wizard-modal-body">
+          <div class="wizard-modal-error notice alert-error" id="modal-error" hidden role="alert"></div>
+
+          <label class="wizard-field">
+            <span class="wizard-field-label">Parentesco *</span>
+            <select id="modal-parentesco">
+              <option value="conyuge">Cónyuge</option>
+              <option value="hijo" selected>Hijo/a</option>
+            </select>
+          </label>
+
+          <label class="wizard-field" id="modal-relacion-field">
+            <span class="wizard-field-label">Tipo de relación con padre/madre</span>
+            <select id="modal-relacion">
+              <option value="comun">Común</option>
+              <option value="no-comun" selected>No común</option>
+            </select>
+          </label>
+
+          <label class="wizard-field">
+            <span class="wizard-field-label">Sexo *</span>
+            <select id="modal-sexo">
+              <option value="H" selected>Masculino</option>
+              <option value="M">Femenino</option>
+            </select>
+          </label>
+
+          <label class="wizard-field">
+            <span class="wizard-field-label">Condición de invalidez *</span>
+            <select id="modal-invalidez">
+              <option value="no" selected>No inválido</option>
+              <option value="parcial">Inválido parcial</option>
+              <option value="total">Inválido total</option>
+            </select>
+          </label>
+
+          <label class="wizard-field">
+            <span class="wizard-field-label">Fecha de nacimiento *</span>
+            <input type="date" id="modal-nacimiento">
+          </label>
+
+          <label class="wizard-field">
+            <span class="wizard-field-label">Edad</span>
+            <input type="text" id="modal-edad" readonly class="wizard-readonly">
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button class="secondary" type="button" id="btn-modal-cancelar">Cancelar</button>
+          <button class="primary" type="button" id="btn-modal-guardar">Agregar</button>
+        </div>
+      </div>
+    </div>
+
+    <script defer src="/static/js/simulador_wizard.js"></script>
+  {% endif %}
 {% endblock %}

@@ -77,3 +77,18 @@ personal del ejecutivo y la comparativa de varias opciones (ver `docs/SIM_RV_V1_
 
 **Rechazos incondicionales de la V1 (422):** bono de reconocimiento, vejez anticipada, invalidez y sobrevivencia como tipo
 de pensión, otros parentescos, cónyuge inválido, renta temporal con cónyuge/hijos/garantía/aumento.
+
+## 5. Nota sobre el asistente de 3 pasos (SIM-WIZARD-3-PASOS)
+
+Desde `SIM-WIZARD-3-PASOS` la pantalla del simulador es un asistente de 3 pasos (ver
+`docs/specs/SIM_WIZARD_SPEC.md`); los componentes y las rutas no cambian de nombre:
+
+- `app/web/templates/simulador.html` pasa de un formulario único a un asistente de 3 pasos (datos, grupo familiar,
+  resultado) con modal de beneficiario gestionado por `app/web/static/js/simulador_wizard.js` (JavaScript propio, sin CDN).
+- `app/web/routes/simulador.py` conserva `GET`/`POST` bajo la misma ruta; el `POST` despacha por `intent` (`continuar`,
+  `volver_paso1`/`volver_paso2`, `simular`, `descargar_pdf`). `simular` calcula sin persistir ni auditar; `descargar_pdf`
+  conserva el PDF efímero y el evento append-only de auditoría.
+- El motor `app/simulador_pension/**`, la autorización (403 fuera de executive/ceo/cto), la validación, el cálculo y el
+  escape del PDF no cambian. La relación RVD/RT queda oculta en 100 en el asistente (el motor y la API siguen aceptando
+  50/51–99).
+- Pruebas del asistente: `tests/unit/test_sim_wizard.py`.
