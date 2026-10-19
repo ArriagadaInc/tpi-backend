@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "SIM-WIZARD-3-PASOS",
+  "created_at": "2026-10-19T21:50:28Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610192148-deployer-supa6a1f7",
+  "pr_number": 89,
+  "pr_url": "https://github.com/ArriagadaInc/tpi-backend/pull/89",
+  "pr_state_after_merge": "MERGED",
+  "reviewed_sha": "5b193879b43a4f256eb2b6af0e77b16c33599ac6",
+  "reviewed_tree": "c25cfa2b1330b2a8d45ab03983ff6cd8ec9d987e",
+  "release_sha": "4ee5fad2f57abe0842a5beaede4bf981299d953e",
+  "release_tree": "c25cfa2b1330b2a8d45ab03983ff6cd8ec9d987e",
+  "main_parent_sha": "56688279e391be1e237001bd9e4078a36a8a2835",
+  "main_before_merge": "56688279e391be1e237001bd9e4078a36a8a2835",
+  "main_after_merge": "4ee5fad2f57abe0842a5beaede4bf981299d953e",
+  "method": "squash",
+  "match_head_commit_used": true,
+  "result": "PASS",
+  "change_class": "A",
+  "deploy_required": true,
+  "fast_path": true,
+  "gh_pr_merge_command": "python scripts/harness/merge_reviewed_pr.py",
+  "tree_equivalence": {
+    "reviewed_tree": "c25cfa2b1330b2a8d45ab03983ff6cd8ec9d987e",
+    "release_tree": "c25cfa2b1330b2a8d45ab03983ff6cd8ec9d987e",
+    "equal": true,
+    "verification": "git rev-parse 4ee5fad^{tree} == reviewed_tree tras git fetch origin main; parent unico 5668827... (56688279)."
+  },
+  "references": {
+    "developer_evidence": "evidence/SIM-WIZARD-3-PASOS/developer/developer-01.json",
+    "review_evidence": "evidence/SIM-WIZARD-3-PASOS/reviewer/review-01.json"
+  },
+  "ci_pr": {
+    "run_id": 39328906090,
+    "sha": "5b193879b43a4f256eb2b6af0e77b16c33599ac6",
+    "conclusion": "success"
+  },
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "c25cfa2 == c25cfa2."
+    },
+    {
+      "name": "merge_not_repeated",
+      "result": "PASS",
+      "note": "una sola ejecucion de merge_reviewed_pr.py; already_merged=false."
+    }
+  ],
+  "cloud_access": "ninguno (MERGING)"
+}

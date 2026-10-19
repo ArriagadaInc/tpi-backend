@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "approval",
+  "task_id": "SIM-WIZARD-3-PASOS",
+  "created_at": "2026-10-19T22:50:06Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "approved_commit": "4ee5fad2f57abe0842a5beaede4bf981299d953e",
+  "app_digest": "sha256:7ee1fa2dc89d44228f31bc214ef092046b95de126c0c0f5d46c4bc7d7420b442",
+  "caddy_digest": "sha256:5d044cadba93c5f7ac3475c9813eda767672539dee9fa50e50b9972b88b3e165",
+  "bundle_sha256": "9bbcbac1881e8660cf10642f93b094796987316b953b6bc2ea3eebf49cc001e0",
+  "s3_key": "tpi-backoffice/dev-releases/h3-sim-wizard-3-pasos-4ee5fad-domainlocked-r1/9bbcbac1881e8660cf10642f93b094796987316b953b6bc2ea3eebf49cc001e0.zip",
+  "application_version": "h3-sim-wizard-3-pasos-4ee5fad-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "lkg_version_label": "h3-sim-evidencia-entradas-a7859af-domainlocked-r1",
+  "candidate_evidence": {
+    "path": "evidence/SIM-WIZARD-3-PASOS/deployment/candidate-01.json",
+    "sha256": "d673567f5020f940d4afd69271f44c3500788086f8caf00f77ecc27479ebc188"
+  },
+  "rollback_authorization": {
+    "scope": "single_version_only_rollback_to_named_lkg",
+    "max_attempts": 1,
+    "lkg_version_label": "h3-sim-evidencia-entradas-a7859af-domainlocked-r1",
+    "conditions": [
+      "update_environment_accepted",
+      "environment_degraded_inconsistent_or_not_expected_state",
+      "lkg_application_version_usable",
+      "lkg_images_present_in_ecr",
+      "no_option_settings_required",
+      "not_purely_functional_defect",
+      "no_previous_rollback_attempt"
+    ]
+  },
+  "decision": "approved"
+}

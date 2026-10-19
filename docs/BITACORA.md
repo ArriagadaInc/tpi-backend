@@ -22,6 +22,19 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-19 - Harness: tarea SIM-WIZARD-3-PASOS cerrada (DONE)
+
+- Titulo: Simulador: asistente de 3 pasos (datos, grupo familiar, resultado) con la marca de TPI
+- Evidencia: `evidence/SIM-WIZARD-3-PASOS/` y `tasks/completed/SIM-WIZARD-3-PASOS.yaml`.
+- release_sha: `4ee5fad2f57abe0842a5beaede4bf981299d953e`
+- pr_number: `89`
+- application_version: `h3-sim-wizard-3-pasos-4ee5fad-domainlocked-r1`
+- bundle_sha256: `9bbcbac1881e8660cf10642f93b094796987316b953b6bc2ea3eebf49cc001e0`
+- lkg: `h3-sim-evidencia-entradas-a7859af-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `4ee5fad2f57abe0842a5beaede4bf981299d953e`
+- verification: `PASS`
+
 ### 2026-10-19 - Simulador: asistente de 3 pasos con la marca de TPI (en desarrollo, DEVELOPING)
 
 - Tarea `SIM-WIZARD-3-PASOS` (clase A, fast path version-only): rehacer la pantalla del simulador como un asistente de

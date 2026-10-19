@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "SIM-WIZARD-3-PASOS",
+  "created_at": "2026-10-19T22:10:59Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610192206-reviewer-sup200a40",
+  "release_sha": "4ee5fad2f57abe0842a5beaede4bf981299d953e",
+  "reviewed_tree": "c25cfa2b1330b2a8d45ab03983ff6cd8ec9d987e",
+  "release_tree": "c25cfa2b1330b2a8d45ab03983ff6cd8ec9d987e",
+  "pr_number": 89,
+  "result": "PASS",
+  "decision": "APPROVED",
+  "cause": null,
+  "candidate_evidence": "evidence/SIM-WIZARD-3-PASOS/deployment/candidate-01.json",
+  "merge_evidence": "evidence/SIM-WIZARD-3-PASOS/deployment/merge-01.json",
+  "review_evidence": "evidence/SIM-WIZARD-3-PASOS/reviewer/review-01.json",
+  "review_scope": "CANDIDATE_REVIEW en sesion distinta de Developer y Deployer. Lecturas AWS solo via aws_guard (candidate_read), una por llamada, sin DENIED. No se ejecuto dry-run de update-environment; el plan se valido por inspeccion.",
+  "identity_chain": {
+    "release_sha": "4ee5fad2f57abe0842a5beaede4bf981299d953e",
+    "publish_run": "39330811012 success, headSha = release_sha",
+    "app_digest": "sha256:7ee1fa2dc89d44228f31bc214ef092046b95de126c0c0f5d46c4bc7d7420b442",
+    "caddy_digest": "sha256:5d044cadba93c5f7ac3475c9813eda767672539dee9fa50e50b9972b88b3e165",
+    "bundle_sha256": "9bbcbac1881e8660cf10642f93b094796987316b953b6bc2ea3eebf49cc001e0",
+    "s3_checksum_sha256_b64": "m7y6wYgehmDPEGQvk7CUeWmHMWuVO2vC6j7r9JzAAeA=",
+    "s3_key": "tpi-backoffice/dev-releases/h3-sim-wizard-3-pasos-4ee5fad-domainlocked-r1/9bbcbac1881e8660cf10642f93b094796987316b953b6bc2ea3eebf49cc001e0.zip",
+    "application_version": "h3-sim-wizard-3-pasos-4ee5fad-domainlocked-r1",
+    "lkg": "h3-sim-evidencia-entradas-a7859af-domainlocked-r1"
+  },
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse 4ee5fad^{tree} == c25cfa2 == reviewed_tree de review-01."
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "origin/main == 4ee5fad tras git fetch; es ancestro-o-igual."
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "gh run view 39330811012: conclusion success, headSha = release_sha."
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "ecr describe-images: ambos digests ACTIVE con tag = release_sha."
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "scan COMPLETE y findingSeverityCounts vacio en app y caddy."
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "Reconstruccion con build_domain_locked_bundle y digests verificados en ECR: sha256 9bbcbac1... identico. Template y constructor iguales al release (git diff --quiet exit 0)."
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "Zip con solo docker-compose.yml; sin build:, sin dominio legado; imagenes por digest."
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "head-object ChecksumSHA256 m7y6wYge... == base64 del sha256 del bundle; ContentLength 4815; FULL_OBJECT."
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "describe-application-versions: SourceBundle = bucket/key del S3 verificado; UNPROCESSED."
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "commit -> digests -> bundle -> key -> AV -> label consistente."
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "describe-environments: VersionLabel = LKG, Ready/Green/Ok, sin operacion en curso."
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "AV del LKG existe con SourceBundle, UNPROCESSED."
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "Digests app y caddy del LKG ACTIVE en ECR."
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "Inspeccion estructural: el compose usa referencias a variables, sin valores sensibles literales; la evidencia solo contiene identificadores y hashes."
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "smoke_plan con 10 pasos incluida la cadena de identidad y el smoke humano AC-7."
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "Un update-environment con --version-label; sin option-settings, template, platform ni tier."
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "policies.yaml aws.modes.cutover/rollback permiten @read y elasticbeanstalk update-environment; sin dry-run ejecutado."
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "note": "Un solo comando de cutover, sin reintentos."
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "Rollback version-only al LKG nombrado, max_attempts 1."
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": "Clase A; sin IAM, DNS, secretos ni migraciones."
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "note": "El plan usa aws_guard y registra solo identificadores y conteos."
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS",
+      "note": "blast_radius_and_residues clasifica imagenes, S3 y AV inertes hasta el cutover."
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "note": "rollback condicionado a las 7 condiciones de rollback_authorization; un defecto funcional no lo autoriza."
+    }
+  ],
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "info",
+      "file": "evidence/SIM-WIZARD-3-PASOS/deployment/candidate-01.json",
+      "summary": "No se ejecuto dry-run de update-environment: el modo candidate_read no lo permite; el plan se valido por inspeccion.",
+      "required_action": "Ninguna."
+    }
+  ],
+  "risks": [
+    "AC-7 (smoke humano en AWS DEV) queda pendiente tras el cutover."
+  ]
+}
