@@ -34,6 +34,7 @@ Guia de todos los documentos del proyecto. Comienza por el que corresponda a tu 
 - [cicd/](cicd/README.md): contrato CI/CD v2 completo (canonico) y lecciones de deploy AWS versionadas.
 - [../AGENTS.md](../AGENTS.md): protocolo del Harness multiagente (entrada para cualquier runtime).
 - [H3_3_2_SUPERUSUARIOS_CEO_CTO.md](H3_3_2_SUPERUSUARIOS_CEO_CTO.md): modelo de superusuarios CEO/CTO e identidades DEV (H3.3.2).
+- [SIMULADOR_USO.md](SIMULADOR_USO.md): simulador de renta vitalicia: uso, casos soportados y fuera de alcance, y mantención (tablas de mortalidad, ventana de fechas).
 ## Pruebas
 
 - [tests/README.md](../tests/README.md): estructura, comandos y troubleshooting de pruebas.
