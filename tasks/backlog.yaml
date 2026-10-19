@@ -18,11 +18,91 @@ items:
   category: infra
   status: pending
   change_class: C
-  summary: ECR lifecycle keep-20 puede eliminar imagenes requeridas por el LKG. Mientras no se corrija,
-    preflight y candidate review verifican todos los digests del LKG.
+  summary: 'ECR lifecycle keep-20 puede eliminar imagenes requeridas por el LKG. Decision del humano (2026-10-19):
+    subir el tope a 100 imagenes; la politica la aplica el humano. Mientras no se corrija, preflight y
+    candidate review verifican todos los digests del LKG.'
   evidence:
   - deployment/ecr/lifecycle-policy.json
   - 'aws ecr get-lifecycle-policy (2026-09-14): aplicada; tpi-dev-app con 20 imagenes'
+  - definida en sesion interactiva con Claude el 2026-10-19 a pedido del humano; agregada al backlog por
+    PR (no con approve.py define); se activa con approve.py activate
+  task:
+    id: H3.2-ECR-LIFECYCLE
+    title: 'Lifecycle de ECR compatible con rollback: conservar 100 imagenes'
+    objective: 'Cambiar la politica de lifecycle de ECR de DEV para que la regla de retencion, que hoy
+      conserva solo las 20 imagenes mas recientes, conserve las 100 mas recientes. Asi la ultima version
+      sana (LKG) y los candidatos de rollback no se expiran cuando se acumulan publicaciones, fallidas
+      o repetidas. Se actualiza deployment/ecr/lifecycle-policy.json, se protege el valor con una prueba
+      y se documenta el procedimiento de aplicacion, que ejecuta el humano en AWS DEV sobre tpi-dev-app
+      y tpi-dev-caddy. El Harness no aplica la politica: ecr put-lifecycle-policy esta denegado a los
+      agentes.'
+    source:
+      type: story
+      ref: Item H3.2-ECR-LIFECYCLE del backlog (riesgo documentado desde 2026-09-14); definida en sesion
+        interactiva con Claude el 2026-10-19. El tope de 100 imagenes y la aplicacion manual de la politica
+        los decidio el humano.
+    change_class: C
+    deploy_required: true
+    requires_human_acceptance: true
+    acceptance_criteria:
+    - id: AC-1
+      verification: automated
+      description: deployment/ecr/lifecycle-policy.json deja la regla 1 sin cambios (imagenes sin etiqueta,
+        expiran a los 7 dias) y la regla 2 pasa de imageCountMoreThan 20 a imageCountMoreThan 100, con
+        tagStatus any y accion expire. Las prioridades siguen siendo 1 y 2, no se agregan reglas y el
+        archivo es JSON valido.
+    - id: AC-2
+      verification: automated
+      description: Una prueba (sin AWS, que corre en CI) lee la politica y falla si no hay reglas, si
+        hay prioridades repetidas, si alguna regla expira por antiguedad imagenes con etiqueta, o si el
+        conteo de la regla de retencion es menor que 100. Asi una reduccion futura rompe CI en lugar de
+        pasar inadvertida.
+    - id: AC-3
+      verification: both
+      description: 'Documentacion en el documento de despliegue o de ECR que corresponda (el Developer
+        elige el archivo de docs/ mas adecuado): por que 100, el procedimiento de aplicacion y verificacion
+        para tpi-dev-app y tpi-dev-caddy (put-lifecycle-policy, get-lifecycle-policy y la vista previa
+        start-lifecycle-policy-preview con get-lifecycle-policy-preview), la reversa (reaplicar el JSON
+        anterior desde git) y que las comprobaciones de digests del LKG en el preflight y en la revision
+        del candidato se mantienen. Lista ademas los lugares que mencionan ''keep-20'' en agents/ para
+        actualizarlos aparte. CHANGELOG y BITACORA actualizados.'
+    - id: AC-4
+      verification: human
+      description: 'Aplicacion en AWS DEV: el humano aplica la politica a tpi-dev-app y a tpi-dev-caddy
+        y comprueba con get-lifecycle-policy que lleva 100, y con la vista previa que no expira ninguna
+        imagen existente (hoy hay unas 20 por repositorio).'
+    constraints:
+    - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
+      desde ramas o worktrees antiguos.'
+    - 'Tarea unica; no mezclar otros cambios ni dejar alcance diferido sin documentarlo. Los cambios de
+      infraestructura distintos de este tope (reglas nuevas, otros recursos de ECR) son BLOCKER: detenerse
+      y escalar al humano.'
+    - 'change_class C: no sigue ningun fast path; tras el merge la transicion obligatoria es merged_non_fast_path
+      hacia BLOCKED_HUMAN, sin excepcion. El humano aplica la politica en AWS DEV segun el procedimiento
+      documentado y resuelve el estado hacia VERIFYING con approve.py resolve, indicando en la razon que
+      la aplico y verifico; despues acepta AC-4.'
+    - Ningun agente aplica la politica ni escribe en AWS (ecr put-lifecycle-policy esta denegado en harness/policies.yaml).
+      El Deployer solo hace las lecturas permitidas.
+    - Un unico archivo de politica (deployment/ecr/lifecycle-policy.json) sirve a tpi-dev-app y a tpi-dev-caddy;
+      no crear politicas por repositorio. Conservar la regla 1 y no cambiar tagStatus; no introducir reglas
+      por prefijo de etiqueta ni por antiguedad de imagenes con etiqueta.
+    - 'No modificar app/**, .github/**, Dockerfile, deployment/ fuera de deployment/ecr/, environments/**,
+      agents/**, harness/** ni scripts/harness/**. Las notas ''keep-20'' de agents/*/CONTEXT.md y de la
+      skill tpi-release-readiness son rutas protegidas: no se editan aqui, solo se listan en la documentacion.'
+    - No reducir la cobertura minima (85%).
+    dependencies: []
+    risk:
+      level: low
+      notes: 'Cambia un numero de una politica de retencion, y lo aumenta: se conserva mas, no menos.
+        Riesgo residual: un costo de almacenamiento marginal. Reversa: reaplicar el JSON anterior desde
+        git. Lo aplica el humano, con vista previa antes de confirmar.'
+    scope:
+      paths:
+      - deployment/ecr/**
+      - tests/**
+      - docs/**
+      - CHANGELOG.md
+    status: active
 - id: H3.2-LEAST-PRIVILEGE-ROLES
   title: Perfiles tpi-dev-readonly y tpi-dev-release con roles IAM minimos
   priority: P1
