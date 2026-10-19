@@ -15,11 +15,11 @@
     },
     {
       "rulePriority": 2,
-      "description": "Retain the 20 most recent immutable DEV revisions.",
+      "description": "Retain the 100 most recent immutable DEV revisions.",
       "selection": {
         "tagStatus": "any",
         "countType": "imageCountMoreThan",
-        "countNumber": 20
+        "countNumber": 100
       },
       "action": {
         "type": "expire"
