@@ -1,6 +1,8 @@
 # Política de lifecycle de ECR en AWS DEV
 
-Estado: propuesta aprobada como tarea `H3.2-ECR-LIFECYCLE` (clase C, infraestructura).
+Estado: **aplicada** en AWS DEV el 2026-10-19, en `tpi-dev-app` y `tpi-dev-caddy`, como tarea
+`H3.2-ECR-LIFECYCLE` (clase C, infraestructura). La regla de retención conserva 100 imágenes; la vista
+previa previa a aplicarla mostró 0 imágenes expiradas con 20 por repositorio.
 Ambiente: AWS DEV (`821656895812`, `us-east-2`), perfil `tpi-dev`.
 Repositorios: `tpi-dev-app` y `tpi-dev-caddy`.
 
@@ -66,11 +68,13 @@ debajo del tope de 100).
 Para cada repositorio (`tpi-dev-app` y `tpi-dev-caddy`):
 
 ```bash
-# 1. Vista previa (no aplica nada)
+# 1. Vista previa (no aplica nada). Hay que pasarle la política NUEVA: sin
+#    --lifecycle-policy-text la vista previa usa la política que ya está aplicada, no esta.
 aws ecr start-lifecycle-policy-preview \
   --repository-name tpi-dev-app \
   --region us-east-2 \
-  --profile tpi-dev
+  --profile tpi-dev \
+  --lifecycle-policy-text file://deployment/ecr/lifecycle-policy.json
 
 aws ecr get-lifecycle-policy-preview \
   --repository-name tpi-dev-app \
@@ -109,8 +113,25 @@ aws ecr put-lifecycle-policy \
   --lifecycle-policy-text file:///tmp/lifecycle-policy-20.json
 ```
 
+En PowerShell no existe `/tmp`: usa una ruta temporal propia, por ejemplo `$env:TEMP`.
+
+```powershell
+# Recuperar la política anterior desde el historial a un archivo temporal
+$tmp = Join-Path $env:TEMP 'lifecycle-policy-20.json'
+git show <sha-anterior>:deployment/ecr/lifecycle-policy.json | Set-Content -Encoding ascii $tmp
+
+aws ecr put-lifecycle-policy `
+  --repository-name tpi-dev-app `
+  --region us-east-2 `
+  --profile tpi-dev `
+  --lifecycle-policy-text ("file://" + ($tmp -replace '\\', '/'))
+```
+
 Repetir para `tpi-dev-caddy`. La reversa es segura: restablece el tope anterior sin borrar
-imágenes de inmediato.
+imágenes de inmediato. Antes de confirmarla conviene ensayar la vista previa con ese mismo archivo
+(`start-lifecycle-policy-preview` con `--lifecycle-policy-text`, como en el paso 1). Nota: la variante
+de PowerShell no se ejecutó contra AWS al redactar este documento; se ensayó solo hasta generar el
+archivo y la ruta `file://`.
 
 ## Controles que se mantienen
 
