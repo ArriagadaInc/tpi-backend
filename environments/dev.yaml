@@ -20,7 +20,7 @@ artifacts:
     caddy: tpi-dev-caddy
   ecr_registry: 821656895812.dkr.ecr.us-east-2.amazonaws.com
   ecr_tag_mutability: IMMUTABLE
-  ecr_lifecycle: {rule: "retain 20 most recent", risk: ECR-LIFECYCLE-KEEP-20}
+  ecr_lifecycle: {rule: "retain 100 most recent", risk: ECR-LIFECYCLE-KEEP-100}
   publish_workflow: publish-dev-ecr-images.yml
   bundle_bucket: elasticbeanstalk-us-east-2-821656895812
   bundle_key_prefix: tpi-backoffice/dev-releases

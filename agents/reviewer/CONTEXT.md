@@ -21,7 +21,7 @@
 5. Bundle domain-locked determinista, reproducible por el Reviewer (`deployment/build_eb_ecr_bundle.py`).
 6. Fast path prohibe `--option-settings`, IAM, Route53, rebuild, rerun de migraciones, borrar AV
    (contrato seccion 4).
-7. LKG = version sana observada; sus digests deben existir en ECR (riesgo ECR lifecycle keep-20).
+7. LKG = version sana observada; sus digests deben existir en ECR (ECR lifecycle keep-100 desde 2026-10-19, antes keep-20: riesgo menor, no eliminado).
 8. Mensajes de error no son contratos; decidir por status, IDs, hashes (`docs/AWS_DEPLOYMENT_BEST_PRACTICES.md` principio 5).
 9. Read-only no es safe-to-log (`docs/AWS_DEPLOYMENT_POLICY.md` principio 11, provisional).
 10. Separacion de poderes: quien construye no aprueba; el Reviewer no despliega (BEST_PRACTICES principio 8).

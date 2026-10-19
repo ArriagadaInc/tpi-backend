@@ -89,8 +89,8 @@ harness:
   deploy_capable_runtimes: [claude]
   portable_runtimes: [claude, codex, deepseek]
 known_risks:
-  - id: ECR-LIFECYCLE-KEEP-20
-    summary: la lifecycle policy de ECR puede expirar imagenes requeridas por el LKG
+  - id: ECR-LIFECYCLE-KEEP-100
+    summary: la lifecycle policy de ECR (conserva las 100 imagenes mas recientes desde 2026-10-19; antes 20) aun podria expirar imagenes requeridas por el LKG si se acumularan mas de 100 publicaciones
     control: aws-read-preflight y tpi-release-readiness verifican todos los digests del LKG
   - id: AWS-HUMAN-CREDENTIALS
     summary: tpi-dev es un usuario IAM humano con privilegios amplios; los guards no sustituyen IAM

@@ -126,17 +126,14 @@ digests en el release:
 Con el tope elevado a 100, esos checks dejan de ser el único freno frente a la expiración: las
 imágenes requeridas por el LKG y por los candidatos de rollback permanecen en ECR con margen.
 
-## Notas `keep-20` pendientes de actualizar (rutas protegidas del Harness)
+## Notas `keep-20` actualizadas (rutas protegidas del Harness)
 
-Las siguientes referencias a `keep-20` viven en rutas protegidas (`agents/`), que un Developer no
-edita; se listan aquí para actualizarlas en un mantenimiento aparte del Harness o por el humano:
+Las referencias a `keep-20` vivían en rutas protegidas, que un Developer no edita, y se actualizaron
+aparte, por el humano y con Claude, el 2026-10-19 (mantenimiento posterior a la tarea):
 
-- `agents/deployer/CONTEXT.md` — «ECR lifecycle keep-20 puede borrar imágenes del LKG: verificar
-  todos sus digests antes del gate.»
-- `agents/reviewer/CONTEXT.md` — «LKG = versión sana observada; sus digests deben existir en ECR
-  (riesgo ECR lifecycle keep-20).»
-- `agents/reviewer/skills/tpi-release-readiness/SKILL.md` — «Digests del LKG ausentes (ECR
-  lifecycle keep-20): REJECTED `infra`.»
-
-Tras esta tarea el riesgo cambia de `keep-20` a `keep-100`: conviene actualizar esas notas para
-mantener la referencia al tope vigente.
+- `agents/deployer/CONTEXT.md`, `agents/reviewer/CONTEXT.md` y
+  `agents/reviewer/skills/tpi-release-readiness/SKILL.md`: ahora dicen `keep-100`. Las
+  comprobaciones de digests del LKG siguen vigentes (el riesgo baja, no desaparece).
+- `environments/dev.yaml` (`ecr_lifecycle`) y `harness/project-profile.yaml` (`known_risks`): la regla
+  pasa a «retain 100 most recent» y el riesgo, que ningún script lee, se renombra a
+  `ECR-LIFECYCLE-KEEP-100`.

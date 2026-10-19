@@ -64,7 +64,7 @@ Decision `APPROVED` con `cause: null`, o `REJECTED` con `cause` `code` / `artifa
 
 ## 7. STOP
 - Cualquier desajuste de hash, digest, arbol o label: REJECTED (no se solicita Human Gate).
-- Digests del LKG ausentes (ECR lifecycle keep-20): REJECTED `infra`.
+- Digests del LKG ausentes (ECR lifecycle keep-100): REJECTED `infra`.
 - AccessDenied o estado AWS ambiguo: REJECTED `infra` con evidencia.
 
 ## 8. Fuentes
