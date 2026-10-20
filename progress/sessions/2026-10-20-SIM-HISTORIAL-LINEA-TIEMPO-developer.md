@@ -1,0 +1,27 @@
+# Sesion archivada: SIM-HISTORIAL-LINEA-TIEMPO-developer
+
+- Archivada: 2026-10-20T03:59:44Z
+- Estado: DEVELOPING
+
+# Progreso actual
+
+## Estado
+<!-- harness:projection:begin (autogenerado desde harness/state.json por transition.py; no editar a mano) -->
+- Estado del Harness: DEVELOPING (rol: developer)
+- Tarea: SIM-HISTORIAL-LINEA-TIEMPO
+- Proximo paso: Developer: implementar, correr gates, abrir/actualizar PR, registrar evidencia y submit_for_review
+- Ultima transicion: start_development (NEW -> DEVELOPING)
+- Actualizado: 2026-10-20T03:31:46Z
+<!-- harness:projection:end -->
+- Ultima sesion archivada: progress/sessions/2026-10-19-SIM-WIZARD-3-PASOS-closure.md
+
+## Estado reciente
+- DECISION (DEVELOPING, SIM-HISTORIAL-LINEA-TIEMPO, sesion other-202610200330-developer-supc180f7): implementada la linea de tiempo de simulaciones. Migracion 009 (forward/rollback) crea la vista tpi.v_historial_simulaciones (security_barrier, GRANT SELECT solo a tpi_app, sin SELECT directo sobre tpi.auditoria, evidencia completa entradas+resultado en JSONB). Repository/service/presentacion/template leen solo la vista y muestran cada simulacion con resumen + detalle desplegable. PR #95 abierto contra main, CI verde (5/5). Gates locales: ruff/black/mypy/bandit PASS; pytest unit de archivos afectados 50 passed; la suite completa y la cobertura las valida el CI. Evidencia: evidence/SIM-HISTORIAL-LINEA-TIEMPO/developer/developer-01.json. Siguiente: submit_for_review.
+- DECISION (CANDIDATE_REVIEW, SIM-WIZARD-3-PASOS, sesion claude-202610192206-reviewer-sup200a40): APPROVED. Arbol release == revisado (c25cfa2), publish run success, digests ACTIVE con scan 0/0, bundle reproducido (sha256 9bbcbac1...) == S3 ChecksumSHA256 == AV SourceBundle, LKG sano con digests presentes, plan version-only. Sin dry-run. Evidencia candidate_review-01.
+- DECISION (DEPLOYING, SIM-WIZARD-3-PASOS, sesion claude-202610192250-deployer-supca6dda): preflight PASS; un unico update-environment version-only a h3-sim-wizard-3-pasos-4ee5fad-domainlocked-r1 (22:52:28Z -> 22:53:23Z, ~55 s); env Ready/Green/Ok con la VersionLabel exacta; eventos EB todos INFO; cadena de identidad VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 coincide con approval-01. Sin option settings ni rollback. Evidencia deployment-01. Siguiente: VERIFYING (smoke y conteos de logs; AC-7 humano).
+- DECISION (VERIFYING, SIM-WIZARD-3-PASOS, sesion claude-202610192255-deployer-sup57bdaf): env Ready/Green/Ok en la VersionLabel exacta, eventos EB todos INFO, smoke 7/7 PASS, conteos de logs 0 en los 8 patrones desde el cutover. Evidencia verification-01 con AC-7 pending_human. `verified` NO emitido: espera que el humano ejecute `python scripts/harness/approve.py accept --decision accept --criteria AC-7` tras el smoke humano (3 pasos con caso solo y familiar, resultado en pantalla, PDF, valores = simulador de referencia).
+- DECISION (VERIFYING, SIM-WIZARD-3-PASOS, sesion claude-202610192344-deployer-supafa4bb): acceptance-01 registrada por approve.py (decision accepted; AC-1, AC-3, AC-4, AC-7). verification-01 PASS (smoke 7/7, conteos de logs 0, identidad de runtime coincide). Se emite `verified`.
+- 2026-10-19: Tarea SIM-WIZARD-3-PASOS cerrada; resumen en tasks/completed/SIM-WIZARD-3-PASOS.yaml
+
+## Bloqueos
+- Ninguno.

@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "SIM-HISTORIAL-LINEA-TIEMPO",
+  "created_at": "2026-10-20T03:59:28Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610200330-developer-supc180f7",
+  "head_sha": "aa11b43ab81feaddbeb44a3419ddbc3bb8ddfea2",
+  "branch": "harness/SIM-HISTORIAL-LINEA-TIEMPO-linea-tiempo",
+  "pr_number": 95,
+  "change_class": "D",
+  "tests": {
+    "command": "CI workflow Tests job (pytest tests/ --cov=app --cov-fail-under=85, Python 3.12 + PostgreSQL) verde en PR #95 (5/5 checks). Local sin BD: ruff check app/ tests/ scripts/ deployment/ PASS; black --check app/ tests/ scripts/ deployment/ PASS (258 files); mypy app/ --ignore-missing-imports PASS; bandit -r app/ --severity-level medium --confidence-level medium 'No issues identified'; pytest tests/unit --no-cov = 769 passed, 11 failed (tests de dashboard ejecutivo que requieren DATABASE_HOST/PORT/NAME/USER, ausentes en este entorno y ajenos a esta tarea); pytest de los archivos afectados (test_sim_historial_timeline_presentation.py, test_sim_historial_migration_scripts.py, test_h3_3_3/h3_3_4_timeline_presentation.py, test_web_app.py) = 50 passed. La suite completa y la cobertura las valida el CI del SHA publicado (pull_request_checks).",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "scripts/sql/009_create_historial_simulaciones.sql crea la vista tpi.v_historial_simulaciones sobre tpi.auditoria con security_barrier, filtro accion='simulacion_renta_vitalicia' AND tabla_afectada='tpi.leads', exponiendo id_auditoria, id_lead, fecha_hora, actor_subject, tipo_escenario, version_modelo, codigo_verificacion, entradas (JSONB completo) y resultado (JSONB completo) — sin censurar ningun dato. REVOKE ALL FROM PUBLIC + GRANT SELECT solo a tpi_app (sin SELECT sobre tpi.auditoria). 009_drop_historial_simulaciones.sql revierte (REVOKE SELECT + DROP VIEW). scripts/init_test_database.py crea la vista para pruebas. Cubierto por tests/unit/test_sim_historial_migration_scripts.py y tests/integration/test_audit_simulation_view.py."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "El detalle del lead muestra cada simulacion en la linea de tiempo: SolicitudRepository.get_lead_simulation_events (lee solo tpi.v_historial_simulaciones, orden fecha_hora DESC, id_auditoria DESC), SolicitudService.get_lead_simulation_events, build_timeline_items con kind='simulation' (rank entre event y state_change) y lead_detail_panel.html renderiza 'Simulacion generada' (ejecutivo actor_subject, escenario tipo_escenario, pension UF resultado.pension_uf, codigo codigo_verificacion) mas un detalle desplegable con todas las entradas (causante y beneficiarios con fechas de nacimiento, invalidez y relacion) y el resultado completo. Cubierto por tests/unit/test_sim_historial_timeline_presentation.py y tests/unit/test_web_app.py::test_detail_timeline_renders_simulation_with_summary_and_full_detail."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "La visibilidad usa el mismo camino del detalle del lead: el timeline se construye dentro de _resolve_detail_context solo cuando selected_lead no es None (404 si no es visible) y con el masking de PII vigente por rol; el actor se muestra como actor_subject (reglas vigentes de la linea de tiempo). La evidencia de simulacion no contiene nombres, RUT, correo ni telefono (SIM-EVIDENCIA-ENTRADAS). La visibilidad por cartera del advisor queda cubierta por tests/unit/test_h3_3_5_advisor_web.py (404 para lead ajeno/no asignado)."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "Pruebas unitarias (test_sim_historial_timeline_presentation.py, test_sim_historial_migration_scripts.py, test_web_app.py) y de integracion PostgreSQL (tests/integration/test_audit_simulation_view.py: columnas/filtro, orden, privilegios PUBLIC/app-only con rol de minimo privilegio, reutilizacion del indice de 008, rollback sin tocar auditoria ni 007/008, y ausencia de SELECT directo a tpi.auditoria). Un lead sin simulaciones no cambia su linea de tiempo (build_timeline_items devuelve [] sin simulaciones). Cobertura total >= 85% validada por el CI del PR #95."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "Documentacion actualizada: docs/database/02_PHYSICAL_SCHEMA.md (seccion de la vista), docs/database/04_MIGRATIONS.md (inventario + Notas sobre 009 con procedimiento de aplicacion/reversa en AWS DEV para el humano), docs/database/05_SECURITY_ACCESS.md (fila de la vista), CHANGELOG.md y docs/BITACORA.md. docs/SIMULADOR_USO.md, docs/SIM_RV_V1_MODELO.md y docs/SIM_RV_V1_PENDIENTES.md dejan de decir que la linea de tiempo esta pendiente o que la app no lee la evidencia: ahora la lee solo a traves de la vista y la muestra completa."
+    },
+    {
+      "id": "AC-6",
+      "status": "pending_verification",
+      "evidence": "Smoke humano en AWS DEV post-migracion y post-deploy (requires_human_acceptance): un ejecutivo genera un PDF y la simulacion aparece en la linea de tiempo del lead con todos sus datos (incluido el grupo familiar con fechas de nacimiento); un advisor sin acceso al lead no la ve."
+    }
+  ],
+  "files_changed": [
+    "CHANGELOG.md",
+    "app/repositories/solicitud_repository.py",
+    "app/services/solicitud_service.py",
+    "app/web/dependencies.py",
+    "app/web/presentation.py",
+    "app/web/routes/leads.py",
+    "app/web/static/css/app.css",
+    "app/web/templates/lead_detail_panel.html",
+    "docs/BITACORA.md",
+    "docs/SIMULADOR_USO.md",
+    "docs/SIM_RV_V1_MODELO.md",
+    "docs/SIM_RV_V1_PENDIENTES.md",
+    "docs/database/02_PHYSICAL_SCHEMA.md",
+    "docs/database/04_MIGRATIONS.md",
+    "docs/database/05_SECURITY_ACCESS.md",
+    "scripts/init_test_database.py",
+    "scripts/sql/009_create_historial_simulaciones.sql",
+    "scripts/sql/009_drop_historial_simulaciones.sql",
+    "tests/integration/test_audit_simulation_view.py",
+    "tests/unit/test_h3_3_1_rbac_pii_assignment.py",
+    "tests/unit/test_h3_3_5_advisor_web.py",
+    "tests/unit/test_sim_historial_migration_scripts.py",
+    "tests/unit/test_sim_historial_timeline_presentation.py",
+    "tests/unit/test_sim_rv_web.py",
+    "tests/unit/test_sim_wizard.py",
+    "tests/unit/test_web_app.py"
+  ],
+  "assumptions": [
+    "La migracion 009 no crea indice nuevo: la consulta de timeline (accion, tabla_afectada, id_lead) queda servida por auditoria_state_history_idx de la migracion 008, cuyas columnas lideres coinciden con el filtro de la vista; se documenta en la cabecera del forward y en docs/database/04_MIGRATIONS.md.",
+    "La vista expone entradas y resultado como JSONB completos (decision del humano 2026-10-19: no se censura ningun dato registrado) y los metadatos de raiz como columnas tipadas; la pension mensual se extrae de resultado.pension_uf en la capa de presentacion, sin duplicar columnas.",
+    "El 'escenario' del resumen se muestra con la clave maquina tipo_escenario (renta_inmediata_causante, renta_inmediata_familia, renta_temporal_rvd), que es lo que queda registrado en tpi.auditoria.detalle; no se reconstruye una descripcion en espanol (no queda registrada).",
+    "El nombre del ejecutivo se muestra como actor_subject, coherente con las reglas vigentes de la linea de tiempo para asignaciones y cambios de estado.",
+    "La visibilidad de la evidencia sigue las reglas del detalle del lead (un advisor solo ve leads de su cartera; 404 si no es visible); no se agrega regla nueva.",
+    "Preflight/postflight del forward 009 replican el patron de 007/008 (aborta si tpi_app posee SELECT/UPDATE/DELETE directo sobre tpi.auditoria); el script NO se aplica en AWS DEV en desarrollo (clase D = Human Gate).",
+    "En este entorno local no hay PostgreSQL/DATABASE_* configurados, por lo que los tests de integracion y los tests unitarios del dashboard ejecutivo que requieren BD no se ejecutaron localmente; la suite completa y la cobertura las valida el CI del SHA publicado (verde en PR #95)."
+  ],
+  "migrations_included": true
+}

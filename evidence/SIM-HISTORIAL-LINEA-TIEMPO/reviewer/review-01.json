@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "SIM-HISTORIAL-LINEA-TIEMPO",
+  "created_at": "2026-10-20T04:01:31Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610200400-reviewer-sup60805c",
+  "reviewed_sha": "aa11b43ab81feaddbeb44a3419ddbc3bb8ddfea2",
+  "reviewed_tree": "06b6af3e797e76a95bdf2098c89a58feb516c077",
+  "pr_number": 95,
+  "ci": {
+    "conclusion": "success",
+    "status": "PASS",
+    "checks": "5/5 (Docker Build, Lint & Format, Release Tooling Validation, Security Audit, Tests) en el SHA exacto",
+    "verification": "gh pr checks 95; mergeStateStatus CLEAN",
+    "run_id": 39366580192
+  },
+  "decision": "APPROVED",
+  "cause": null,
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "info",
+      "file": "scripts/sql/009_create_historial_simulaciones.sql",
+      "summary": "La vista expone entradas y resultado completos por decision del humano (2026-10-19); la evidencia no contiene nombres, RUT, correo ni telefono. Sin ip_origen, id_usuario ni id_persona.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F-2",
+      "severity": "info",
+      "file": "scripts/sql/009_create_historial_simulaciones.sql",
+      "summary": "Clase D: tras el merge la transicion es merged_non_fast_path a BLOCKED_HUMAN; el humano aplica 009 en DEV (procedimiento en docs/database/04_MIGRATIONS.md) y AC-6 queda para validacion humana.",
+      "required_action": "Humano aplica 009 y verifica AC-6."
+    }
+  ],
+  "checks": [
+    {
+      "name": "sha_pr_igual_a_evidencia_developer_y_rama_al_dia_con_main",
+      "result": "PASS"
+    },
+    {
+      "name": "migracion_009_libre_forward_drop_preflight_postflight_grant_solo_vista",
+      "result": "PASS"
+    },
+    {
+      "name": "app_lee_solo_vista_nunca_tpi_auditoria",
+      "result": "PASS"
+    },
+    {
+      "name": "filtro_vista_coincide_con_escritor_accion_y_tabla_afectada",
+      "result": "PASS"
+    },
+    {
+      "name": "visibilidad_timeline_dentro_de_detalle_lead_404_si_no_visible",
+      "result": "PASS"
+    },
+    {
+      "name": "plantilla_autoescape_sin_safe_detalle_desplegable_completo",
+      "result": "PASS"
+    },
+    {
+      "name": "scope_sin_cambios_en_simulador_pension_auth_dependencias",
+      "result": "PASS"
+    },
+    {
+      "name": "migraciones_005_a_008_intactas",
+      "result": "PASS"
+    },
+    {
+      "name": "ci_5_de_5_cobertura_validada_por_ci",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "Migracion 009 aplicada manualmente en AWS DEV por el humano; mitigado con vista de solo lectura, grant minimo y script de reversa."
+  ]
+}

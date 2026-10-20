@@ -22,6 +22,43 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-20 - Simulador: migración 009 aplicada en DEV y defecto con eventos antiguos (SIM-HISTORIAL-LINEA-TIEMPO)
+
+- Migración 009 aplicada y verificada en AWS DEV por el humano (2026-10-20, 10:34 hora de Chile) con una herramienta de una sola
+  vez que simula primero y deshace (ROLLBACK), pide una frase de confirmación, usa el SQL exacto del commit `e4476c3` (huella
+  `6a5247dc14d6`) y verifica antes y después del COMMIT. Resultado: vista `tpi.v_historial_simulaciones` creada con
+  `security_barrier` y las 9 columnas esperadas; `tpi_app` con SELECT sobre la vista y sin SELECT/UPDATE/DELETE sobre
+  `tpi.auditoria`; `PUBLIC` sin privilegios; la vista mostró 15 simulaciones, igual que la tabla. PostgreSQL 17.9, usuario
+  `tpi_admin`. Luego el humano resolvió el bloqueo hacia `PREPARING_DEPLOYMENT`.
+- Despliegue: versión `h3-sim-historial-linea-tiempo-e4476c3-domainlocked-r1`. Verificación PASS (smoke 6/6 y 0 coincidencias
+  en los 8 patrones de logs). Aceptados AC-2, AC-5 y AC-6.
+- Defecto hallado por el humano al verificar: un lead de DEV con simulaciones anteriores a `SIM-EVIDENCIA-ENTRADAS` mostraba
+  solo «Internal Server Error». Causa: esos eventos (2026-10-14 a 2026-10-16) tienen un `detalle` con solo cinco metadatos
+  (`actor_subject`, `role`, `tipo_escenario`, `version_modelo`, `codigo_verificacion`); la vista devuelve `entradas` y
+  `resultado` en NULL; `build_timeline_items` los normaliza a `{}` y la plantilla lee `item.entradas.causante.sexo`, que en
+  Jinja lanza `UndefinedError` y tumba toda la página del lead (500). Reproducido con la plantilla real y confirmado en DEV:
+  ese lead tiene 4 eventos antiguos y 1 completo.
+- Por qué no se detectó: ni las pruebas del Developer, ni la revisión, ni la definición de la tarea consideraron la evidencia
+  anterior a `SIM-EVIDENCIA-ENTRADAS`. Las pruebas usaron solo eventos con el esquema nuevo.
+- Lección: una presentación que lee datos históricos se prueba con cada forma que el dato ha tenido en el tiempo. Al definir una
+  tarea que lee datos existentes, consultar en DEV las formas reales (por ejemplo `entradas IS NULL`) y exigirlo en un criterio.
+- Decisión del humano (2026-10-20): aceptar esta tarea y corregir con una tarea nueva, clase A y P0:
+  `SIM-HISTORIAL-EVENTOS-ANTIGUOS`, definida en el PR de cierre. Hasta que se despliegue, los leads con simulaciones de ese
+  periodo siguen fallando en DEV.
+
+### 2026-10-20 - Harness: tarea SIM-HISTORIAL-LINEA-TIEMPO cerrada (DONE)
+
+- Titulo: Linea de tiempo del lead: mostrar las simulaciones generadas
+- Evidencia: `evidence/SIM-HISTORIAL-LINEA-TIEMPO/` y `tasks/completed/SIM-HISTORIAL-LINEA-TIEMPO.yaml`.
+- release_sha: `e4476c325395d849c32b1c521687e1d56f6ee22e`
+- pr_number: `95`
+- application_version: `h3-sim-historial-linea-tiempo-e4476c3-domainlocked-r1`
+- bundle_sha256: `d6f6015d921f19dbaac49b8bcadcf165fbd95c27faaca679c4c2961893fcd6da`
+- lkg: `h3-sim-wizard-3-pasos-4ee5fad-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `e4476c325395d849c32b1c521687e1d56f6ee22e`
+- verification: `PASS`
+
 ### 2026-10-20 - Simulador: línea de tiempo del lead con las simulaciones generadas (en desarrollo, DEVELOPING)
 
 - Tarea `SIM-HISTORIAL-LINEA-TIEMPO` (clase D, db_path): mostrar en la línea de tiempo del detalle del lead cada
