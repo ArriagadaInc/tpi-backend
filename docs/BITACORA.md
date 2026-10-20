@@ -22,6 +22,27 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-20 - Seguridad: excepción acotada de pip-audit para 8 avisos de Pillow 12.3.0
+
+- Hallazgo: poco después del bump de `certifi` (#98) `pip-audit` empezó a reportar 8 avisos en `pillow 12.3.0`
+  (CVE-2026-112395, 112397, 112400, 112404, 112895, 112896, 112897 y 112899), todos corregidos solo en Pillow 13.0.0. Eso hizo
+  fallar el `Security Audit` del CI y del workflow de publicación, y dejó el release `793e718` de `SIM-HISTORIAL-EVENTOS-ANTIGUOS`
+  sin poder publicarse (el workflow audita el lock del commit que publica).
+- Por qué no se actualiza: `streamlit` (1.60.0 y también la última, 1.66.0) exige `pillow<13`. Streamlit no puede salir del runtime
+  todavía: `app.web.main` y la API lo importan a través de `app.auth` (`guards.py`) y `app.components.ui`.
+- Riesgo evaluado: los avisos exigen abrir una imagen o un PDF enviado por un atacante. La aplicación no recibe archivos de
+  usuarios, no usa Pillow directamente y solo abre el logo fijo del repositorio (vía `reportlab`).
+- Decisión del humano (2026-10-20): excepción acotada a esos 8 IDs, en `ci.yml` y en `publish-dev-ecr-images.yml`, con fecha de
+  vencimiento 2026-11-20. Como el workflow de publicación toma su definición de `main`, también aplica al publicar el commit
+  `793e718` ya mergeado.
+- Resguardos: nueva prueba `tests/security/test_excepcion_pip_audit_pillow.py` que falla si los workflows difieren de los 8 IDs
+  documentados, si aparece código que reciba archivos de usuarios, si cambia la versión de Pillow o si llega el vencimiento.
+  Sección «Excepciones de pip-audit» en `docs/SEGURIDAD.md` con la condición de salida.
+- Motivo de fondo de los resguardos: el humano planea una función de adjuntos (imágenes y PDF) en los comentarios del CRM. La
+  excepción deja de ser válida en ese momento, así que la salida (Pillow >= 13 vía desacople de Streamlit) es requisito previo.
+- Siguiente paso: tareas `SEG-DESACOPLAR-STREAMLIT` y `CRM-ADJUNTOS-COMENTARIOS` en el backlog (se agregan en el PR de cierre de
+  la tarea en curso) y reintento del publish de `793e718`.
+
 ### 2026-10-20 - Línea de tiempo del lead: tolerar simulaciones anteriores a SIM-EVIDENCIA-ENTRADAS (SIM-HISTORIAL-EVENTOS-ANTIGUOS, en desarrollo)
 
 - Tarea `SIM-HISTORIAL-EVENTOS-ANTIGUOS` (clase A, fast path version-only): el detalle del lead no debe fallar por la forma
