@@ -22,6 +22,21 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-19 - Simulador: corrección del documento de uso (`docs/SIMULADOR_USO.md`)
+
+- Corrección al documento mergeado en #90: sí se encontró el Excel de la CMF del que salen las tablas de mortalidad (la
+  búsqueda inicial se quedó corta). Está en el workspace de REA
+  (`homologacion_simulador/entrega-2026-10-13-v1/investigacion/ejecucion-vejez-edad/tablas-mortalidad-cmf.xlsx`) y la CMF
+  publica un archivo del mismo tamaño. El script que construye el `.npz` sigue solo en `REA/simulador_pension/scripts`.
+- Se incorporan: nombres oficiales de las tablas, su vigencia (NCG N.° 495 de la CMF, 24-feb-2023; rigen desde el 1-jul-2023;
+  según el sitio oficial, uso máximo de 6 años, o sea revisión hacia mediados de 2029), la comparación de 3.636 valores
+  contra el módulo de la SP y la convención sin verificar para los años posteriores a 2036.
+- Se detalla la campaña canaria (qué es, qué hace falta, cobertura sugerida, qué hacer con el resultado y las fragilidades
+  de la herramienta actual).
+- Solo documentación: sin cambios de código, base de datos ni despliegue.
+- Siguiente paso: tareas para (1) traer al repositorio el script y el Excel de las tablas y (2) consolidar la campaña
+  canaria en un único script; programar la primera campaña, porque la ventana validada venció el 2026-10-13.
+
 ### 2026-10-19 - Harness: tarea SIM-WIZARD-3-PASOS cerrada (DONE)
 
 - Titulo: Simulador: asistente de 3 pasos (datos, grupo familiar, resultado) con la marca de TPI

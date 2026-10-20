@@ -152,7 +152,7 @@ La tolerancia que se garantiza es ±1 UF. Estas son las cifras medidas, no un co
 
 | Qué | Por qué cambia | Dónde está | Disparador |
 |---|---|---|---|
-| **Tablas de mortalidad** (CB-H, RV-M, CB, B, MI-2020) | La CMF/SP publica tablas nuevas o ajusta los factores de mejoramiento. | `app/simulador_pension/datos/tablas_mortalidad.npz` | Publicación nueva, o el portal cambia de tablas. |
+| **Tablas de mortalidad** (CB-H-2020, RV-M-2020, B-M-2020, MI-H/M-2020) | La CMF/SP publica tablas nuevas o ajusta los factores de mejoramiento. | `app/simulador_pension/datos/tablas_mortalidad.npz` | Publicación nueva, o el portal cambia de tablas. |
 | **Factores de mejoramiento** (años 2021–2036) | El archivo solo trae 16 años. Más allá de 2036 el motor repite el factor de 2036. | ídem | Con el tiempo pesa más; ver §8.2. |
 | **Constantes empíricas** (`c = −0,4568`, edad +1 mes, κ = 0,2445, tope 60 UF, umbral 3.000 UF) | Se ajustaron al comportamiento del portal en un periodo. | `mortalidad.py`, `renta_diferida.py` | El portal cambia, o la campaña canaria se degrada. |
 | **Parámetros legales** (tasa de renta temporal 3,67%, cuota mortuoria 15 UF, pensiones de 60% / 50% / 15% / 11% / 50% adicional, límite de 24 años para hijos) | Cambia la normativa o la práctica de la aseguradora. | `renta_inmediata.py`, `renta_diferida.py` | Cambio normativo o del portal. |
@@ -163,31 +163,50 @@ La tolerancia que se garantiza es ±1 UF. Estas son las cifras medidas, no un co
 
 ### 8.2 Actualizar las tablas de mortalidad
 
-Las tablas salen de un Excel oficial de la CMF, con una hoja por sexo y tipo, a través de `scripts/construir_tablas.py`
-del paquete de referencia (`C:\desarrollos\REA\simulador_pension`). Cada tabla guarda `q(edad)` base 2020 (111 edades) y
-los factores `AA(edad, año)` de 2021 a 2036. Según el uso: causante vejez, CB-H-2020 (hombre) y RV-M-2020 (mujer); cónyuge e
-hijos no inválidos, CB-2020 y B-2020; hijos inválidos, MI-2020.
+**De dónde salen.** Del Excel oficial de la CMF («Tablas de Mortalidad Histórica», una hoja por sexo y tipo), a través de
+`scripts/construir_tablas.py` del paquete de referencia. Cada tabla guarda `q(edad)` base 2020 (111 edades) y los factores
+de mejoramiento `AA(edad, año)` de 2021 a 2036 (la última columna del Excel se llama «2036\*»). Nombres oficiales:
+CB-H-2020 y MI-H-2020 (hombres); RV-M-2020, B-M-2020 y MI-M-2020 (mujeres). El simulador usa el causante de vejez con
+CB-H-2020 (hombre) o RV-M-2020 (mujer); el cónyuge y los hijos no inválidos con CB-H-2020 (hombre) o B-M-2020 (mujer); y
+los hijos inválidos con MI-H/M-2020 (en el código y en los documentos antiguos aparecen como CB-2020, B-2020 y MI-2020).
 
-> **Dos cosas que hoy no están en este repositorio:** el script que construye el `.npz` (vive solo en el paquete REA) y el
-> Excel original de la CMF (no lo encontré en esta máquina: busqué en `C:\desarrollos`, Descargas, Documentos y OneDrive). Antes de la primera actualización
-> conviene traer el script a `scripts/` mediante una tarea y guardar la ubicación o el enlace oficial del Excel aquí.
+**Hasta cuándo valen.** La CMF fijó las tablas 2020 con la [Norma de Carácter General N.° 495](https://www.cmfchile.cl/portal/principal/623/w4-article-99359.html)
+(24-feb-2023); rigen desde el 1-jul-2023 y reemplazaron a las de 2014. Según las páginas oficiales de la
+[Superintendencia de Pensiones](https://www.spensiones.cl/portal/institucional/594/w3-article-15658.html) y de la CMF,
+deben usarse por un máximo de 6 años desde esa fecha, así que **toca revisarlas hacia mediados de 2029** (conviene
+confirmarlo en el sitio oficial). Al 2026-10-19 no se encontró una serie posterior.
 
-Procedimiento:
+**Dónde están hoy los insumos** (ninguno está en este repositorio):
 
-1. Obtener el Excel nuevo de la CMF y comprobar que las hojas y columnas coinciden con las que lee el script (`HOJAS` y los
-   índices de columna).
+| Insumo | Ubicación |
+|---|---|
+| Excel de la CMF | Copia en `C:\desarrollos\REA\homologacion_simulador\entrega-2026-10-13-v1\investigacion\ejecucion-vejez-edad\tablas-mortalidad-cmf.xlsx` (141.411 bytes, 13-oct-2026, sha256 que empieza en `5c8a01aa2dd8`). La CMF publica un archivo del mismo tamaño en [su página de tablas históricas](https://www.cmfchile.cl/portal/principal/623/w4-article-99359.html). |
+| Script que construye el `.npz` | `C:\desarrollos\REA\simulador_pension\scripts\construir_tablas.py` |
+
+**Recomendación:** traer ambos al repositorio (por ejemplo `scripts/tablas_mortalidad/`, con un README y el enlace
+oficial) mediante una tarea. Son datos públicos y pesan poco.
+
+**Qué ya se comprobó** (investigación del 13-oct-2026): se compararon 3.636 valores (CB-H-2020 en las edades 0–110 y
+RV-M-2020 en las 20–110) contra el módulo de la SP en Stata y coinciden exactamente. El archivo de la SP trae además las
+edades femeninas 0–19, que el Excel de la CMF no tiene; por eso la tabla RV-M-2020 del simulador parte en la edad 20
+(el simulador no usa esas edades). Esa comparación no prueba cuál de las dos fuentes usa el portal.
+
+**Una convención sin verificar.** Para los años posteriores a 2036 el motor repite el factor de la columna «2036\*». Es la
+convención del código exploratorio; la propia investigación dejó pendiente verificarla contra la documentación oficial.
+Pesa más a medida que pasa el tiempo, porque una parte mayor del horizonte cae después de 2036.
+
+**Procedimiento:**
+
+1. Obtener el Excel nuevo de la CMF y contrastarlo con los archivos de la SP; comprobar que las hojas y columnas coinciden
+   con las que lee el script (`HOJAS` y los índices de columna).
 2. Generar el `.npz` y reemplazar `app/simulador_pension/datos/tablas_mortalidad.npz`.
 3. **Volver a contrastar con el portal.** Las constantes empíricas se ajustaron con las tablas 2020; con tablas nuevas
-   pueden dejar de calzar. Hacer una campaña ciega de ≥ 30 casos (§8.6) y regenerar el fixture, porque el actual son
+   pueden dejar de calzar. Hacer una campaña ciega de ≥ 30 casos (§8.5) y regenerar el fixture, porque el actual son
    respuestas del portal con las tablas de entonces.
 4. Ejecutar la regresión (§8.7). Criterio: 100% dentro de ±1 UF y sin degradar los umbrales por categoría.
 5. **Subir `__version__`** en `app/simulador_pension/__init__.py`. La versión forma parte del código de verificación y se
    imprime en el PDF; así un PDF antiguo se puede reproducir con la versión de su fecha.
 6. Actualizar `SIM_RV_V1_MODELO.md` (§4, precisión), `SIM_RV_V1_PENDIENTES.md`, CHANGELOG y BITACORA.
-
-Notas sobre las tablas actuales: la tabla RV-M-2020 de mujeres pensionadas empieza en la edad 20 (las edades 0–19 están
-vacías; el simulador no las usa). Con el paso de los años, una parte cada vez mayor del horizonte cae después de 2036 y
-depende del factor repetido; **recomendación:** tener tablas nuevas antes de ~2030.
 
 ### 8.3 Constantes empíricas y legales
 
@@ -210,16 +229,43 @@ el motor emite un aviso interno (`warnings.warn`) que no llega a pantalla ni al 
 (`SIM-RV-V1-VENTANA`, 2026-10-14) y deja de ser bloqueante, pero requiere la campaña canaria periódica. No encontré ninguna
 programada.
 
-Cada campaña, cuando se haga: ≥ 30 casos ciegos, actualizar `VENTANA_VALIDADA` en `api.py` y registrar el resultado. La
-frecuencia sugerida es mensual.
+**Qué es.** Una tanda pequeña de simulaciones con datos ficticios que se ejecutan en el portal de Penta y se comparan con
+lo que el motor había predicho antes de consultar. Si siguen coincidiendo dentro de ±1 UF, el modelo sigue vigente; si no,
+algo cambió en el portal (tablas, tasas o reglas). Se llama «canaria» porque avisa de un cambio antes de que lo note un
+cliente.
+
+**Qué hace falta hoy.**
+
+* Una persona con credenciales del portal de ejecutivos: el inicio de sesión no se automatiza.
+* Chrome con depuración remota (`127.0.0.1:9222`) y la herramienta REA (`rea-agents`, Node) de
+  `C:\desarrollos\REA\bloque_a\herramientas`.
+* Los scripts de `C:\desarrollos\REA\bloque_a`: `crear_etapaNN.py` genera los casos con una semilla fija, **congela las
+  predicciones y su hash antes de consultar**, y `campana.py` los ejecuta en el portal.
+* Unos 40 minutos por campaña de ~30 casos (≈ 1 minuto por caso). Mensual, son unas 7 horas al año (estimación).
+
+**Qué se compara.** `PensionMensualEstimada` del portal contra el motor. Criterio: 100% dentro de ±1 UF y sin degradar los
+umbrales por categoría. La tasa de venta de cada caso se toma de la respuesta del portal (`TasaVenta`).
+
+**Cobertura sugerida (propuesta, no medida):** unos 8 casos de causante individual, 6 con cónyuge, 8 con hijos y 8 de renta
+temporal, con fechas repartidas desde el 13-oct-2026 hasta hoy. El portal solo acepta fechas hasta hoy y hasta un año
+atrás, así que una campaña no puede validar fechas futuras.
+
+**Qué hacer con el resultado.**
+
+* Todo dentro de ±1 UF: actualizar `VENTANA_VALIDADA` en `api.py` y registrar la campaña en la bitácora.
+* Fallos aislados: revisar el caso y su categoría antes de tocar el motor.
+* Degradación general: sospechar de las tablas, de la tasa de renta temporal o de las constantes del portal (§8.2, §8.3).
+
+**Fragilidades de la herramienta actual** (es código de investigación): usa rutas fijas (`campana.py` deja los resultados
+crudos en la carpeta temporal de una sesión anterior de Claude y lee plantillas de `entrega-2026-10-13-v1`) y cada
+`crear_etapaNN.py` depende de motores de investigación de `bloque_a`. **Recomendación:** una tarea que consolide todo en un
+único script de campaña canaria, con rutas por parámetro, casos repartidos por categoría y puntuación automática.
 
 ### 8.6 Revalidar con el portal (resumen)
 
-Detalle en `docs/SIM_RV_V1_PENDIENTES.md` §3. Requiere a una persona con credenciales del portal (el inicio de sesión no
-se automatiza) y datos **ficticios**. Resumen: generar `etapaNN/casos.json`; **congelar las predicciones y su hash antes de
-consultar**; ejecutar (~1 min por caso); puntuar con `scripts/informe_regresion.py` tras regenerar el fixture con
-`scripts/generar_fixture.py`; cerrar Chrome y borrar el perfil temporal y las capturas (contienen datos de la cuenta). Las
-herramientas están en `C:\desarrollos\REA\simulador_pension`.
+Detalle en `docs/SIM_RV_V1_PENDIENTES.md` §3. Al terminar una campaña: cerrar Chrome y borrar el perfil temporal y las
+capturas crudas, porque contienen datos de la cuenta. Tras regenerar el fixture con `scripts/generar_fixture.py`, puntuar
+con `scripts/informe_regresion.py`. Esos dos scripts están en `C:\desarrollos\REA\simulador_pension`.
 
 ### 8.7 Verificar tras cualquier cambio
 
@@ -247,7 +293,7 @@ reales en DEV.
 | Cada release que toque el simulador | Las pruebas de §8.7. |
 | Cuando la CMF/SP publique tablas | §8.2 completo. |
 | Cada trimestre | Revisar que el Excel de la CMF y el script de tablas sigan localizables, y el estado de los pendientes #2, #3, #4. |
-| Antes de ~2030 | Tener tablas con factores de mejoramiento posteriores a 2036. |
+| Hacia mediados de 2029 | Fin del plazo de uso de las tablas 2020 según el sitio oficial: tener las nuevas incorporadas (§8.2). |
 
 ## 9. Observaciones de esta revisión
 
@@ -257,7 +303,7 @@ Hallazgos al revisar el código; ninguno bloquea el uso actual.
 2. **El PDF no lista el grupo familiar** (§6). Decisión del humano (2026-10-19): se mantiene así; no se agrega. Se anota
    para que quien lea un PDF sepa que la pensión depende de un grupo familiar que el documento no detalla.
 3. **Rango de edad con cónyuge e hijos:** el código aplica 60–92 y la evidencia empieza en 62 (§5).
-4. **El script de tablas y el Excel de la CMF están fuera del repositorio** (§8.2).
+4. **El script de tablas y el Excel de la CMF están fuera del repositorio** (§8.2): viven en el workspace de REA.
 5. **Opción II del PDF con aumento mayor que la garantía:** la fórmula de la ficha resta
    `pensión base × (garantía − aumento)`, que se vuelve negativo si el aumento supera a la garantía. Es lo que define la
    especificación; conviene confirmar con producto que ese es el valor que se quiere mostrar.
