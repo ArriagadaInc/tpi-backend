@@ -889,6 +889,13 @@ select:focus {
   color: #334155;
 }
 
+.timeline-simulation-note {
+  margin-top: 6px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
 .timeline-simulation-detail {
   margin-top: 10px;
   border-top: 1px dashed var(--border);

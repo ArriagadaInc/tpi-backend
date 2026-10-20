@@ -123,7 +123,12 @@ def build_timeline_items(
         timestamp = _to_santiago(sim.get("fecha_hora"))
         if timestamp is None:
             continue
-        resultado = sim.get("resultado") or {}
+        entradas = _normalize_simulation_entradas(sim.get("entradas"))
+        resultado = _normalize_simulation_resultado(sim.get("resultado"))
+        # Legacy events predate SIM-EVIDENCIA-ENTRADAS: the view returns entradas and
+        # resultado as NULL, so only the root metadata survived. They are flagged so the
+        # template renders the honest note instead of the (empty) detail dropdown.
+        es_legacy = sim.get("entradas") is None and sim.get("resultado") is None
         items.append(
             {
                 "kind": "simulation",
@@ -133,10 +138,11 @@ def build_timeline_items(
                 "tipo_escenario": sim.get("tipo_escenario"),
                 "version_modelo": sim.get("version_modelo"),
                 "codigo_verificacion": sim.get("codigo_verificacion"),
-                "pension_uf": resultado.get("pension_uf"),
-                "renta_temporal_uf": resultado.get("renta_temporal_uf"),
-                "meses_diferidos": resultado.get("meses_diferidos"),
-                "entradas": sim.get("entradas") or {},
+                "es_legacy": es_legacy,
+                "pension_uf": resultado["pension_uf"],
+                "renta_temporal_uf": resultado["renta_temporal_uf"],
+                "meses_diferidos": resultado["meses_diferidos"],
+                "entradas": entradas,
                 "resultado": resultado,
             }
         )
@@ -162,6 +168,57 @@ _SOURCE_RANK: dict[str, int] = {"event": 0, "simulation": 1, "state_change": 2, 
 def _timeline_sort_key(item: dict) -> tuple[datetime, int]:
     """Stable, deterministic sort key: timestamp desc, then fixed source rank asc."""
     return (item["timestamp"], -_SOURCE_RANK[item["kind"]])
+
+
+def _normalize_simulation_entradas(entradas: dict | None) -> dict:
+    """Normalize a simulation ``entradas`` payload into a template-safe shape.
+
+    The evidence has had two forms over time: legacy rows (pre SIM-EVIDENCIA-ENTRADAS)
+    have no ``entradas`` at all, and newer rows may still be partial (missing causante,
+    empty beneficiarios, null dates). Every leaf is normalized to a fixed key with a
+    ``None`` fallback so the Jinja template never chains attribute access on an
+    undefined value (``item.entradas.causante.sexo`` would otherwise raise
+    ``UndefinedError``).
+    """
+    data = entradas or {}
+    causante = data.get("causante") or {}
+    beneficiarios = data.get("beneficiarios") or []
+    return {
+        "fecha_simulacion": data.get("fecha_simulacion"),
+        "saldo_uf": data.get("saldo_uf"),
+        "tasa_venta_pct": data.get("tasa_venta_pct"),
+        "valor_uf": data.get("valor_uf"),
+        "meses_garantizados": data.get("meses_garantizados"),
+        "meses_aumento_temporal": data.get("meses_aumento_temporal"),
+        "pct_aumento_temporal": data.get("pct_aumento_temporal"),
+        "anios_diferidos": data.get("anios_diferidos"),
+        "porcentaje_rvd": data.get("porcentaje_rvd"),
+        "causante": {
+            "sexo": causante.get("sexo"),
+            "fecha_nacimiento": causante.get("fecha_nacimiento"),
+        },
+        "beneficiarios": [
+            {
+                "parentesco": b.get("parentesco"),
+                "sexo": b.get("sexo"),
+                "fecha_nacimiento": b.get("fecha_nacimiento"),
+                "invalidez": b.get("invalidez"),
+                "comun": b.get("comun"),
+            }
+            for b in beneficiarios
+            if isinstance(b, dict)
+        ],
+    }
+
+
+def _normalize_simulation_resultado(resultado: dict | None) -> dict:
+    """Normalize a simulation ``resultado`` payload into a template-safe shape."""
+    data = resultado or {}
+    return {
+        "pension_uf": data.get("pension_uf"),
+        "renta_temporal_uf": data.get("renta_temporal_uf"),
+        "meses_diferidos": data.get("meses_diferidos"),
+    }
 
 
 def _to_santiago(value: object) -> datetime | None:

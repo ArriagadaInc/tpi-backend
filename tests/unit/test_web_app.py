@@ -1180,3 +1180,71 @@ def test_detail_timeline_renders_simulation_with_summary_and_full_detail() -> No
     assert "1995-06-01" in detail.text
     # The evidence carries no direct PII (names, RUT, email, phone) from the simulation.
     assert "común" in detail.text
+
+
+def test_detail_timeline_renders_legacy_simulation_with_note_and_no_detail() -> None:
+    service = _FakeWebService(
+        simulations=[
+            {
+                "fecha_hora": datetime(2026, 9, 5, 12, 0, tzinfo=UTC),
+                "actor_subject": "user-exec",
+                "tipo_escenario": "renta_inmediata_familia",
+                "version_modelo": "sim-rv-v1",
+                "codigo_verificacion": "abc123def456",
+                "entradas": None,
+                "resultado": None,
+            }
+        ]
+    )
+    client = _build_client(service, auth_provider=_FakeAuthProvider(authenticated_role="tester"))
+    _login(client)
+
+    detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert detail.status_code == 200
+    assert "Automático" in detail.text
+    assert "user-exec" in detail.text
+    assert "Simulación generada" in detail.text
+    assert "renta_inmediata_familia" in detail.text
+    assert "Modelo sim-rv-v1" in detail.text
+    assert "Código abc123def456" in detail.text
+    assert (
+        "Registro anterior al guardado de entradas: solo se conservan escenario, version y codigo"
+        in detail.text
+    )
+    # Legacy events have no entradas/resultado evidence: no collapsible detail is rendered.
+    assert "Ver detalle de la simulación" not in detail.text
+
+
+def test_detail_timeline_tolerates_partial_simulation_evidence_without_500() -> None:
+    service = _FakeWebService(
+        simulations=[
+            {
+                "fecha_hora": datetime(2026, 9, 5, 12, 0, tzinfo=UTC),
+                "actor_subject": "user-exec",
+                "tipo_escenario": "renta_inmediata_familia",
+                "version_modelo": "sim-rv-v1",
+                "codigo_verificacion": "abc123def456",
+                "entradas": {
+                    "fecha_simulacion": None,
+                    "saldo_uf": 1000.0,
+                    "causante": {"sexo": "H"},
+                    "beneficiarios": [{"parentesco": "hijo"}],
+                },
+                "resultado": {
+                    "pension_uf": None,
+                    "renta_temporal_uf": None,
+                    "meses_diferidos": None,
+                },
+            }
+        ]
+    )
+    client = _build_client(service, auth_provider=_FakeAuthProvider(authenticated_role="tester"))
+    _login(client)
+
+    detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert detail.status_code == 200
+    assert "Simulación generada" in detail.text
+    assert "Ver detalle de la simulación" in detail.text
+    # Missing/null evidence fields render empty (never a 500 / UndefinedError).
+    assert "Sin beneficiarios." not in detail.text
+    assert "hijo" in detail.text

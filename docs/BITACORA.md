@@ -22,6 +22,27 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-20 - Línea de tiempo del lead: tolerar simulaciones anteriores a SIM-EVIDENCIA-ENTRADAS (SIM-HISTORIAL-EVENTOS-ANTIGUOS, en desarrollo)
+
+- Tarea `SIM-HISTORIAL-EVENTOS-ANTIGUOS` (clase A, fast path version-only): el detalle del lead no debe fallar por la forma
+  de un evento de simulación. Las simulaciones registradas antes de `SIM-EVIDENCIA-ENTRADAS` (2026-10-16) tienen un
+  `detalle` con solo `actor_subject`, `role`, `tipo_escenario`, `version_modelo` y `codigo_verificacion`; la vista
+  `tpi.v_historial_simulaciones` devuelve `entradas` y `resultado` en `NULL`, y la plantilla del detalle encadenaba
+  `item.entradas.causante.sexo` sobre un valor indefinido, lo que en Jinja lanza `UndefinedError` y tumba la página del
+  lead con un 500.
+- Corrección en `app/web/presentation.py`: `build_timeline_items` normaliza `entradas` y `resultado` a una forma segura
+  (claves fijas con fallback `None`; `causante` y `beneficiarios` normalizados) y marca los eventos antiguos con
+  `es_legacy` (`entradas` y `resultado` ambos `NULL`). La plantilla (`app/web/templates/lead_detail_panel.html`) muestra
+  para esos eventos «Simulación generada» con ejecutivo, escenario, versión del modelo y código, más la nota «Registro
+  anterior al guardado de entradas: solo se conservan escenario, version y codigo», sin el detalle desplegable; los
+  eventos con evidencia completa se muestran como hasta ahora.
+- La presentación y la plantilla toleran cualquier dato faltante o nulo (entradas o resultado ausentes, causante ausente,
+  beneficiarios vacíos, beneficiarios con campos faltantes y fechas nulas) sin producir un 500. Sin cambios de base de
+  datos, vistas, `scripts/sql/**`, `app/simulador_pension/**` ni `app/auth/**`.
+- Pruebas: unitarias de presentación (`tests/unit/test_sim_historial_timeline_presentation.py`), de render del detalle
+  (`tests/unit/test_web_app.py`) y de integración en PostgreSQL (`tests/integration/test_audit_simulation_view.py`) con
+  filas de ambas formas (antigua y completa) leídas a través de `tpi.v_historial_simulaciones`.
+
 ### 2026-10-20 - Seguridad: certifi 2026.7.22 → 2026.10.19 (GHSA-6q48-6c7w-9gw2)
 
 - Hallazgo: el CI del PR #97 (`SIM-HISTORIAL-EVENTOS-ANTIGUOS`) falló en `Security Audit`: `pip-audit` reportó 1 vulnerabilidad

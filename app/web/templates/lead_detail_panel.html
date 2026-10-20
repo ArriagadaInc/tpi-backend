@@ -191,6 +191,12 @@
                   Cambio de estado: {{ item.estado_anterior or '—' }} → {{ item.estado_nuevo or '—' }}
                 </div>
               {% elif item.kind == 'simulation' %}
+                {% if item.es_legacy %}
+                <div class="timeline-text">
+                  Simulación generada · {{ item.tipo_escenario or '—' }} · Modelo {{ item.version_modelo or '—' }} · Código {{ item.codigo_verificacion or '—' }}
+                </div>
+                <div class="timeline-simulation-note">Registro anterior al guardado de entradas: solo se conservan escenario, version y codigo</div>
+                {% else %}
                 <div class="timeline-text">
                   Simulación generada · {{ item.tipo_escenario or '—' }} · Pensión {{ item.pension_uf if item.pension_uf is not none else '—' }} UF · Código {{ item.codigo_verificacion or '—' }}
                 </div>
@@ -256,6 +262,7 @@
                     </dl>
                   </div>
                 </details>
+                {% endif %}
               {% else %}
                 <div class="timeline-text">{{ item.text }}</div>
               {% endif %}
