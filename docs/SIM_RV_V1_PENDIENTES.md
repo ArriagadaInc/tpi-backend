@@ -59,6 +59,7 @@ Todas las consultas usan datos ficticios; hasta hoy se hicieron 457 simulaciones
 * `docs/SIM_RV_V1_MODELO.md` (ecuaciones y precisión).
 * Motor portado: `app/simulador_pension` (sin cambios en la lógica numérica respecto del paquete de referencia).
 * Fixture de regresión: `tests/data/casos_portal.json` (435 casos del portal).
+* Tablas de mortalidad (Excel de la CMF, procedencia y script que las construye): `scripts/tablas_mortalidad/`; ver `docs/SIMULADOR_USO.md` §8.2.
 * Paquete de referencia (fuente de la ingeniería inversa): `C:\desarrollos\REA\simulador_pension`.
 
 ## 5. Fuera de alcance de la ficha «Estudio de pensión» (SIM-FICHA-PDF)

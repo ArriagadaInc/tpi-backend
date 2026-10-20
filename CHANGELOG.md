@@ -10,6 +10,12 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ### ✅ Agregado
 
+- **Tablas de mortalidad del simulador reproducibles desde el repositorio** (`scripts/tablas_mortalidad/`)
+  - Se incorporan el Excel de la CMF del que salen las tablas (sin editar, con `procedencia.json`: fuente, norma, fecha, tamaño y `sha256`) y el script que construye `app/simulador_pension/datos/tablas_mortalidad.npz`, con validación de encabezados y modo `--verificar`.
+  - El `.npz` que ya usaba el motor se reconstruye idéntico desde el Excel; no cambia ningún valor ni la versión del modelo.
+  - Prueba nueva `tests/unit/test_tablas_mortalidad.py`: el CI falla si el Excel, `procedencia.json` y el `.npz` dejan de ser coherentes.
+  - Documentado en `docs/SIMULADOR_USO.md` (§8.2) y en `scripts/tablas_mortalidad/README.md`.
+
 - **Documento de uso y mantención del simulador** (`docs/SIMULADOR_USO.md`)
   - Casos soportados y fuera de alcance, rangos de entrada, qué entrega el PDF y la precisión medida.
   - Qué hay que hacer para mantener el simulador vigente: tablas de mortalidad (origen, procedimiento de actualización), constantes empíricas y legales, tasa de venta, ventana de fechas y campaña canaria.

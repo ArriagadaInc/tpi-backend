@@ -22,6 +22,26 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-19 - Simulador: el Excel y el script de las tablas de mortalidad pasan al repositorio
+
+- Pedido del humano: traer al repositorio el script y el Excel de los que salen las tablas de mortalidad, y dejarlo todo
+  documentado en el manual de uso del simulador (`docs/SIMULADOR_USO.md`).
+- Nueva carpeta `scripts/tablas_mortalidad/`:
+  - `tablas-mortalidad-cmf.xlsx`: Excel de la CMF sin editar (141.411 bytes, descargado el 2026-10-13).
+  - `procedencia.json`: fuente, norma (NCG N.º 495 de la CMF), fecha, tamaño, `sha256` y verificaciones ya hechas.
+  - `construir_tablas.py`: el script de la investigación (REA), con tres cambios: escribe en este repositorio, valida los
+    encabezados del Excel antes de leer y tiene el modo `--verificar`.
+  - `README.md`: qué contiene el resultado, qué tabla usa el simulador en cada rol, comandos y procedimiento de actualización.
+- Comprobación: el `.npz` que ya usaba el motor se reconstruye idéntico desde el Excel (los 12 arreglos, incluidos los
+  valores vacíos de la tabla de mujeres pensionadas antes de los 20 años). No cambia ningún valor del motor ni su versión.
+- Prueba nueva `tests/unit/test_tablas_mortalidad.py` (8 pruebas): falla en el CI si el Excel deja de coincidir con
+  `procedencia.json`, si el `.npz` deja de reconstruirse desde el Excel, si cambia la estructura de las tablas, o si un Excel
+  con otra estructura no produce un error claro.
+- Manual de uso: §8.1, §8.2 (insumos, comandos, protección del CI y procedimiento), §8.7, §8.9, §9 (hallazgo 4 resuelto) y §10.
+- Solo herramientas, datos públicos y documentación: sin cambios de código de la aplicación, base de datos ni despliegue.
+- Siguiente paso: consolidar la campaña canaria en un único script y programar la primera campaña (la ventana validada
+  venció el 2026-10-13); contrastar la convención de la columna «2036*» con la documentación oficial.
+
 ### 2026-10-19 - Simulador: corrección del documento de uso (`docs/SIMULADOR_USO.md`)
 
 - Corrección al documento mergeado en #90: sí se encontró el Excel de la CMF del que salen las tablas de mortalidad (la

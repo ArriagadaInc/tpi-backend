@@ -152,7 +152,7 @@ La tolerancia que se garantiza es ±1 UF. Estas son las cifras medidas, no un co
 
 | Qué | Por qué cambia | Dónde está | Disparador |
 |---|---|---|---|
-| **Tablas de mortalidad** (CB-H-2020, RV-M-2020, B-M-2020, MI-H/M-2020) | La CMF/SP publica tablas nuevas o ajusta los factores de mejoramiento. | `app/simulador_pension/datos/tablas_mortalidad.npz` | Publicación nueva, o el portal cambia de tablas. |
+| **Tablas de mortalidad** (CB-H-2020, RV-M-2020, B-M-2020, MI-H/M-2020) | La CMF/SP publica tablas nuevas o ajusta los factores de mejoramiento. | `app/simulador_pension/datos/tablas_mortalidad.npz` (se regenera con `scripts/tablas_mortalidad/`) | Publicación nueva, o el portal cambia de tablas. |
 | **Factores de mejoramiento** (años 2021–2036) | El archivo solo trae 16 años. Más allá de 2036 el motor repite el factor de 2036. | ídem | Con el tiempo pesa más; ver §8.2. |
 | **Constantes empíricas** (`c = −0,4568`, edad +1 mes, κ = 0,2445, tope 60 UF, umbral 3.000 UF) | Se ajustaron al comportamiento del portal en un periodo. | `mortalidad.py`, `renta_diferida.py` | El portal cambia, o la campaña canaria se degrada. |
 | **Parámetros legales** (tasa de renta temporal 3,67%, cuota mortuoria 15 UF, pensiones de 60% / 50% / 15% / 11% / 50% adicional, límite de 24 años para hijos) | Cambia la normativa o la práctica de la aseguradora. | `renta_inmediata.py`, `renta_diferida.py` | Cambio normativo o del portal. |
@@ -164,11 +164,11 @@ La tolerancia que se garantiza es ±1 UF. Estas son las cifras medidas, no un co
 ### 8.2 Actualizar las tablas de mortalidad
 
 **De dónde salen.** Del Excel oficial de la CMF («Tablas de Mortalidad Histórica», una hoja por sexo y tipo), a través de
-`scripts/construir_tablas.py` del paquete de referencia. Cada tabla guarda `q(edad)` base 2020 (111 edades) y los factores
+`scripts/tablas_mortalidad/construir_tablas.py` (en este repositorio). Cada tabla guarda `q(edad)` base 2020 (111 edades) y los factores
 de mejoramiento `AA(edad, año)` de 2021 a 2036 (la última columna del Excel se llama «2036\*»). Nombres oficiales:
 CB-H-2020 y MI-H-2020 (hombres); RV-M-2020, B-M-2020 y MI-M-2020 (mujeres). El simulador usa el causante de vejez con
 CB-H-2020 (hombre) o RV-M-2020 (mujer); el cónyuge y los hijos no inválidos con CB-H-2020 (hombre) o B-M-2020 (mujer); y
-los hijos inválidos con MI-H/M-2020 (en el código y en los documentos antiguos aparecen como CB-2020, B-2020 y MI-2020).
+los hijos inválidos con MI-H/M-2020 (los títulos de las hojas del Excel y los documentos antiguos las llaman CB-2020, B-2020 y MI-2020).
 
 **Hasta cuándo valen.** La CMF fijó las tablas 2020 con la [Norma de Carácter General N.° 495](https://www.cmfchile.cl/portal/principal/623/w4-article-99359.html)
 (24-feb-2023); rigen desde el 1-jul-2023 y reemplazaron a las de 2014. Según las páginas oficiales de la
@@ -176,15 +176,35 @@ los hijos inválidos con MI-H/M-2020 (en el código y en los documentos antiguos
 deben usarse por un máximo de 6 años desde esa fecha, así que **toca revisarlas hacia mediados de 2029** (conviene
 confirmarlo en el sitio oficial). Al 2026-10-19 no se encontró una serie posterior.
 
-**Dónde están hoy los insumos** (ninguno está en este repositorio):
+**Dónde están los insumos.** Todo vive en `scripts/tablas_mortalidad/` (desde 2026-10-19):
 
-| Insumo | Ubicación |
+| Archivo | Para qué sirve |
 |---|---|
-| Excel de la CMF | Copia en `C:\desarrollos\REA\homologacion_simulador\entrega-2026-10-13-v1\investigacion\ejecucion-vejez-edad\tablas-mortalidad-cmf.xlsx` (141.411 bytes, 13-oct-2026, sha256 que empieza en `5c8a01aa2dd8`). La CMF publica un archivo del mismo tamaño en [su página de tablas históricas](https://www.cmfchile.cl/portal/principal/623/w4-article-99359.html). |
-| Script que construye el `.npz` | `C:\desarrollos\REA\simulador_pension\scripts\construir_tablas.py` |
+| `tablas-mortalidad-cmf.xlsx` | Excel de la CMF, conservado sin editar (141.411 bytes, descargado el 13-oct-2026). La CMF publica un archivo del mismo tamaño en [su página de tablas históricas](https://www.cmfchile.cl/portal/principal/623/w4-article-99359.html). |
+| `procedencia.json` | Fuente, norma, fecha, tamaño y `sha256` del Excel, y las verificaciones ya hechas. |
+| `construir_tablas.py` | Lee el Excel y escribe `app/simulador_pension/datos/tablas_mortalidad.npz`. |
+| `README.md` | Resumen de esta sección, con los comandos. |
 
-**Recomendación:** traer ambos al repositorio (por ejemplo `scripts/tablas_mortalidad/`, con un README y el enlace
-oficial) mediante una tarea. Son datos públicos y pesan poco.
+El script viene de la investigación (`REA\simulador_pension\scripts\construir_tablas.py`) con tres cambios: escribe en
+este repositorio, valida los encabezados del Excel antes de leer (si la CMF reordena el archivo o agrega series, falla con
+un mensaje claro) y tiene el modo `--verificar`. Con él, el `.npz` que ya usaba el motor se reconstruye idéntico, en los 12
+arreglos. La copia original del Excel sigue en el workspace de REA
+(`homologacion_simulador\entrega-2026-10-13-v1\investigacion\ejecucion-vejez-edad`).
+
+**Comandos** (desde la raíz del repositorio):
+
+```bash
+# Comprobar que el .npz del motor coincide con el Excel del repo (no escribe nada)
+python scripts/tablas_mortalidad/construir_tablas.py --verificar
+
+# Regenerar el .npz desde el Excel del repo, o desde uno nuevo
+python scripts/tablas_mortalidad/construir_tablas.py
+python scripts/tablas_mortalidad/construir_tablas.py ruta/al/excel-nuevo.xlsx
+```
+
+**Qué protege el CI.** La prueba `tests/unit/test_tablas_mortalidad.py` falla si el Excel deja de coincidir con
+`procedencia.json`, si el `.npz` deja de reconstruirse desde el Excel o si cambia la estructura de las tablas. Así nadie
+puede cambiar el Excel o el `.npz` por separado sin que se note.
 
 **Qué ya se comprobó** (investigación del 13-oct-2026): se compararon 3.636 valores (CB-H-2020 en las edades 0–110 y
 RV-M-2020 en las 20–110) contra el módulo de la SP en Stata y coinciden exactamente. El archivo de la SP trae además las
@@ -197,16 +217,18 @@ Pesa más a medida que pasa el tiempo, porque una parte mayor del horizonte cae 
 
 **Procedimiento:**
 
-1. Obtener el Excel nuevo de la CMF y contrastarlo con los archivos de la SP; comprobar que las hojas y columnas coinciden
-   con las que lee el script (`HOJAS` y los índices de columna).
-2. Generar el `.npz` y reemplazar `app/simulador_pension/datos/tablas_mortalidad.npz`.
-3. **Volver a contrastar con el portal.** Las constantes empíricas se ajustaron con las tablas 2020; con tablas nuevas
+1. Descargar el Excel nuevo desde la CMF y contrastarlo con los archivos de la SP.
+2. Reemplazar `scripts/tablas_mortalidad/tablas-mortalidad-cmf.xlsx` y **actualizar `procedencia.json`** (fuente, norma,
+   fecha, bytes y `sha256`; el comando para calcularlo está en el README de la carpeta).
+3. Regenerar el `.npz` con `construir_tablas.py` y comprobar con `--verificar`. Si el Excel nuevo cambia de estructura, el
+   script se detiene con un mensaje claro: ajustar entonces `HOJAS`, `SERIE` y las constantes del script.
+4. **Volver a contrastar con el portal.** Las constantes empíricas se ajustaron con las tablas 2020; con tablas nuevas
    pueden dejar de calzar. Hacer una campaña ciega de ≥ 30 casos (§8.5) y regenerar el fixture, porque el actual son
    respuestas del portal con las tablas de entonces.
-4. Ejecutar la regresión (§8.7). Criterio: 100% dentro de ±1 UF y sin degradar los umbrales por categoría.
-5. **Subir `__version__`** en `app/simulador_pension/__init__.py`. La versión forma parte del código de verificación y se
+5. Ejecutar la regresión (§8.7). Criterio: 100% dentro de ±1 UF y sin degradar los umbrales por categoría.
+6. **Subir `__version__`** en `app/simulador_pension/__init__.py`. La versión forma parte del código de verificación y se
    imprime en el PDF; así un PDF antiguo se puede reproducir con la versión de su fecha.
-6. Actualizar `SIM_RV_V1_MODELO.md` (§4, precisión), `SIM_RV_V1_PENDIENTES.md`, CHANGELOG y BITACORA.
+7. Actualizar `SIM_RV_V1_MODELO.md` (§4, precisión), `SIM_RV_V1_PENDIENTES.md`, CHANGELOG y BITACORA.
 
 ### 8.3 Constantes empíricas y legales
 
@@ -270,10 +292,10 @@ con `scripts/informe_regresion.py`. Esos dos scripts están en `C:\desarrollos\R
 ### 8.7 Verificar tras cualquier cambio
 
 ```bash
-python -m pytest tests/unit/test_sim_rv_regresion_portal.py tests/unit/test_sim_rv_validacion.py tests/unit/test_sim_rv_ventana.py -q
+python -m pytest tests/unit/test_sim_rv_regresion_portal.py tests/unit/test_sim_rv_validacion.py tests/unit/test_sim_rv_ventana.py tests/unit/test_tablas_mortalidad.py -q
 ```
 
-Hoy: 55 pruebas en verde. La regresión recalcula los 435 casos del fixture y exige ±1 UF. Además existen pruebas del PDF
+Hoy: 63 pruebas en verde. La regresión recalcula los 435 casos del fixture y exige ±1 UF; la de tablas comprueba que el `.npz` se reconstruye desde el Excel versionado (§8.2). Además existen pruebas del PDF
 (`test_sim_rv_pdf.py`), del código de verificación, de la auditoría y del flujo web
 (`tests/unit/test_sim_rv_web.py`, `tests/integration/test_sim_rv_web.py`). La cobertura mínima del proyecto es 85%.
 
@@ -292,7 +314,7 @@ reales en DEV.
 | Cada cambio de tasa del portal | Informar la tasa nueva a los ejecutivos. |
 | Cada release que toque el simulador | Las pruebas de §8.7. |
 | Cuando la CMF/SP publique tablas | §8.2 completo. |
-| Cada trimestre | Revisar que el Excel de la CMF y el script de tablas sigan localizables, y el estado de los pendientes #2, #3, #4. |
+| Cada trimestre | Revisar el estado de los pendientes #2, #3 y #4, y si la CMF/SP publicó tablas nuevas (§8.2). |
 | Hacia mediados de 2029 | Fin del plazo de uso de las tablas 2020 según el sitio oficial: tener las nuevas incorporadas (§8.2). |
 
 ## 9. Observaciones de esta revisión
@@ -303,7 +325,8 @@ Hallazgos al revisar el código; ninguno bloquea el uso actual.
 2. **El PDF no lista el grupo familiar** (§6). Decisión del humano (2026-10-19): se mantiene así; no se agrega. Se anota
    para que quien lea un PDF sepa que la pensión depende de un grupo familiar que el documento no detalla.
 3. **Rango de edad con cónyuge e hijos:** el código aplica 60–92 y la evidencia empieza en 62 (§5).
-4. **El script de tablas y el Excel de la CMF están fuera del repositorio** (§8.2): viven en el workspace de REA.
+4. **El script de tablas y el Excel de la CMF estaban fuera del repositorio.** Resuelto el 2026-10-19: ahora están en
+   `scripts/tablas_mortalidad/` y el CI comprueba su coherencia con el `.npz` (§8.2).
 5. **Opción II del PDF con aumento mayor que la garantía:** la fórmula de la ficha resta
    `pensión base × (garantía − aumento)`, que se vuelve negativo si el aumento supera a la garantía. Es lo que define la
    especificación; conviene confirmar con producto que ese es el valor que se quiere mostrar.
@@ -318,4 +341,5 @@ Hallazgos al revisar el código; ninguno bloquea el uso actual.
 * `docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md`: matriz de requisitos de la V1.
 * `docs/specs/SIM_WIZARD_SPEC.md` y `docs/specs/SIM_FICHA_PDF_SPEC.md`: pantallas y ficha PDF.
 * `app/simulador_pension/` (motor), `app/services/simulador_service.py`, `app/web/routes/simulador.py`.
+* `scripts/tablas_mortalidad/`: Excel de la CMF, procedencia y script que construye las tablas de mortalidad.
 * Paquete de referencia (investigación, campañas y scripts): `C:\desarrollos\REA\simulador_pension`.
