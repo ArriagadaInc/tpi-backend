@@ -247,8 +247,11 @@ items:
         la presentacion; un lead sin simulaciones no cambia su linea de tiempo; cobertura total >= 85%.
     - id: AC-5
       verification: both
-      description: Documentacion de la base (docs/database), CHANGELOG y BITACORA, con el procedimiento
-        de aplicacion y de reversa de la migracion 009 en AWS DEV para el humano.
+      description: 'Documentacion de la base (docs/database), CHANGELOG y BITACORA, con el procedimiento
+        de aplicacion y de reversa de la migracion 009 en AWS DEV para el humano. El manual de uso del
+        simulador (docs/SIMULADOR_USO.md) y docs/SIM_RV_V1_MODELO.md y docs/SIM_RV_V1_PENDIENTES.md dejan
+        de decir que la linea de tiempo esta pendiente o que la aplicacion no lee la evidencia: ahora
+        la lee solo a traves de la vista saneada.'
     - id: AC-6
       verification: human
       description: Tras aplicar la migracion 009 en AWS DEV y desplegar, un ejecutivo genera un PDF y
@@ -266,7 +269,9 @@ items:
     - No modificar app/simulador_pension/** ni app/auth/**, ni dependencias; no reducir la cobertura minima
       (85%).
     - 'Dependencia funcional: SIM-EVIDENCIA-ENTRADAS (el evento ya trae tipo_escenario, version_modelo,
-      codigo_verificacion y pension_uf).'
+      codigo_verificacion y pension_uf). En tpi.auditoria.detalle, actor_subject, tipo_escenario, version_modelo
+      y codigo_verificacion estan en la raiz y la pension en resultado.pension_uf; las entradas (fechas
+      de nacimiento del grupo familiar) estan en entradas.* y no deben salir por la vista.'
     dependencies:
     - SIM-EVIDENCIA-ENTRADAS
     risk:
@@ -284,6 +289,9 @@ items:
       - docs/database/**
       - CHANGELOG.md
       - docs/BITACORA.md
+      - docs/SIMULADOR_USO.md
+      - docs/SIM_RV_V1_MODELO.md
+      - docs/SIM_RV_V1_PENDIENTES.md
     status: active
 - id: CRM-LOOK-AND-FEEL
   title: Mejorar el look and feel del CRM
