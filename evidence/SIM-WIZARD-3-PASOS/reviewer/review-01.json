@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "SIM-WIZARD-3-PASOS",
+  "created_at": "2026-10-19T21:48:13Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610192145-reviewer-sup31ab00",
+  "reviewed_sha": "5b193879b43a4f256eb2b6af0e77b16c33599ac6",
+  "reviewed_tree": "c25cfa2b1330b2a8d45ab03983ff6cd8ec9d987e",
+  "pr_number": 89,
+  "ci": {
+    "conclusion": "success",
+    "run_id": 39328906090,
+    "status": "PASS",
+    "checks": "5/5 (Docker Build, Lint & Format, Release Tooling Validation, Security Audit, Tests) en el SHA exacto",
+    "verification": "gh pr checks 89"
+  },
+  "decision": "APPROVED",
+  "cause": null,
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "info",
+      "file": "app/web/routes/simulador.py",
+      "summary": "Un intent desconocido cae en la rama descargar_pdf (default). No es una brecha: la rama valida todo el formulario, exige CSRF y autorizacion, y audita igual que antes.",
+      "required_action": "Ninguna; opcionalmente rechazar intents desconocidos en una tarea futura."
+    },
+    {
+      "id": "F-2",
+      "severity": "info",
+      "file": "app/web/templates/simulador.html",
+      "summary": "Saldo total en la tarjeta del paso 3 es el saldo en UF ingresado; coincide con Capital del PDF. Decision de presentacion documentada por el Developer. La relacion RVD queda fija en 100 en el asistente; el motor y la API conservan el rango validado.",
+      "required_action": "Confirmar en el smoke humano AC-7 que los valores coinciden con el simulador de referencia."
+    }
+  ],
+  "checks": [
+    {
+      "name": "scope_diff_sin_motor_auth_dependencias",
+      "result": "PASS"
+    },
+    {
+      "name": "pruebas_worktree_sha_exacto_150_passed",
+      "result": "PASS"
+    },
+    {
+      "name": "pantalla_y_pdf_mismo_calculo_servidor_sin_auditar_en_simular",
+      "result": "PASS"
+    },
+    {
+      "name": "csrf_403_404_antes_de_intent_sin_safe_ni_innerhtml_ni_cdn",
+      "result": "PASS"
+    },
+    {
+      "name": "js_node_check_sintaxis",
+      "result": "PASS"
+    },
+    {
+      "name": "arbol_revisado_igual_al_pr_base_actual_mergeable",
+      "result": "PASS"
+    },
+    {
+      "name": "ci_verde_sha_exacto",
+      "result": "PASS"
+    },
+    {
+      "name": "sin_migraciones_ni_infraestructura_clase_A",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "Cambio grande de interfaz con JS no cubierto por pruebas de navegador; mitigado por servidor como fuente de verdad y por el smoke humano AC-7",
+    "La fecha de simulacion actual esta fuera de la ventana validada del motor (solo advertencia, comportamiento previo a esta tarea)"
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "SIM-WIZARD-3-PASOS",
+  "created_at": "2026-10-19T21:44:51Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610192047-developer-sup184035",
+  "head_sha": "5b193879b43a4f256eb2b6af0e77b16c33599ac6",
+  "branch": "harness/SIM-WIZARD-3-PASOS-wizard",
+  "pr_number": 89,
+  "change_class": "A",
+  "tests": {
+    "command": "CI workflow Tests job (pytest tests/ --cov=app --cov-report=xml --cov-fail-under=85, Python 3.12 + PostgreSQL; 1859 passed, 17 skipped, cobertura 90.22%). Local sin BD: pytest tests/unit/test_sim_wizard.py test_sim_rv_web.py test_sim_rv_validacion.py test_sim_rv_pdf.py test_sim_rv_auditoria.py test_sim_rv_codigo_verificacion.py test_sim_rv_evidencia_entradas.py test_sim_rv_ventana.py test_web_app.py test_web_helpers.py test_backoffice_public_site_link.py test_h3_3_7_theme.py --no-cov (240 passed).",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "app/web/templates/simulador.html renderiza un asistente de 3 pasos (indicador wizard-steps con 'Datos de la simulación', 'Grupo familiar' y 'Resultado') y los botones Continuar/Volver/Simular/Descargar PDF. tests/unit/test_sim_wizard.py::test_wizard_muestra_tres_pasos_y_continuar, ::test_continuar_valida_paso1_y_avanza_al_paso2. El paso 1 es el activo por defecto y los pasos completados muestran lápiz y permiten volver (test_volver_paso1_conserva_datos_ingresados)."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "app/web/routes/simulador.py::_parse_paso1_form valida solo el paso 1 en el servidor (SimuladorForm con saldo 500–100.000, tasa 0,5–8/7,5, meses garantizados 0–480, diferimiento 0–10, aumento 0–600/0–100, RVD entero). La fecha de simulación es datetime.now(CRM_TZ).date() (solo lectura, America/Santiago) y se muestra con fecha_simulacion_label. El intent 'continuar' re-renderiza el paso 1 con los errores (422) o avanza al paso 2. tests/unit/test_sim_wizard.py::test_continuar_paso1_invalido_422_y_conserva_valor; validación de rangos ya cubierta por tests/unit/test_sim_rv_validacion.py."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "app/web/templates/simulador.html renderiza el causante como primera fila no editable (familia[0], sin acciones) y el modal de beneficiario (parentesco Cónyuge/Hijo/a, relación padre/madre solo para hijos, sexo, condición de invalidez, fecha de nacimiento y edad calculada). app/web/static/js/simulador_wizard.js gestiona agregar/editar/eliminar sobre los inputs ocultos con las reglas de la V1 (un cónyuge, máximo 4 hijos). El cónyuge inválido se rechaza: ConyugeForm._rechazar_conyuge_invalido y test_sim_wizard.py::test_simular_rechaza_conyuge_invalido. El formulario conserva los beneficiarios entre pasos (test_wizard_preserva_beneficiarios_ocultos)."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "El paso 3 muestra tres tarjetas (Monto pensión, Saldo total, Tasa de venta; más Renta temporal y Meses de diferimiento en renta temporal), el resumen de la simulación, el grupo familiar y el aviso 'Valores referenciales, no vinculantes'. El intent 'simular' calcula en el servidor y muestra el resultado sin llamar a record_simulacion_event (test_sim_wizard.py::test_simular_muestra_resultado_sin_auditar, ::test_simular_renta_temporal_muestra_tarjetas_extra); 'descargar_pdf' genera el PDF en memoria y registra la auditoría (test_descargar_pdf_con_intent_explicito_audita y tests/unit/test_sim_rv_web.py::test_headers_pdf_y_auditoria)."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "Marca de TPI: topbar compartido con official-logo-on-light.png (base.html), paleta del CRM (tokens de app.css) y azul marino #0f243e de la ficha (paso activo y cabecera del modal). JavaScript propio app/web/static/js/simulador_wizard.js sin CDN. test_sim_wizard.py::test_wizard_sin_cdn_ni_urls_externas_en_plantilla, ::test_wizard_js_propio_existe_y_se_referencia_localmente, ::test_wizard_usa_azul_marino_de_la_ficha, ::test_wizard_no_introduce_naranja_del_simulador_de_referencia. El PDF no cambia (usa _NAVY/_NAVY_LIGHT/_HIGHLIGHT, tests/unit/test_sim_rv_pdf.py)."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "evidence": "Sin cambios en app/simulador_pension/**, app/auth/** ni dependencias/lockfiles. Motor intacto (tests/unit/test_sim_rv_regresion_portal.py::test_435_casos_dentro_de_una_uf), validación/cálculo en el servidor, CSRF/403/404, escape de marcado, headers del PDF y auditoría sin PII intactos (tests/unit/test_sim_rv_web.py, test_sim_rv_pdf.py, tests/security/). Usable a 1280 px y 768 px (media queries .wizard-grid-4/.wizard-result-cards). Cobertura CI 90.22% >= 85%. CHANGELOG.md, docs/BITACORA.md y docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md actualizados. CI PR #89 verde (5/5 checks)."
+    },
+    {
+      "id": "AC-7",
+      "status": "pending_verification",
+      "evidence": "Smoke humano en AWS DEV post-deploy: un ejecutivo recorre los 3 pasos con un caso solo y uno familiar, ve el resultado en pantalla, descarga el PDF y los valores coinciden con el simulador de referencia. Verificación humana (requires_human_acceptance)."
+    }
+  ],
+  "files_changed": [
+    "CHANGELOG.md",
+    "app/web/routes/simulador.py",
+    "app/web/static/css/app.css",
+    "app/web/static/js/simulador_wizard.js",
+    "app/web/templates/simulador.html",
+    "docs/BITACORA.md",
+    "docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md",
+    "tests/unit/test_sim_wizard.py"
+  ],
+  "assumptions": [
+    "La relación RVD/RT queda oculta en 100 en el asistente (input type=hidden con valor por defecto 100), porque el simulador de referencia no la expone en su paso de datos; el motor y la API siguen aceptando 50/51–99 (SimuladorForm y simulador_pension intactos), por lo que no cambia el alcance validado. Se documenta en CHANGELOG y BITACORA.",
+    "El 'Saldo total' de la tarjeta de resultado corresponde al saldo en UF ingresado (el capital), coherente con 'Capital: {saldo_uf} UF' del PDF y con 'Saldo cuenta AFP (UF)' del resumen; es una decisión de presentación.",
+    "La 'etiqueta flotante' del spec se implementa como etiqueta sobre el campo (label + input), más robusto y accesible; el flujo, la estructura y la marca son fieles al spec.",
+    "La edad mostrada (columna 'Edad' y modal) usa edad_en_meses//12 (misma que la validación del servidor) para no contradecir los mensajes de rechazo por edad.",
+    "El CI del PR #89 falló una vez en 'Docker Build' por un error transitorio de red en la descarga de módulos Go de xcaddy (sum.golang.org INTERNAL_ERROR), ajeno a esta tarea; se re-ejecutó con un commit vacío y quedó verde."
+  ],
+  "migrations_included": false
+}

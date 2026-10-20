@@ -1,0 +1,99 @@
+schema_version: 1
+task:
+  id: SIM-WIZARD-3-PASOS
+  title: 'Simulador: asistente de 3 pasos (datos, grupo familiar, resultado) con la marca de TPI'
+  objective: Rehacer la pantalla del simulador como un asistente de 3 pasos (Datos de la simulacion, Grupo
+    familiar, Resultado) con el flujo y la estructura del simulador de referencia y la marca de TPI (logo
+    oficial y colores del CRM y de la ficha). El resultado se ve en pantalla antes de descargar el PDF.
+    Sin cambios en el motor, el alcance validado ni la autorizacion.
+  source:
+    type: story
+    ref: Observaciones del humano sobre el simulador y el CRM (2026-10-15); definida en sesion interactiva
+      con Claude.
+  change_class: A
+  deploy_required: true
+  requires_human_acceptance: true
+  acceptance_criteria:
+  - id: AC-1
+    verification: both
+    description: El simulador es un asistente de 3 pasos con indicador (Datos de la simulacion, Grupo
+      familiar, Resultado) y los botones Continuar, Volver, Simular y Descargar PDF, segun docs/specs/SIM_WIZARD_SPEC.md.
+  - id: AC-2
+    verification: automated
+    description: 'Paso 1: fecha de simulacion de solo lectura (fecha actual de America/Santiago en el
+      servidor), tipo de pension, tasa de venta, meses garantizados, anios de periodo diferido, meses
+      y % de aumento temporal, saldo en UF y valor UF opcional, con los rangos validados de la V1; los
+      errores se muestran en el mismo paso.'
+  - id: AC-3
+    verification: both
+    description: 'Paso 2: el causante (el lead) aparece como primera fila sin poder editarse ni eliminarse;
+      el conyuge y hasta 4 hijos se agregan, editan y eliminan con un modal (parentesco, tipo de relacion
+      con padre o madre solo para hijos, sexo, condicion de invalidez, fecha de nacimiento y edad calculada);
+      se respetan las reglas de la V1 (un conyuge, maximo 4 hijos, conyuge invalido rechazado).'
+  - id: AC-4
+    verification: both
+    description: 'Paso 3: tres tarjetas (Monto pension, Saldo total, Tasa de venta; mas Renta temporal
+      y Meses de diferimiento en renta temporal), resumen de la simulacion, grupo familiar y el aviso
+      ''Valores referenciales, no vinculantes''; ''Descargar PDF'' genera el PDF en memoria y registra
+      el evento de auditoria; calcular el resultado en pantalla no persiste ni audita nada.'
+  - id: AC-5
+    verification: automated
+    description: 'Marca de TPI: logo oficial y colores del CRM y de la ficha; ningun logo, nombre ni color
+      naranja del simulador de referencia en pantallas ni PDF; sin librerias ni CDN nuevos (JavaScript
+      propio en app/web/static/js/).'
+  - id: AC-6
+    verification: automated
+    description: 'Sin regresion: motor intacto (435 casos), validacion y calculo en el servidor, CSRF,
+      403 y 404, escape de marcado, headers del PDF y auditoria sin PII; usable a 1280 px y a 768 px;
+      cobertura total >= 85%; docs y CHANGELOG y BITACORA actualizados.'
+  - id: AC-7
+    verification: human
+    description: 'Smoke humano en AWS DEV: un ejecutivo recorre los 3 pasos con un caso solo y uno familiar,
+      ve el resultado en pantalla, descarga el PDF y los valores coinciden con el simulador de referencia.'
+  constraints:
+  - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
+    desde ramas o worktrees antiguos.'
+  - 'Tarea unica; no mezclar otros cambios ni dejar alcance diferido sin documentarlo. Clase A (fast path
+    version-only): sin migraciones, grants, vistas, constraints ni infraestructura; si hicieran falta
+    es BLOCKER: detenerse y escalar al humano.'
+  - No modificar app/simulador_pension/** (motor), app/auth/**, dependencias ni lockfiles; no cambiar
+    la logica numerica, los rangos validados, la autorizacion (403 fuera de executive, ceo y cto) ni el
+    escape de marcado del PDF.
+  - No reducir la cobertura minima (85%).
+  - 'Fuente de verdad del diseno: docs/specs/SIM_WIZARD_SPEC.md (el Developer no ve imagenes, por eso
+    las capturas se tradujeron a texto). Se replica el flujo y la estructura, no la marca: nada del simulador
+    de referencia (logo, nombre, naranja).'
+  - Los datos de los pasos se conservan al volver sin guardarse en base de datos; la persistencia como
+    evidencia es la tarea SIM-EVIDENCIA-ENTRADAS.
+  - 'Reviewer: recorrer el flujo completo y generar un PDF real para comprobar que el resultado en pantalla
+    y el PDF coinciden.'
+  dependencies:
+  - SIM-UX-AJUSTES
+  risk:
+    level: medium
+    notes: Cambio grande de interfaz que toca el flujo del formulario y la generacion del PDF; mitigado
+      con el servidor como fuente de verdad y las pruebas de la V1.
+  scope:
+    paths:
+    - app/web/**
+    - app/services/**
+    - tests/**
+    - CHANGELOG.md
+    - docs/BITACORA.md
+    - docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md
+    - docs/specs/SIM_WIZARD_SPEC.md
+  status: closed
+closure:
+  closed_at: '2026-10-19T23:45:31Z'
+  final_state: DONE
+  evidence_dir: evidence/SIM-WIZARD-3-PASOS
+  release:
+    release_sha: 4ee5fad2f57abe0842a5beaede4bf981299d953e
+    pr_number: 89
+    application_version: h3-sim-wizard-3-pasos-4ee5fad-domainlocked-r1
+    bundle_sha256: 9bbcbac1881e8660cf10642f93b094796987316b953b6bc2ea3eebf49cc001e0
+    lkg: h3-sim-evidencia-entradas-a7859af-domainlocked-r1
+    deployment: success
+    deployed_commit: 4ee5fad2f57abe0842a5beaede4bf981299d953e
+    verification: PASS
+  rework_rounds: 0
