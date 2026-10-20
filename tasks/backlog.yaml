@@ -1,6 +1,105 @@
 # Backlog del Harness. Ninguna tarea es current hasta que el humano la active.
 schema_version: 1
 items:
+- id: SIM-HISTORIAL-EVENTOS-ANTIGUOS
+  title: 'Linea de tiempo del lead: no fallar con simulaciones registradas antes de guardar sus entradas'
+  priority: P0
+  category: functional
+  status: pending
+  change_class: A
+  summary: 'Defecto: el detalle de un lead devuelve 500 si tiene simulaciones generadas entre SIM-RV-V1
+    y SIM-EVIDENCIA-ENTRADAS (2026-10-14 a 2026-10-16). Su detalle solo trae 5 metadatos, la vista devuelve
+    entradas y resultado NULL y la plantilla lee entradas.causante.sexo sin comprobar. Hay que mostrar
+    esos eventos con lo que tienen y hacer la presentacion tolerante a datos faltantes.'
+  evidence:
+  - 'hallazgo del humano al verificar SIM-HISTORIAL-LINEA-TIEMPO (2026-10-20): un lead de DEV mostraba
+    solo ''Internal Server Error'''
+  - 'causa reproducida: lead_detail_panel.html lee item.entradas.causante.sexo con entradas vacio y Jinja
+    lanza UndefinedError; build_timeline_items normaliza entradas NULL a {}'
+  - 'confirmado en DEV con tpi.v_historial_simulaciones: ese lead tiene 4 eventos antiguos (entradas NULL)
+    y 1 evento completo'
+  - definida en sesion interactiva con Claude el 2026-10-20 a pedido del humano; agregada al backlog por
+    PR (no con approve.py define); se activa con approve.py activate
+  task:
+    id: SIM-HISTORIAL-EVENTOS-ANTIGUOS
+    title: 'Linea de tiempo del lead: no fallar con simulaciones registradas antes de guardar sus entradas'
+    objective: El detalle del lead no debe fallar por la forma de un evento de simulacion. Las simulaciones
+      registradas antes de SIM-EVIDENCIA-ENTRADAS (detalle con solo actor_subject, role, tipo_escenario,
+      version_modelo y codigo_verificacion; la vista devuelve entradas y resultado NULL) se muestran en
+      la linea de tiempo con los datos que tienen y una nota, y la presentacion tolera cualquier dato
+      faltante de la evidencia.
+    source:
+      type: story
+      ref: Defecto hallado por el humano al verificar SIM-HISTORIAL-LINEA-TIEMPO (2026-10-20); definida
+        en sesion interactiva con Claude.
+    change_class: A
+    deploy_required: true
+    requires_human_acceptance: true
+    acceptance_criteria:
+    - id: AC-1
+      verification: automated
+      description: 'Un evento de simulacion antiguo (la vista devuelve entradas y resultado NULL) no rompe
+        el detalle del lead: la pagina responde 200 y la linea de tiempo muestra ''Simulacion generada''
+        con ejecutivo, escenario, version del modelo y codigo, mas la nota ''Registro anterior al guardado
+        de entradas: solo se conservan escenario, version y codigo'', sin el detalle desplegable de entradas.'
+    - id: AC-2
+      verification: automated
+      description: 'La presentacion y la plantilla toleran cualquier dato faltante o nulo de la evidencia:
+        entradas o resultado ausentes, entradas sin causante, beneficiarios nulo o vacio, beneficiario
+        con campos faltantes y fechas nulas. Ninguna combinacion produce 500. Se prueba con cargas parciales,
+        no solo con la evidencia completa.'
+    - id: AC-3
+      verification: automated
+      description: 'Sin regresion: un evento con la evidencia completa se muestra como hasta ahora (entradas,
+        causante, beneficiarios con fecha de nacimiento, invalidez y relacion, y resultado); el orden
+        por fecha, la visibilidad (404 si el lead no es visible) y el resto de la linea de tiempo no cambian.'
+    - id: AC-4
+      verification: automated
+      description: Pruebas unitarias de la presentacion y de la plantilla, y de integracion en PostgreSQL
+        (CI) con filas de tpi.auditoria de ambas formas (antigua y completa) leidas a traves de tpi.v_historial_simulaciones;
+        cobertura total >= 85%.
+    - id: AC-5
+      verification: both
+      description: 'CHANGELOG, BITACORA y docs/SIMULADOR_USO.md: las simulaciones anteriores al 2026-10-16
+        solo conservan escenario, version del modelo y codigo, y la linea de tiempo lo indica.'
+    - id: AC-6
+      verification: human
+      description: 'Smoke humano en AWS DEV: el lead ffd67c7a-8c1d-4891-8a6e-fa049446facc abre sin error
+        y su linea de tiempo muestra sus 5 simulaciones: 4 antiguas con la nota y 1 completa con su detalle
+        desplegable.'
+    constraints:
+    - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
+      desde ramas o worktrees antiguos.'
+    - 'change_class A (fast path version-only): sin migraciones, grants, vistas ni infraestructura. La
+      vista tpi.v_historial_simulaciones y scripts/sql/** no se modifican.'
+    - 'Leccion de SIM-HISTORIAL-LINEA-TIEMPO: toda presentacion que lea datos historicos se prueba con
+      cada forma que el dato ha tenido en el tiempo, no solo con la actual. Formas de la evidencia de
+      simulacion en DEV: (1) desde SIM-RV-V1 (2026-10-14): detalle con actor_subject, role, tipo_escenario,
+      version_modelo y codigo_verificacion; (2) desde SIM-EVIDENCIA-ENTRADAS (2026-10-16): ademas schema_version,
+      entradas y resultado.'
+    - En Jinja, acceder a un atributo de un valor indefinido lanza UndefinedError (por ejemplo item.entradas.causante.sexo
+      con entradas vacio). Normalizar los datos en app/web/presentation.py o comprobar cada nivel antes
+      de encadenar atributos.
+    - 'No inventar datos de eventos antiguos: no completar entradas ni resultado; mostrar solo lo que
+      el evento tiene.'
+    - No modificar app/simulador_pension/** ni app/auth/**, ni dependencias; no reducir la cobertura minima
+      (85%).
+    dependencies:
+    - SIM-HISTORIAL-LINEA-TIEMPO
+    risk:
+      level: low
+      notes: Cambio de presentacion acotado, sin base de datos; la regresion queda cubierta con pruebas
+        de ambas formas de evento. Se despliega por fast path version-only con rollback al LKG.
+    scope:
+      paths:
+      - app/web/presentation.py
+      - app/web/templates/lead_detail_panel.html
+      - app/web/static/css/app.css
+      - tests/**
+      - CHANGELOG.md
+      - docs/BITACORA.md
+      - docs/SIMULADOR_USO.md
+    status: active
 - id: AUTOMATED_AUTHENTICATED_SMOKE
   title: Smoke autenticado automatizado con identidad sintetica
   priority: P3
@@ -198,115 +297,6 @@ items:
   - evidence/H3.3.5/deployment/verification-03.json (CR-D7-03)
   dependencies:
   - H3.3.5
-- id: SIM-HISTORIAL-LINEA-TIEMPO
-  title: 'Linea de tiempo del lead: mostrar las simulaciones generadas'
-  priority: P3
-  category: functional
-  status: pending
-  change_class: D
-  summary: 'Vista de solo lectura y linea de tiempo del lead con las simulaciones generadas y todos sus
-    datos registrados (clase D: migracion 009, la aplica el humano).'
-  evidence:
-  - definida en sesion interactiva con Claude el 2026-10-15 a pedido del humano; agregada al backlog por
-    PR (no con approve.py define); se activa con approve.py activate
-  task:
-    id: SIM-HISTORIAL-LINEA-TIEMPO
-    title: 'Linea de tiempo del lead: mostrar las simulaciones generadas'
-    objective: 'Mostrar en la linea de tiempo del detalle del lead cada simulacion generada, con todos
-      los datos que quedaron registrados al generar la ficha (entradas y resultado: ejecutivo, escenario,
-      pension mensual estimada, codigo de verificacion, causante y grupo familiar con sus fechas de nacimiento,
-      saldo, tasa y condiciones), leyendola de una vista de solo lectura sobre tpi.auditoria, como ya
-      se hace con las asignaciones y los cambios de estado.'
-    source:
-      type: story
-      ref: Observaciones del humano sobre el simulador y el CRM (2026-10-15); definida en sesion interactiva
-        con Claude.
-    change_class: D
-    deploy_required: true
-    requires_human_acceptance: true
-    acceptance_criteria:
-    - id: AC-1
-      verification: automated
-      description: 'Migracion 009 (create y drop) que crea la vista tpi.v_historial_simulaciones sobre
-        tpi.auditoria filtrando accion=''simulacion_renta_vitalicia'' y exponiendo TODA la evidencia registrada,
-        sin omitir ningun dato (decision del humano, 2026-10-19: no se censura nada): id_auditoria, id_lead,
-        fecha_hora, actor_subject, tipo_escenario, version_modelo, codigo_verificacion, las entradas completas
-        (fecha de simulacion, saldo, tasa de venta, valor UF, meses garantizados, meses y porcentaje de
-        aumento temporal, anios diferidos, relacion RVD, causante con sexo y fecha de nacimiento, y cada
-        beneficiario con parentesco, sexo, fecha de nacimiento y, segun corresponda, condicion de invalidez
-        y relacion comun o no) y el resultado completo (pension, renta temporal y meses diferidos), como
-        columnas tipadas o JSONB a criterio del Developer; GRANT SELECT solo sobre la vista a tpi_app
-        (sin SELECT sobre tpi.auditoria); scripts/init_test_database.py crea la vista para las pruebas.'
-    - id: AC-2
-      verification: both
-      description: 'El detalle del lead muestra las simulaciones en la linea de tiempo, junto a asignaciones,
-        cambios de estado, comentarios y actividad, ordenadas por fecha: ''Simulacion generada'' con ejecutivo,
-        escenario, pension mensual (UF) y codigo, y todos los datos registrados de esa simulacion (entradas
-        y resultado, incluidas las fechas de nacimiento, la invalidez y la relacion de cada beneficiario),
-        por ejemplo en un detalle desplegable de la misma entrada. La aplicacion lee solo la vista, nunca
-        tpi.auditoria.'
-    - id: AC-3
-      verification: automated
-      description: Visibilidad igual a la del detalle del lead (un advisor solo ve leads de su cartera;
-        404 si no es visible); el nombre del ejecutivo se muestra segun las reglas vigentes de la linea
-        de tiempo. La evidencia no contiene nombres, RUT, correo ni telefono (SIM-EVIDENCIA-ENTRADAS),
-        asi que mostrarla completa no los expone; los datos del lead siguen sujetos a su enmascaramiento
-        vigente.
-    - id: AC-4
-      verification: automated
-      description: Pruebas unitarias y de integracion (PostgreSQL en CI) de la vista, el repositorio y
-        la presentacion; un lead sin simulaciones no cambia su linea de tiempo; cobertura total >= 85%.
-    - id: AC-5
-      verification: both
-      description: 'Documentacion de la base (docs/database), CHANGELOG y BITACORA, con el procedimiento
-        de aplicacion y de reversa de la migracion 009 en AWS DEV para el humano. El manual de uso del
-        simulador (docs/SIMULADOR_USO.md) y docs/SIM_RV_V1_MODELO.md y docs/SIM_RV_V1_PENDIENTES.md dejan
-        de decir que la linea de tiempo esta pendiente o que la aplicacion no lee la evidencia: ahora
-        la lee solo a traves de la vista y la muestra completa en la linea de tiempo del lead.'
-    - id: AC-6
-      verification: human
-      description: Tras aplicar la migracion 009 en AWS DEV y desplegar, un ejecutivo genera un PDF y
-        la simulacion aparece en la linea de tiempo del lead con todos sus datos (incluido el grupo familiar
-        con sus fechas de nacimiento); un advisor sin acceso al lead no la ve.
-    constraints:
-    - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
-      desde ramas o worktrees antiguos.'
-    - 'change_class D: la migracion 009 y su aplicacion en AWS DEV no siguen ningun fast path; tras el
-      merge la transicion obligatoria es merged_non_fast_path hacia BLOCKED_HUMAN, sin excepcion. El humano
-      aplica la migracion en DEV y resuelve el estado segun el procedimiento de H3.3.4.'
-    - 'No asumir el numero de migracion: inspeccionar todo scripts/sql y la historia git antes de crearla
-      (009 debe estar libre). No modificar las migraciones 005 a 008.'
-    - La aplicacion lee solo la vista, nunca tpi.auditoria; el GRANT es solo SELECT sobre la vista; sin
-      SELECT, UPDATE ni DELETE sobre la tabla.
-    - No modificar app/simulador_pension/** ni app/auth/**, ni dependencias; no reducir la cobertura minima
-      (85%).
-    - 'Dependencia funcional: SIM-EVIDENCIA-ENTRADAS (el evento ya trae tipo_escenario, version_modelo,
-      codigo_verificacion y pension_uf). En tpi.auditoria.detalle, actor_subject, tipo_escenario, version_modelo
-      y codigo_verificacion estan en la raiz y la pension en resultado.pension_uf; las entradas (causante
-      y beneficiarios, con todos sus campos) estan en entradas.causante y entradas.beneficiarios y el
-      resultado en resultado.*; la vista expone la evidencia completa (decision del humano, 2026-10-19:
-      no se censura ningun dato registrado).'
-    dependencies:
-    - SIM-EVIDENCIA-ENTRADAS
-    risk:
-      level: medium
-      notes: Migracion de base de datos aplicada por el humano en AWS DEV; mitigado con una vista de solo
-        lectura, grant minimo, script de reversa y el procedimiento ya probado en H3.3.4.
-    scope:
-      paths:
-      - scripts/sql/**
-      - scripts/init_test_database.py
-      - app/repositories/**
-      - app/services/**
-      - app/web/**
-      - tests/**
-      - docs/database/**
-      - CHANGELOG.md
-      - docs/BITACORA.md
-      - docs/SIMULADOR_USO.md
-      - docs/SIM_RV_V1_MODELO.md
-      - docs/SIM_RV_V1_PENDIENTES.md
-    status: active
 - id: CRM-LOOK-AND-FEEL
   title: Mejorar el look and feel del CRM
   priority: P3

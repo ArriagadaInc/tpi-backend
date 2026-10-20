@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "kind": "deployment",
+  "task_id": "SIM-HISTORIAL-LINEA-TIEMPO",
+  "created_at": "2026-10-20T14:18:30Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610201413-deployer-sup19d530",
+  "approved_commit": "e4476c325395d849c32b1c521687e1d56f6ee22e",
+  "deployed_commit": "e4476c325395d849c32b1c521687e1d56f6ee22e",
+  "application_version": "h3-sim-historial-linea-tiempo-e4476c3-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "update_accepted": true,
+  "result": "success",
+  "started_at": "2026-10-20T14:16:17Z",
+  "finished_at": "2026-10-20T14:17:14Z",
+  "failure_class": null,
+  "previous_version_label": "h3-sim-wizard-3-pasos-4ee5fad-domainlocked-r1",
+  "final_state": {
+    "version_label": "h3-sim-historial-linea-tiempo-e4476c3-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "observed_at": "2026-10-20T14:19:00Z"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-sim-historial-linea-tiempo-e4476c3-domainlocked-r1/d6f6015d921f19dbaac49b8bcadcf165fbd95c27faaca679c4c2961893fcd6da.zip",
+    "s3_checksum_sha256_b64": "1vYBXZIfGduqxJuLytzxZfvZXCf6rKZ5xMKWGJP81to=",
+    "s3_content_length": 4815,
+    "bundle_sha256": "d6f6015d921f19dbaac49b8bcadcf165fbd95c27faaca679c4c2961893fcd6da",
+    "digests_equal_approval_01": true,
+    "note": "describe-environments post-cutover VersionLabel = aprobada; AV SourceBundle (preflight) = key de approval-01; head-object post-cutover ChecksumSHA256 = base64 del bundle_sha256 aprobado, cuyo compose fija los digests app 74d8dab2... / caddy c65ca702... segun approval-01 y candidate-01."
+  },
+  "preflight": {
+    "at": "2026-10-20T14:15Z",
+    "result": "PASS",
+    "checks": [
+      "init PASS (DEPLOYING, rol deployer)",
+      "approval-01 aprobada para e4476c3 coincide con candidate-01 (bundle, key, digests, AV, LKG)",
+      "sts account 821656895812; region us-east-2 por aws_guard",
+      "environment en LKG h3-sim-wizard-3-pasos-4ee5fad, Ready/Green/Ok, AbortableOperationInProgress false",
+      "AV candidata UNPROCESSED con SourceBundle = key aprobada; AV del LKG existente",
+      "digests candidatos y del LKG presentes en ECR (ACTIVE)"
+    ]
+  },
+  "cutover": {
+    "mechanism": "aws_guard update-environment version-label only",
+    "executed_by": "deployer",
+    "updates_applied": 1,
+    "retries": 0,
+    "option_settings": false,
+    "restart_app_server": false,
+    "rollback_executed": false,
+    "convergence": "exitosa en ~57 s (start 14:16:17Z, completed 14:17:14Z)"
+  },
+  "events": {
+    "levels_observed": [
+      "INFO"
+    ],
+    "errors": 0,
+    "note": "Environment update completed successfully; Ready/Green/Ok."
+  },
+  "warnings": [
+    "AC-6 (smoke humano) sigue pendiente; conteos de logs y smoke HTTP corresponden a VERIFYING."
+  ]
+}
