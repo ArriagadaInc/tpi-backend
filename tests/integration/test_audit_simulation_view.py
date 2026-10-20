@@ -23,6 +23,7 @@ from app.config import get_settings
 from app.database.connection import get_db_connection
 from app.database.healthcheck import full_health_check
 from app.repositories import SolicitudRepository
+from app.web.presentation import build_timeline_items
 
 pytestmark = pytest.mark.integration
 
@@ -246,6 +247,60 @@ def test_view_exposes_only_simulation_columns_and_filters_events() -> None:
         assert row["entradas"]["causante"]["fecha_nacimiento"] == "1960-01-15"
         assert row["entradas"]["beneficiarios"][0]["parentesco"] == "conyuge"
         assert row["resultado"]["pension_uf"] == 5.23
+    finally:
+        _cleanup_lead(lead_id)
+
+
+def test_view_exposes_legacy_and_complete_simulation_evidence_forms() -> None:
+    lead_id = _new_lead()
+    try:
+        legacy_detalle = {
+            "actor_subject": "user-legacy",
+            "role": "executive",
+            "tipo_escenario": "renta_inmediata_familia",
+            "version_modelo": "sim-rv-v1",
+            "codigo_verificacion": "legacy-code",
+        }
+        with get_db_connection(operation="integration.sim_view.legacy_seed") as conn:
+            with conn.cursor() as cur:
+                _insert_audit_row(
+                    cur,
+                    id_lead=lead_id,
+                    accion="simulacion_renta_vitalicia",
+                    tabla_afectada="tpi.leads",
+                    detalle=legacy_detalle,
+                )
+                _insert_audit_row(
+                    cur,
+                    id_lead=lead_id,
+                    accion="simulacion_renta_vitalicia",
+                    tabla_afectada="tpi.leads",
+                    detalle=_simulation_detalle(),
+                )
+            conn.commit()
+
+        rows = SolicitudRepository.get_lead_simulation_events(UUID(lead_id))
+        assert len(rows) == 2
+
+        legacy = next(r for r in rows if r["codigo_verificacion"] == "legacy-code")
+        complete = next(r for r in rows if r["codigo_verificacion"] == "abc123def456")
+
+        # Legacy rows (pre SIM-EVIDENCIA-ENTRADAS) have no entradas/resultado in detalle.
+        assert legacy["entradas"] is None
+        assert legacy["resultado"] is None
+        assert legacy["actor_subject"] == "user-legacy"
+        assert legacy["tipo_escenario"] == "renta_inmediata_familia"
+        assert legacy["version_modelo"] == "sim-rv-v1"
+
+        # Complete rows expose the full evidence.
+        assert complete["entradas"]["causante"]["fecha_nacimiento"] == "1960-01-15"
+        assert complete["resultado"]["pension_uf"] == 5.23
+
+        # The presentation layer flags the legacy form without raising on either form.
+        items = build_timeline_items([], [], [], rows)
+        by_code = {item["codigo_verificacion"]: item for item in items}
+        assert by_code["legacy-code"]["es_legacy"] is True
+        assert by_code["abc123def456"]["es_legacy"] is False
     finally:
         _cleanup_lead(lead_id)
 

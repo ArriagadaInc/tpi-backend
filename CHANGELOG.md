@@ -69,6 +69,13 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
   - Cálculos derivados verificados con datos sintéticos: Rescate Total = pensión × meses garantizados; `$` Valor Actual = pensión × valor UF; Valor Futuro = Valor Actual × 1,04^años del aumento; Rescate Total de la Opción II = pensión aumentada × meses del aumento + pensión base × (meses garantizados − meses del aumento).
   - Se conservan la leyenda «Estimación referencial no vinculante», la versión del modelo, el código de verificación, el escape de marcado, los metadatos genéricos sin PII y la ausencia de RUT, correo y teléfono del lead; la renta temporal con RVD conserva su sección con la nueva apariencia.
 
+### 🔧 Corregido
+
+- **Línea de tiempo del lead: no fallar con simulaciones registradas antes de guardar sus entradas** (SIM-HISTORIAL-EVENTOS-ANTIGUOS)
+  - Las simulaciones registradas antes de `SIM-EVIDENCIA-ENTRADAS` (2026-10-16) solo conservan el escenario, la versión del modelo y el código de verificación (la vista devuelve `entradas` y `resultado` en `NULL`). El detalle del lead dejaba de renderizar con un 500 porque la plantilla encadenaba atributos de la evidencia (`item.entradas.causante.sexo`) sobre un valor indefinido.
+  - La presentación (`app/web/presentation.py`) ahora normaliza las entradas y el resultado a una forma segura (cada campo con clave fija y fallback `None`) y marca los eventos antiguos con `es_legacy`. La plantilla muestra para ellos «Simulación generada» con ejecutivo, escenario, versión del modelo y código, más la nota «Registro anterior al guardado de entradas: solo se conservan escenario, version y codigo», sin detalle desplegable de entradas.
+  - La presentación y la plantilla toleran cualquier dato faltante o nulo de la evidencia (entradas o resultado ausentes, causante ausente, beneficiarios vacíos, beneficiarios con campos faltantes y fechas nulas) sin producir un 500; los eventos con evidencia completa se muestran como hasta ahora (entradas, causante, beneficiarios y resultado).
+
 ---
 
 ## [0.2.0] - 2026-10-12

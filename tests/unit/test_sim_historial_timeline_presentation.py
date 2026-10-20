@@ -120,5 +120,88 @@ def test_simulation_with_missing_resultado_does_not_raise() -> None:
     items = build_timeline_items([], [], [], [sim])
 
     assert items[0]["pension_uf"] is None
-    assert items[0]["entradas"] == {}
-    assert items[0]["resultado"] == {}
+    assert items[0]["entradas"]["causante"]["sexo"] is None
+    assert items[0]["resultado"]["pension_uf"] is None
+
+
+def test_legacy_simulation_is_flagged_and_normalized() -> None:
+    sim = {
+        "fecha_hora": datetime(2026, 9, 5, 12, 0, tzinfo=_TZ),
+        "actor_subject": "user-001",
+        "tipo_escenario": "renta_inmediata_familia",
+        "version_modelo": "sim-rv-v1",
+        "codigo_verificacion": "abc123",
+        "entradas": None,
+        "resultado": None,
+    }
+
+    items = build_timeline_items([], [], [], [sim])
+
+    item = items[0]
+    assert item["kind"] == "simulation"
+    assert item["es_legacy"] is True
+    assert item["actor"] == "user-001"
+    assert item["tipo_escenario"] == "renta_inmediata_familia"
+    assert item["version_modelo"] == "sim-rv-v1"
+    assert item["codigo_verificacion"] == "abc123"
+    assert item["entradas"]["causante"]["sexo"] is None
+    assert item["entradas"]["causante"]["fecha_nacimiento"] is None
+    assert item["entradas"]["beneficiarios"] == []
+    assert item["resultado"]["pension_uf"] is None
+    assert item["resultado"]["renta_temporal_uf"] is None
+    assert item["resultado"]["meses_diferidos"] is None
+
+
+def test_partial_entradas_without_causante_or_beneficiarios_does_not_raise() -> None:
+    sim = {
+        "fecha_hora": datetime(2026, 9, 5, 12, 0, tzinfo=_TZ),
+        "actor_subject": "user-001",
+        "tipo_escenario": "renta_inmediata_familia",
+        "version_modelo": "sim-rv-v1",
+        "codigo_verificacion": "abc123",
+        "entradas": {"saldo_uf": 1000.0},
+        "resultado": None,
+    }
+
+    items = build_timeline_items([], [], [], [sim])
+
+    item = items[0]
+    # Entradas present but resultado missing: not a legacy event.
+    assert item["es_legacy"] is False
+    assert item["entradas"]["saldo_uf"] == 1000.0
+    assert item["entradas"]["causante"]["sexo"] is None
+    assert item["entradas"]["causante"]["fecha_nacimiento"] is None
+    assert item["entradas"]["beneficiarios"] == []
+    assert item["pension_uf"] is None
+    assert item["resultado"]["pension_uf"] is None
+
+
+def test_beneficiario_with_missing_fields_and_null_dates_does_not_raise() -> None:
+    sim = {
+        "fecha_hora": datetime(2026, 9, 5, 12, 0, tzinfo=_TZ),
+        "actor_subject": "user-001",
+        "tipo_escenario": "renta_inmediata_familia",
+        "version_modelo": "sim-rv-v1",
+        "codigo_verificacion": "abc123",
+        "entradas": {
+            "fecha_simulacion": None,
+            "causante": {"sexo": "H"},
+            "beneficiarios": [{"parentesco": "hijo"}],
+        },
+        "resultado": {"pension_uf": 5.23},
+    }
+
+    items = build_timeline_items([], [], [], [sim])
+
+    item = items[0]
+    assert item["es_legacy"] is False
+    assert item["entradas"]["fecha_simulacion"] is None
+    assert item["entradas"]["causante"]["sexo"] == "H"
+    assert item["entradas"]["causante"]["fecha_nacimiento"] is None
+    beneficiario = item["entradas"]["beneficiarios"][0]
+    assert beneficiario["parentesco"] == "hijo"
+    assert beneficiario["sexo"] is None
+    assert beneficiario["fecha_nacimiento"] is None
+    assert beneficiario["invalidez"] is None
+    assert beneficiario["comun"] is None
+    assert item["pension_uf"] == 5.23
