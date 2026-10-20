@@ -57,6 +57,7 @@ Hallazgo confirmado:
 | `tpi.asignaciones` | `SELECT/INSERT = true`; `UPDATE/DELETE = false` | `SELECT/INSERT` | `SELECT/INSERT` | alineado post-006 |
 | `tpi.auditoria` | `INSERT = true`; `SELECT/UPDATE/DELETE = false` | `INSERT` | `INSERT` | alineado post-006; append-only |
 | `tpi.v_asignacion_auditoria` (vista 007) | no existe aun en AWS DEV (007 pendiente de Human Gate) | `SELECT` a `tpi_app`; `REVOKE ALL` a `PUBLIC` | `SELECT` a `tpi_app`; sin privilegios para `PUBLIC` | pendiente post-007 |
+| `tpi.v_historial_simulaciones` (vista 009) | no existe aun en AWS DEV (009 pendiente de Human Gate) | `SELECT` a `tpi_app`; `REVOKE ALL` a `PUBLIC` | `SELECT` a `tpi_app`; sin privilegios para `PUBLIC`; sin `SELECT` directo sobre `tpi.auditoria` | pendiente post-009 |
 
 ## Drift de seguridad
 

@@ -889,6 +889,66 @@ select:focus {
   color: #334155;
 }
 
+.timeline-simulation-detail {
+  margin-top: 10px;
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+}
+
+.timeline-simulation-detail summary {
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: var(--primary);
+}
+
+.simulation-detail-body {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.simulation-detail-body h4 {
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  margin: 6px 0 2px;
+}
+
+.simulation-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 6px 16px;
+  margin: 0;
+}
+
+.simulation-detail-grid div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.simulation-detail-grid dt {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.simulation-detail-grid dd {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #334155;
+}
+
+.simulation-detail-table {
+  margin: 0;
+}
+
+[data-theme="dark"] .simulation-detail-grid dd {
+  color: var(--text-soft);
+}
+
 .note-form {
   margin-top: 16px;
   display: grid;

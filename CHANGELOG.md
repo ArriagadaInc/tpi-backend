@@ -10,6 +10,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ### ✅ Agregado
 
+- **Línea de tiempo del lead: simulaciones generadas** (SIM-HISTORIAL-LINEA-TIEMPO)
+  - Nueva vista de solo lectura `tpi.v_historial_simulaciones` (migración `009`, `change_class D`) sobre `tpi.auditoria` filtrada por `accion = 'simulacion_renta_vitalicia'`, que expone la evidencia completa de cada simulación (ejecutivo, escenario, versión del modelo, código de verificación, las entradas completas —causante y beneficiarios con sus fechas de nacimiento, invalidez y relación— y el resultado completo), sin censurar ningún dato registrado (decisión del humano, 2026-10-19). `security_barrier`, `REVOKE ALL FROM PUBLIC` y `GRANT SELECT` solo a `tpi_app`; sin `SELECT` directo sobre `tpi.auditoria`. Rollback idempotente en `scripts/sql/009_drop_historial_simulaciones.sql`.
+  - El detalle del lead muestra cada simulación en la línea de tiempo (junto a asignaciones, cambios de estado y notas), ordenadas por fecha, con un resumen «Simulación generada» (ejecutivo, escenario, pensión mensual en UF y código) y un detalle desplegable con todas las entradas y el resultado. La aplicación lee **solo** la vista, nunca `tpi.auditoria`.
+  - La visibilidad sigue las reglas vigentes del detalle del lead (un `advisor` solo ve leads de su cartera; 404 si no es visible).
+
 - **Tablas de mortalidad del simulador reproducibles desde el repositorio** (`scripts/tablas_mortalidad/`)
   - Se incorporan el Excel de la CMF del que salen las tablas (sin editar, con `procedencia.json`: fuente, norma, fecha, tamaño y `sha256`) y el script que construye `app/simulador_pension/datos/tablas_mortalidad.npz`, con validación de encabezados y modo `--verificar`.
   - El `.npz` que ya usaba el motor se reconstruye idéntico desde el Excel; no cambia ningún valor ni la versión del modelo.

@@ -240,6 +240,36 @@ Notas:
   fecha_hora)` justificado por EXPLAIN real.
 - **No aplicada en AWS RDS DEV al cierre de la etapa de desarrollo.**
 
+### `tpi.v_historial_simulaciones` (vista de la migracion 009)
+
+Read model de solo lectura sobre `tpi.auditoria` (migracion 009, change_class D).
+Contrato versionado:
+
+| Columna | Tipo | Origen | Proposito |
+| ------- | ---- | ------ | --------- |
+| `id_auditoria` | UUID | `tpi.auditoria.id_auditoria` | Identificador del evento |
+| `id_lead` | UUID | `tpi.auditoria.id_lead` | Lead afectado |
+| `fecha_hora` | TIMESTAMPTZ | `tpi.auditoria.fecha_hora` | Momento del evento |
+| `actor_subject` | TEXT | `detalle->>'actor_subject'` | Identidad historica del actor |
+| `tipo_escenario` | TEXT | `detalle->>'tipo_escenario'` | Escenario simulado (clave maquina) |
+| `version_modelo` | TEXT | `detalle->>'version_modelo'` | Version del modelo del simulador |
+| `codigo_verificacion` | TEXT | `detalle->>'codigo_verificacion'` | Codigo de verificacion de la simulacion |
+| `entradas` | JSONB | `detalle->'entradas'` | Entradas completas (causante y beneficiarios con todos sus campos) |
+| `resultado` | JSONB | `detalle->'resultado'` | Resultado completo (pension, renta temporal y meses diferidos) |
+
+Notas:
+
+- Filtro fijo: `accion = 'simulacion_renta_vitalicia'` AND `tabla_afectada = 'tpi.leads'`.
+- `security_barrier = true`.
+- `REVOKE ALL ... FROM PUBLIC`; `GRANT SELECT` unicamente a `tpi_app`.
+- No expone `detalle` crudo completo, `id_persona`, `id_usuario` ni `ip_origen`;
+  expone la evidencia funcional completa (`entradas` + `resultado`) por decision del
+  humano (2026-10-19): no se censura ningun dato registrado.
+- Sin indice nuevo: la consulta queda servida por el indice de apoyo `auditoria_state_history_idx
+  (accion, tabla_afectada, id_lead, fecha_hora)` de la migracion 008, cuyas columnas lideres
+  coinciden con el filtro de la vista.
+- **No aplicada en AWS RDS DEV al cierre de la etapa de desarrollo.**
+
 ### `tpi.consentimientos`
 
 Contrato versionado:

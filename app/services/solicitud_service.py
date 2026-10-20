@@ -615,6 +615,16 @@ class SolicitudService:
         lead_id = self._normalize_uuid(id_lead, "lead")
         return self.repository.get_lead_state_change_events(lead_id)
 
+    def get_lead_simulation_events(self, id_lead: UUID | str) -> list[dict[str, Any]]:
+        """Return sanitized simulation traceability events for one lead.
+
+        The repository reads only the migration-009 view; the application never reads
+        tpi.auditoria directly. Each event carries the complete simulation evidence
+        (entradas and resultado) as registered, with no field censored.
+        """
+        lead_id = self._normalize_uuid(id_lead, "lead")
+        return self.repository.get_lead_simulation_events(lead_id)
+
     def get_asesores_disponibles_para_asignacion(self) -> list[dict[str, Any]]:
         return self.repository.get_asesores_disponibles_para_asignacion()
 

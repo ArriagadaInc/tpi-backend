@@ -1109,6 +1109,37 @@ class SolicitudRepository:
                 return [dict(row) for row in rows]
 
     @staticmethod
+    def get_lead_simulation_events(id_lead: UUID) -> list[dict[str, Any]]:
+        """Return simulation traceability events from the sanitized read model only.
+
+        Reads tpi.v_historial_simulaciones (migration 009). Never reads tpi.auditoria
+        directly from the application; the read model stays behind the least-privilege
+        view, mirroring the assignment/state-change event patterns of migrations 007/008.
+        ``entradas`` and ``resultado`` are the complete JSONB payloads (no field is
+        censored, per the human decision of 2026-10-19).
+        """
+        query = """
+            SELECT
+                v.id_auditoria,
+                v.id_lead,
+                v.fecha_hora,
+                v.actor_subject,
+                v.tipo_escenario,
+                v.version_modelo,
+                v.codigo_verificacion,
+                v.entradas,
+                v.resultado
+            FROM tpi.v_historial_simulaciones v
+            WHERE v.id_lead = %s
+            ORDER BY v.fecha_hora DESC, v.id_auditoria DESC
+        """
+        with get_db_connection(operation="get_lead_simulation_events") as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (str(id_lead),))
+                rows = cur.fetchall()
+                return [dict(row) for row in rows]
+
+    @staticmethod
     def get_crm_estado_lead_options() -> list[str]:
         """Return the canonical lead states accepted by the CRM."""
         return list(CRM_STATE_CONTRACT)

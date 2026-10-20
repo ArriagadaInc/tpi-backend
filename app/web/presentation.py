@@ -71,19 +71,20 @@ def build_timeline_items(
     events: list[dict],
     notes: list[FollowUpNote],
     state_changes: list[dict] | None = None,
+    simulations: list[dict] | None = None,
 ) -> list[dict]:
-    """Merge assignment events, state-change events and human notes into one timeline.
+    """Merge assignment, state-change, simulation events and human notes into one timeline.
 
-    Assignment events (migration 007) and state-change events (migration 008) carry
-    full-precision ``fecha_hora`` (TIMESTAMPTZ); human notes carry minute-precision
-    ``dd/mm/YYYY HH:MM`` strings generated in America/Santiago. All are normalized to
-    aware datetimes in America/Santiago for a stable descending sort.
+    Assignment events (migration 007), state-change events (migration 008) and simulation
+    events (migration 009) carry full-precision ``fecha_hora`` (TIMESTAMPTZ); human notes
+    carry minute-precision ``dd/mm/YYYY HH:MM`` strings generated in America/Santiago. All
+    are normalized to aware datetimes in America/Santiago for a stable descending sort.
 
-    The sort is deterministic: primary key is the timestamp (descending) and, on an
-    exact tie, a fixed source rank keeps assignment events before state-change events
-    before notes (``event`` < ``state_change`` < ``note``). Python's stable sort then
-    preserves the repository's own deterministic ordering (``fecha_hora DESC,
-    id_auditoria DESC``) for ties within a single source.
+    The sort is deterministic: primary key is the timestamp (descending) and, on an exact
+    tie, a fixed source rank keeps assignment events before simulation events before
+    state-change events before notes (``event`` < ``simulation`` < ``state_change`` <
+    ``note``). Python's stable sort then preserves the repository's own deterministic
+    ordering (``fecha_hora DESC, id_auditoria DESC``) for ties within a single source.
     """
     items: list[dict] = []
 
@@ -118,6 +119,28 @@ def build_timeline_items(
             }
         )
 
+    for sim in simulations or []:
+        timestamp = _to_santiago(sim.get("fecha_hora"))
+        if timestamp is None:
+            continue
+        resultado = sim.get("resultado") or {}
+        items.append(
+            {
+                "kind": "simulation",
+                "timestamp": timestamp,
+                "display_time": timestamp.strftime("%d/%m/%Y %H:%M"),
+                "actor": sim.get("actor_subject"),
+                "tipo_escenario": sim.get("tipo_escenario"),
+                "version_modelo": sim.get("version_modelo"),
+                "codigo_verificacion": sim.get("codigo_verificacion"),
+                "pension_uf": resultado.get("pension_uf"),
+                "renta_temporal_uf": resultado.get("renta_temporal_uf"),
+                "meses_diferidos": resultado.get("meses_diferidos"),
+                "entradas": sim.get("entradas") or {},
+                "resultado": resultado,
+            }
+        )
+
     for note in notes:
         items.append(
             {
@@ -133,7 +156,7 @@ def build_timeline_items(
     return items
 
 
-_SOURCE_RANK: dict[str, int] = {"event": 0, "state_change": 1, "note": 2}
+_SOURCE_RANK: dict[str, int] = {"event": 0, "simulation": 1, "state_change": 2, "note": 3}
 
 
 def _timeline_sort_key(item: dict) -> tuple[datetime, int]:

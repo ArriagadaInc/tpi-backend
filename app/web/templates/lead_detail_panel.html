@@ -175,7 +175,7 @@
               <div class="timeline-meta">
                 <span>{{ item.display_time }}</span>
                 <span>·</span>
-                {% if item.kind == 'event' or item.kind == 'state_change' %}
+                {% if item.kind == 'event' or item.kind == 'state_change' or item.kind == 'simulation' %}
                   <span class="timeline-badge-auto">Automático</span>
                   <span class="timeline-author">{{ item.actor }}</span>
                 {% else %}
@@ -190,6 +190,72 @@
                 <div class="timeline-text">
                   Cambio de estado: {{ item.estado_anterior or '—' }} → {{ item.estado_nuevo or '—' }}
                 </div>
+              {% elif item.kind == 'simulation' %}
+                <div class="timeline-text">
+                  Simulación generada · {{ item.tipo_escenario or '—' }} · Pensión {{ item.pension_uf if item.pension_uf is not none else '—' }} UF · Código {{ item.codigo_verificacion or '—' }}
+                </div>
+                <details class="timeline-simulation-detail">
+                  <summary>Ver detalle de la simulación</summary>
+                  <div class="simulation-detail-body">
+                    <h4>Entradas</h4>
+                    <dl class="simulation-detail-grid">
+                      <div><dt>Fecha de simulación</dt><dd>{{ item.entradas.fecha_simulacion }}</dd></div>
+                      <div><dt>Saldo cuenta AFP (UF)</dt><dd>{{ item.entradas.saldo_uf }}</dd></div>
+                      <div><dt>Tasa de venta (%)</dt><dd>{{ item.entradas.tasa_venta_pct }}</dd></div>
+                      {% if item.entradas.valor_uf %}
+                        <div><dt>Valor UF ($)</dt><dd>{{ item.entradas.valor_uf }}</dd></div>
+                      {% endif %}
+                      <div><dt>Meses garantizados</dt><dd>{{ item.entradas.meses_garantizados }}</dd></div>
+                      <div><dt>Meses aumento temporal</dt><dd>{{ item.entradas.meses_aumento_temporal }}</dd></div>
+                      <div><dt>% aumento temporal</dt><dd>{{ item.entradas.pct_aumento_temporal }}</dd></div>
+                      <div><dt>Años diferidos</dt><dd>{{ item.entradas.anios_diferidos }}</dd></div>
+                      <div><dt>Relación RVD/RT (%)</dt><dd>{{ item.entradas.porcentaje_rvd }}</dd></div>
+                    </dl>
+
+                    <h4>Causante</h4>
+                    <dl class="simulation-detail-grid">
+                      <div><dt>Sexo</dt><dd>{{ item.entradas.causante.sexo }}</dd></div>
+                      <div><dt>Fecha de nacimiento</dt><dd>{{ item.entradas.causante.fecha_nacimiento }}</dd></div>
+                    </dl>
+
+                    <h4>Beneficiarios</h4>
+                    {% if item.entradas.beneficiarios %}
+                      <table class="board-table simulation-detail-table">
+                        <thead>
+                          <tr>
+                            <th>Parentesco</th>
+                            <th>Sexo</th>
+                            <th>Fecha nacimiento</th>
+                            <th>Invalidez</th>
+                            <th>Relación</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for b in item.entradas.beneficiarios %}
+                            <tr>
+                              <td>{{ b.parentesco }}</td>
+                              <td>{{ b.sexo }}</td>
+                              <td>{{ b.fecha_nacimiento }}</td>
+                              <td>{{ b.invalidez or '—' }}</td>
+                              <td>{{ 'común' if b.comun is true else ('no común' if b.comun is false else '—') }}</td>
+                            </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    {% else %}
+                      <p class="empty-inline">Sin beneficiarios.</p>
+                    {% endif %}
+
+                    <h4>Resultado</h4>
+                    <dl class="simulation-detail-grid">
+                      <div><dt>Pensión mensual (UF)</dt><dd>{{ item.pension_uf if item.pension_uf is not none else '—' }}</dd></div>
+                      {% if item.renta_temporal_uf is not none %}
+                        <div><dt>Renta temporal (UF)</dt><dd>{{ item.renta_temporal_uf }}</dd></div>
+                      {% endif %}
+                      <div><dt>Meses diferidos</dt><dd>{{ item.meses_diferidos }}</dd></div>
+                    </dl>
+                  </div>
+                </details>
               {% else %}
                 <div class="timeline-text">{{ item.text }}</div>
               {% endif %}
@@ -197,7 +263,7 @@
           {% endfor %}
         </div>
       {% else %}
-        <div class="empty-followup">Aún no existen notas de seguimiento, asignaciones ni cambios de estado.</div>
+        <div class="empty-followup">Aún no existen notas de seguimiento, asignaciones, cambios de estado ni simulaciones.</div>
       {% endif %}
 
       {% if can_write %}

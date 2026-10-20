@@ -84,6 +84,9 @@ class _Repo:
     def get_lead_state_change_events(self, id_lead: UUID) -> list[dict[str, Any]]:
         return []
 
+    def get_lead_simulation_events(self, id_lead: UUID) -> list[dict[str, Any]]:
+        return []
+
 
 class _AuthProvider:
     def __init__(self, advisor_id: UUID | None) -> None:

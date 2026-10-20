@@ -52,6 +52,13 @@ su ficha (sin ellos no se puede simular).
 un código de verificación. Sin nombres, RUT, correo ni teléfono. La retención es indefinida (decisión del humano,
 2026-10-19). Si falla el registro, **no se entrega el PDF**.
 
+**Dónde se ve después:** la línea de tiempo del detalle del lead muestra cada simulación generada (junto a asignaciones,
+cambios de estado y notas), con el ejecutivo, el escenario, la pensión mensual (UF), el código de verificación y, en un
+detalle desplegable, todas las entradas y el resultado registrados (incluidas las fechas de nacimiento del grupo
+familiar). La aplicación lee esa evidencia **solo** a través de la vista de solo lectura `tpi.v_historial_simulaciones`
+(migración `009`, `GRANT SELECT` solo a `tpi_app`), nunca de `tpi.auditoria` directamente. La visibilidad sigue las
+reglas del detalle del lead (un `advisor` solo ve leads de su cartera; 404 si no es visible).
+
 ## 3. Casos soportados (todos con tipo de pensión «Vejez edad»)
 
 | Caso | Respaldo | Casos del fixture |
