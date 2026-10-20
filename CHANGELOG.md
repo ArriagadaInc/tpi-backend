@@ -48,6 +48,10 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ### 🔒 Seguridad
 
+- **Excepción acotada de `pip-audit` para 8 avisos de `pillow` 12.3.0** (corregidos solo en Pillow 13.0.0; `streamlit` exige `pillow<13`)
+  - Ignorados por ID en `ci.yml` y `publish-dev-ecr-images.yml`, con vencimiento 2026-11-20 y condición de salida documentada en `docs/SEGURIDAD.md`. Motivo: la aplicación no recibe archivos de usuarios.
+  - Prueba `tests/security/test_excepcion_pip_audit_pillow.py`: el CI falla si los workflows difieren de los 8 IDs, si aparece código que reciba archivos de usuarios, si cambia la versión de Pillow o si vence la fecha.
+
 - **`certifi` 2026.7.22 → 2026.10.19** (`requirements/runtime.lock`): corrige GHSA-6q48-6c7w-9gw2, que `pip-audit` empezó a reportar el 2026-10-20 y hacía fallar el `Security Audit` de cualquier PR. Dependencia transitiva de ejecución; sin cambios de código.
 
 ### 🔄 Cambiado
