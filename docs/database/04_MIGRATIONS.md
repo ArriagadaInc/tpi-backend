@@ -26,6 +26,7 @@ scripts versionados, debe tratarse como drift.
 | `scripts/sql/006_grant_h3_3_assignment_privileges.sql` | Agregar los privilegios minimos que requiere H3.3 inicial | `tpi_app`, `tpi.asesores`, `tpi.asignaciones`, `tpi.auditoria`, `tpi.leads` | Ejecutado y verificado en AWS DEV el 2026-09-03 | AWS DEV existente | Revoke solo de los privilegios agregados por este script, conforme al preflight |
 | `scripts/sql/007_create_audit_assignment_view.sql` | Crear la trusted view `tpi.v_asignacion_auditoria` (read model sanitizado sobre `tpi.auditoria`) y conceder `SELECT` solo a `tpi_app` | `tpi.auditoria`, `tpi_app` | Versionado; **NO aplicado en AWS RDS DEV al cierre de la etapa de desarrollo** (change_class D requiere Human Gate explicito) | AWS DEV (post-merge, Human Gate) | `scripts/sql/007_drop_audit_assignment_view.sql` |
 | `scripts/sql/008_create_lead_state_history.sql` | Crear la trusted view `tpi.v_historial_estado_lead` (read model sanitizado de cambios generales de `estado_lead`) con `security_barrier`, el indice de apoyo `auditoria_state_history_idx` justificado por EXPLAIN y `GRANT SELECT` solo a `tpi_app` | `tpi.auditoria`, `tpi_app` | Versionado; **NO aplicado en AWS RDS DEV al cierre de la etapa de desarrollo** (change_class D requiere Human Gate explicito) | AWS DEV (post-merge, Human Gate) | `scripts/sql/008_drop_lead_state_history.sql` |
+| `scripts/sql/009_create_historial_simulaciones.sql` | Crear la trusted view `tpi.v_historial_simulaciones` (read model sanitizado del historial de simulaciones de renta vitalicia) con `security_barrier`, exponiendo la evidencia completa (`entradas` y `resultado` en JSONB) y `GRANT SELECT` solo a `tpi_app`; sin indice nuevo (reutiliza el de 008) | `tpi.auditoria`, `tpi_app` | Versionado; **NO aplicado en AWS RDS DEV al cierre de la etapa de desarrollo** (change_class D requiere Human Gate explicito) | AWS DEV (post-merge, Human Gate) | `scripts/sql/009_drop_historial_simulaciones.sql` |
 | `scripts/sql/dev/002_enable_test_cleanup.sql` | Conceder DELETE solo para limpieza controlada en DEV | `tpi.leads`, `tpi.consentimientos` | Ayuda DEV-only | AWS DEV solamente | `scripts/sql/dev/002_disable_test_cleanup.sql` |
 | `scripts/sql/dev/002_disable_test_cleanup.sql` | Revocar el DELETE DEV-only | Script de habilitacion previo | Ayuda DEV-only | AWS DEV solamente | Revocar DELETE |
 
@@ -147,6 +148,50 @@ Estado de aplicacion:
 - El forward/rollback se probaron en PostgreSQL local/integracion (rollback:
   `REVOKE SELECT` + `DROP VIEW` + `DROP INDEX`; no elimina datos de auditoria ni
   afecta la vista/objetos de `007`).
+
+## Notas sobre `009`
+
+La migracion `009` crea un read model SQL sanitizado (vista, no tabla) sobre
+`tpi.auditoria` para exponer la trazabilidad de las simulaciones de renta vitalicia
+(`SIM-HISTORIAL-LINEA-TIEMPO`) sin conceder acceso directo a la tabla y sin duplicar
+estado en `tpi.leads`.
+
+Contrato versionado:
+
+- Vista `tpi.v_historial_simulaciones` con `security_barrier`.
+- Filtro fijo: `accion = 'simulacion_renta_vitalicia'` y `tabla_afectada = 'tpi.leads'`.
+- Columnas: `id_auditoria`, `id_lead`, `fecha_hora`, `actor_subject`, `tipo_escenario`,
+  `version_modelo`, `codigo_verificacion`, `entradas` (JSONB) y `resultado` (JSONB).
+  La evidencia se expone completa (decision del humano, 2026-10-19): no se censura ningun
+  dato registrado; `entradas` y `resultado` conservan causante y beneficiarios con todos
+  sus campos y el resultado completo.
+- `REVOKE ALL ... FROM PUBLIC` y `GRANT SELECT` unicamente a `tpi_app`.
+- No amplia los privilegios de `tpi_app` sobre `tpi.auditoria`
+  (`SELECT/UPDATE/DELETE` continuan `false`; append-only vigente desde `006`).
+- Sin indice nuevo: la consulta de timeline queda servida por el indice de apoyo
+  `auditoria_state_history_idx (accion, tabla_afectada, id_lead, fecha_hora)` de la
+  migracion `008`, cuyas columnas lideres coinciden con el filtro de la vista.
+- Orden estable aplicado por la consulta del repositorio
+  (`fecha_hora DESC, id_auditoria DESC`), no por la vista.
+
+Procedimiento de aplicacion y reversa en AWS DEV (para el humano):
+
+1. Con el migration candidate congelado (SHA exacto de `main`), verificar que `009` esta
+   libre y que no se han reejecutado `005`/`006`.
+2. Preflight (tpi_admin): `psql ... -f scripts/sql/009_create_historial_simulaciones.sql`.
+   El preflight aborta si `tpi_app` posee `SELECT`/`UPDATE`/`DELETE` directo sobre
+   `tpi.auditoria` o si falta `USAGE` sobre `tpi`.
+3. Postflight: confirmar `SELECT` solo a `tpi_app` sobre la vista, `PUBLIC` sin privilegios
+   y `tpi_app` sin `SELECT`/`UPDATE`/`DELETE` directo sobre `tpi.auditoria`.
+4. Reversa (solo tras evaluar el rollback conforme al Harness):
+   `psql ... -f scripts/sql/009_drop_historial_simulaciones.sql` (idempotente:
+   `REVOKE SELECT` + `DROP VIEW`; no elimina datos de auditoria ni afecta `007`/`008`).
+
+Estado de aplicacion:
+
+- **No aplicada en AWS RDS DEV** al cierre de la etapa de desarrollo. La aplicacion
+  en AWS DEV es `change_class D` (db_path) y requiere Human Gate explicito.
+- El forward/rollback se probaron en PostgreSQL local/integracion.
 
 ## Bootstrap vs migracion incremental
 

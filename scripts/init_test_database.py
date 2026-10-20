@@ -186,6 +186,29 @@ WHERE a.accion = 'cambio_estado_lead'
 
 REVOKE ALL ON tpi.v_historial_estado_lead FROM PUBLIC;
 
+-- SIM-HISTORIAL-LINEA-TIEMPO read model: sanitized simulation-history view (mirrors migration
+-- 009, without the AWS-DEV preflight/postflight and without the app-role grant, which the real
+-- migration grants to tpi_app and the integration tests exercise via a least-privilege reader
+-- role). Exposes the complete simulation evidence (entradas + resultado) via JSONB columns,
+-- plus the root functional metadata, filtered by accion = 'simulacion_renta_vitalicia'.
+CREATE OR REPLACE VIEW tpi.v_historial_simulaciones
+WITH (security_barrier = true) AS
+SELECT
+    a.id_auditoria,
+    a.id_lead,
+    a.fecha_hora,
+    a.detalle->>'actor_subject' AS actor_subject,
+    a.detalle->>'tipo_escenario' AS tipo_escenario,
+    a.detalle->>'version_modelo' AS version_modelo,
+    a.detalle->>'codigo_verificacion' AS codigo_verificacion,
+    a.detalle->'entradas' AS entradas,
+    a.detalle->'resultado' AS resultado
+FROM tpi.auditoria a
+WHERE a.accion = 'simulacion_renta_vitalicia'
+  AND a.tabla_afectada = 'tpi.leads';
+
+REVOKE ALL ON tpi.v_historial_simulaciones FROM PUBLIC;
+
 -- Stores no payload or PII: only a keyed fingerprint and the resulting lead id.
 CREATE TABLE IF NOT EXISTS tpi.api_idempotency (
     idempotency_key UUID PRIMARY KEY,

@@ -22,6 +22,29 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-20 - Simulador: línea de tiempo del lead con las simulaciones generadas (en desarrollo, DEVELOPING)
+
+- Tarea `SIM-HISTORIAL-LINEA-TIEMPO` (clase D, db_path): mostrar en la línea de tiempo del detalle del lead cada
+  simulación generada, con toda la evidencia registrada, leyéndola de una vista de solo lectura sobre `tpi.auditoria`
+  (mismo patrón que asignaciones y cambios de estado).
+- Migración `009` (`scripts/sql/009_create_historial_simulaciones.sql` + `009_drop_historial_simulaciones.sql`):
+  - Vista `tpi.v_historial_simulaciones` con `security_barrier`, filtro fijo `accion = 'simulacion_renta_vitalicia'`
+    AND `tabla_afectada = 'tpi.leads'`.
+  - Columnas: `id_auditoria`, `id_lead`, `fecha_hora`, `actor_subject`, `tipo_escenario`, `version_modelo`,
+    `codigo_verificacion`, `entradas` (JSONB completo) y `resultado` (JSONB completo). No se censura ningún dato
+    registrado (decisión del humano 2026-10-19).
+  - `REVOKE ALL FROM PUBLIC`; `GRANT SELECT` solo a `tpi_app`; sin `SELECT` directo sobre `tpi.auditoria`. Sin índice
+    nuevo: reutiliza `auditoria_state_history_idx` de la migración `008` (sus columnas líderes coinciden con el filtro).
+- Aplicación: `SolicitudRepository.get_lead_simulation_events` (lee solo la vista), `SolicitudService`, la presentación
+  de la línea de tiempo (`build_timeline_items` con `kind='simulation'`) y el template del detalle (resumen + detalle
+  desplegable con entradas y resultado). La visibilidad sigue las reglas vigentes del detalle del lead.
+- Bootstrap de tests (`scripts/init_test_database.py`) actualizado con la vista; pruebas unitarias (scripts y
+  presentación) e integración (`tests/integration/test_audit_simulation_view.py`) sobre PostgreSQL.
+- Procedimiento de aplicación y reversa en AWS DEV (para el humano) documentado en `docs/database/04_MIGRATIONS.md`
+  (Notas sobre `009`): preflight/postflight con `tpi_admin`, aplicación única y reversa idempotente.
+- Impacto y rollback: solo crea/elimina la vista y su grant; no toca `tpi.auditoria` ni los objetos de `007`/`008`.
+- Siguiente paso: revisión independiente del PR y, tras el merge, aplicar la migración en AWS DEV vía Human Gate.
+
 ### 2026-10-19 - Simulador: el Excel y el script de las tablas de mortalidad pasan al repositorio
 
 - Pedido del humano: traer al repositorio el script y el Excel de los que salen las tablas de mortalidad, y dejarlo todo

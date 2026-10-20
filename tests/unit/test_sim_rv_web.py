@@ -66,6 +66,10 @@ class _Repo:
         self.calls.append("get_lead_state_change_events")
         return []
 
+    def get_lead_simulation_events(self, id_lead: Any) -> list[dict[str, Any]]:
+        self.calls.append("get_lead_simulation_events")
+        return []
+
     def get_asesores_disponibles_para_asignacion(self) -> list[dict[str, Any]]:
         self.calls.append("get_asesores_disponibles_para_asignacion")
         return []

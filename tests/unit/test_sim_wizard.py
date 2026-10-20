@@ -70,6 +70,9 @@ class _Repo:
     def get_lead_state_change_events(self, id_lead: Any) -> list[dict[str, Any]]:
         return []
 
+    def get_lead_simulation_events(self, id_lead: Any) -> list[dict[str, Any]]:
+        return []
+
     def get_asesores_disponibles_para_asignacion(self) -> list[dict[str, Any]]:
         return []
 

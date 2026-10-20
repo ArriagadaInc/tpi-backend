@@ -393,7 +393,10 @@ def _resolve_detail_context(
     if selected_lead is not None:
         events = service.get_lead_assignment_events(lead_id)
         state_changes = service.get_lead_state_change_events(lead_id)
-        timeline_items = build_timeline_items(events, parsed_comments.notes, state_changes)
+        simulations = service.get_lead_simulation_events(lead_id)
+        timeline_items = build_timeline_items(
+            events, parsed_comments.notes, state_changes, simulations
+        )
 
     app_settings = getattr(request.app.state, "settings", None)
     cutover = getattr(app_settings, "lead_state_history_cutover", None)

@@ -52,9 +52,11 @@ class _FakeWebService:
         cleanup_enabled: bool = True,
         events: list[dict[str, object]] | None = None,
         state_changes: list[dict[str, object]] | None = None,
+        simulations: list[dict[str, object]] | None = None,
     ) -> None:
         self.events = events or []
         self.state_changes = state_changes or []
+        self.simulations = simulations or []
         self._full_detail = {
             "id_lead": "11111111-1111-1111-1111-111111111111",
             "nombre_completo": "Juan Perez",
@@ -183,6 +185,9 @@ class _FakeWebService:
 
     def get_lead_state_change_events(self, id_lead):
         return list(self.state_changes)
+
+    def get_lead_simulation_events(self, id_lead):
+        return list(self.simulations)
 
     def update_lead_status(self, id_lead, estado_lead, *, actor=None):
         if str(id_lead) != str(self._full_detail["id_lead"]):
@@ -1119,4 +1124,59 @@ def test_detail_timeline_empty_state_is_coherent() -> None:
 
     detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
     assert detail.status_code == 200
-    assert "Aún no existen notas de seguimiento, asignaciones ni cambios de estado." in detail.text
+    assert (
+        "Aún no existen notas de seguimiento, asignaciones, cambios de estado ni simulaciones."
+        in detail.text
+    )
+
+
+def test_detail_timeline_renders_simulation_with_summary_and_full_detail() -> None:
+    service = _FakeWebService(
+        simulations=[
+            {
+                "fecha_hora": datetime(2026, 9, 5, 12, 0, tzinfo=UTC),
+                "actor_subject": "user-exec",
+                "tipo_escenario": "renta_inmediata_familia",
+                "version_modelo": "sim-rv-v1",
+                "codigo_verificacion": "abc123def456",
+                "entradas": {
+                    "fecha_simulacion": "2026-10-15",
+                    "saldo_uf": 1000.0,
+                    "tasa_venta_pct": 2.63,
+                    "valor_uf": 38000.0,
+                    "meses_garantizados": 120,
+                    "meses_aumento_temporal": 0,
+                    "pct_aumento_temporal": 0.0,
+                    "anios_diferidos": 0,
+                    "porcentaje_rvd": 100.0,
+                    "causante": {"sexo": "H", "fecha_nacimiento": "1960-01-15"},
+                    "beneficiarios": [
+                        {
+                            "parentesco": "hijo",
+                            "sexo": "M",
+                            "fecha_nacimiento": "1995-06-01",
+                            "invalidez": "no",
+                            "comun": True,
+                        }
+                    ],
+                },
+                "resultado": {"pension_uf": 5.23, "renta_temporal_uf": None, "meses_diferidos": 0},
+            }
+        ]
+    )
+    client = _build_client(service, auth_provider=_FakeAuthProvider(authenticated_role="tester"))
+    _login(client)
+
+    detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
+    assert detail.status_code == 200
+    assert "Automático" in detail.text
+    assert "user-exec" in detail.text
+    assert "Simulación generada" in detail.text
+    assert "renta_inmediata_familia" in detail.text
+    assert "5.23" in detail.text
+    assert "abc123def456" in detail.text
+    assert "Ver detalle de la simulación" in detail.text
+    assert "1960-01-15" in detail.text
+    assert "1995-06-01" in detail.text
+    # The evidence carries no direct PII (names, RUT, email, phone) from the simulation.
+    assert "común" in detail.text
