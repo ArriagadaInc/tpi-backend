@@ -204,17 +204,19 @@ items:
   category: functional
   status: pending
   change_class: D
-  summary: 'Vista saneada y linea de tiempo del lead con las simulaciones generadas (clase D: migracion
-    009, la aplica el humano).'
+  summary: 'Vista de solo lectura y linea de tiempo del lead con las simulaciones generadas y todos sus
+    datos registrados (clase D: migracion 009, la aplica el humano).'
   evidence:
   - definida en sesion interactiva con Claude el 2026-10-15 a pedido del humano; agregada al backlog por
     PR (no con approve.py define); se activa con approve.py activate
   task:
     id: SIM-HISTORIAL-LINEA-TIEMPO
     title: 'Linea de tiempo del lead: mostrar las simulaciones generadas'
-    objective: Mostrar en la linea de tiempo del detalle del lead cada simulacion generada (fecha, ejecutivo,
-      escenario, pension mensual estimada y codigo de verificacion), leyendola de una vista saneada sobre
-      tpi.auditoria, como ya se hace con las asignaciones y los cambios de estado.
+    objective: 'Mostrar en la linea de tiempo del detalle del lead cada simulacion generada, con todos
+      los datos que quedaron registrados al generar la ficha (entradas y resultado: ejecutivo, escenario,
+      pension mensual estimada, codigo de verificacion, causante y grupo familiar con sus fechas de nacimiento,
+      saldo, tasa y condiciones), leyendola de una vista de solo lectura sobre tpi.auditoria, como ya
+      se hace con las asignaciones y los cambios de estado.'
     source:
       type: story
       ref: Observaciones del humano sobre el simulador y el CRM (2026-10-15); definida en sesion interactiva
@@ -226,33 +228,46 @@ items:
     - id: AC-1
       verification: automated
       description: 'Migracion 009 (create y drop) que crea la vista tpi.v_historial_simulaciones sobre
-        tpi.auditoria filtrando accion=''simulacion_renta_vitalicia'', con solo estas columnas saneadas:
-        id_auditoria, id_lead, fecha_hora, actor_subject, tipo_escenario, version_modelo, codigo_verificacion
-        y pension_uf; sin entradas personales ni el detalle completo; GRANT SELECT solo sobre la vista
-        a tpi_app (sin SELECT sobre tpi.auditoria); scripts/init_test_database.py crea la vista para las
-        pruebas.'
+        tpi.auditoria filtrando accion=''simulacion_renta_vitalicia'' y exponiendo TODA la evidencia registrada,
+        sin omitir ningun dato (decision del humano, 2026-10-19: no se censura nada): id_auditoria, id_lead,
+        fecha_hora, actor_subject, tipo_escenario, version_modelo, codigo_verificacion, las entradas completas
+        (fecha de simulacion, saldo, tasa de venta, valor UF, meses garantizados, meses y porcentaje de
+        aumento temporal, anios diferidos, relacion RVD, causante con sexo y fecha de nacimiento, y cada
+        beneficiario con parentesco, sexo, fecha de nacimiento y, segun corresponda, condicion de invalidez
+        y relacion comun o no) y el resultado completo (pension, renta temporal y meses diferidos), como
+        columnas tipadas o JSONB a criterio del Developer; GRANT SELECT solo sobre la vista a tpi_app
+        (sin SELECT sobre tpi.auditoria); scripts/init_test_database.py crea la vista para las pruebas.'
     - id: AC-2
       verification: both
       description: 'El detalle del lead muestra las simulaciones en la linea de tiempo, junto a asignaciones,
         cambios de estado, comentarios y actividad, ordenadas por fecha: ''Simulacion generada'' con ejecutivo,
-        escenario, pension mensual (UF) y codigo. La aplicacion lee solo la vista, nunca tpi.auditoria.'
+        escenario, pension mensual (UF) y codigo, y todos los datos registrados de esa simulacion (entradas
+        y resultado, incluidas las fechas de nacimiento, la invalidez y la relacion de cada beneficiario),
+        por ejemplo en un detalle desplegable de la misma entrada. La aplicacion lee solo la vista, nunca
+        tpi.auditoria.'
     - id: AC-3
       verification: automated
       description: Visibilidad igual a la del detalle del lead (un advisor solo ve leads de su cartera;
         404 si no es visible); el nombre del ejecutivo se muestra segun las reglas vigentes de la linea
-        de tiempo; sin RUT, correo ni telefono.
+        de tiempo. La evidencia no contiene nombres, RUT, correo ni telefono (SIM-EVIDENCIA-ENTRADAS),
+        asi que mostrarla completa no los expone; los datos del lead siguen sujetos a su enmascaramiento
+        vigente.
     - id: AC-4
       verification: automated
       description: Pruebas unitarias y de integracion (PostgreSQL en CI) de la vista, el repositorio y
         la presentacion; un lead sin simulaciones no cambia su linea de tiempo; cobertura total >= 85%.
     - id: AC-5
       verification: both
-      description: Documentacion de la base (docs/database), CHANGELOG y BITACORA, con el procedimiento
-        de aplicacion y de reversa de la migracion 009 en AWS DEV para el humano.
+      description: 'Documentacion de la base (docs/database), CHANGELOG y BITACORA, con el procedimiento
+        de aplicacion y de reversa de la migracion 009 en AWS DEV para el humano. El manual de uso del
+        simulador (docs/SIMULADOR_USO.md) y docs/SIM_RV_V1_MODELO.md y docs/SIM_RV_V1_PENDIENTES.md dejan
+        de decir que la linea de tiempo esta pendiente o que la aplicacion no lee la evidencia: ahora
+        la lee solo a traves de la vista y la muestra completa en la linea de tiempo del lead.'
     - id: AC-6
       verification: human
       description: Tras aplicar la migracion 009 en AWS DEV y desplegar, un ejecutivo genera un PDF y
-        la simulacion aparece en la linea de tiempo del lead; un advisor sin acceso al lead no la ve.
+        la simulacion aparece en la linea de tiempo del lead con todos sus datos (incluido el grupo familiar
+        con sus fechas de nacimiento); un advisor sin acceso al lead no la ve.
     constraints:
     - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
       desde ramas o worktrees antiguos.'
@@ -261,18 +276,22 @@ items:
       aplica la migracion en DEV y resuelve el estado segun el procedimiento de H3.3.4.'
     - 'No asumir el numero de migracion: inspeccionar todo scripts/sql y la historia git antes de crearla
       (009 debe estar libre). No modificar las migraciones 005 a 008.'
-    - La aplicacion lee solo la vista saneada, nunca tpi.auditoria; el GRANT es solo SELECT sobre la vista;
-      sin SELECT, UPDATE ni DELETE sobre la tabla.
+    - La aplicacion lee solo la vista, nunca tpi.auditoria; el GRANT es solo SELECT sobre la vista; sin
+      SELECT, UPDATE ni DELETE sobre la tabla.
     - No modificar app/simulador_pension/** ni app/auth/**, ni dependencias; no reducir la cobertura minima
       (85%).
     - 'Dependencia funcional: SIM-EVIDENCIA-ENTRADAS (el evento ya trae tipo_escenario, version_modelo,
-      codigo_verificacion y pension_uf).'
+      codigo_verificacion y pension_uf). En tpi.auditoria.detalle, actor_subject, tipo_escenario, version_modelo
+      y codigo_verificacion estan en la raiz y la pension en resultado.pension_uf; las entradas (causante
+      y beneficiarios, con todos sus campos) estan en entradas.causante y entradas.beneficiarios y el
+      resultado en resultado.*; la vista expone la evidencia completa (decision del humano, 2026-10-19:
+      no se censura ningun dato registrado).'
     dependencies:
     - SIM-EVIDENCIA-ENTRADAS
     risk:
       level: medium
-      notes: Migracion de base de datos aplicada por el humano en AWS DEV; mitigado con vista saneada,
-        grant minimo, script de reversa y el procedimiento ya probado en H3.3.4.
+      notes: Migracion de base de datos aplicada por el humano en AWS DEV; mitigado con una vista de solo
+        lectura, grant minimo, script de reversa y el procedimiento ya probado en H3.3.4.
     scope:
       paths:
       - scripts/sql/**
@@ -284,6 +303,9 @@ items:
       - docs/database/**
       - CHANGELOG.md
       - docs/BITACORA.md
+      - docs/SIMULADOR_USO.md
+      - docs/SIM_RV_V1_MODELO.md
+      - docs/SIM_RV_V1_PENDIENTES.md
     status: active
 - id: CRM-LOOK-AND-FEEL
   title: Mejorar el look and feel del CRM
