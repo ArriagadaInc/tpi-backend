@@ -1,0 +1,20 @@
+{
+  "archivo": "tablas-mortalidad-cmf.xlsx",
+  "descripcion": "Tablas de Mortalidad Histórica (series 2004 a 2020) publicadas por la CMF; el simulador usa solo la serie 2020.",
+  "fuente": "https://www.cmfchile.cl/portal/principal/623/w4-article-99359.html",
+  "norma": "Norma de Carácter General N.º 495 de la CMF (24-feb-2023); tablas 2020 vigentes desde el 1-jul-2023",
+  "fecha_descarga": "2026-10-13",
+  "bytes": 141411,
+  "sha256": "5c8a01aa2dd8b356038d33894b77bc765e1fa2281d53c8e336c750a74feab747",
+  "origen_de_la_copia": "Investigación de homologación del simulador (REA, entrega 2026-10-13): investigacion/ejecucion-vejez-edad/tablas-mortalidad-cmf.xlsx, conservada sin editar",
+  "verificaciones": "Comparación de 3.636 valores (CB-H-2020 edades 0-110 y RV-M-2020 edades 20-110) contra el módulo CNU en Stata de la Superintendencia de Pensiones: coincidencia exacta. El archivo de la SP incluye además las edades femeninas 0-19, que este Excel no trae.",
+  "serie_usada": 2020,
+  "hojas_usadas": [
+    "Vejez-Hombres",
+    "Vejez-Mujeres",
+    "Sobrevivencia-Hombres",
+    "Sobrevivencia-Mujeres",
+    "Invalidez-Hombres",
+    "Invalidez-Mujeres"
+  ]
+}
