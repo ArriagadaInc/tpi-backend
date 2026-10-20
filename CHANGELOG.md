@@ -46,6 +46,10 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
   - El detalle es de solo escritura (la aplicación no lo lee), no altera el lead y no contiene nombres, RUT, correo ni teléfono; la retención es indefinida (decisión del humano, 2026-10-19), sin purga ni expiración, y queda pendiente su revisión normativa.
   - Las entradas guardadas bastan para reproducir el resultado y el código de verificación.
 
+### 🔒 Seguridad
+
+- **`certifi` 2026.7.22 → 2026.10.19** (`requirements/runtime.lock`): corrige GHSA-6q48-6c7w-9gw2, que `pip-audit` empezó a reportar el 2026-10-20 y hacía fallar el `Security Audit` de cualquier PR. Dependencia transitiva de ejecución; sin cambios de código.
+
 ### 🔄 Cambiado
 
 - **Lifecycle de ECR compatible con rollback: conservar 100 imágenes** (H3.2-ECR-LIFECYCLE)

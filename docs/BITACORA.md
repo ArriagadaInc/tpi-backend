@@ -43,6 +43,19 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
   (`tests/unit/test_web_app.py`) y de integración en PostgreSQL (`tests/integration/test_audit_simulation_view.py`) con
   filas de ambas formas (antigua y completa) leídas a través de `tpi.v_historial_simulaciones`.
 
+### 2026-10-20 - Seguridad: certifi 2026.7.22 → 2026.10.19 (GHSA-6q48-6c7w-9gw2)
+
+- Hallazgo: el CI del PR #97 (`SIM-HISTORIAL-EVENTOS-ANTIGUOS`) falló en `Security Audit`: `pip-audit` reportó 1 vulnerabilidad
+  conocida en `certifi 2026.7.22` (GHSA-6q48-6c7w-9gw2, corregida en `2026.10.19`). El aviso se publicó entre el último CI verde
+  de `main` (2026-10-20 14:49 UTC) y las 20:11 UTC, así que afecta a cualquier PR hasta que `main` lo incorpore.
+- Efecto en el Harness: la tarea no puede tocar dependencias y el guard `g_developer_evidence_valid` rechaza evidencia con un gate
+  en rojo, por lo que el Developer se detuvo correctamente (`no_progress`) en lugar de falsear la evidencia.
+- Cambio: `requirements/runtime.lock`, una línea: `certifi==2026.10.19` (última versión publicada). `dev.lock` no incluye `certifi`.
+- Verificación: `pip-audit --requirement requirements/runtime.lock` da «No known vulnerabilities found» con el cambio y reproduce
+  la vulnerabilidad con el lock anterior.
+- Solo dependencia transitiva de ejecución: sin cambios de código, base de datos ni configuración.
+- Siguiente paso: tras el merge, el PR de la tarea en curso debe traer `main` a su rama para que su CI pase.
+
 ### 2026-10-20 - Simulador: migración 009 aplicada en DEV y defecto con eventos antiguos (SIM-HISTORIAL-LINEA-TIEMPO)
 
 - Migración 009 aplicada y verificada en AWS DEV por el humano (2026-10-20, 10:34 hora de Chile) con una herramienta de una sola
