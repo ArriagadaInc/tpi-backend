@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "SEG-DESACOPLAR-STREAMLIT",
+  "created_at": "2026-10-21T14:32:50Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610211430-reviewer-sup8a9862",
+  "reviewed_sha": "87ef2bb188b0227db1caa955b151653acc2d4226",
+  "reviewed_tree": "deba86f819be64eed9cbac92044d6afc389efa98",
+  "pr_number": 103,
+  "ci": {
+    "run_id": "39614765827",
+    "conclusion": "success",
+    "status": "PASS",
+    "jobs": [
+      "Docker Build",
+      "Lint & Format",
+      "Release Tooling Validation",
+      "Security Audit",
+      "Tests"
+    ]
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "minor",
+      "file": "scripts/generate_coverage_report.py",
+      "summary": "Texto estatico aun menciona app/streamlit_app.py y test_streamlit_app.py (reporte generado, sin efecto en runtime).",
+      "required_action": "Limpiar en una tarea posterior."
+    },
+    {
+      "id": "F-2",
+      "severity": "info",
+      "file": "app/__init__.py",
+      "summary": "Docstrings/descripciones residuales mencionan Streamlit (app/__init__.py, database/connection.py, database/errors.py, security/masking.py). Sin imports; AC-1 protegido por test.",
+      "required_action": "Limpieza cosmetica opcional."
+    },
+    {
+      "id": "F-3",
+      "severity": "info",
+      "file": ".streamlit/",
+      "summary": "Directorio .streamlit/ pendiente de borrar por el humano en PR aparte (constraint de la tarea).",
+      "required_action": "Humano."
+    }
+  ],
+  "checks": [
+    {
+      "name": "check-1",
+      "result": "PASS",
+      "detail": "PR 103 head == reviewed_sha; base main c401bba == merge-base (arbol mergeado == revisado); MERGEABLE"
+    },
+    {
+      "name": "check-2",
+      "result": "PASS",
+      "detail": "CI verde en el SHA exacto (5 jobs): tests con cobertura >=85, ruff/black/mypy, bandit, pip-audit sin ignore-vuln, docker build y compose config"
+    },
+    {
+      "name": "check-3",
+      "result": "PASS",
+      "detail": "AC-1: test_streamlit_retired bloquea streamlit via meta-path e importa app.web.main y app.api.main; sin imports de streamlit en app/"
+    },
+    {
+      "name": "check-4",
+      "result": "PASS",
+      "detail": "AC-2: git grep sobre el SHA no halla importaciones de modulos borrados en app/, scripts, deployment ni workflows; funciones movidas (urls.py, formatting.py, log_health_status) identicas en contenido"
+    },
+    {
+      "name": "check-5",
+      "result": "PASS",
+      "detail": "AC-3: runtime.lock sin streamlit y deps exclusivas; pillow==13.0.0; jsonschema y deps movidas a dev.lock (usadas por scripts/harness); sin otras subidas"
+    },
+    {
+      "name": "check-6",
+      "result": "PASS",
+      "detail": "AC-4: --ignore-vuln eliminados en ci.yml y publish-dev-ecr-images.yml; prueba de excepcion eliminada; SEGURIDAD.md actualizado"
+    },
+    {
+      "name": "check-7",
+      "result": "PASS",
+      "detail": "AC-5: Dockerfile sin STREAMLIT_* ni COPY .streamlit, CMD uvicorn app.web.main; compose backoffice igual; healthcheck usa scripts.healthcheck_runtime"
+    },
+    {
+      "name": "check-8",
+      "result": "PASS",
+      "detail": "AC-6/AC-7: cambios de docs/CHANGELOG/BITACORA presentes; test de seguridad XSS reorientado a plantillas Jinja2 sin |safe"
+    },
+    {
+      "name": "check-9",
+      "result": "PASS",
+      "detail": "AC-8 es de verificacion humana tras el despliegue (clase C: merged_non_fast_path -> BLOCKED_HUMAN)"
+    },
+    {
+      "name": "check-10",
+      "result": "PASS",
+      "detail": "Cambios en API/web limitados a rutas de import; sin cambios de comportamiento ni de app/simulador_pension"
+    }
+  ],
+  "risks": [
+    "Clase C con cambio de dependencias de ejecucion: mitigado por smoke humano en DEV y rollback version-only al LKG",
+    "uvicorn, Jinja2, python-multipart e itsdangerous ahora declarados explicitos; versiones del lock sin cambio"
+  ]
+}

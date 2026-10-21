@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "SEG-DESACOPLAR-STREAMLIT",
+  "created_at": "2026-10-21T14:34:30Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610211433-deployer-supf79641",
+  "pr_number": 103,
+  "reviewed_sha": "87ef2bb188b0227db1caa955b151653acc2d4226",
+  "reviewed_tree": "deba86f819be64eed9cbac92044d6afc389efa98",
+  "release_sha": "0c9b16599c84e1bd4c3e198f6efa4733f1785e76",
+  "release_tree": "deba86f819be64eed9cbac92044d6afc389efa98",
+  "main_parent_sha": "c401bba951624bc52a37b9240f379a11f161b0ca",
+  "method": "squash",
+  "match_head_commit_used": true
+}

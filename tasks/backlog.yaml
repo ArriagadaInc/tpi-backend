@@ -1,152 +1,22 @@
 # Backlog del Harness. Ninguna tarea es current hasta que el humano la active.
 schema_version: 1
 items:
-- id: SEG-DESACOPLAR-STREAMLIT
-  title: Retirar Streamlit del proyecto y subir Pillow a 13 para eliminar la excepcion de pip-audit
-  priority: P1
-  category: hygiene
-  status: pending
-  change_class: C
-  summary: 'Streamlit (todas las versiones hasta la 1.66.0) exige pillow<13 y bloquea 8 avisos de Pillow
-    que solo se corrigen en 13.0.0; hoy pip-audit los ignora con una excepcion que vence el 2026-11-20.
-    La aplicacion en produccion (API y web del backoffice) solo usa uvicorn, pero 10 modulos de app/ aun
-    importan Streamlit (entre ellos app.auth y app.components.ui, que la API y la web importan). Decision
-    del humano (2026-10-21): retirar el codigo legado de Streamlit, subir Pillow y quitar la excepcion.
-    Es requisito previo de CRM-ADJUNTOS-COMENTARIOS.'
-  evidence:
-  - docs/SEGURIDAD.md, seccion 'Excepciones de pip-audit' (excepcion vigente, vence 2026-11-20) y tests/security/test_excepcion_pip_audit_pillow.py
-  - 'cadena de imports comprobada: app.web.main -> app.auth/__init__ -> app.auth.guards -> streamlit;
-    app.web.dependencies y app.web.main importan app.components.ui, que tambien importa streamlit; app.api.main
-    depende de app.auth'
-  - el compose de despliegue (deployment/aws/docker-compose.domainlocked.yml) arranca solo 'uvicorn app.api.main:app'
-    y 'uvicorn app.web.main:app'; el CMD del Dockerfile (streamlit run app/streamlit_app.py) queda siempre
-    sobrescrito
-  - 'dev.lock incluye runtime.lock (-r runtime.lock): Streamlit y Pillow 13 no pueden convivir en un mismo
-    entorno de pruebas'
-  - 'decision del humano 2026-10-21: opcion (a), retirar el codigo legado en lugar de aislarlo en un lock
-    y un job aparte'
-  - definida en sesion interactiva con Claude el 2026-10-21 a pedido del humano; agregada al backlog por
-    PR (no con approve.py define); se activa con approve.py activate
-  task:
-    id: SEG-DESACOPLAR-STREAMLIT
-    title: Retirar Streamlit del proyecto y subir Pillow a 13 para eliminar la excepcion de pip-audit
-    objective: Retirar Streamlit del proyecto (codigo legado, dependencias, Dockerfile y pruebas) y subir
-      Pillow a 13.x para que pip-audit pase sin ninguna excepcion y sea posible aceptar archivos de usuarios
-      en el futuro. La aplicacion en produccion (la API y la web del backoffice, ambas con uvicorn) no
-      cambia de comportamiento.
-    source:
-      type: story
-      ref: Excepcion de pip-audit para Pillow (PR 99) y decision del humano del 2026-10-21; definida en
-        sesion interactiva con Claude.
-    change_class: C
-    deploy_required: true
-    allow_lockfile_update: true
-    requires_human_acceptance: true
-    acceptance_criteria:
-    - id: AC-1
-      verification: automated
-      description: app.web.main y app.api.main se importan sin streamlit instalado (prueba que bloquea
-        el modulo y los importa) y ningun archivo de app/ importa streamlit (comprobacion estatica en
-        la misma prueba).
-    - id: AC-2
-      verification: automated
-      description: 'Se retira el codigo legado de Streamlit: se elimina todo modulo de app/ que importe
-        streamlit y no sea necesario para app.api.main ni app.web.main (por ejemplo app/streamlit_app.py,
-        app/backoffice_app.py, app/pages/**, app/presentation/public/** y app/internal_tools/registrar_solicitud.py,
-        a confirmar con un analisis de imports) junto con las pruebas que solo los ejercitan. Lo que la
-        API o la web usan de app/auth/guards.py y de app/components/ui.py (get_public_site_url, get_public_simulator_url,
-        format_currency_clp y lo que exporta app.auth) se MUEVE sin reescribirlo a modulos sin streamlit,
-        con sus pruebas. Antes de borrar cada modulo se verifica por busqueda que ninguna ruta de api
-        o web lo importa.'
-    - id: AC-3
-      verification: automated
-      description: requirements/runtime.lock y requirements/dev.lock no contienen streamlit ni las dependencias
-        que solo este traia; pillow queda en 13.0.0 o superior; 'pip-audit --requirement requirements/runtime.lock'
-        pasa SIN ningun --ignore-vuln y la instalacion de dev.lock no tiene conflictos. No se actualiza
-        ninguna otra dependencia salvo las que Pillow 13 exija (reportlab, si hiciera falta, con sus pruebas
-        del PDF).
-    - id: AC-4
-      verification: automated
-      description: 'En el MISMO PR se elimina la excepcion de pip-audit para Pillow: los --ignore-vuln
-        de ci.yml y publish-dev-ecr-images.yml, la prueba tests/security/test_excepcion_pip_audit_pillow.py
-        y la seccion ''Excepciones de pip-audit'' de docs/SEGURIDAD.md, que pasa a dejar constancia de
-        que se cerro y por que.'
-    - id: AC-5
-      verification: automated
-      description: El Dockerfile ya no instala ni configura Streamlit (sin variables STREAMLIT_*, sin
-        COPY de .streamlit) y su CMD por defecto arranca la web del backoffice con uvicorn; docker build
-        y docker compose config pasan en el CI; los servicios api y backoffice del compose de despliegue
-        no cambian.
-    - id: AC-6
-      verification: automated
-      description: El resto de las pruebas (unitarias, integracion, seguridad y e2e que sigan vigentes)
-        pasa con cobertura total >= 85%; el PDF del simulador se genera con Pillow 13 (pruebas del PDF
-        y del simulador en verde); ruff, black, mypy y bandit sin observaciones.
-    - id: AC-7
-      verification: both
-      description: 'Documentacion al dia: CHANGELOG y BITACORA; README, DEVELOPMENT_GUIDE, ARCHITECTURE,
-        ENGINEERING_STANDARDS y tests/README dejan de describir Streamlit como parte vigente del sistema;
-        docs/SEGURIDAD.md y docs/SIMULADOR_USO.md coherentes. Los documentos historicos de etapas se dejan
-        como historia con una nota de que Streamlit fue retirado.'
-    - id: AC-8
-      verification: human
-      description: 'Smoke humano en AWS DEV tras el despliegue: inicio de sesion en el backoffice, lista
-        y detalle de leads, asistente del simulador con descarga del PDF (con el logo) y la API publica
-        responde; sin errores.'
-    constraints:
-    - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
-      desde ramas o worktrees antiguos.'
-    - 'change_class C: tras el merge la transicion obligatoria es merged_non_fast_path hacia BLOCKED_HUMAN,
-      sin excepcion. No hay nada que aplicar en AWS: el humano resuelve el estado hacia PREPARING_DEPLOYMENT
-      (release completo), NUNCA hacia VERIFYING.'
-    - 'allow_lockfile_update: solo para quitar streamlit (y sus dependencias exclusivas) y subir pillow.
-      No hacer otras actualizaciones de dependencias.'
-    - 'Decision del humano (2026-10-21): se RETIRA el codigo legado de Streamlit; no se aisla en un lock
-      aparte. El historial de git lo conserva.'
-    - 'No cambiar el comportamiento de la API ni de la web (rutas, autorizacion, respuestas): lo que usan
-      se mueve, no se reescribe. No modificar app/simulador_pension/**. No reducir la cobertura minima
-      (85%).'
-    - 'El directorio .streamlit/ queda fuera del alcance del Developer (el guard no lo permite): se quita
-      solo la linea COPY del Dockerfile y el humano borra el directorio en un PR aparte.'
-    - 'Lecciones de las tareas anteriores: verificar con la cadena real de imports (no solo con busqueda
-      de texto) y comprobar el bump con ''pip-audit'' sobre runtime.lock antes de entregar.'
-    dependencies: []
-    risk:
-      level: medium
-      notes: Elimina codigo legado y cambia dependencias de ejecucion. Mitigado porque el compose de despliegue
-        solo usa uvicorn, por las pruebas, por el smoke humano en DEV y por el rollback version-only al
-        LKG.
-    scope:
-      paths:
-      - app/**
-      - tests/**
-      - requirements/**
-      - pyproject.toml
-      - Dockerfile
-      - docker-compose*.yml
-      - deployment/**
-      - .github/workflows/ci.yml
-      - .github/workflows/publish-dev-ecr-images.yml
-      - scripts/*.py
-      - docs/**
-      - README.md
-      - CHANGELOG.md
-    status: active
 - id: CRM-ADJUNTOS-COMENTARIOS
   title: Adjuntos (imagenes y PDF) en los comentarios del lead
   priority: P2
   category: functional
   status: blocked
   change_class: none
-  summary: 'Permitir que los usuarios suban imagenes y PDF en los comentarios de un lead. Es una funcion
-    de varias tareas (infraestructura, base de datos y codigo) y requiere resguardos de seguridad. Bloqueada
-    hasta que SEG-DESACOPLAR-STREAMLIT suba Pillow a 13 y elimine la excepcion de pip-audit: la prueba
-    tests/security/test_excepcion_pip_audit_pillow.py falla si aparece codigo de subida de archivos mientras
-    la excepcion exista. Antes de definir las tareas hay decisiones del humano pendientes.'
+  summary: Permitir que los usuarios suban imagenes y PDF en los comentarios de un lead. Es una funcion
+    de varias tareas (infraestructura, base de datos y codigo) y requiere resguardos de seguridad. SEG-DESACOPLAR-STREAMLIT
+    ya subio Pillow a 13 y elimino la excepcion de pip-audit (2026-10-21), asi que esa dependencia esta
+    cumplida; la prueba que vigilaba la excepcion se retiro con ella. Antes de definir las tareas hay
+    decisiones del humano pendientes.
   evidence:
   - 'peticion del humano el 2026-10-20: ''en el crm quiero incorporar una nueva feature, que en los comentarios
     el usuario pueda subir imagenes y pdf, etc.. dado esto, hay que tomar los resguardos'''
-  - 'dependencia: SEG-DESACOPLAR-STREAMLIT (Pillow >= 13 y sin excepciones de pip-audit)'
+  - 'dependencia cumplida: SEG-DESACOPLAR-STREAMLIT cerrada el 2026-10-21 (Pillow 13.0.0 y pip-audit sin
+    excepciones)'
   - 'decisiones del humano pendientes: tipos permitidos y tamano maximo, vista en linea o solo descarga,
     retencion y borrado (Ley 21.719) y quien puede ver los adjuntos'
   - 'resguardo: tipos permitidos verificados por el CONTENIDO (PDF, PNG y JPEG; nada de SVG, HTML, TIFF,
@@ -164,8 +34,6 @@ items:
     y borrado, y cifrado en reposo'
   - 'se divide en tareas: bucket e IAM (clase C, lo aplica el humano), tabla de adjuntos (clase D, con
     script de aplicacion probado como el de la migracion 009), codigo de subida y descarga, y escaneo'
-  dependencies:
-  - SEG-DESACOPLAR-STREAMLIT
 - id: SIM-CANARIA-MENSUAL
   title: Campana canaria mensual del simulador de renta vitalicia
   priority: P2
@@ -187,6 +55,25 @@ items:
     mediados de 2029'
   - definida en sesion interactiva con Claude el 2026-10-21; sin definicion de tarea hasta que haya una
     persona con credenciales del portal
+- id: SEG-LIMPIEZA-RESIDUOS-STREAMLIT
+  title: Limpiar los residuos cosmeticos de Streamlit que quedaron tras retirarlo
+  priority: P3
+  category: hygiene
+  status: pending
+  change_class: A
+  summary: 'SEG-DESACOPLAR-STREAMLIT retiro Streamlit del runtime y sus pruebas protegen que no vuelva
+    a importarse, pero quedaron menciones sin efecto: docstrings y descripciones en app/ (app/__init__.py,
+    app/database/connection.py, app/database/errors.py, app/security/masking.py), texto estatico en scripts/generate_coverage_report.py,
+    el script suelto check_streamlit.py de la raiz y los diagramas de docs/ARCHITECTURE.md que aun dibujan
+    ''Streamlit UI''. El directorio .streamlit/ lo borra el humano en un PR aparte (el guard no lo permite
+    al Developer).'
+  evidence:
+  - 'evidence/SEG-DESACOPLAR-STREAMLIT/reviewer/review-01.json, hallazgos F-1 (menor), F-2 (informativo)
+    y F-3 (humano: .streamlit/)'
+  - 'revision de origin/main el 2026-10-21 tras el despliegue: README, DEVELOPMENT_GUIDE y tests/README
+    ya dicen que Streamlit fue retirado; ARCHITECTURE.md lo declara retirado en una nota pero sus diagramas
+    lo siguen mostrando'
+  - 'sin efecto en el runtime: tests/unit/test_streamlit_retired.py impide los imports'
 - id: AUTOMATED_AUTHENTICATED_SMOKE
   title: Smoke autenticado automatizado con identidad sintetica
   priority: P3

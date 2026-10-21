@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "SEG-DESACOPLAR-STREAMLIT",
+  "created_at": "2026-10-21T15:20:28Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610211517-reviewer-supad9892",
+  "release_sha": "0c9b16599c84e1bd4c3e198f6efa4733f1785e76",
+  "reviewed_tree": "deba86f819be64eed9cbac92044d6afc389efa98",
+  "release_tree": "deba86f819be64eed9cbac92044d6afc389efa98",
+  "decision": "APPROVED",
+  "cause": null,
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "detail": "git rev-parse 0c9b165^{tree} = deba86f... = reviewed_tree de review-01 y merge-01"
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "detail": "origin/main (tras fetch) = 0c9b165; padre c401bba = main_parent_sha de merge-01"
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "detail": "gh run view 39622446165: conclusion success, status completed, headSha = release_sha"
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "detail": "ecr describe-images: app sha256:202e9133... y caddy sha256:070ce617... ACTIVE, con tag = release_sha"
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "detail": "describe-image-scan-findings: status COMPLETE, findings vacio y findingSeverityCounts vacio en ambos digests"
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "detail": "Reconstruccion independiente con build_domain_locked_bundle (template y constructor identicos al release segun git diff --quiet): sha256 c187fd6b...4d39, ChecksumSHA256 base64 wYf9a/m7mZfv3OdUBo5XKWIePzuKCrapQPftS0GbTTk=, 4815 bytes = candidate"
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "detail": "Zip con una sola entrada docker-compose.yml; sin build:; sin genialabs; imagenes solo por @sha256"
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "detail": "s3api head-object: ChecksumSHA256 igual al del bundle reconstruido, FULL_OBJECT, ContentLength 4815, key content-addressed con el sha256 del bundle"
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "detail": "describe-application-versions: SourceBundle bucket/key = objeto S3 verificado; Status UNPROCESSED"
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "detail": "commit 0c9b165 -> arbol deba86f -> publish run 39622446165 -> digests app/caddy -> bundle c187fd6b -> key S3 -> AV h3-seg-desacoplar-streamlit-0c9b165-domainlocked-r1"
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "detail": "describe-environments: tpi-backoffice-dev-green Ready/Green/Ok, VersionLabel h3-sim-historial-eventos-antiguos-793e718-domainlocked-r1 = LKG del candidate"
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "detail": "describe-application-versions del LKG: existe, SourceBundle presente, UNPROCESSED (misma condicion que la version vigente)"
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "detail": "ecr describe-images: app sha256:fd448749... y caddy sha256:3c8dd868... ACTIVE"
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "detail": "Inspeccion estructural del compose: variables sensibles solo como referencias con sustitucion (sin valores literales); los unicos literales son direcciones/upstreams del dominio TPI. candidate-01 sin valores sensibles. Sin scan auxiliar del humano; la comprobacion es estructural y limitada a los artefactos permitidos"
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "detail": "candidate-01 trae smoke_plan con checks HTTP, cadena de identidad, conteos de logs y smoke humano AC-8"
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "detail": "Un unico update-environment con --version-label; sin option settings, template, platform ni tier"
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "detail": "Verificado por inspeccion contra policies.yaml/contrato para el Deployer en DEPLOYING; no se ejecuto dry-run ni update-environment"
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "detail": "Un solo comando de cutover; espera por describe-environments sin reintento de promocion"
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "detail": "rollback_plan: un comando version-only al LKG nombrado, max_attempts 1, condicionado a las 7 condiciones de rollback_authorization"
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "detail": "Plan sin IAM, DNS, secretos ni migraciones; database_changes ninguna"
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "detail": "Smoke de logs solo por conteos; salidas AWS minimizadas en la evidencia"
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS",
+      "detail": "blast_radius_and_residues clasifica imagenes ECR, objeto S3 y AV como inertes hasta el cutover; environment sin mutar"
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "detail": "conditions del rollback_plan: un defecto puramente funcional no autoriza rollback"
+    }
+  ],
+  "findings": [
+    {
+      "id": "CF-1",
+      "severity": "info",
+      "file": ".streamlit/",
+      "summary": "Directorio .streamlit/ aun pendiente de borrar por el humano en PR aparte (ya anotado en review-01 F-3); sin efecto en la imagen porque el Dockerfile no lo copia.",
+      "required_action": "Humano, PR aparte."
+    },
+    {
+      "id": "CF-2",
+      "severity": "info",
+      "file": "evidence/SEG-DESACOPLAR-STREAMLIT/deployment/candidate-01.json",
+      "summary": "El bundle embebido en el artifact del publish run (sha256 28b285aa...) no es el desplegable; el desplegable es el domain-locked reconstruido y verificado.",
+      "required_action": "Ninguna."
+    }
+  ],
+  "risks": [
+    "Cambia el contenido de la imagen app (sin Streamlit, Pillow 13): validar con el smoke y el smoke humano AC-8 tras el cutover.",
+    "No se ejecuto dry-run de update-environment (no permitido en CANDIDATE_REVIEW)."
+  ]
+}

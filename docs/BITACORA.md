@@ -22,6 +22,50 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-21 - Seguridad: Streamlit retirado y Pillow 13 desplegados; excepción de pip-audit cerrada (SEG-DESACOPLAR-STREAMLIT)
+
+- Resultado: el humano aceptó AC-7 y AC-8 en DEV (inicio de sesión en el backoffice, lista y detalle de leads, asistente del simulador con
+  el PDF y su logo, y API pública). La tarea terminó en la ronda 0, sin rechazos del Reviewer.
+- Cambio (PR #103, `0c9b165`; 58 archivos, +365 y −3128 líneas): el código legado de Streamlit salió del repositorio, `pillow` subió a
+  13.0.0 y se retiró la excepción de `pip-audit` (8 avisos de Pillow 12.3.0, PR #99, que vencía el 2026-11-20) junto con su prueba guardia.
+  `pip-audit` pasa sin excepciones en el CI y en el publish. Al irse Streamlit hubo que declarar `uvicorn`, `Jinja2`, `python-multipart`
+  e `itsdangerous`, que antes llegaban como dependencias transitivas.
+- Release: publish a ECR en el primer intento (run 39622446165, escaneo COMPLETE sin hallazgos en las dos imágenes). Despliegue con un único
+  `update-environment` por version label, convergió en unos 46 s, entorno Ready/Green/Ok, sin rollback. Verificación automática PASS
+  (smoke HTTP 5/5, 0 coincidencias en los patrones de PII, secretos y `Traceback`).
+- Es una tarea de clase C que cambia la aplicación: tras el merge pasó por `BLOCKED_HUMAN` y el humano resolvió hacia
+  `PREPARING_DEPLOYMENT`. La definición de la tarea lo decía de forma explícita y el flujo funcionó sin ambigüedad.
+- Bloqueos del guard durante el desarrollo (dos sesiones del Developer, sin pérdida de trabajo): (1) el nombre del SDK de AWS escrito en un
+  comando de shell, porque la regla de `policies.yaml` busca esa palabra en cualquier comando; (2) la creación de un script suelto en la raíz
+  del worktree, que el guard no permite y que había sugerido el propio humano. Ambos eran de forma, no de fondo; el humano dejó notas en
+  `progress/current.md` y el Developer continuó desde su trabajo previo y entregó.
+- Incidente menor: la sesión AWS expiró antes del release. El orquestador lo detectó antes de lanzar al Deployer y pidió reautenticar,
+  sin perder estado.
+- Lecciones:
+  - Una instrucción al Developer no puede pedir algo que el guard prohíbe: las rutas permitidas y las reglas de texto de `policies.yaml` se
+    revisan antes de dar una indicación operativa.
+  - Las dependencias exclusivas de Streamlit (altair, pandas, pyarrow, pydeck, protobuf y watchdog, entre otras) salieron del lock de
+    runtime; `jsonschema` pasó al lock de desarrollo porque lo usa `scripts/harness/common.py`. El lock de desarrollo se verificó con
+    `pip install --dry-run`, que resuelve sin conflictos.
+  - Con la excepción de Pillow cerrada vuelve a ser posible aceptar archivos de usuarios sin una excepción de seguridad vigente: se
+    desbloquea la dependencia de `CRM-ADJUNTOS-COMENTARIOS` (sigue pendiente de decisiones del humano).
+- Pendiente: el humano borra `.streamlit/` en un PR aparte (el guard no lo permite al Developer). Quedan residuos cosméticos sin efecto
+  en el runtime (docstrings en `app/`, texto en `scripts/generate_coverage_report.py`, `check_streamlit.py` en la raíz y los diagramas de
+  `docs/ARCHITECTURE.md`); se registran en el backlog como `SEG-LIMPIEZA-RESIDUOS-STREAMLIT`.
+
+### 2026-10-21 - Harness: tarea SEG-DESACOPLAR-STREAMLIT cerrada (DONE)
+
+- Titulo: Retirar Streamlit del proyecto y subir Pillow a 13 para eliminar la excepcion de pip-audit
+- Evidencia: `evidence/SEG-DESACOPLAR-STREAMLIT/` y `tasks/completed/SEG-DESACOPLAR-STREAMLIT.yaml`.
+- release_sha: `0c9b16599c84e1bd4c3e198f6efa4733f1785e76`
+- pr_number: `103`
+- application_version: `h3-seg-desacoplar-streamlit-0c9b165-domainlocked-r1`
+- bundle_sha256: `c187fd6bf9bb9997efdce754068e5729621e3f3b8a0ab6a940f7ed4b419b4d39`
+- lkg: `h3-sim-historial-eventos-antiguos-793e718-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `0c9b16599c84e1bd4c3e198f6efa4733f1785e76`
+- verification: `PASS`
+
 ### 2026-10-21 - Seguridad: retirada de Streamlit del runtime y Pillow 13 (SEG-DESACOPLAR-STREAMLIT, en desarrollo)
 
 - Cambio (change_class C, `allow_lockfile_update` solo para quitar Streamlit y subir Pillow): se retira el código legado de Streamlit

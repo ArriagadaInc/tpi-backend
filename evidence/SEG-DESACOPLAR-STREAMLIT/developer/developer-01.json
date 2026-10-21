@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "SEG-DESACOPLAR-STREAMLIT",
+  "created_at": "2026-10-21T14:30:00Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610211330-developer-sup3752c0",
+  "head_sha": "87ef2bb188b0227db1caa955b151653acc2d4226",
+  "branch": "harness/SEG-DESACOPLAR-STREAMLIT-retirar-streamlit",
+  "pr_number": 103,
+  "change_class": "C",
+  "tests": {
+    "command": "Local (worktree, Python 3.13.13): python -m pytest tests/unit tests/security tests/e2e --no-cov -q -> 869 passed; los 11 fallos restantes son tests dependientes de PostgreSQL (executive_dashboard render/service), no disponible localmente. python -m pytest tests/unit/test_streamlit_retired.py --no-cov -q -> 2 passed. CI PR #103 (Python 3.12): pytest tests/ --cov=app --cov-fail-under=85 -> PASS (job Tests).",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "docker_compose_config": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "tests/unit/test_streamlit_retired.py (nuevo): (a) instala un meta-path blocker que lanza ImportError para 'streamlit'/'streamlit.*' y, en un subproceso, importa app.web.main y app.api.main (imprime IMPORT_OK); (b) recorre app/**/*.py y falla si alguna linea empieza con 'import streamlit' o 'from streamlit'. Ambos tests pasan (local y CI)."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "Se eliminan app/streamlit_app.py, app/backoffice_app.py, app/pages/, app/presentation/, app/internal_tools/, app/components/ui.py, app/auth/guards.py, app/runtime.py y las pruebas que solo los ejercitaban (tests/e2e/test_*.py de Streamlit, tests/unit/test_public_solicitud_form.py, test_runtime.py, test_streamlit_test_utils.py, tests/streamlit_test_utils.py). Se mueven SIN reescribir a modulos sin Streamlit: get_public_site_url/get_public_simulator_url -> app/components/urls.py, format_currency_clp -> app/components/formatting.py, log_health_status -> app/database/healthcheck.py; app.auth deja de exportar get_current_user/logout/require_authenticated_user (solo Streamlit). Verificado por grep que app/ no importa los modulos borrados; la cadena real de imports (AC-1) y los tests movidos (test_backoffice_public_site_link, test_crm_lite_helpers, test_database_healthcheck) pasan."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "requirements/runtime.lock sin streamlit ni sus dependencias exclusivas (altair, pandas, pyarrow, pydeck, protobuf, watchdog, tenacity, toml, GitPython, gitdb, smmap, blinker, narwhals, ast_serialize, pytokens, librt, annotated-doc, httptools, websockets, packaging, platformdirs, attrs, requests, certifi, jsonschema, jsonschema-specifications, referencing, rpds-py); pillow==13.0.0. uvicorn/Jinja2/python-multipart/itsdangerous declarados explicitos en pyproject (antes transitivos via Streamlit). 'pip-audit --requirement requirements/runtime.lock' -> 'No known vulnerabilities found' SIN --ignore-vuln. 'pip install --dry-run --requirement requirements/dev.lock' resuelve sin conflictos (jsonschema y deps pasaron a dev.lock porque los usa scripts/harness/common.py). Sin otras actualizaciones de dependencias."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "Se eliminan los --ignore-vuln de .github/workflows/ci.yml y .github/workflows/publish-dev-ecr-images.yml (pip-audit queda con 'run: pip-audit --requirement requirements/runtime.lock'), se elimina tests/security/test_excepcion_pip_audit_pillow.py y la seccion 'Excepciones de pip-audit' de docs/SEGURIDAD.md pasa a 'Excepcion cerrada' documentando por que y como se cerro."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "Dockerfile sin STREAMLIT_* ni COPY de .streamlit, con CMD ['uvicorn','app.web.main:app','--host','0.0.0.0','--port','8501']; el backoffice de docker-compose.yml usa el mismo comando uvicorn (el compose de despliegue deployment/aws/docker-compose.ecr.yml ya usaba uvicorn y no cambia). CI job Docker Build PASS (docker build + docker compose config + compose up de readiness)."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "evidence": "CI PR #103 verde: Tests (pytest --cov=app --cov-fail-under=85, incluye el PDF/simulador con Pillow 13 via reportlab), Lint & Format (ruff/black/mypy), Security Audit (bandit + pip-audit), Docker Build, Release Tooling Validation. Local: ruff/black/mypy/bandit PASS; pytest de los archivos afectados PASS (--no-cov)."
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "evidence": "README.md, docs/DEVELOPMENT_GUIDE.md, docs/ARCHITECTURE.md (nota de retiro), tests/README.md, docs/SEGURIDAD.md actualizados; CHANGELOG.md y docs/BITACORA.md con entrada del cambio. docs/ENGINEERING_STANDARDS.md y docs/SIMULADOR_USO.md no mencionan Streamlit (sin cambios). Los documentos historicos de etapas se dejan como historia (nota en ARCHITECTURE.md y en la bitacora)."
+    },
+    {
+      "id": "AC-8",
+      "status": "pending_verification",
+      "evidence": "Smoke humano en AWS DEV tras el despliegue (login del backoffice, lista/detalle de leads, asistente del simulador con descarga del PDF y API publica). Es clase C: tras el merge la transicion es merged_non_fast_path -> BLOCKED_HUMAN y el humano resuelve hacia PREPARING_DEPLOYMENT."
+    }
+  ],
+  "files_changed": [
+    "app/ (eliminados: streamlit_app.py, backoffice_app.py, pages/, presentation/, internal_tools/, components/ui.py, auth/guards.py, runtime.py)",
+    "app/components/formatting.py (nuevo)",
+    "app/components/urls.py (nuevo)",
+    "app/components/__init__.py",
+    "app/auth/__init__.py",
+    "app/database/healthcheck.py",
+    "app/web/dependencies.py",
+    "app/web/main.py",
+    "scripts/healthcheck_runtime.py",
+    "pyproject.toml",
+    "requirements/runtime.lock",
+    "requirements/dev.lock",
+    "Dockerfile",
+    "docker-compose.yml",
+    ".github/workflows/ci.yml",
+    ".github/workflows/publish-dev-ecr-images.yml",
+    "tests/ (eliminados tests E2E/unit de Streamlit y test_excepcion_pip_audit_pillow.py; nuevo test_streamlit_retired.py; ajustados conftest, security y unit)",
+    "README.md",
+    "docs/ARCHITECTURE.md",
+    "docs/BITACORA.md",
+    "docs/DEVELOPMENT_GUIDE.md",
+    "docs/SEGURIDAD.md",
+    "CHANGELOG.md",
+    "tests/README.md"
+  ],
+  "assumptions": [
+    "La suite completa con cobertura (>= 85%) y los jobs docker se verifican en CI (PR #103 verde: Lint & Format, Tests, Security Audit, Docker Build, Release Tooling Validation). Localmente corrieron ruff/black/mypy/bandit y pytest de los archivos afectados (--no-cov), porque la suite completa requiere PostgreSQL local; los 11 fallos locales (executive_dashboard) son por falta de BD y pasan en CI.",
+    "El directorio .streamlit/ queda fuera del alcance del Developer (el guard no lo permite): solo se quita la linea COPY del Dockerfile; el humano borra el directorio en un PR aparte (constraint de la tarea).",
+    "La API y la web no cambian de comportamiento: lo que usaban se mueve (no se reescribe) y el valor de datos 'origen_lead=formulario_streamlit' se conserva (no es un import de Streamlit, es un valor historico persistido).",
+    "jsonschema (y sus deps attrs/jsonschema-specifications/referencing/rpds-py) se declaran en dev.lock porque scripts/harness/common.py lo importa; antes llegaba transitivamente via streamlit (altair). No se toca ninguna otra dependencia.",
+    "pillow==13.0.0 lo acepta reportlab==5.0.1 (pillow>=9.0.0); no hizo falta subir reportlab."
+  ],
+  "migrations_included": false
+}
