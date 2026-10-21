@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "SIM-HISTORIAL-EVENTOS-ANTIGUOS",
+  "created_at": "2026-10-21T00:39:15Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610210036-reviewer-sup2c81a3",
+  "release_sha": "793e718aaf8f4dcd52e1cd12644f8b514984202f",
+  "reviewed_tree": "f48c0e753855f0d394d284a19461fb3a09e79c0e",
+  "release_tree": "f48c0e753855f0d394d284a19461fb3a09e79c0e",
+  "decision": "APPROVED",
+  "cause": null,
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse 793e718^{tree} == f48c0e7"
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "ancestro de origin/main (28467f9) tras fetch"
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "run 39516711668 success; headSha=28467f9 (main con excepcion pip-audit), manifest runtime_git_sha=793e718"
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "app fd448749 y caddy 3c8dd868 ACTIVE en ECR"
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "scan COMPLETE, findingSeverityCounts vacio en ambos digests"
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "reconstruccion independiente sha256 8c341278...aa79 == candidate"
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "entrada unica docker-compose.yml; sin build ni dominio legado"
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "ChecksumSHA256 jDQSeP3w... FULL_OBJECT, 4815 bytes"
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "SourceBundle = key S3 del candidate, UNPROCESSED"
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "commit -> digests -> bundle -> key -> AV"
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "environment Ready/Green/Ok con VersionLabel LKG e4476c3"
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "AV LKG existe con SourceBundle intacto"
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "app 74d8dab2 y caddy c65ca702 ACTIVE"
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "bundle solo referencias a variables sensibles, sin valores literales; evidencia sin secretos"
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS"
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "sin option settings"
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "inspeccion; no se ejecuto dry-run"
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS"
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "max_attempts 1, 7 condiciones de rollback_authorization"
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS"
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS"
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS"
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS"
+    }
+  ],
+  "findings": [
+    {
+      "id": "C-1",
+      "severity": "info",
+      "file": "evidence/SIM-HISTORIAL-EVENTOS-ANTIGUOS/deployment/candidate-01.json",
+      "summary": "headSha del publish run es 28467f9 (main posterior), no el release; el manifest confirma source 793e718 y el bundle reconstruido coincide.",
+      "required_action": "ninguna"
+    }
+  ]
+}

@@ -22,6 +22,50 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-21 - Simulador: línea de tiempo tolerante a eventos antiguos desplegada e incidente de release (SIM-HISTORIAL-EVENTOS-ANTIGUOS)
+
+- Resultado: el humano aceptó AC-5 y AC-6 en DEV. El lead que daba «Internal Server Error» abre sin error y su línea de tiempo muestra
+  sus 5 simulaciones: 4 antiguas con la nota «Registro anterior al guardado de entradas…» y 1 completa con su detalle.
+- Incidente en el release (cronología, 2026-10-20):
+  1. El CI del PR #97 falló en `Security Audit`: `certifi 2026.7.22` (GHSA-6q48-6c7w-9gw2). Se corrigió con el PR #98
+     (`certifi 2026.10.19`); el Developer trajo `main` a su rama y entregó.
+  2. El publish del release `793e718` falló: el escaneo de ECR no terminó en los 5 minutos del workflow y quedó atascado más de
+     47 minutos (lo normal es de 14 a 35 s). El Deployer se detuvo en `BLOCKED_HUMAN` (`preparation_failed`).
+  3. Se borraron las dos imágenes del release con una herramienta de una sola vez (espera opcional del escaneo, frase de
+     confirmación, probada con 19 escenarios simulados) y se relanzó el publish. Volvió a fallar, esta vez en `Security Audit`:
+     8 avisos nuevos de `pillow 12.3.0`, corregidos solo en Pillow 13.0.0.
+  4. `streamlit` (hasta la 1.66.0) exige `pillow<13`, por lo que no se podía subir. Además el workflow audita el lock del commit
+     que publica, así que `793e718` no podía pasar sin cambiar el workflow.
+  5. Decisión del humano: excepción acotada de `pip-audit` para esos 8 IDs (PR #99, vence 2026-11-20, vigilada por una prueba del
+     CI). El publish de `793e718` terminó bien (run 39516711668, escaneo COMPLETE sin hallazgos); el humano resolvió a
+     `PREPARING_DEPLOYMENT`; siguieron candidato, gate, despliegue, verificación y aceptación.
+- Lecciones:
+  - El workflow de publicación toma su definición de `main` pero audita el lock del commit que publica: una excepción puesta en
+    `main` también vale para un commit ya mergeado, lo que evitó rehacer el release.
+  - Un escaneo de ECR puede atascarse; esperar a uno atascado no sirve, hay que borrar las imágenes y volver a publicar para que se
+    escaneen de nuevo. La espera de 5 minutos del workflow es corta.
+  - Los avisos de dependencias aparecen sin cambiar el código: un PR verde por la mañana puede fallar por la tarde.
+  - Antes de aceptar una excepción de seguridad hay que preguntar por los planes del producto: la futura función de adjuntos en los
+    comentarios invalidó el argumento «la app no recibe archivos de usuarios» y obligó a ponerle vencimiento y una guardia.
+- Backlog (definido en este PR de cierre): `H3.2-ECR-SCAN-WAIT` y `SEG-DESACOPLAR-STREAMLIT` (decisión del humano: retirar el código
+  legado de Streamlit, no aislarlo), listas para activar; `CRM-ADJUNTOS-COMENTARIOS` (bloqueada hasta la anterior, con los resguardos
+  como requisitos) y `SIM-CANARIA-MENSUAL` (requiere una persona con credenciales del portal).
+- Estado: la excepción de Pillow sigue vigente hasta 2026-11-20 o hasta que `SEG-DESACOPLAR-STREAMLIT` la elimine, lo que ocurra
+  primero; ningún archivo de usuarios puede aceptarse antes.
+
+### 2026-10-21 - Harness: tarea SIM-HISTORIAL-EVENTOS-ANTIGUOS cerrada (DONE)
+
+- Titulo: Linea de tiempo del lead: no fallar con simulaciones registradas antes de guardar sus entradas
+- Evidencia: `evidence/SIM-HISTORIAL-EVENTOS-ANTIGUOS/` y `tasks/completed/SIM-HISTORIAL-EVENTOS-ANTIGUOS.yaml`.
+- release_sha: `793e718aaf8f4dcd52e1cd12644f8b514984202f`
+- pr_number: `97`
+- application_version: `h3-sim-historial-eventos-antiguos-793e718-domainlocked-r1`
+- bundle_sha256: `8c341278fdf069cd925219bf6d7004c963ac485738a04a4c17c3a6f5e000aa79`
+- lkg: `h3-sim-historial-linea-tiempo-e4476c3-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `793e718aaf8f4dcd52e1cd12644f8b514984202f`
+- verification: `PASS`
+
 ### 2026-10-20 - Seguridad: excepción acotada de pip-audit para 8 avisos de Pillow 12.3.0
 
 - Hallazgo: poco después del bump de `certifi` (#98) `pip-audit` empezó a reportar 8 avisos en `pillow 12.3.0`

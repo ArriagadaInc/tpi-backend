@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "SIM-HISTORIAL-EVENTOS-ANTIGUOS",
+  "created_at": "2026-10-20T20:21:20Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610201957-developer-sup8256c2",
+  "head_sha": "ccfa899d9e7f3c7a723e5d475d93c6bae32ecfee",
+  "branch": "harness/SIM-HISTORIAL-EVENTOS-ANTIGUOS-eventos-antiguos",
+  "pr_number": 97,
+  "change_class": "A",
+  "tests": {
+    "command": "CI Tests job (pytest tests/ --cov=app --cov-report=xml --cov-fail-under=85, Python 3.12 + PostgreSQL) verde en PR #97 (5/5 checks menos Security Audit, que falla por pip-audit ajeno a esta tarea). Local sin BD: pytest tests/unit/test_sim_historial_timeline_presentation.py --no-cov = 9 passed; pytest tests/unit/test_web_app.py --no-cov = 40 passed; pytest tests/integration/test_audit_simulation_view.py --collect-only = 7 collected (la ejecucion requiere PostgreSQL, ausente en este entorno). pytest tests/unit --no-cov = 774 passed, 11 failed (tests del dashboard ejecutivo que requieren DATABASE_HOST/PORT/NAME/USER, ausentes en este entorno y ajenos a esta tarea). La cobertura total la valida el CI Tests job del SHA publicado (verde).",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "FAIL",
+    "docker_build": "PASS",
+    "ci": "FAIL"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "Un evento de simulacion antiguo (la vista devuelve entradas y resultado NULL) no rompe el detalle del lead. build_timeline_items marca es_legacy=true cuando entradas y resultado son ambos None y normaliza la evidencia; la plantilla lead_detail_panel.html renderiza para esos eventos 'Simulacion generada' con ejecutivo (actor_subject), escenario (tipo_escenario), version del modelo (version_modelo) y codigo (codigo_verificacion), mas la nota 'Registro anterior al guardado de entradas: solo se conservan escenario, version y codigo', sin el detalle desplegable. Cubierto por tests/unit/test_sim_historial_timeline_presentation.py::test_legacy_simulation_is_flagged_and_normalized y tests/unit/test_web_app.py::test_detail_timeline_renders_legacy_simulation_with_note_and_no_detail (respuesta 200 y ausencia de 'Ver detalle de la simulacion')."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "La presentacion normaliza entradas y resultado a claves fijas con fallback None (causante con sexo/fecha_nacimiento, beneficiarios como lista de dicts con parentesco/sexo/fecha_nacimiento/invalidez/comun), por lo que la plantilla nunca encadena atributos sobre un valor indefinido. Cubre entradas o resultado ausentes, entradas sin causante, beneficiarios nulo/vacio, beneficiario con campos faltantes y fechas nulas. Cubierto por tests/unit/test_sim_historial_timeline_presentation.py (test_partial_entradas_without_causante_or_beneficiarios_does_not_raise, test_beneficiario_with_missing_fields_and_null_dates_does_not_raise) y tests/unit/test_web_app.py::test_detail_timeline_tolerates_partial_simulation_evidence_without_500 (200 sin 500)."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "Sin regresion: un evento con evidencia completa se muestra como hasta ahora (resumen con escenario/pension/codigo y detalle desplegable con entradas, causante, beneficiarios con fecha de nacimiento, invalidez, relacion y resultado). El orden por fecha (sort por timestamp desc + rank de fuente) y la visibilidad (el timeline se construye dentro de _resolve_detail_context solo cuando selected_lead no es None, 404 si no es visible) no cambian. Cubierto por tests/unit/test_web_app.py::test_detail_timeline_renders_simulation_with_summary_and_full_detail (regresion, sigue verde) y tests/unit/test_sim_historial_timeline_presentation.py (orden y rank)."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "Pruebas unitarias de presentacion (tests/unit/test_sim_historial_timeline_presentation.py) y de render (tests/unit/test_web_app.py), y de integracion en PostgreSQL (tests/integration/test_audit_simulation_view.py::test_view_exposes_legacy_and_complete_simulation_evidence_forms) con filas de tpi.auditoria de ambas formas (antigua y completa) leidas a traves de tpi.v_historial_simulaciones y verificando es_legacy true/false. Cobertura total >= 85% validada por el CI Tests job del SHA publicado (verde en PR #97)."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "Documentacion actualizada: CHANGELOG.md (seccion Corregido), docs/BITACORA.md (entrada de desarrollo) y docs/SIMULADOR_USO.md ('Donde se ve despues'): las simulaciones anteriores al 2026-10-16 solo conservan escenario, version del modelo y codigo, y la linea de tiempo lo indica con la nota."
+    },
+    {
+      "id": "AC-6",
+      "status": "pending_verification",
+      "evidence": "Smoke humano en AWS DEV (requires_human_acceptance): el lead ffd67c7a-8c1d-4891-8a6e-fa049446facc abre sin error y su linea de tiempo muestra sus 5 simulaciones: 4 antiguas con la nota y 1 completa con su detalle desplegable."
+    }
+  ],
+  "files_changed": [
+    "CHANGELOG.md",
+    "app/web/presentation.py",
+    "app/web/static/css/app.css",
+    "app/web/templates/lead_detail_panel.html",
+    "docs/BITACORA.md",
+    "docs/SIMULADOR_USO.md",
+    "tests/integration/test_audit_simulation_view.py",
+    "tests/unit/test_sim_historial_timeline_presentation.py",
+    "tests/unit/test_web_app.py"
+  ],
+  "assumptions": [
+    "Un evento es 'antiguo' (es_legacy) cuando la vista devuelve entradas y resultado ambos NULL (contrato exacto de AC-1); si solo falta uno de los dos, el evento se trata como evidencia completa parcial y se muestra el detalle tolerando lo ausente (AC-2).",
+    "El resumen del evento antiguo muestra la version del modelo (version_modelo) y el codigo, ademas del escenario, porque AC-1 lo pide; el ejecutivo se muestra como actor_subject en la meta de la linea de tiempo, igual que en los eventos completos.",
+    "El evento completo conserva exactamente el texto de resumen anterior (escenario/pension/codigo, sin 'Modelo'), para no regresionar AC-3.",
+    "pip-audit falla en CI por una vulnerabilidad PREEXISTENTE y AJENA a esta tarea: certifi 2026.7.22 -> GHSA-6q48-6c7w-9gw2 (fix 2026.10.19). Esta tarea no modifica dependencias (restriccion explicita 'ni dependencias' y scope sin requirements/**), por lo que no se corrige aqui; requiere decision humana / tarea separada. Por eso quality_gates.pip_audit y quality_gates.ci quedan en FAIL.",
+    "En este entorno local no hay PostgreSQL/DATABASE_* configurados, por lo que los tests de integracion y los tests unitarios del dashboard ejecutivo que requieren BD no se ejecutaron localmente; la suite completa, la cobertura y la integracion las valida el CI Tests job del SHA publicado (verde en PR #97)."
+  ],
+  "migrations_included": false
+}
