@@ -12,7 +12,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.templating import Jinja2Templates
 
 from app.auth import build_auth_provider
-from app.components.ui import format_currency_clp
+from app.components.formatting import format_currency_clp
 from app.config import get_settings
 from app.models.crm_states import crm_state_label, normalize_crm_state_for_display
 from app.web.dashboard_presentation import format_dias, format_int, format_percentage

@@ -1,5 +1,11 @@
 # Diagrama de Arquitectura - Etapa 3
 
+> **Nota (2026-10-21):** este documento es histórico de la Etapa 3. La capa de
+> presentación Streamlit que describe fue retirada en `SEG-DESACOPLAR-STREAMLIT`.
+> La arquitectura vigente es la web del backoffice (`app/web/main.py`,
+> FastAPI + Jinja2, uvicorn) y la API pública (`app/api/main.py`); ver
+> `docs/DEVELOPMENT_GUIDE.md` y `docs/H3_3_CRM_LITE_WEB_UX.md`.
+
 ## Flujo de Registro de Solicitud
 
 ```mermaid

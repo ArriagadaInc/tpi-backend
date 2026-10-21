@@ -11,7 +11,7 @@ class FakeLogger:
 
 
 def test_main_returns_true_when_health_is_ready(monkeypatch) -> None:
-    monkeypatch.setattr(healthcheck_runtime, "configure_logging", lambda: FakeLogger())
+    monkeypatch.setattr(healthcheck_runtime, "_configure_logging", lambda: FakeLogger())
     monkeypatch.setattr(
         healthcheck_runtime,
         "full_health_check",
@@ -32,7 +32,7 @@ def test_main_returns_true_when_health_is_ready(monkeypatch) -> None:
 
 
 def test_main_returns_false_when_health_is_not_ready(monkeypatch) -> None:
-    monkeypatch.setattr(healthcheck_runtime, "configure_logging", lambda: FakeLogger())
+    monkeypatch.setattr(healthcheck_runtime, "_configure_logging", lambda: FakeLogger())
     monkeypatch.setattr(
         healthcheck_runtime,
         "full_health_check",

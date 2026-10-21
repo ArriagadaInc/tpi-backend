@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
@@ -148,3 +149,50 @@ def test_full_health_check_aggregates_component_results(
     assert result["all_ready"] is True
     assert result["connected"] is True
     assert result["connection"]["leads_accessible"] is True
+
+
+def test_log_health_status_reports_success_without_sensitive_details(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    logger = logging.getLogger("tpi.backoffice.test")
+
+    with caplog.at_level(logging.INFO, logger="tpi.backoffice.test"):
+        healthcheck.log_health_status(
+            {
+                "all_ready": True,
+                "connected": True,
+                "connection": {
+                    "schema_accessible": True,
+                    "leads_accessible": True,
+                    "message": "Base de datos conectada correctamente",
+                    "error_code": None,
+                },
+            },
+            logger,
+        )
+
+    assert "Health check completed" in caplog.text
+    assert "password" not in caplog.text.lower()
+    assert "postgresql://" not in caplog.text.lower()
+
+
+def test_log_health_status_does_not_report_connection_success_when_not_ready(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    logger = logging.getLogger("tpi.backoffice.test")
+
+    with caplog.at_level(logging.WARNING, logger="tpi.backoffice.test"):
+        healthcheck.log_health_status(
+            {
+                "all_ready": False,
+                "connected": True,
+                "connection": {"schema_accessible": False, "leads_accessible": False},
+                "schema": {"exists": False},
+                "tables": {"all_present": False},
+                "catalogs": {"all_ready": False},
+            },
+            logger,
+        )
+
+    assert "Health check failed" in caplog.text
+    assert "Base de datos conectada correctamente" not in caplog.text

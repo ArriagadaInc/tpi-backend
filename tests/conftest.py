@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.streamlit_test_utils import PROJECT_ROOT, build_app_test
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 project_root = PROJECT_ROOT
 sys.path.insert(0, str(project_root))
@@ -80,9 +80,3 @@ def reset_runtime_state() -> None:
     yield
     reset_pool()
     clear_settings_cache()
-
-
-@pytest.fixture(scope="session")
-def streamlit_app_factory():
-    """Build AppTest instances from repository-relative paths."""
-    return build_app_test

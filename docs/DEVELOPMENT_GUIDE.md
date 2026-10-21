@@ -6,7 +6,7 @@ TPI has two presentation surfaces that share the same application core:
 
 ```text
 Static public frontend              Private backoffice
-front/ + FastAPI                    app/backoffice_app.py
+front/ + FastAPI API                app/web/main.py (FastAPI + Jinja2, uvicorn)
           |                                  |
           |                           SimpleDevAuth (DEV only)
           +---------------+------------------+
@@ -18,16 +18,15 @@ front/ + FastAPI                    app/backoffice_app.py
                 PostgreSQL        SNS publisher
 ```
 
-The public site never imports the authentication boundary. The backoffice calls
-`require_authenticated_user()` before reading or rendering operational data.
+The public site never imports the authentication boundary. The backoffice
+requires an authenticated session before reading or rendering operational data.
 Both presentations use the same Pydantic contracts and `SolicitudService`; no
-Streamlit page accesses PostgreSQL or SNS directly.
+page or route accesses PostgreSQL or SNS directly.
 
 The public form is the canonical lead-creation channel. The private backoffice
 is limited to consultation, traceability and DEV cleanup; it does not expose a
-second operational registration page. The former Streamlit form remains only
-as `app/internal_tools/registrar_solicitud.py` for temporary developer
-diagnostics and is outside Streamlit's page navigation.
+second operational registration page. The legacy Streamlit UI was retired
+(SEG-DESACOPLAR-STREAMLIT); the repository history keeps it.
 
 ## Local demo
 
@@ -59,17 +58,17 @@ The public header exposes `Acceso Backoffice` only on approved local/DEV
 hostnames. It derives the matching private hostname while preserving the local
 port; no credentials, tokens, or query parameters are transferred.
 
-After authentication, the backoffice sidebar (Streamlit) and the CRM Lite Web UX
-topbar (FastAPI/Jinja2) display `Volver al sitio` only when `TPI_PUBLIC_SITE_URL`
-matches the approved environment URL: local uses `http://tpi.localhost:8080/` and
-temporary AWS DEV uses `https://dev.tupensioninteligente.cl/`. Both surfaces reuse
-`get_public_site_url()`, which fails closed on absent or unapproved URLs and never
-carries query, fragment, credentials, or session data. The Web UX link appears only
-for authenticated users, never on the login page.
+After authentication, the backoffice web topbar (FastAPI/Jinja2) displays
+`Volver al sitio` only when `TPI_PUBLIC_SITE_URL` matches the approved
+environment URL: local uses `http://tpi.localhost:8080/` and temporary AWS DEV
+uses `https://dev.tupensioninteligente.cl/`. It reuses `get_public_site_url()`,
+which fails closed on absent or unapproved URLs and never carries query,
+fragment, credentials, or session data. The link appears only for authenticated
+users, never on the login page.
 
 Running services are `postgres`, one-shot `db-init`, `api`, `backoffice` and
-`caddy`. Only Caddy publishes `127.0.0.1:8080` and `127.0.0.1:443`; API,
-Streamlit and PostgreSQL remain internal to Compose. Stop while retaining the
+`caddy`. Only Caddy publishes `127.0.0.1:8080` and `127.0.0.1:443`; the API, the
+backoffice web and PostgreSQL remain internal to Compose. Stop while retaining the
 local data:
 
 ```powershell
@@ -95,8 +94,9 @@ that environment guard.
 If Docker Desktop is unavailable, use an existing local PostgreSQL instance,
 set the equivalent `DATABASE_*`, `AUTH_USERS_JSON` and
 `API_IDEMPOTENCY_HMAC_SECRET` values in untracked environment variables, run
-`python scripts/init_test_database.py`, then start `uvicorn` on `127.0.0.1:8000`
-and Streamlit on `127.0.0.1:8501`. Install Caddy locally and run it with
+`python scripts/init_test_database.py`, then start `uvicorn` for the API on
+`127.0.0.1:8000` and for the backoffice web on `127.0.0.1:8501`. Install Caddy
+locally and run it with
 `TPI_API_UPSTREAM=127.0.0.1:8000`,
 `TPI_BACKOFFICE_UPSTREAM=127.0.0.1:8501`,
 `TPI_FRONT_ROOT=<absolute path to front>` and the two `http://*.localhost`
@@ -115,7 +115,7 @@ Use an untracked `.env` for local database settings. The public API runs at
 For the local private entrypoint:
 
 ```bash
-streamlit run app/backoffice_app.py
+uvicorn app.web.main:app --host 127.0.0.1 --port 8501
 ```
 
 `APP_ENV=testing` and `AUTH_ENABLED=false` are permitted for automated tests.
@@ -148,8 +148,8 @@ edge or API boundary. CAPTCHA is not part of DEV.
 ## Private auth boundary
 
 SimpleDevAuth is **DEV ONLY**. It uses Argon2id hashes supplied at runtime in
-`AUTH_USERS_JSON`; passwords and hashes are never versioned or stored in
-Streamlit session state. The `AuthProvider` protocol and `AuthenticatedUser`
+`AUTH_USERS_JSON`; passwords and hashes are never versioned or stored in web
+session state. The `AuthProvider` protocol and `AuthenticatedUser`
 contract isolate future OIDC/Cognito/Entra adapters.
 
 The private boundary fails closed on absent or malformed auth configuration,

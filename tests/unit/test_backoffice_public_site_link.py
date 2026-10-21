@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.components import ui
+from app.components.urls import get_public_simulator_url, get_public_site_url
 from app.config import Settings
 
 
@@ -24,7 +24,7 @@ def test_public_site_link_uses_the_approved_environment_url(
 ) -> None:
     settings = Settings(_env_file=None, APP_ENV=app_env, TPI_PUBLIC_SITE_URL=configured_url)
 
-    assert ui.get_public_site_url(settings) == expected
+    assert get_public_site_url(settings) == expected
 
 
 @pytest.mark.parametrize(
@@ -43,36 +43,7 @@ def test_public_site_link_is_hidden_when_configuration_is_not_an_approved_dev_ur
 ) -> None:
     settings = Settings(_env_file=None, APP_ENV=app_env, TPI_PUBLIC_SITE_URL=configured_url)
 
-    assert ui.get_public_site_url(settings) is None
-
-
-class _Sidebar:
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, str, bool]] = []
-
-    def link_button(self, label: str, url: str, *, use_container_width: bool) -> None:
-        self.calls.append((label, url, use_container_width))
-
-
-class _FakeStreamlit:
-    def __init__(self) -> None:
-        self.sidebar = _Sidebar()
-
-
-def test_rendering_public_site_link_does_not_change_authentication_state(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    fake_streamlit = _FakeStreamlit()
-    monkeypatch.setattr(ui, "st", fake_streamlit)
-    settings = Settings(
-        _env_file=None,
-        APP_ENV="local",
-        TPI_PUBLIC_SITE_URL="http://tpi.localhost:8080/",
-    )
-
-    ui.render_public_site_link(settings)
-
-    assert fake_streamlit.sidebar.calls == [("Volver al sitio", "http://tpi.localhost:8080/", True)]
+    assert get_public_site_url(settings) is None
 
 
 def test_public_simulator_url_is_derived_from_the_approved_base_url() -> None:
@@ -82,7 +53,7 @@ def test_public_simulator_url_is_derived_from_the_approved_base_url() -> None:
         TPI_PUBLIC_SITE_URL="https://dev.tupensioninteligente.cl/",
     )
 
-    assert ui.get_public_simulator_url(settings) == (
+    assert get_public_simulator_url(settings) == (
         "https://dev.tupensioninteligente.cl/simulador.html#simulador-interactivo"
     )
 
@@ -92,4 +63,4 @@ def test_public_simulator_url_is_hidden_when_public_site_is_not_approved() -> No
         _env_file=None, APP_ENV="aws-dev", TPI_PUBLIC_SITE_URL="https://example.com/"
     )
 
-    assert ui.get_public_simulator_url(settings) is None
+    assert get_public_simulator_url(settings) is None

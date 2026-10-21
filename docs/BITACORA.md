@@ -22,6 +22,23 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-21 - Seguridad: retirada de Streamlit del runtime y Pillow 13 (SEG-DESACOPLAR-STREAMLIT, en desarrollo)
+
+- Cambio (change_class C, `allow_lockfile_update` solo para quitar Streamlit y subir Pillow): se retira el código legado de Streamlit
+  (`app/streamlit_app.py`, `app/backoffice_app.py`, `app/pages/`, `app/presentation/`, `app/internal_tools/`, `app/components/ui.py`,
+  `app/auth/guards.py` y `app/runtime.py`) junto con las pruebas que solo lo ejercitaban. La API y la web no cambian de comportamiento.
+- Se mueven sin reescribir los helpers que la web/API sí usan: `get_public_site_url`/`get_public_simulator_url` a
+  `app/components/urls.py`, `format_currency_clp` a `app/components/formatting.py` y `log_health_status` a `app/database/healthcheck.py`.
+- Dependencias: `streamlit` y sus dependencias exclusivas salen de `requirements/runtime.lock`; `pillow` sube a 13.0.0. Se declaran
+  explícitamente `uvicorn`, `Jinja2`, `python-multipart` e `itsdangerous`, que antes llegaban transitivamente vía Streamlit.
+- Dockerfile sin `STREAMLIT_*` ni `COPY .streamlit`, con `CMD` uvicorn `app.web.main:app` en `:8501`; el backoffice de `docker-compose.yml`
+  local hace lo mismo. El compose de despliegue (ECR) ya usaba uvicorn y no cambia.
+- Se cierra la excepción de `pip-audit` para los 8 avisos de Pillow 12.3.0: fuera los `--ignore-vuln` de `ci.yml` y
+  `publish-dev-ecr-images.yml`, fuera `tests/security/test_excepcion_pip_audit_pillow.py` y actualizada la sección de `docs/SEGURIDAD.md`.
+  `pip-audit --requirement requirements/runtime.lock` pasa sin excepciones.
+- Nuevo test `tests/unit/test_streamlit_retired.py`: importa ambos entrypoints con `streamlit` bloqueado y comprueba estáticamente que
+  ningún archivo de `app/` lo importa.
+
 ### 2026-10-21 - Publish de ECR: la espera del escaneo sube a 20 minutos (H3.2-ECR-SCAN-WAIT)
 
 - Cambio (PR #101, `dfb1d7f`): el paso del escaneo de `publish-dev-ecr-images.yml` espera hasta 20 minutos, con sondeo cada 15 segundos,

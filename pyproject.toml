@@ -8,7 +8,7 @@ include = ["app*"]
 [project]
 name = "tu-pension-inteligente-backoffice"
 version = "0.1.0"
-description = "MVP Streamlit para captura y consulta de solicitudes de simulación. Prototipo funcional del futuro back-office."
+description = "API pública y backoffice web (CRM Lite) para captura y consulta de solicitudes de simulación de pensión."
 readme = "README.md"
 requires-python = ">=3.12"
 license = {text = "MIT"}
@@ -17,9 +17,6 @@ authors = [
 ]
 
 dependencies = [
-    # Web UI
-    "streamlit>=1.28.0",
-    
     # Database
     "psycopg[binary]>=3.1.0",
     "psycopg-pool>=3.1.0",
@@ -36,14 +33,26 @@ dependencies = [
     "argon2-cffi>=25.1.0,<26.0",
     "fastapi>=0.139.0,<0.140.0",
 
+    # Web server and templates. uvicorn serves app.api.main and app.web.main;
+    # Jinja2 renders the CRM templates; python-multipart parses the login form;
+    # itsdangerous signs the Starlette session cookies.
+    "uvicorn>=0.52.0",
+    "Jinja2>=3.1.0",
+    "python-multipart>=0.0.32",
+    "itsdangerous>=2.2.0",
+
     # XLSX export (H3.3.6). Write-only usage: no defusedxml needed at runtime.
     "openpyxl>=3.1.5,<4.0",
 
     # Simulador de renta vitalicia (SIM-RV-V1). Módulo puro: numpy para mortalidad.
     "numpy>=2.5.1,<3.0",
 
-    # PDF efímero (SIM-RV-V1). Rueda pura Python; pillow y charset-normalizer ya fijadas.
+    # PDF efímero (SIM-RV-V1). Rueda pura Python.
     "reportlab==5.0.1",
+
+    # Image processing for the PDF logo and future user-file uploads.
+    # Pinned >=13 to close the Pillow 12.3.0 pip-audit exceptions (SEG-DESACOPLAR-STREAMLIT).
+    "pillow>=13.0.0",
 ]
 
 [tool.setuptools.package-data]
@@ -70,7 +79,6 @@ select = ["E", "F", "W", "I", "N", "UP"]
 ignore = ["E501"]  # Line too long - handled by formatter
 
 [tool.ruff.lint.per-file-ignores]
-"app/pages/[0-9]*.py" = ["N999"]  # Streamlit usa prefijos numéricos para ordenar páginas
 "app/simulador_pension/*.py" = ["N803", "N806"]  # notación matemática (A, Q, P, N, D, ...)
 
 [tool.black]
@@ -87,7 +95,7 @@ addopts = "--strict-markers -v --basetemp=.pytest-tmp -o cache_dir=.pytest-cache
 markers = [
     "unit: Tests de unidad",
     "integration: Tests de integración con BD",
-    "e2e: Tests end-to-end de Streamlit",
+    "e2e: Tests end-to-end",
     "security: Tests de seguridad",
 ]
 

@@ -62,7 +62,7 @@ def test_route53_policy_allows_only_tpi_acme_txt_changes() -> None:
 
 def test_active_runtime_contract_has_no_genialabs_dependency() -> None:
     runtime_files = [
-        "app/components/ui.py",
+        "app/components/urls.py",
         "front/js/backoffice-access.js",
         "deployment/caddy/Caddyfile",
         "deployment/caddy/README.md",
@@ -71,7 +71,7 @@ def test_active_runtime_contract_has_no_genialabs_dependency() -> None:
     ]
 
     assert all("genialabs.cl" not in _text(path) for path in runtime_files)
-    assert "dev.tupensioninteligente.cl" in _text("app/components/ui.py")
+    assert "dev.tupensioninteligente.cl" in _text("app/components/urls.py")
     assert "backoffice.dev.tupensioninteligente.cl" in _text("front/js/backoffice-access.js")
 
 

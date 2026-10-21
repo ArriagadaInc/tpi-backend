@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.auth.models import AuthenticatedUser, AuthenticationResult
-from app.components.ui import get_public_simulator_url, get_public_site_url
+from app.components.urls import get_public_simulator_url, get_public_site_url
 from app.config import Settings
 from app.validators import mask_email, mask_phone, mask_rut
 from app.web.main import create_web_app

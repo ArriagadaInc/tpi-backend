@@ -31,7 +31,7 @@ def test_public_api_has_no_database_or_sns_implementation_in_routes() -> None:
     assert not any(value in routes for value in forbidden)
 
 
-def test_caddy_keeps_api_and_streamlit_ports_internal() -> None:
+def test_caddy_keeps_api_and_backoffice_ports_internal() -> None:
     compose = (PROJECT_ROOT / "docker-compose.yml").read_text(encoding="utf-8")
     caddyfile = (PROJECT_ROOT / "deployment/caddy/Caddyfile").read_text(encoding="utf-8")
 

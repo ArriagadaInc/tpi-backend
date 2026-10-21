@@ -133,4 +133,5 @@ pip install -e ".[dev]"
 - [ ] Pruebas de rendimiento (Etapa 5)
 - [ ] Pruebas de seguridad (SQL injection, XSS)
 - [ ] Pruebas de carga (múltiples usuarios concurrentes)
-- [ ] Pruebas E2E con Streamlit (Etapa 4)
+- [x] Pruebas E2E con Streamlit (Etapa 4) — retirado: Streamlit fue eliminado del runtime
+  (`SEG-DESACOPLAR-STREAMLIT`); el backoffice se prueba vía FastAPI TestClient.
