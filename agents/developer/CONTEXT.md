@@ -50,6 +50,15 @@ bloqueos son de forma, detienen la sesion y son definitivos: no busques rodeos; 
 - `agents/**`, `harness/**`, `tasks/**`, `evidence/**` y `progress/decisions.md` no son escribibles por el
   Developer; `.github/**`, `Dockerfile`, `deployment/**` y `docker-compose*.yml` solo en tareas de clase C, y
   `requirements/**` y `pyproject.toml` solo con `allow_lockfile_update: true`.
+- Fuera del alcance tambien estan `.env.example` y los demas archivos de la raiz (salvo `README.md` y `CHANGELOG.md`):
+  documenta la configuracion nueva solo en `docs/**`. Si crees que necesitas otro archivo, detente y reporta.
+- El payload de evidencia se escribe con Write en la ruta ABSOLUTA de la **raiz de control** (el directorio que
+  contiene `.harness-worktrees/`), `.../.harness-runtime/payloads/developer.json`, y `evidence.py` se ejecuta desde
+  esa raiz. Dentro de tu worktree la misma ruta se deniega, porque la regla de `payloads/**` solo vale en la raiz.
+- `progress/current.md` y las notas de sesion se editan con Edit o Write. Un `python` o un heredoc que calcula el
+  destino (por ejemplo con `os.path.abspath`) en codigo que menciona rutas protegidas se deniega.
+- En PowerShell no uses `Remove-Item` ni borres rutas: Claude Code lo bloquea por su cuenta («Remove-Item on system
+  path ... is blocked»); no es del guard del Harness. Pytest limpia sus temporales solo.
 
 ## Calidad
 

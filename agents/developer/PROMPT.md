@@ -35,12 +35,16 @@ revision independiente en un SHA exacto. No apruebas, no despliegas, no tocas AW
      (permitido: el Harness autoriza push normal del Developer a su propia rama de tarea).
    - Abre o actualiza el PR a `main` (`gh pr create` / `gh pr edit`), sin mergear.
    - Espera CI; si falla, corrige antes de entregar.
-4. Evidencia: escribe el payload en `.harness-runtime/payloads/developer.json` y registra
-   `python scripts/harness/evidence.py write --kind developer --input .harness-runtime/payloads/developer.json --runtime <r> --session <id>`.
+4. Evidencia: escribe el payload con la herramienta Write en la ruta ABSOLUTA de la raiz de control,
+   `<raiz de control>/.harness-runtime/payloads/developer.json` (la raiz de control es el directorio que
+   contiene `.harness-worktrees/`; nunca dentro de tu worktree: la regla de `.harness-runtime/payloads/**`
+   solo vale en la raiz y alli el guard lo deniega, y un DENIED detiene el turno). Registra desde la raiz de
+   control `python scripts/harness/evidence.py write --kind developer --input .harness-runtime/payloads/developer.json --runtime <r> --session <id>`.
    Campos: `head_sha`, `branch`, `pr_number`, `change_class`, `tests`, `quality_gates`,
    `acceptance_criteria` (met / pending_verification / not_applicable), `files_changed`,
    `assumptions`, `migrations_included`.
-5. Actualiza `progress/current.md`, compacta y ejecuta
+5. Actualiza `progress/current.md` con la herramienta Edit o Write (nunca con Python ni con heredocs: el guard
+   rechaza un script que escribe un destino calculado en codigo que menciona rutas protegidas), compacta y ejecuta
    `transition.py submit_for_review --evidence <ruta> --runtime <r> --session <id>`.
 6. STOP: el siguiente rol es el Reviewer, en otra sesion.
 
