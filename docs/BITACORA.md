@@ -22,6 +22,22 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-21 - CRM: herramienta de infraestructura S3 de los adjuntos, sin aplicar todavía (CRM-ADJUNTOS-1-INFRA-S3)
+
+- Cambio (solo repositorio; **no se aplicó nada en AWS**): `deployment/aws/adjuntos_s3_infra.py` con los subcomandos `plan` (solo lectura),
+  `apply`, `verify` y `rollback`; cuatro documentos de política en `deployment/iam/` (política del bucket, rol y confianza de GuardDuty
+  y permiso de la app); procedimiento en `docs/ADJUNTOS_INFRA_S3.md`. `apply` y `rollback` exigen una frase de confirmación y el
+  script comprueba la cuenta antes de actuar.
+- Diseño de seguridad: la política del bucket impide leer `leads/*` a cualquiera (también al administrador) si el objeto no tiene la
+  etiqueta `GuardDutyMalwareScanStatus=NO_THREATS_FOUND`; solo el rol de GuardDuty puede escribir o borrar esa etiqueta, y subir un
+  objeto con la etiqueta puesta también se deniega. El rol de la app no tiene `ListBucket` ni permisos de etiquetas.
+- Hallazgos de la lectura previa de AWS: GuardDuty no está activado en `us-east-2` (sin detectores ni planes); la instancia de Elastic
+  Beanstalk es `t3.micro`, demasiado chica para un ClamAV propio, lo que confirma la elección de GuardDuty; no hay bloqueo de acceso
+  público a nivel de cuenta (el bucket lo lleva propio); el usuario operador pertenece a `TPI_CTO_ADMINS` (AdministratorAccess).
+- Pruebas: 29 pruebas nuevas (19 con un AWS simulado en memoria y 10 de seguridad sobre los documentos de política). Se comprobó con
+  mutaciones que fallan si se rompe una política o el orden de `apply`.
+- Pendiente: revisar y mergear este PR, ejecutar `plan`, `apply` y `verify` con el humano, y recién entonces cerrar el paso 1.
+
 ### 2026-10-21 - CRM: los adjuntos se simplifican a dos pasos y sin tabla (CRM-ADJUNTOS-COMENTARIOS)
 
 - Decisión del humano: el mismo día de definir el diseño (PR #107) se pidió una forma más simple que una tabla de adjuntos. Se
