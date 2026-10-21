@@ -16,7 +16,7 @@ app/web (FastAPI + Jinja2, backoffice CRM Lite, uvicorn app.web.main:app :8501)
   -> PostgreSQL (psycopg3 + psycopg_pool, esquema tpi, sin ORM)
   -> app/notifications (LeadCreatedEvent post-commit, SNS)
 Auth: app/auth SimpleDevAuth (Argon2id, DEV-only), roles tester/admin/advisor/executive/operations/readonly/ceo/cto
-Legacy: app/streamlit_app.py, app/backoffice_app.py (no es el backoffice desplegado)
+Streamlit fue retirado (SEG-DESACOPLAR-STREAMLIT): no existe codigo ni dependencia de Streamlit; no lo reintroduzcas
 ```
 
 ## Reglas de dominio y seguridad
@@ -31,6 +31,25 @@ Legacy: app/streamlit_app.py, app/backoffice_app.py (no es el backoffice despleg
 - Migraciones: scripts versionados en `scripts/sql/` con preflight y rollback; bootstrap de tests en
   `scripts/init_test_database.py`. Nunca reejecutar 005/006. Ejecucion en AWS = clase D, fuera del Harness.
 - Secretos solo por entorno/Secrets Manager; nunca en codigo, tests, logs ni docs.
+
+## Limites del guard (bloqueos de forma)
+
+El guard (`harness/policies.yaml`) revisa el **texto** de cada comando de shell, no solo lo que hace. Estos
+bloqueos son de forma, detienen la sesion y son definitivos: no busques rodeos; detente y reporta.
+
+- Un comando que contenga en cualquier parte (heredoc, `echo`, `grep`, argumento, comentario) un texto de
+  `forbidden_everywhere` se deniega completo, aunque solo lo nombre: el SDK de AWS para Python (`boto3`; AWS va
+  por `python scripts/harness/aws_guard.py`), nombres de secretos (`DATABASE_PASSWORD`, `AUTH_USERS_JSON`,
+  `WEB_SESSION_SECRET`...), `docker push`/`docker login`, `git push` forzado o a `main`, `git reset --hard`,
+  `git clean`, `git checkout --` y el script de decisiones humanas. No pongas esos textos en un comando; si
+  necesitas listar o buscar paquetes, hazlo con las herramientas de lectura o con un `python -c` de una linea
+  que no los nombre.
+- No crees archivos sueltos en la raiz del worktree (scripts de analisis, notas, salidas temporales): solo se
+  escribe dentro del alcance de la tarea (`app/**`, `tests/**`, `scripts/*.py`, `docs/**`...). Para un analisis
+  puntual usa un `python -c` de una linea, por ejemplo leyendo un JSON por la entrada estandar.
+- `agents/**`, `harness/**`, `tasks/**`, `evidence/**` y `progress/decisions.md` no son escribibles por el
+  Developer; `.github/**`, `Dockerfile`, `deployment/**` y `docker-compose*.yml` solo en tareas de clase C, y
+  `requirements/**` y `pyproject.toml` solo con `allow_lockfile_update: true`.
 
 ## Calidad
 
