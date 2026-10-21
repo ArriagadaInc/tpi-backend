@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "CRM-ADJUNTOS-2-CODIGO",
+  "created_at": "2026-10-21T20:00:17Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610211958-deployer-sup27d064",
+  "pr_number": 111,
+  "reviewed_sha": "bc8b95c16cc60dd8cbc54d433e6700d202558fd9",
+  "reviewed_tree": "2ddb00bc35ca4ee70635e6c3be474da36429b565",
+  "release_sha": "03436de2e1a66c6c5950633111075521c4122b5f",
+  "release_tree": "2ddb00bc35ca4ee70635e6c3be474da36429b565",
+  "main_parent_sha": "496213eb214b00cd2fc00facb913fc737a9080dc",
+  "method": "squash",
+  "match_head_commit_used": true
+}

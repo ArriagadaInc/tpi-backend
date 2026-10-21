@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "CRM-ADJUNTOS-2-CODIGO",
+  "created_at": "2026-10-21T19:28:42Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610211853-developer-supb01665",
+  "head_sha": "c2cf6606a79110ee5ce000516363c5a3d26de982",
+  "branch": "harness/CRM-ADJUNTOS-2-CODIGO-adjuntos-notas",
+  "pr_number": 111,
+  "change_class": "C",
+  "tests": {
+    "command": "Local (worktree, Python 3.13.13): python -m pytest tests/unit/test_attachments_validation.py tests/unit/test_attachments_marks.py tests/unit/test_attachments_storage.py tests/unit/test_attachments_service.py tests/unit/test_attachments_audit.py tests/unit/test_attachments_web.py tests/unit/test_domain_locked_bundle.py --no-cov -q -> 81 passed. La suite completa requiere PostgreSQL local (no disponible): se deja al CI. CI PR #111 (Python 3.12): pytest tests/ --cov=app --cov-fail-under=85 -> PASS (job Tests, cobertura >= 85% con integracion).",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_compose_config": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "app/config/settings.py agrega ATTACHMENTS_ENABLED (falso por defecto), ATTACHMENTS_BUCKET (vacio por defecto) y ATTACHMENTS_S3_REGION (us-east-2 por defecto) mas los limites de tasa. model_validator validate_attachments_configuration lanza ValueError con ATTACHMENTS_ENABLED=true y sin bucket (test_settings_rejects_enabled_without_bucket). Con la funcion apagada no se muestra el campo de archivos y las rutas responden 404, y una nota de solo texto se agrega igual (test_disabled_attachments_hide_file_field_and_return_404, test_text_only_note_still_works_when_attachments_enabled). Limites como constantes en app/attachments/validation.py (10 MiB, 5 archivos, 25 MiB)."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "app/attachments/validation.py valida por contenido (PNG por firma + IHDR, JPEG por SOI + SOF, PDF por '%PDF-' y '%%EOF' en los ultimos 1024 bytes); lee solo las dimensiones sin decodificar pixeles (tope 50M); rechaza vacio, >10 MiB, firma valida truncada y cualquier otro tipo (SVG, HTML, GIF, TIFF, WebP, EPS, PPM, ejecutables); PDF con /JS, /JavaScript, /Launch, /EmbeddedFile o /Encrypt (con decodificacion de escapes #xx, p.ej. /J#53). Devuelve tipo verificado, tamano y SHA-256; los rechazos usan codigo estable sin texto del usuario. Cubierto por tests/unit/test_attachments_validation.py."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "app/attachments/storage.py implementa AttachmentStorage (Protocol inyectable, patron de app/notifications/sns.py) y S3AttachmentStorage. Clave 'leads/<id_lead>/<uuid4>' generada por el servidor. Metadatos: verified_type, size, sha256, uploaded_by, uploaded_at (nunca el nombre original). ContentType = tipo verificado. put() nunca envia Tagging/PutObjectTagging (test_put_never_tags_and_stores_verified_metadata). get() devuelve None ante ClientError (NoSuchKey y 403 indistintos; test_get_returns_none_on_client_error y test_get_returns_none_on_access_denied_403)."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "POST /leads/{id}/comments multipart en app/web/routes/leads.py. Orden: CSRF (_validate_csrf_token), alcance del asesor ANTES de leer/subir (can_append_comment_to_lead usa _advisor_mutation_scope + lead_active_assignment_belongs_to, igual que la nota; test_upload_by_advisor_on_foreign_lead_makes_no_s3_call con 0 llamadas a S3), validar TODOS los archivos (si uno falla 400 y nada se sube; test_upload_with_invalid_content_is_rejected_and_audited), subir a S3, agregar la nota con la marca '[adjunto:<tipo>:<uuid>]' en el MISMO UPDATE (append_lead_comment_with_attachments), y si el UPDATE devuelve falso borra los objetos subidos best-effort (test_append_failure_deletes_uploaded_objects). Las marcas solo las agrega el servidor, no cuentan para el tope de 1000 caracteres y el texto que imite una marca se neutraliza (neutralize_attachment_marks). Limites: max 5 archivos (test_upload_six_files_is_rejected), 413 con Content-Length > 25 MiB (test_upload_over_request_limit_is_413) y, sin el, max_files/max_part_size de Starlette; limite de tasa InMemoryRateLimiter (test_upload_rate_limited_returns_429_without_s3_call)."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "FollowUpNote incorpora attachments (tipo y uuid) y parse_lead_comments quita las marcas del texto y falla cerrado ante bloques mal formados (tests/unit/test_attachments_marks.py). El detalle muestra cada imagen en linea (<img loading=lazy alt generico sin nombre de archivo) y cada PDF como 'Ver PDF' (target=_blank rel=noopener) y 'Descargar'; un adjunto eliminado se muestra como 'adjunto eliminado' (test_detail_page_renders_attachment_controls). No se llama a S3 al renderizar (storage.get_calls == []). Las marcas se ocultan en la exportacion XLSX (strip_attachment_marks en el exportador) y en todo uso de tpi.leads.comentarios (parse_lead_comments es el unico formateador de display). El formulario usa enctype multipart con el campo de archivos, tipos/limites y el aviso 'no subas documentos de identidad completos salvo que sea necesario'."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "evidence": "GET /leads/{id}/adjuntos/{uuid} (en linea) y ?descargar=1 (attachment). Sin sesion redirige a /login (test_view_requires_session). 404 generico si uuid invalido, lead no visible (misma regla que el detalle; test_view_by_advisor_without_access_is_404_without_s3_call), la marca no esta en la nota de ESE lead (test_view_with_uuid_of_another_lead_is_404_without_s3_call) o S3 no entrega (403/NoSuchKey). No se llama a S3 hasta superar esas comprobaciones. Cabeceras: Content-Type del tipo verificado, X-Content-Type-Options nosniff, Cache-Control private,no-store, Content-Disposition con nombre generado 'adjunto-<fecha>.<ext>' (nunca el del usuario), CSP default-src 'none' (con sandbox en imagenes; sin sandbox en PDF, documentado) y Referrer-Policy no-referrer (test_view_returns_verified_content_and_security_headers, test_download_uses_attachment_disposition_and_audits). Si el tipo de los metadatos no coincide con la marca, 404 (test_get_attachment_with_metadata_type_mismatch_is_none)."
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "evidence": "app/attachments/audit.py inserta en tpi.auditoria (append-only, tabla_afectada tpi.leads) las acciones adjunto_subido, adjunto_rechazado, adjunto_visto, adjunto_descargado y adjunto_eliminado con detalle JSON (sujeto, uuid, tipo, tamano, SHA-256; para rechazos solo el codigo), nunca nombres ni contenido (tests/unit/test_attachments_audit.py). Borrado: POST con CSRF en /leads/{id}/adjuntos/{uuid}/eliminar, solo can_view_full_pii (ceo/cto; test_delete_requires_full_pii_role), borra el objeto de S3, deja la marca (se muestra eliminado) y audita (test_delete_success_leaves_mark_and_audits). delete_test_lead borra antes los objetos por las marcas (SolicitudService._delete_lead_attachments_best_effort)."
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "evidence": "deployment/aws/docker-compose.domainlocked.yml agrega al servicio backoffice ATTACHMENTS_ENABLED: 'true' y ATTACHMENTS_BUCKET: 'tpi-dev-adjuntos-821656895812-us-east-2' como valores literales; el servicio api no las recibe. tests/unit/test_domain_locked_bundle.py lo comprueba (test_domain_locked_bundle_enables_attachments_only_in_backoffice) y actualiza EXPECTED_BUNDLE_SHA256. docker-compose.yml local y Dockerfile sin cambios. docker compose config --quiet local PASS y CI job Docker Build PASS."
+    },
+    {
+      "id": "AC-9",
+      "status": "met",
+      "evidence": "Pruebas de seguridad sin red (S3 simulado): tipo por contenido (PNG como .pdf y PDF como .png; test_content_decides_not_declared_type), firma valida truncada, PDF con /JavaScript /JS /Launch /EmbeddedFile /Encrypt incluidos escapes #xx, SVG/HTML/GIF/TIFF/WebP rechazados, >10 MiB, tope de pixeles, 6 archivos, >25 MiB (413), CSRF ausente (403 y 0 llamadas S3), asesor sobre lead ajeno (0 llamadas S3), uuid de otro lead (404), sin sesion (login), asesor sin acceso (404), cabeceras de AC-6 en vista y descarga, marca a mano neutralizada, nombre malicioso (<script>.pdf, ../../x) no guardado ni reflejado (test_malicious_filename_is_not_stored_or_reflected), logs sin bytes ni nombres (caplog; test_logs_do_not_contain_bytes_or_filenames), S3 403 -> no disponible (test_get_returns_none_on_access_denied_403), limite de tasa (429) y nota cuyo UPDATE devuelve falso borra los objetos (test_append_failure_deletes_uploaded_objects)."
+    },
+    {
+      "id": "AC-10",
+      "status": "met",
+      "evidence": "CI PR #111 verde: Tests (pytest --cov=app --cov-fail-under=85, cobertura >= 85% incluyendo el codigo nuevo), Lint & Format (ruff/black/mypy), Security Audit (bandit + pip-audit) y Docker Build. Local: ruff check PASS, black --check PASS, mypy app/ PASS, bandit (medium/medium) sin hallazgos, pip-audit sin vulnerabilidades. Sin dependencias nuevas: boto3, Pillow y python-multipart ya estaban en el lock."
+    },
+    {
+      "id": "AC-11",
+      "status": "met",
+      "evidence": "docs/SEGURIDAD.md documenta la funcion y los riesgos aceptados (visibilidad y EXIF/GPS sin re-codificar); docs/ADJUNTOS_COMENTARIOS_DISENO.md pasa a 'implementado' con los modulos y acciones de auditoria reales; docs/DEVELOPMENT_GUIDE.md explica las variables nuevas y como probar localmente con S3 simulado; CHANGELOG.md con la entrada del cambio. La entrada de cierre de docs/BITACORA.md la genera el cierre automatico del Harness (fuera del alcance del Developer)."
+    },
+    {
+      "id": "AC-12",
+      "status": "pending_verification",
+      "evidence": "Smoke humano en AWS DEV tras el despliegue (subir PNG/JPEG y PDF y verlos en linea, descargar, asesor con/sin acceso, EICAR como no disponible, rechazo de GIF, eliminar como ceo/cto, revisar tpi.auditoria y logs). Es clase C: tras el merge la transicion es merged_non_fast_path -> BLOCKED_HUMAN y el humano resuelve hacia PREPARING_DEPLOYMENT."
+    }
+  ],
+  "files_changed": [
+    "app/attachments/__init__.py (nuevo)",
+    "app/attachments/validation.py (nuevo)",
+    "app/attachments/storage.py (nuevo)",
+    "app/attachments/marks.py (nuevo)",
+    "app/attachments/audit.py (nuevo)",
+    "app/config/settings.py",
+    "app/services/solicitud_service.py",
+    "app/web/main.py",
+    "app/web/presentation.py",
+    "app/web/routes/leads.py",
+    "app/web/static/css/app.css",
+    "app/web/templates/lead_detail_panel.html",
+    "deployment/aws/docker-compose.domainlocked.yml",
+    "docs/ADJUNTOS_COMENTARIOS_DISENO.md",
+    "docs/DEVELOPMENT_GUIDE.md",
+    "docs/SEGURIDAD.md",
+    "CHANGELOG.md",
+    "tests/unit/test_attachments_validation.py (nuevo)",
+    "tests/unit/test_attachments_storage.py (nuevo)",
+    "tests/unit/test_attachments_marks.py (nuevo)",
+    "tests/unit/test_attachments_service.py (nuevo)",
+    "tests/unit/test_attachments_audit.py (nuevo)",
+    "tests/unit/test_attachments_web.py (nuevo)",
+    "tests/unit/test_domain_locked_bundle.py"
+  ],
+  "assumptions": [
+    "La suite completa con cobertura (>= 85%) y los jobs docker se verifican en CI (PR #111 verde: Lint & Format, Tests, Security Audit, Docker Build, Release Tooling Validation). Localmente corrieron ruff/black/mypy/bandit/pip-audit, docker compose config y pytest de los archivos afectados (--no-cov); la suite completa requiere PostgreSQL local, no disponible. Los 11 fallos locales de executive_dashboard (test_executive_dashboard_render/service) son por falta de BD y pasan en CI, no relacionados con la tarea.",
+    "Sin tabla nueva ni migracion: la relacion nota-adjunto es la marca '[adjunto:<tipo>:<uuid>]' en tpi.leads.comentarios (decision del humano del 2026-10-21). migrations_included=false.",
+    "Imagenes SIN re-codificar (decision del humano): solo se valida la firma y se leen las dimensiones del encabezado; EXIF y GPS se conservan (riesgo aceptado y documentado en docs/SEGURIDAD.md).",
+    "No se toca IAM, el bucket ni GuardDuty: la infraestructura ya esta aplicada (docs/ADJUNTOS_INFRA_S3.md). Solo se agregan las dos variables literales al compose del backoffice.",
+    "El borrado de adjuntos queda restringido a ceo/cto (can_view_full_pii), y el nombre original del archivo no se guarda ni muestra en ningun lado (S3, marcas, auditoria, HTML, cabeceras ni logs)."
+  ],
+  "migrations_included": false
+}

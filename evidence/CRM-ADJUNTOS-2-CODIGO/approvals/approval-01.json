@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "approval",
+  "task_id": "CRM-ADJUNTOS-2-CODIGO",
+  "created_at": "2026-10-21T21:34:54Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "approved_commit": "03436de2e1a66c6c5950633111075521c4122b5f",
+  "app_digest": "sha256:8caad557c71f15ca012e4f0008b0a25d98711a4af35bc49b8f6f51c84f267cd3",
+  "caddy_digest": "sha256:83e3c337278f584ff8fe93f745726de92f93985beec0c5b6c9a18b9c9a6243f9",
+  "bundle_sha256": "c24f2e7e8530a61b3bbf7504c7c8c9574d387845fe6b78e274eec755148d2bde",
+  "s3_key": "tpi-backoffice/dev-releases/h3-crm-adjuntos-2-codigo-03436de-domainlocked-r1/c24f2e7e8530a61b3bbf7504c7c8c9574d387845fe6b78e274eec755148d2bde.zip",
+  "application_version": "h3-crm-adjuntos-2-codigo-03436de-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "lkg_version_label": "h3-seg-desacoplar-streamlit-0c9b165-domainlocked-r1",
+  "candidate_evidence": {
+    "path": "evidence/CRM-ADJUNTOS-2-CODIGO/deployment/candidate-01.json",
+    "sha256": "94232ae2243f9fee3bfb04efd1fa3ad86303912a5d1455b953f79dacb0c5a8a2"
+  },
+  "rollback_authorization": {
+    "scope": "single_version_only_rollback_to_named_lkg",
+    "max_attempts": 1,
+    "lkg_version_label": "h3-seg-desacoplar-streamlit-0c9b165-domainlocked-r1",
+    "conditions": [
+      "update_environment_accepted",
+      "environment_degraded_inconsistent_or_not_expected_state",
+      "lkg_application_version_usable",
+      "lkg_images_present_in_ecr",
+      "no_option_settings_required",
+      "not_purely_functional_defect",
+      "no_previous_rollback_attempt"
+    ]
+  },
+  "decision": "approved"
+}

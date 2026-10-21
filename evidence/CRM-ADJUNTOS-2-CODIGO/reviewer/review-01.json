@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "CRM-ADJUNTOS-2-CODIGO",
+  "created_at": "2026-10-21T19:32:07Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610211929-reviewer-sup6e72fc",
+  "reviewed_sha": "c2cf6606a79110ee5ce000516363c5a3d26de982",
+  "reviewed_tree": "6e6dec919c4f8d71e5b939a8274cf3454d2cd176",
+  "pr_number": 111,
+  "ci": {
+    "run_id": "39660547384",
+    "conclusion": "success",
+    "jobs": [
+      "Docker Build",
+      "Lint & Format",
+      "Release Tooling Validation",
+      "Security Audit",
+      "Tests"
+    ]
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "minor",
+      "file": "app/web/routes/leads.py",
+      "summary": "max_part_size de Starlette no limita archivos; sin Content-Length (chunked) el tope de 10 MiB solo se aplica tras leer el archivo completo. Acotado por max_files=5 y usuarios autenticados.",
+      "required_action": "Opcional: limitar la lectura a MAX_ATTACHMENT_BYTES+1 por archivo."
+    },
+    {
+      "id": "F-2",
+      "severity": "minor",
+      "file": "app/web/templates/lead_detail_panel.html",
+      "summary": "Un PDF eliminado o no escaneado sigue mostrando Ver PDF/Descargar (404); solo las imagenes muestran 'adjunto eliminado' via onerror, que tambien cubre el caso no escaneado.",
+      "required_action": "Opcional: aclarar el texto de no disponible."
+    },
+    {
+      "id": "F-3",
+      "severity": "minor",
+      "file": "app/attachments/storage.py",
+      "summary": "get() solo captura ClientError; un fallo de red de botocore produce 500 en vez de 404 generico.",
+      "required_action": "Opcional: capturar BotoCoreError."
+    },
+    {
+      "id": "F-4",
+      "severity": "info",
+      "file": "app/attachments/marks.py",
+      "summary": "La neutralizacion usa la entidad &#58;, que se muestra literal al escapar Jinja; solo afecta a texto que imita una marca.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F-5",
+      "severity": "info",
+      "file": "app/attachments/validation.py",
+      "summary": "La deteccion de PDF activo es por texto y no ve contenido en object streams comprimidos; limite inherente al diseno aceptado en AC-2.",
+      "required_action": "Ninguna."
+    }
+  ],
+  "checks": [
+    {
+      "name": "CI verde en el SHA exacto (5 jobs); PR 111 mergeable y al dia con main",
+      "result": "PASS"
+    },
+    {
+      "name": "Pruebas de adjuntos y bundle reproducidas localmente: 81 passed; ruff sin observaciones",
+      "result": "PASS"
+    },
+    {
+      "name": "Sin cambios en rutas protegidas ni dependencias nuevas; alcance dentro de la tarea",
+      "result": "PASS"
+    },
+    {
+      "name": "Orden de AC-4: CSRF, alcance de asesor, validar todos los archivos, subida a S3, UPDATE unico con marcas, limpieza si falla",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-6: 404 generico y sin llamada a S3 antes de visibilidad y marca del lead; cabeceras de seguridad presentes",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-7: auditoria sin nombres ni contenido; borrado solo ceo/cto con CSRF",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-8: variables literales solo en backoffice; local y Dockerfile sin cambios",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "Visibilidad de documentos con datos personales y EXIF/GPS sin re-codificar: riesgo aceptado por el humano y documentado",
+    "Clase C: merge hacia BLOCKED_HUMAN y release completo; AC-12 pendiente de smoke humano tras el despliegue"
+  ]
+}
