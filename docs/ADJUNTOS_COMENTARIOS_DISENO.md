@@ -1,6 +1,6 @@
 # Adjuntos en las notas de seguimiento del lead: diseño y resguardos
 
-Estado: **decisiones del humano del 2026-10-21; sin implementar**. Este documento fija las decisiones y los
+Estado: **decisiones del humano del 2026-10-21; paso 1 (infraestructura) aplicado y verificado el 2026-10-21; paso 2 (código) definido y sin implementar**. Este documento fija las decisiones y los
 resguardos antes de escribir código. Las tareas que lo implementan están en `tasks/backlog.yaml` (prefijo
 `CRM-ADJUNTOS-`). Si una decisión cambia, se cambia aquí primero.
 
@@ -26,8 +26,8 @@ usuarios con acceso a ese lead los vean junto a la nota.
 | 8 | Imágenes en la primera versión | **Sin re-codificación**: se valida la firma y las dimensiones leyendo solo el encabezado. EXIF y GPS se conservan (riesgo en la sección 5). |
 
 Supuestos míos, sin objeción del humano: los valores de los puntos 1, 2, 4 y 5 son los propuestos el 2026-10-21 y se
-aceptaron al no ser objetados; la primera versión **no guarda el nombre original del archivo** (se muestra el tipo y el
-tamaño, p. ej. «PDF · 2,3 MB»); el plazo definitivo de retención lo fija el humano (sección 8).
+aceptaron al no ser objetados; la primera versión **no guarda el nombre original del archivo** (se muestra solo el tipo,
+«Imagen adjunta» o «PDF adjunto»: la página del lead no consulta S3, así que tampoco se muestra el tamaño); el plazo definitivo de retención lo fija el humano (sección 8).
 
 ## 3. Cómo se guarda cada cosa (sin tabla)
 
@@ -125,7 +125,7 @@ Al implementar, se deja constancia en `docs/SEGURIDAD.md`.
 
 | Paso | Qué es | Clase | Quién | Depende de |
 |---|---|---|---|---|
-| 1. `CRM-ADJUNTOS-1-INFRA-S3` | Bucket S3 privado, permisos mínimos del rol de la instancia, GuardDuty Malware Protection for S3 con etiquetado y la política que deniega lo no escaneado; plantilla revisable y script de aplicación que simula por defecto | C | El humano aplica, con Claude interactivo | — |
+| 1. `CRM-ADJUNTOS-1-INFRA-S3` (**aplicado y verificado el 2026-10-21**) | Bucket S3 privado, permisos mínimos del rol de la instancia, GuardDuty Malware Protection for S3 con etiquetado y la política que deniega lo no escaneado; plantilla revisable y script de aplicación que simula por defecto | C | El humano aplica, con Claude interactivo | — |
 | 2. `CRM-ADJUNTOS-2-CODIGO` | Subida, vista en línea, descarga y borrado con validación; marcas en las notas; auditoría; configuración en el compose de despliegue de DEV | C (toca `deployment/**`) | Developer | 1 |
 
 El paso 2 nace de clase C porque agrega variables al compose de despliegue (`deployment/aws/docker-compose.domainlocked.yml`);
@@ -134,8 +134,8 @@ tras el merge pasa por `BLOCKED_HUMAN` y el humano resuelve hacia `PREPARING_DEP
 ## 8. Preguntas abiertas
 
 - Plazo definitivo de retención y si se agrega una expiración automática.
-- Si GuardDuty Malware Protection for S3 está disponible en la cuenta sin activar el resto de GuardDuty (se comprueba con comandos
-  de solo lectura al empezar el paso 1) y su costo real (la tarifa por GB está publicada; la de por objeto hay que confirmarla).
+- Costo real de GuardDuty Malware Protection for S3 (la tarifa por GB está publicada; la de por objeto en `us-east-2` hay que confirmarla).
+  Resuelto el 2026-10-21: el plan se creó sin necesitar un detector de GuardDuty activo.
 - Si se agrega el nombre original del archivo (hoy no se guarda).
 - Si se agrega la re-codificación de imágenes (EXIF y GPS) en una segunda versión.
 - Si se migra a una tabla de adjuntos cuando haga falta describir, renombrar o reportar.
