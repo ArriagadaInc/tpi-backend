@@ -78,22 +78,34 @@ def test_only_the_scanner_can_write_or_delete_the_scan_tag() -> None:
 @pytest.mark.security
 def test_app_role_policy_is_object_level_on_the_leads_prefix_only() -> None:
     policy = _policy("app_role")
-    statement = policy["Statement"][0]
+    objects = _statement(policy, "AdjuntosLeadsObjects")
+    scan_tag = _statement(policy, "AdjuntosLeadsReadScanTag")
 
-    assert len(policy["Statement"]) == 1
-    assert statement["Effect"] == "Allow"
-    assert set(statement["Action"]) == {"s3:PutObject", "s3:GetObject", "s3:DeleteObject"}
-    assert statement["Resource"] == f"{BUCKET_ARN}/leads/*"
-    assert "Condition" not in statement
+    assert len(policy["Statement"]) == 2
+    assert objects["Effect"] == "Allow"
+    assert set(objects["Action"]) == {"s3:PutObject", "s3:GetObject", "s3:DeleteObject"}
+    assert objects["Resource"] == f"{BUCKET_ARN}/leads/*"
+    assert "Condition" not in objects
+    # solo LEE la etiqueta de escaneo (GuardDuty la escribe); nunca la escribe ni la borra
+    assert scan_tag["Effect"] == "Allow"
+    assert scan_tag["Action"] == "s3:GetObjectTagging"
+    assert scan_tag["Resource"] == f"{BUCKET_ARN}/leads/*"
+    assert "Condition" not in scan_tag
 
 
 @pytest.mark.security
 def test_app_role_cannot_list_tag_or_reconfigure_the_bucket() -> None:
-    actions = set(_as_list(_policy("app_role")["Statement"][0]["Action"]))
+    actions = {
+        action
+        for statement in _policy("app_role")["Statement"]
+        for action in _as_list(statement["Action"])
+    }
 
     assert not {action for action in actions if "*" in action}
     assert "s3:ListBucket" not in actions
-    assert not {action for action in actions if "Tagging" in action or "Bucket" in action}
+    assert not {action for action in actions if "Bucket" in action}
+    # la unica accion de etiquetas es de lectura: la app no puede falsificar el resultado del escaneo
+    assert {action for action in actions if "Tagging" in action} == {"s3:GetObjectTagging"}
 
 
 @pytest.mark.security

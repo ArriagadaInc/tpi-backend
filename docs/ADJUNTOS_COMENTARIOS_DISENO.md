@@ -76,7 +76,8 @@ renombrar, describir o reportar adjuntos, se migra a una tabla con los datos de 
 4. **Almacenamiento privado.** Bucket S3 con acceso público bloqueado, cifrado en reposo con claves de S3 (SSE-S3), solo TLS y
    **sin versionado**, para que el borrado sea real; regla que aborta subidas multiparte incompletas. Claves aleatorias (UUID),
    nunca el nombre del usuario.
-5. **IAM mínimo** en el rol de la instancia: `s3:PutObject`, `s3:GetObject` y `s3:DeleteObject` sobre `leads/*` del bucket; sin
+5. **IAM mínimo** en el rol de la instancia: `s3:PutObject`, `s3:GetObject` y `s3:DeleteObject` sobre `leads/*` del bucket, más
+   `s3:GetObjectTagging` (solo lectura, para mostrar el estado del escaneo; agregado el 2026-10-21); sin
    `s3:ListBucket`. Consecuencia: S3 responde 403 tanto a un objeto inexistente como a uno denegado; la app los trata igual
    («adjunto no disponible»).
 6. **Todo pasa por la app.** Nada de URLs firmadas ni de acceso directo a S3. La ruta de vista y de descarga aplica la
