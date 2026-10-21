@@ -32,27 +32,24 @@ items:
     ver docs/ADJUNTOS_INFRA_S3.md'
   - paso 2 desplegado el 2026-10-21 (PR 111, release 03436de, version h3-crm-adjuntos-2-codigo-03436de-domainlocked-r1)
     y aceptado por el humano con observaciones; ver evidence/CRM-ADJUNTOS-2-CODIGO y tasks/completed/CRM-ADJUNTOS-2-CODIGO.yaml
+  - 'decision del humano el 2026-10-21 (opcion B): los PDF con archivos incrustados se permiten, con condiciones
+    (se siguen rechazando JavaScript, /Launch y cifrados; auditoria del dato; etiqueta en la interfaz;
+    ajuste para volver al rechazo; revision antes de produccion); definida en CRM-ADJUNTOS-3-AJUSTES'
 - id: CRM-ADJUNTOS-3-AJUSTES
-  title: 'Adjuntos de notas: mensajes de rechazo claros y estados de escaneo y borrado visibles'
+  title: 'Adjuntos de notas: mensajes de rechazo claros, estados de escaneo y borrado visibles, PDF con
+    archivos incrustados'
   priority: P2
   category: functional
   status: pending
   change_class: A
-  summary: 'Observaciones del smoke humano en DEV del 2026-10-21 (aceptacion de CRM-ADJUNTOS-2-CODIGO
-    con notas): (1) un PDF liviano se rechaza con el mensaje generico ''Uno de los archivos no es valido'';
-    en DEV hubo 4 rechazos, todos con codigo unsafe_pdf, y el PDF de prueba que el humano diagnostico
-    trae un archivo incrustado de verdad (/EmbeddedFile exacto), de modo que la regla lo rechaza segun
-    el diseno pero el usuario no sabe por que; el mensaje debe decir el motivo concreto (por ejemplo cifrado,
-    archivos incrustados o JavaScript) y que el codigo unsafe_pdf se divida por causa. (2) Una imagen
-    recien subida muestra ''adjunto eliminado'' mientras GuardDuty la escanea, y deberia decir que se
-    esta escaneando. (3) Un PDF eliminado por ceo o cto sigue mostrando ''Ver PDF'' y ''Descargar'' y
-    abre una pestana nueva con 404; debe aparecer ''archivo eliminado'' en el mismo comentario. Propuesta
-    de diseno: (a) registrar el borrado dentro de la propia nota reemplazando la marca por una marca de
-    eliminado, para que no haya enlaces ni 404; (b) leer la etiqueta GuardDutyMalwareScanStatus (permiso
-    s3:GetObjectTagging de solo lectura para el rol de la app, que se aplica con deployment/aws/adjuntos_s3_infra.py)
-    para mostrar escaneando, bloqueado o disponible; (c) mensajes de rechazo por causa, indicando el archivo
-    por su posicion y sin repetir nombres. Decision pendiente del humano: si un PDF con archivos incrustados
-    se sigue rechazando con un mensaje claro (recomendado para esta etapa) o se permite.'
+  summary: 'Ajustes tras el smoke humano en DEV del 2026-10-21, listos para activar: (1) mensajes de rechazo
+    con el motivo concreto de cada archivo y codigos de auditoria por causa; (2) PDF con archivos incrustados
+    PERMITIDOS (decision del humano, opcion B) con condiciones: se siguen rechazando JavaScript, /Launch
+    y cifrados, auditoria del dato, etiqueta en la interfaz y ajuste para volver al rechazo; (3) el borrado
+    se registra en la propia nota y muestra ''Archivo eliminado'' sin enlaces; (4) las imagenes y PDF
+    recien subidos muestran ''Escaneando'' o ''Bloqueado'' leyendo la etiqueta de GuardDuty. Requisito
+    previo del humano: agregar el permiso de solo lectura s3:GetObjectTagging al rol de la app (PR aparte
+    y deployment/aws/adjuntos_s3_infra.py apply); el codigo debe degradar bien si todavia falta.'
   evidence:
   - 'evidence/CRM-ADJUNTOS-2-CODIGO/approvals/acceptance-01.json: AC-11 y AC-12 aceptados con las tres
     observaciones'
@@ -68,6 +65,179 @@ items:
     Ver PDF y Descargar'
   - S3 sin ListBucket responde 403 tanto al objeto inexistente como al aun no escaneado o infectado, por
     eso la pagina no puede distinguirlos sin leer la etiqueta o sin una marca de eliminado
+  - 'docs/ADJUNTOS_COMENTARIOS_DISENO.md: decisiones 1 a 8; esta tarea agrega la decision 9 (PDF con archivos
+    incrustados permitidos con condiciones)'
+  - las reglas de PDF detectan /EmbeddedFile de forma fiable porque la marca va en el diccionario del
+    propio stream, que nunca queda comprimido en un object stream; la deteccion de /JS, /JavaScript y
+    /Launch puede no ver accion comprimida (limitacion ya documentada)
+  - 'lecciones del guard de CRM-ADJUNTOS-2-CODIGO: .env.example fuera de alcance; el payload de evidencia
+    se escribe en la raiz de control y no en el worktree; progress/current.md no se escribe con Python'
+  task:
+    id: CRM-ADJUNTOS-3-AJUSTES
+    title: 'Adjuntos de notas: mensajes de rechazo claros, estados de escaneo y borrado visibles, PDF
+      con archivos incrustados'
+    objective: 'Corregir lo observado por el humano en el smoke de CRM-ADJUNTOS-2-CODIGO y cerrar la decision
+      sobre los PDF con archivos incrustados: que cada rechazo diga el motivo concreto, que la pagina
+      del lead distinga ''escaneando'', ''bloqueado'', ''no disponible'' y ''eliminado'', que un adjunto
+      eliminado se vea como eliminado en su mismo comentario (tambien los PDF) y que los PDF con archivos
+      incrustados se acepten con las condiciones de seguridad acordadas. Sin tabla nueva: el borrado se
+      registra en la marca de la nota y el estado de escaneo se lee de la etiqueta de GuardDuty.'
+    source:
+      type: story
+      ref: Aceptacion con observaciones de CRM-ADJUNTOS-2-CODIGO (2026-10-21) y decision del humano sobre
+        PDF con archivos incrustados (opcion B); definida en sesion interactiva con Claude.
+    change_class: A
+    deploy_required: true
+    requires_human_acceptance: true
+    acceptance_criteria:
+    - id: AC-1
+      verification: automated
+      description: 'Mensajes de rechazo por causa. La subida rechazada muestra el motivo concreto de CADA
+        archivo rechazado, indicando su posicion en el envio (''Archivo 2 de 3'') y SIN repetir su nombre
+        ni su contenido. Se validan todos los archivos y se informan todos los fallos juntos; sigue siendo
+        todo o nada (si falla uno no se sube ninguno). Mensajes distintos para: tipo no permitido (solo
+        PDF, PNG y JPEG), contenido danado o incompleto, archivo vacio, mas de 10 MB, imagen con dimensiones
+        excesivas, PDF cifrado, PDF con JavaScript o acciones automaticas, mas de 5 archivos y limite
+        de tasa. Para PDF cifrado o con scripts el mensaje sugiere volver a guardarlo con ''Imprimir y
+        Guardar como PDF''. El codigo ''unsafe_pdf'' se divide por causa (por ejemplo pdf_encrypted, pdf_javascript,
+        pdf_launch y pdf_embedded_files) y cada rechazo se audita con su codigo especifico, que sigue
+        sin contener texto del usuario. Los mensajes se escapan en HTML.'
+    - id: AC-2
+      verification: automated
+      description: 'Reglas de PDF afinadas sin debilitarlas. La busqueda de nombres de PDF respeta donde
+        termina el nombre (un nombre termina en espacio, delimitador de PDF o fin de datos, despues de
+        decodificar los escapes ''#xx''): ''/JS'', ''/JavaScript'', ''/Launch'' y ''/Encrypt'' siguen
+        rechazando; un nombre mas largo que solo empieza igual (por ejemplo ''/JSON'' o ''/EmbeddedFiles'')
+        ya no se confunde con ellos. Se conservan las pruebas de ofuscacion (por ejemplo ''/J#53'' y ''/Launc#68'')
+        y se agregan casos de limites (''/JS(...)'', ''/JS<<'', ''/JS/Otro'', ''/JS'' al final del archivo
+        y ''/JSON''). El cifrado se detecta en el trailer o en el diccionario del xref stream.'
+    - id: AC-3
+      verification: automated
+      description: 'PDF con archivos incrustados permitidos (decision del humano, opcion B) con condiciones.
+        (a) Nuevo ajuste ATTACHMENTS_ALLOW_PDF_EMBEDDED_FILES, verdadero por defecto en el codigo; con
+        falso, un PDF con archivos incrustados se rechaza con el codigo pdf_embedded_files y un mensaje
+        claro. (b) Con verdadero se aceptan, detectando el nombre EXACTO ''/EmbeddedFile''; JavaScript,
+        ''/Launch'' y los cifrados se siguen rechazando aunque el PDF tenga archivos incrustados. (c)
+        Auditoria: el detalle del evento adjunto_subido incluye ''archivos_incrustados'' (verdadero o
+        falso). (d) La marca distingue estos PDF (por ejemplo ''[adjunto:pdfe:<uuid>]'') sin romper las
+        marcas existentes pdf, png y jpg; la nota muestra la etiqueta ''Contiene archivos incrustados:
+        abrelo en el navegador''; se sirven con Content-Type application/pdf y se comprueba que el tipo
+        de los metadatos coincida con el de la marca. (e) No se cambian el compose ni la infraestructura.'
+    - id: AC-4
+      verification: automated
+      description: Borrado visible en la nota. Al eliminar un adjunto (solo los roles que ya pueden),
+        el servicio borra el objeto de S3 y despues reemplaza SU marca en tpi.leads.comentarios por una
+        marca de eliminado ('[adjunto-eliminado:<tipo>:<uuid>]') con un UPDATE parametrizado acotado al
+        lead que reemplaza la marca exacta. Si el borrado en S3 falla, no se toca la nota. La nota muestra
+        'Archivo eliminado' en el mismo comentario, sin imagen, enlaces ni pestanas nuevas, tambien para
+        los PDF. Las marcas de eliminado se ocultan en la exportacion a Excel y en cualquier lugar que
+        muestre el texto de la nota (la funcion unica de AC-5 de la tarea anterior), y la limpieza de
+        leads de prueba no intenta borrar de nuevo los eliminados. La auditoria adjunto_eliminado sigue
+        igual. Los adjuntos eliminados ANTES de este cambio no se pueden reconocer y siguen mostrandose
+        como 'no disponible'.
+    - id: AC-5
+      verification: automated
+      description: 'Estado de escaneo visible. Para los adjuntos de las notas de los ultimos 30 minutos
+        (hora de la cabecera de la nota, zona America/Santiago), la pagina del lead lee la etiqueta GuardDutyMalwareScanStatus
+        del objeto (permiso s3:GetObjectTagging, SOLO lectura) y muestra: sin etiqueta -> ''Escaneando:
+        actualiza la pagina en unos segundos'' (sin imagen ni enlaces); NO_THREATS_FOUND -> disponible;
+        THREATS_FOUND -> ''Bloqueado: se detecto una amenaza''; UNSUPPORTED, FAILED o ACCESS_DENIED ->
+        ''Bloqueado: no se pudo escanear''; cualquier error al leer la etiqueta, incluido AccessDenied
+        por falta del permiso, -> ''No disponible'', sin romper la pagina. Tope de 20 consultas por pagina;
+        las notas mas antiguas no consultan S3 y siguen mostrando la imagen o el enlace. El texto del
+        onerror de las imagenes pasa a ''Adjunto no disponible (en revision o bloqueado); actualiza la
+        pagina'' y deja de decir ''eliminado''. La interfaz de almacenamiento agrega un metodo para leer
+        la etiqueta; el adaptador de S3 NUNCA llama a PutObjectTagging ni a DeleteObjectTagging. Pruebas
+        con un doble sin red.'
+    - id: AC-6
+      verification: automated
+      description: 'Pagina de adjunto no disponible. La ruta GET /leads/{id}/adjuntos/{uuid}, cuando no
+        hay objeto que servir, responde con una pagina HTML sencilla y escapada (''Este adjunto no esta
+        disponible: puede estar escaneandose, bloqueado o eliminado'') con el mismo codigo 404, X-Content-Type-Options:
+        nosniff y Cache-Control: no-store, en lugar del texto plano de hoy. La respuesta es IDENTICA para
+        un lead no visible, un uuid sin marca y un objeto no disponible (no revela cual). Las demas cabeceras
+        de AC-6 de la tarea anterior no cambian.'
+    - id: AC-7
+      verification: automated
+      description: Regresion y calidad. Siguen pasando todas las pruebas de seguridad de CRM-ADJUNTOS-2-CODIGO
+        (solo se actualizan las que dependen de los codigos o textos que cambian por AC-1 y AC-4); con
+        ATTACHMENTS_ENABLED=false el comportamiento es identico al de hoy; cobertura total >= 85%; ruff,
+        black, mypy, bandit y pip-audit sin observaciones y SIN dependencias nuevas.
+    - id: AC-8
+      verification: both
+      description: 'Documentacion al dia: docs/SEGURIDAD.md deja constancia de la decision de permitir
+        PDF con archivos incrustados con sus condiciones y su riesgo, de los codigos de rechazo nuevos,
+        de los estados de escaneo y del permiso s3:GetObjectTagging; docs/ADJUNTOS_COMENTARIOS_DISENO.md
+        agrega la decision 9, la marca pdfe y la marca de eliminado; CHANGELOG, BITACORA y DEVELOPMENT_GUIDE
+        si cambia la configuracion.'
+    - id: AC-9
+      verification: human
+      description: 'Smoke humano en AWS DEV tras el despliegue (con el permiso s3:GetObjectTagging ya
+        aplicado): subir el PDF con archivos incrustados que el humano uso antes (se acepta y muestra
+        la etiqueta); subir un PDF cifrado (rechazo con un mensaje claro que dice cual archivo); subir
+        un GIF y un archivo de mas de 10 MB (mensajes especificos, y todos los fallos juntos); subir una
+        imagen y ver ''Escaneando'' justo despues (si el escaneo es muy rapido puede no alcanzar a verse)
+        y la imagen al actualizar; subir EICAR y ver ''Bloqueado''; eliminar un PDF y una imagen como
+        ceo o cto y ver ''Archivo eliminado'' en el mismo comentario sin enlaces; abrir un adjunto no
+        disponible y ver la pagina amable; revisar en tpi.auditoria los codigos especificos y ''archivos_incrustados'';
+        sin errores en los logs.'
+    constraints:
+    - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
+      desde ramas o worktrees antiguos.'
+    - 'change_class A: solo codigo de la aplicacion. NO tocar deployment/**, IAM, el bucket ni GuardDuty.
+      El permiso de solo lectura s3:GetObjectTagging lo agrega el humano con un PR aparte y deployment/aws/adjuntos_s3_infra.py
+      apply ANTES del despliegue; el codigo debe funcionar si todavia falta (AC-5).'
+    - 'Decision del humano (2026-10-21, opcion B): los PDF con archivos incrustados SE PERMITEN con las
+      condiciones de AC-3. No debilitar el rechazo de JavaScript, /Launch ni cifrados: cada cambio de
+      las reglas lleva pruebas que lo demuestran, incluidas las de ofuscacion.'
+    - 'No guardar ni mostrar el nombre original de los archivos en ningun lado, tampoco en los mensajes
+      de rechazo: se indica la posicion (''Archivo 2 de 3'').'
+    - 'Sin tabla nueva ni migracion: la relacion nota-adjunto sigue siendo la marca en tpi.leads.comentarios;
+      el unico UPDATE nuevo es el reemplazo parametrizado de una marca exacta acotado al lead.'
+    - 'Nada de red ni de AWS en las pruebas: el cliente de S3 se inyecta y se simula. No ejecutar comandos
+      contra AWS.'
+    - No cambiar el comportamiento de las notas de solo texto ni la regla de visibilidad de los leads;
+      no modificar app/simulador_pension/**; no reducir la cobertura minima (85%) ni agregar dependencias.
+    - 'Lecciones del guard de la tarea anterior: (1) .env.example no esta en tu alcance; documenta la
+      configuracion solo en docs/**. (2) El payload de evidencia se escribe con Write en la ruta ABSOLUTA
+      de la raiz de control (C:\desarrollos\TPI\tpi_deep_agents\tpi-backend\.harness-runtime\payloads\developer.json),
+      nunca dentro del worktree. (3) progress/current.md se edita con Edit o Write, no con Python ni heredocs.
+      (4) Ningun comando de shell nombra paquetes o textos denegados por policies.yaml y no se crean archivos
+      sueltos en la raiz del worktree. Un DENIED es definitivo: detenerse y reportar.'
+    dependencies: []
+    risk:
+      level: medium
+      notes: Cambia reglas de validacion de PDF (se permite un tipo de contenido que antes se rechazaba)
+        y la forma en que se registra el borrado. Mitigado porque JavaScript, /Launch y los cifrados siguen
+        rechazados, porque el bucket sigue sin entregar nada no escaneado, por la auditoria del dato,
+        por la etiqueta en la interfaz, por el ajuste para volver al rechazo, por las pruebas de seguridad
+        existentes y nuevas, por la revision del Reviewer, por el smoke humano y por el rollback version-only
+        al LKG.
+    scope:
+      paths:
+      - app/**
+      - tests/**
+      - docs/**
+      - README.md
+      - CHANGELOG.md
+    status: active
+- id: CRM-ADJUNTOS-REVISION-PREPROD
+  title: Revisar antes de produccion las decisiones aceptadas de los adjuntos de notas
+  priority: P3
+  category: hygiene
+  status: pending
+  change_class: none
+  summary: 'Antes de llevar los adjuntos de notas a produccion, o tras un mes de uso real en DEV, lo que
+    ocurra primero, el humano revisa las decisiones aceptadas el 2026-10-21: (1) PDF con archivos incrustados
+    permitidos (opcion B de CRM-ADJUNTOS-3-AJUSTES): mirar en tpi.auditoria cuantos se subieron y si conviene
+    volver al rechazo con el ajuste ATTACHMENTS_ALLOW_PDF_EMBEDDED_FILES; (2) visibilidad de los adjuntos
+    para todos los usuarios con acceso al lead, dado que un archivo no se puede enmascarar; (3) EXIF y
+    GPS de las imagenes sin re-codificar; (4) plazo de retencion y borrado a solicitud del titular (Ley
+    21.719); (5) tarifa real de GuardDuty por objeto; (6) la limitacion de la validacion de PDF con streams
+    comprimidos.'
+  evidence:
+  - docs/ADJUNTOS_COMENTARIOS_DISENO.md, secciones 5 y 8
+  - docs/SEGURIDAD.md, seccion de adjuntos de notas (riesgos aceptados)
 - id: SIM-CANARIA-MENSUAL
   title: Campana canaria mensual del simulador de renta vitalicia
   priority: P2
