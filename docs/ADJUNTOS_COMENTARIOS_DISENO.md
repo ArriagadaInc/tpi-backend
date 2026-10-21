@@ -24,6 +24,7 @@ usuarios con acceso a ese lead los vean junto a la nota.
 | 6 | Quién los ve | **Todos los usuarios que tienen acceso al lead** (un asesor solo ve los de su cartera; quien no ve el lead recibe 404). |
 | 7 | Dónde se guardan | **Sin tabla nueva**: el archivo y sus datos viven en S3, el antivirus es GuardDuty Malware Protection for S3 y la nota guarda una marca (sección 3). |
 | 8 | Imágenes en la primera versión | **Sin re-codificación**: se valida la firma y las dimensiones leyendo solo el encabezado. EXIF y GPS se conservan (riesgo en la sección 5). |
+| 9 | PDF con archivos incrustados | **Se permiten** (decisión del 2026-10-21, tarea `CRM-ADJUNTOS-3-AJUSTES`) con condiciones: JavaScript, `/Launch` y los PDF cifrados se siguen rechazando; el dato queda en la auditoría; la nota muestra una etiqueta; un ajuste permite volver al rechazo; la decisión se revisa antes de producción (`CRM-ADJUNTOS-REVISION-PREPROD`). |
 
 Supuestos míos, sin objeción del humano: los valores de los puntos 1, 2, 4 y 5 son los propuestos el 2026-10-21 y se
 aceptaron al no ser objetados; la primera versión **no guarda el nombre original del archivo** (se muestra solo el tipo,
@@ -66,8 +67,9 @@ renombrar, describir o reportar adjuntos, se migra a una tabla con los datos de 
 
 1. **Validar por contenido.** Firma del archivo (PNG, JPEG, `%PDF-`) y estructura mínima válida. El tipo que se
    guarda y se sirve es el verificado, nunca el declarado por el cliente. Se rechaza todo lo demás.
-2. **PDF sin partes activas.** Se rechazan los PDF con JavaScript, acciones de lanzamiento (`/Launch`), archivos
-   incrustados (`/EmbeddedFile`) o cifrados (`/Encrypt`).
+2. **PDF sin partes activas.** Se rechazan los PDF con JavaScript, acciones de lanzamiento (`/Launch`) o cifrados
+   (`/Encrypt`). Los archivos incrustados (`/EmbeddedFile`) se rechazaban en la primera versión y se aceptan desde la
+   decisión 9, con condiciones (sección 5).
 3. **Imágenes: solo el encabezado.** Se leen las dimensiones sin decodificar los píxeles, con un tope de píxeles y de
    tamaño (protege de «bombas de descompresión»). No se re-codifican en la primera versión (decisión 8). Nunca se
    decodifica una imagen completa de un usuario dentro de la petición web.
@@ -99,6 +101,14 @@ renombrar, describir o reportar adjuntos, se migra a una tabla con los datos de 
 **Visibilidad (decisión 6).** La interfaz enmascara los datos personales para todos salvo `ceo` y `cto`, pero **un archivo no se
 puede enmascarar**: una foto de una cédula la vería cualquier usuario con acceso al lead, aunque la pantalla le oculte el RUT.
 El humano lo aceptó el 2026-10-21.
+
+**PDF con archivos incrustados (decisión 9).** Un archivo incrustado puede ser un ejecutable, un documento con macros o un HTML. Para
+hacer daño alguien tiene que abrirlo a mano desde un lector de escritorio; los visores de los navegadores no lo ejecutan solos.
+GuardDuty no garantiza revisar el contenido incrustado como un archivo independiente, aunque el diseño falla cerrado (lo que no queda
+`NO_THREATS_FOUND` no se entrega). La detección de `/EmbeddedFile` es la más fiable de las reglas de PDF, porque va en el diccionario
+del propio stream, que nunca queda comprimido. Condiciones: el dato `archivos_incrustados` queda en la auditoría, la nota muestra
+«Contiene archivos incrustados: ábrelo en el navegador», el ajuste `ATTACHMENTS_ALLOW_PDF_EMBEDDED_FILES` permite volver al rechazo y
+la decisión se revisa antes de producción.
 
 **Metadatos de las imágenes (decisión 8).** Al no re-codificarlas, EXIF y GPS (por ejemplo la ubicación de una foto tomada con el
 teléfono) quedan visibles para quien vea el adjunto. Se revisa con la segunda versión.

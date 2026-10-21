@@ -35,6 +35,26 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
   confirmación la actualiza (el resto queda igual) y `verify` la comprueba. Debe aplicarse antes de desplegar `CRM-ADJUNTOS-3-AJUSTES`,
   aunque el código de esa tarea degrada bien si el permiso todavía falta.
 
+### 2026-10-21 - CRM: ajustes de los adjuntos definidos; se permiten PDF con archivos incrustados (CRM-ADJUNTOS-3-AJUSTES)
+
+- Decisión del humano (opción B): los PDF con archivos incrustados **se permiten**. Los 4 rechazos de DEV fueron `unsafe_pdf` y el PDF que
+  el humano diagnosticó con una herramienta local trae un archivo incrustado real; la regla lo rechazaba como estaba diseñada, pero el
+  usuario no sabía por qué. Riesgo evaluado: un archivo incrustado solo hace daño si alguien lo abre a mano desde un lector de escritorio,
+  GuardDuty no garantiza revisarlo como archivo independiente (el bucket falla cerrado) y la regla de `/EmbeddedFile` es la más fiable
+  porque va en el diccionario del stream, que no se comprime.
+- Condiciones: se siguen rechazando JavaScript, `/Launch` y los PDF cifrados; el dato `archivos_incrustados` queda en la auditoría; la
+  nota muestra la etiqueta «Contiene archivos incrustados: ábrelo en el navegador»; el ajuste `ATTACHMENTS_ALLOW_PDF_EMBEDDED_FILES`
+  permite volver al rechazo; la decisión se revisa antes de producción (nuevo item `CRM-ADJUNTOS-REVISION-PREPROD`).
+- Tarea definida y activable (`CRM-ADJUNTOS-3-AJUSTES`, **clase A**, riesgo medio, aceptación humana): 9 criterios. Mensajes de rechazo por
+  causa con la posición del archivo y sin nombres, y el código `unsafe_pdf` dividido por causa; reglas de PDF que respetan dónde termina el
+  nombre (sin debilitarlas); PDF con archivos incrustados con sus condiciones; borrado registrado dentro de la nota con una marca de
+  eliminado para que se muestre «Archivo eliminado» sin enlaces; estados «Escaneando» y «Bloqueado» leyendo la etiqueta de GuardDuty en los
+  adjuntos de los últimos 30 minutos; página amable para un adjunto no disponible; regresión, documentación y smoke humano.
+- Es clase A porque no toca `deployment/**`: el ajuste vale por defecto en el código. El permiso de solo lectura `s3:GetObjectTagging` lo
+  agrega el humano con un PR aparte y el script de infraestructura **antes** del despliegue; el código debe funcionar si todavía falta.
+- Pendiente: PR del permiso `s3:GetObjectTagging` y su aplicación; activar la tarea.
+
+
 ### 2026-10-21 - CRM: adjuntos de notas desplegados y aceptados con observaciones (CRM-ADJUNTOS-2-CODIGO)
 
 - Resultado: el humano aceptó AC-11 (documentación) y AC-12 (smoke humano en DEV) **con observaciones**, que recoge la tarea
