@@ -22,6 +22,15 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-21 - Publish a ECR: esperar el escaneo hasta 20 minutos y fallar con mensajes claros (H3.2-ECR-SCAN-WAIT, en desarrollo)
+
+- Contexto: el publish del release fallo dos veces (2026-10-16 y 2026-10-20) porque el escaneo de ECR no terminaba en los 5 minutos que esperaba el workflow y quedaba atascado mas de 20-47 minutos (lo normal es de 14 a 35 s). El workflow tampoco distinguia entre «escaneo lento», «escaneo fallido» y «hallazgos reales».
+- Cambio (change_class C, sin despliegue): `publish-dev-ecr-images.yml` espera hasta `SCAN_TIMEOUT_MINUTES=20` minutos (sondeo cada `SCAN_POLL_SECONDS=15` s) a que ambas imagenes (`tpi-dev-app` y `tpi-dev-caddy`) tengan el escaneo `COMPLETE`, con gate fail-closed (`CRITICAL=0` y `HIGH=0`; `IN_PROGRESS` nunca cuenta como exito). La logica de espera se extrae a `scripts/release/wait_for_ecr_scan.py`.
+- Mensajes de fallo: (a) no termino en el plazo (aclarando que NO hay hallazgos verificados, con los digests y la recuperacion); (b) termino en `FAILED` o `UNSUPPORTED_IMAGE`; (c) hallazgos HIGH/CRITICAL con el detalle.
+- Recuperacion cuando el publish falla por el escaneo: revisar el estado del escaneo de ambos digests, borrar las dos imagenes del release (los tags son inmutables, lo hace el humano) y relanzar el workflow con el mismo SHA. Documentado en `docs/DEV_EB_DEPLOYMENT_RUNBOOK.md`.
+- Sin cambios de permisos IAM/OIDC, de la politica de tags ni de la publicacion de imagenes; no se toca el paso de pip-audit ni la excepcion de Pillow.
+- Siguiente paso: correr las pruebas locales (sin BD) y entregar a revision.
+
 ### 2026-10-21 - Simulador: línea de tiempo tolerante a eventos antiguos desplegada e incidente de release (SIM-HISTORIAL-EVENTOS-ANTIGUOS)
 
 - Resultado: el humano aceptó AC-5 y AC-6 en DEV. El lead que daba «Internal Server Error» abre sin error y su línea de tiempo muestra

@@ -241,53 +241,30 @@ jobs:
           [[ "$caddy_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
           echo "app_image=$REGISTRY/$ECR_APP_REPOSITORY@$app_digest" >> "$GITHUB_OUTPUT"
           echo "caddy_image=$REGISTRY/$ECR_CADDY_REPOSITORY@$caddy_digest" >> "$GITHUB_OUTPUT"
-      - name: Fail closed on high or critical ECR findings
+          echo "app_digest=$app_digest" >> "$GITHUB_OUTPUT"
+          echo "caddy_digest=$caddy_digest" >> "$GITHUB_OUTPUT"
+      - name: Wait for ECR scans and fail closed on findings
         env:
           IMAGE_TAG: ${{ inputs.source_sha }}
+          APP_DIGEST: ${{ steps.images.outputs.app_digest }}
+          CADDY_DIGEST: ${{ steps.images.outputs.caddy_digest }}
+          SCAN_TIMEOUT_MINUTES: '20'
+          SCAN_POLL_SECONDS: '15'
         run: |
-          scan_failed=0
-          for repository in "$ECR_APP_REPOSITORY" "$ECR_CADDY_REPOSITORY"; do
-            for attempt in $(seq 1 30); do
-              status=$(aws ecr describe-image-scan-findings \
-                --repository-name "$repository" \
-                --image-id imageTag="$IMAGE_TAG" \
-                --query 'imageScanStatus.status' \
-                --output text 2>/dev/null || true)
-              if [ "$status" = "COMPLETE" ]; then
-                break
-              fi
-              sleep 10
-            done
-            if [ "$status" != "COMPLETE" ]; then
-              echo "ECR scan did not complete for $repository within five minutes."
-              scan_failed=1
-              continue
-            fi
-            critical=$(aws ecr describe-image-scan-findings \
-              --repository-name "$repository" \
-              --image-id imageTag="$IMAGE_TAG" \
-              --query 'imageScanFindings.findingSeverityCounts.CRITICAL || `0`' \
-              --output text)
-            high=$(aws ecr describe-image-scan-findings \
-              --repository-name "$repository" \
-              --image-id imageTag="$IMAGE_TAG" \
-              --query 'imageScanFindings.findingSeverityCounts.HIGH || `0`' \
-              --output text)
-            echo "$repository: CRITICAL=$critical HIGH=$high"
-            if [ "$critical" != "0" ] || [ "$high" != "0" ]; then
-              echo "Relevant ECR findings for $repository:"
-              aws ecr describe-image-scan-findings \
-                --repository-name "$repository" \
-                --image-id imageTag="$IMAGE_TAG" \
-                --query 'imageScanFindings.findings[?severity==`CRITICAL` || severity==`HIGH`].{severity:severity,name:name,description:description,uri:uri,attributes:attributes}' \
-                --output json
-              scan_failed=1
-              echo "ECR deployment eligibility requires CRITICAL=0 and HIGH=0 for $repository."
-            fi
-          done
-          if [ "$scan_failed" -ne 0 ]; then
-            exit 1
-          fi
+          python scripts/release/wait_for_ecr_scan.py \
+            --region "$AWS_REGION" \
+            --repository "$ECR_APP_REPOSITORY" \
+            --image-tag "$IMAGE_TAG" \
+            --digest "$APP_DIGEST" \
+            --timeout-minutes "$SCAN_TIMEOUT_MINUTES" \
+            --poll-seconds "$SCAN_POLL_SECONDS"
+          python scripts/release/wait_for_ecr_scan.py \
+            --region "$AWS_REGION" \
+            --repository "$ECR_CADDY_REPOSITORY" \
+            --image-tag "$IMAGE_TAG" \
+            --digest "$CADDY_DIGEST" \
+            --timeout-minutes "$SCAN_TIMEOUT_MINUTES" \
+            --poll-seconds "$SCAN_POLL_SECONDS"
       - name: Build and validate release bundle
         env:
           SOURCE_SHA: ${{ inputs.source_sha }}
