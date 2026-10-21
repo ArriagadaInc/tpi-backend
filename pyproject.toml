@@ -80,6 +80,7 @@ ignore = ["E501"]  # Line too long - handled by formatter
 
 [tool.ruff.lint.per-file-ignores]
 "app/simulador_pension/*.py" = ["N803", "N806"]  # notación matemática (A, Q, P, N, D, ...)
+"tests/unit/test_adjuntos_s3_infra.py" = ["N803"]  # el doble imita los argumentos de boto3 (Bucket, Key...)
 
 [tool.black]
 line-length = 100

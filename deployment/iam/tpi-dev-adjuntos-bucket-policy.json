@@ -1,0 +1,70 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyInsecureTransport",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:*",
+      "Resource": [
+        "arn:aws:s3:::tpi-dev-adjuntos-821656895812-us-east-2",
+        "arn:aws:s3:::tpi-dev-adjuntos-821656895812-us-east-2/*"
+      ],
+      "Condition": {
+        "Bool": {
+          "aws:SecureTransport": "false"
+        }
+      }
+    },
+    {
+      "Sid": "DenyReadUnlessScannedClean",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion"
+      ],
+      "Resource": "arn:aws:s3:::tpi-dev-adjuntos-821656895812-us-east-2/leads/*",
+      "Condition": {
+        "StringNotEquals": {
+          "s3:ExistingObjectTag/GuardDutyMalwareScanStatus": "NO_THREATS_FOUND"
+        },
+        "ArnNotEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::821656895812:role/tpi-dev-guardduty-malware-s3-role"
+        }
+      }
+    },
+    {
+      "Sid": "DenyScanTagTamperingExceptGuardDuty",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": [
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging",
+        "s3:DeleteObjectTagging",
+        "s3:DeleteObjectVersionTagging"
+      ],
+      "Resource": "arn:aws:s3:::tpi-dev-adjuntos-821656895812-us-east-2/leads/*",
+      "Condition": {
+        "ArnNotEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::821656895812:role/tpi-dev-guardduty-malware-s3-role"
+        }
+      }
+    },
+    {
+      "Sid": "DenyUploadWithForgedScanTag",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::tpi-dev-adjuntos-821656895812-us-east-2/leads/*",
+      "Condition": {
+        "Null": {
+          "s3:RequestObjectTag/GuardDutyMalwareScanStatus": "false"
+        },
+        "ArnNotEquals": {
+          "aws:PrincipalArn": "arn:aws:iam::821656895812:role/tpi-dev-guardduty-malware-s3-role"
+        }
+      }
+    }
+  ]
+}
