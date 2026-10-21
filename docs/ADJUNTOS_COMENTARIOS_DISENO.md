@@ -1,6 +1,6 @@
 # Adjuntos en las notas de seguimiento del lead: diseño y resguardos
 
-Estado: **decisiones del humano del 2026-10-21; paso 1 (infraestructura) aplicado y verificado el 2026-10-21; paso 2 (código) definido y sin implementar**. Este documento fija las decisiones y los
+Estado: **decisiones del humano del 2026-10-21; paso 1 (infraestructura) aplicado y verificado el 2026-10-21; paso 2 (código) implementado**. Este documento fija las decisiones y los
 resguardos antes de escribir código. Las tareas que lo implementan están en `tasks/backlog.yaml` (prefijo
 `CRM-ADJUNTOS-`). Si una decisión cambia, se cambia aquí primero.
 
@@ -130,6 +130,14 @@ Al implementar, se deja constancia en `docs/SEGURIDAD.md`.
 
 El paso 2 nace de clase C porque agrega variables al compose de despliegue (`deployment/aws/docker-compose.domainlocked.yml`);
 tras el merge pasa por `BLOCKED_HUMAN` y el humano resuelve hacia `PREPARING_DEPLOYMENT`, como en `SEG-DESACOPLAR-STREAMLIT`.
+
+**Implementación (módulos y acciones de auditoría).** La validación por contenido vive en
+`app/attachments/validation.py`, las marcas en `app/attachments/marks.py`, el adaptador S3 inyectable en
+`app/attachments/storage.py` (patrón de `app/notifications/sns.py`) y el escritor append-only en
+`app/attachments/audit.py`. Las rutas están en `app/web/routes/leads.py` (subida en `POST /leads/{id}/comments`
+multipart, vista/descarga en `GET /leads/{id}/adjuntos/{uuid}` y borrado en `POST /leads/{id}/adjuntos/{uuid}/eliminar`)
+y la orquestación en `app/services/solicitud_service.py`. Las acciones de auditoría son `adjunto_subido`,
+`adjunto_rechazado`, `adjunto_visto`, `adjunto_descargado` y `adjunto_eliminado` (`tabla_afectada` = `tpi.leads`).
 
 ## 8. Preguntas abiertas
 

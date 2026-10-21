@@ -5,11 +5,37 @@ Business service for lead registration and lookup.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any, cast
-from uuid import UUID
+from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
+from app.attachments.audit import (
+    ACCION_DESCARGADO,
+    ACCION_ELIMINADO,
+    ACCION_RECHAZADO,
+    ACCION_SUBIDO,
+    ACCION_VISTO,
+    record_attachment_event,
+)
+from app.attachments.marks import (
+    build_attachment_mark,
+    neutralize_attachment_marks,
+    parse_attachment_marks,
+    strip_attachment_marks,
+)
+from app.attachments.storage import (
+    AttachmentStorage,
+    StoredObject,
+    build_attachment_storage,
+)
+from app.attachments.validation import (
+    ATTACHMENT_MIME_TYPES,
+    MAX_FILES_PER_NOTE,
+    AttachmentValidationError,
+    ValidatedAttachment,
+)
 from app.auth.models import AuthenticatedUser, is_superuser
 from app.config import Settings, get_settings
 from app.database import DatabaseAppError
@@ -47,10 +73,14 @@ class SolicitudService:
         repository: SolicitudRepository | None = None,
         settings: Settings | None = None,
         publisher: LeadEventPublisher | None = None,
+        storage: AttachmentStorage | None = None,
+        attachment_audit: Callable[..., None] | None = None,
     ) -> None:
         self.repository = repository or SolicitudRepository()
         self.settings = settings or get_settings()
         self.publisher = publisher or build_lead_event_publisher(self.settings)
+        self.storage = storage if storage is not None else build_attachment_storage(self.settings)
+        self.attachment_audit = attachment_audit or record_attachment_event
 
     def registrar_solicitud(self, request: RegistrarSolicitudRequest) -> SolicitudResponse:
         """
@@ -433,6 +463,11 @@ class SolicitudService:
             estancado=estancado,
         )
 
+        # Las marcas de adjuntos se ocultan también en la exportación (AC-5).
+        for row in rows:
+            if isinstance(row, dict) and row.get("comentarios") is not None:
+                row["comentarios"] = strip_attachment_marks(str(row["comentarios"]))
+
         content = build_xlsx_workbook(rows)
 
         self.repository.record_xlsx_export_event(
@@ -662,6 +697,282 @@ class SolicitudService:
             advisor_scope=cast(UUID | None, advisor_scope),
         )
 
+    def can_append_comment_to_lead(self, id_lead: UUID | str, actor: AuthenticatedUser) -> bool:
+        """Pre-flight check (same advisor scope as the note) before reading files.
+
+        Used by the multipart comment route so an advisor who does not own the
+        lead is rejected before any file is read or uploaded.
+        """
+        if not isinstance(actor, AuthenticatedUser):
+            return False
+        try:
+            lead_id = self._normalize_uuid(id_lead, "lead")
+        except ValueError:
+            return False
+        advisor_scope = self._advisor_mutation_scope(actor)
+        if advisor_scope is False:
+            return False
+        if advisor_scope is not None:
+            return self.repository.lead_active_assignment_belongs_to(
+                lead_id, cast(UUID, advisor_scope)
+            )
+        return True
+
+    def append_lead_comment_with_attachments(
+        self,
+        id_lead: UUID | str,
+        comment_text: str,
+        attachments: list[ValidatedAttachment],
+        *,
+        actor: AuthenticatedUser,
+    ) -> bool:
+        """Append a note with attachments in the required order (AC-4).
+
+        (1) validate the text, (2) advisor scope before any S3 call, (3) upload
+        each verified file to S3, (4) append the note with the server marks in
+        the same UPDATE, (5) if the note is not appended, delete the uploaded
+        objects (best-effort), (6) audit each upload.
+        """
+        self._ensure_web_write_allowed()
+        if not isinstance(actor, AuthenticatedUser):
+            raise TypeError("actor must be an AuthenticatedUser")
+        lead_id = self._normalize_uuid(id_lead, "lead")
+        normalized_comment = self._normalize_follow_up_comment(comment_text)
+        if not normalized_comment:
+            raise ValueError("El comentario no puede estar vacio")
+        if len(normalized_comment) > 1000:
+            raise ValueError("El comentario excede la longitud permitida")
+        if len(attachments) > MAX_FILES_PER_NOTE:
+            raise AttachmentValidationError("too_many_files")
+
+        advisor_scope = self._advisor_mutation_scope(actor)
+        if advisor_scope is False:
+            return False
+        # Comprobar el alcance del asesor antes de subir ningún archivo (AC-4).
+        if advisor_scope is not None and not self.repository.lead_active_assignment_belongs_to(
+            lead_id, cast(UUID, advisor_scope)
+        ):
+            return False
+
+        uploaded: list[tuple[str, ValidatedAttachment, UUID]] = []
+        marks: list[str] = []
+        for attachment in attachments:
+            attachment_id = uuid4()
+            key = self._attachment_key(lead_id, attachment_id)
+            marks.append(build_attachment_mark(attachment.attachment_type, attachment_id))
+            try:
+                self.storage.put(
+                    key,
+                    attachment.content,
+                    content_type=ATTACHMENT_MIME_TYPES[attachment.attachment_type],
+                    metadata=self._attachment_metadata(attachment, actor),
+                )
+            except Exception:
+                self._delete_uploaded_best_effort(uploaded)
+                raise
+            uploaded.append((key, attachment, attachment_id))
+
+        fragment = self._format_follow_up_fragment_with_marks(
+            normalized_comment, actor.display_name, marks
+        )
+        try:
+            appended = self.repository.append_lead_comment(
+                lead_id,
+                fragment,
+                advisor_scope=cast(UUID | None, advisor_scope),
+            )
+        except Exception:
+            self._delete_uploaded_best_effort(uploaded)
+            raise
+
+        if not appended:
+            self._delete_uploaded_best_effort(uploaded)
+            return False
+
+        for _key, attachment, attachment_id in uploaded:
+            self._audit(
+                ACCION_SUBIDO,
+                lead_id,
+                actor,
+                attachment_id,
+                attachment.attachment_type,
+                attachment.size,
+                attachment.sha256,
+            )
+        return True
+
+    def audit_attachment_rejection(
+        self,
+        id_lead: UUID | str,
+        *,
+        actor: AuthenticatedUser,
+        rejection_code: str,
+    ) -> None:
+        """Audit a rejected upload attempt with only the rejection code (AC-7)."""
+        lead_id = self._normalize_uuid(id_lead, "lead")
+        self._audit(
+            ACCION_RECHAZADO,
+            lead_id,
+            actor,
+            None,
+            None,
+            None,
+            None,
+            rejection_code=rejection_code,
+        )
+
+    def get_attachment(
+        self,
+        id_lead: UUID | str,
+        attachment_uuid: UUID,
+        *,
+        actor: AuthenticatedUser | None,
+        as_download: bool,
+    ) -> StoredObject | None:
+        """Return an attachment or ``None`` (generic 404) when unavailable (AC-6).
+
+        Checks, in order and before any S3 call: authenticated user, lead
+        visibility (same rule as the detail page), the mark for this uuid being
+        in THIS lead's note, and the metadata type matching the mark type.
+        """
+        if actor is None:
+            return None
+        lead_id = self._normalize_uuid(id_lead, "lead")
+        lead = self.get_solicitud_detalle_masked(lead_id, user=actor)
+        if lead is None:
+            return None
+
+        marks = parse_attachment_marks(lead.get("comentarios"))
+        matching = next((mark for mark in marks if mark.attachment_id == attachment_uuid), None)
+        if matching is None:
+            return None
+
+        stored = self.storage.get(self._attachment_key(lead_id, attachment_uuid))
+        if stored is None:
+            return None
+        if stored.metadata.get("verified_type") != matching.attachment_type:
+            return None
+
+        self._audit(
+            ACCION_DESCARGADO if as_download else ACCION_VISTO,
+            lead_id,
+            actor,
+            attachment_uuid,
+            matching.attachment_type,
+            _parse_int_metadata(stored.metadata.get("size")),
+            stored.metadata.get("sha256"),
+        )
+        return stored
+
+    def delete_attachment(
+        self,
+        id_lead: UUID | str,
+        attachment_uuid: UUID,
+        *,
+        actor: AuthenticatedUser,
+    ) -> bool:
+        """Delete an attachment (S3 object) leaving the mark, and audit (AC-7)."""
+        if not self.can_view_full_pii(actor):
+            return False
+        lead_id = self._normalize_uuid(id_lead, "lead")
+        lead = self.get_solicitud_detalle_masked(lead_id, user=actor)
+        if lead is None:
+            return False
+
+        marks = parse_attachment_marks(lead.get("comentarios"))
+        matching = next((mark for mark in marks if mark.attachment_id == attachment_uuid), None)
+        if matching is None:
+            return False
+
+        key = self._attachment_key(lead_id, attachment_uuid)
+        stored = self.storage.get(key)
+        size = _parse_int_metadata(stored.metadata.get("size")) if stored else None
+        sha256 = stored.metadata.get("sha256") if stored else None
+
+        self.storage.delete(key)
+        self._audit(
+            ACCION_ELIMINADO,
+            lead_id,
+            actor,
+            attachment_uuid,
+            matching.attachment_type,
+            size,
+            sha256,
+        )
+        return True
+
+    @staticmethod
+    def _attachment_key(lead_id: UUID, attachment_id: UUID) -> str:
+        return f"leads/{lead_id}/{attachment_id}"
+
+    @staticmethod
+    def _attachment_metadata(
+        attachment: ValidatedAttachment, actor: AuthenticatedUser
+    ) -> dict[str, str]:
+        return {
+            "verified_type": attachment.attachment_type,
+            "size": str(attachment.size),
+            "sha256": attachment.sha256,
+            "uploaded_by": actor.subject,
+            "uploaded_at": datetime.now(UTC).isoformat(),
+        }
+
+    def _format_follow_up_fragment_with_marks(
+        self, comment_text: str, author: str, marks: list[str]
+    ) -> str:
+        fragment = self._format_follow_up_fragment(comment_text, author)
+        if not marks:
+            return fragment
+        return fragment + "\n" + "\n".join(marks)
+
+    def _delete_uploaded_best_effort(
+        self, uploaded: list[tuple[str, ValidatedAttachment, UUID]]
+    ) -> None:
+        for key, _attachment, _attachment_id in uploaded:
+            try:
+                self.storage.delete(key)
+            except Exception:
+                logger.warning("event=attachment_cleanup_failed result=failed")
+
+    def _delete_lead_attachments_best_effort(self, lead_id: UUID) -> None:
+        getter = getattr(self.repository, "get_solicitud_by_id", None)
+        if getter is None:
+            return
+        lead = getter(lead_id)
+        if not lead:
+            return
+        for mark in parse_attachment_marks(lead.get("comentarios")):
+            try:
+                self.storage.delete(self._attachment_key(lead_id, mark.attachment_id))
+            except Exception:
+                logger.warning("event=test_lead_attachment_cleanup_failed result=failed")
+
+    def _audit(
+        self,
+        accion: str,
+        lead_id: UUID,
+        actor: AuthenticatedUser,
+        attachment_id: UUID | None,
+        attachment_type: str | None,
+        size: int | None,
+        sha256: str | None,
+        *,
+        rejection_code: str | None = None,
+    ) -> None:
+        try:
+            self.attachment_audit(
+                accion=accion,
+                id_lead=str(lead_id),
+                actor_subject=actor.subject,
+                attachment_id=str(attachment_id) if attachment_id is not None else "",
+                attachment_type=attachment_type,
+                size=size,
+                sha256=sha256,
+                rejection_code=rejection_code,
+            )
+        except Exception:
+            logger.warning("event=attachment_audit_failed accion=%s result=failed", accion)
+
     def is_test_lead_cleanup_enabled(self) -> bool:
         """Return the effective cleanup capability, never enabled outside AWS DEV."""
         return self.settings.is_test_lead_cleanup_enabled
@@ -688,6 +999,10 @@ class SolicitudService:
                 message="El lead de prueba ya no existe.",
                 lead_id=lead_id,
             )
+
+        # Los adjuntos viven en S3 y se encuentran por las marcas de la nota;
+        # se borran antes que el lead (AC-7), con mejor esfuerzo.
+        self._delete_lead_attachments_best_effort(lead_id)
 
         try:
             deleted = self.repository.delete_test_lead(lead_id)
@@ -784,4 +1099,15 @@ class SolicitudService:
         timestamp = datetime.now(self._CRM_TZ).strftime("%d/%m/%Y %H:%M")
         display_name = " ".join(str(author or "").strip().split()) or "Usuario"
         safe_comment = comment_text.replace("<", "&lt;").replace(">", "&gt;")
+        safe_comment = neutralize_attachment_marks(safe_comment)
         return f"[{timestamp}] {display_name}\n{safe_comment}"
+
+
+def _parse_int_metadata(value: Any) -> int | None:
+    """Coerce a string S3 metadata value to int, or ``None`` (fail safe)."""
+    if value is None:
+        return None
+    try:
+        return int(str(value))
+    except (TypeError, ValueError):
+        return None

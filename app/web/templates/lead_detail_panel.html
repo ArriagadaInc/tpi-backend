@@ -265,6 +265,46 @@
                 {% endif %}
               {% else %}
                 <div class="timeline-text">{{ item.text }}</div>
+                {% if item.attachments %}
+                  <div class="timeline-attachments">
+                    {% for attachment in item.attachments %}
+                      <div class="timeline-attachment">
+                        {% if attachment.attachment_type in ('png', 'jpg') %}
+                          <img
+                            class="timeline-attachment-img"
+                            src="/leads/{{ selected_lead_id }}/adjuntos/{{ attachment.attachment_id }}"
+                            alt="Imagen adjunta"
+                            loading="lazy"
+                            onerror="this.hidden=true;this.nextElementSibling.hidden=false"
+                          >
+                          <span class="attachment-deleted" hidden>adjunto eliminado</span>
+                        {% else %}
+                          <a
+                            class="attachment-link"
+                            href="/leads/{{ selected_lead_id }}/adjuntos/{{ attachment.attachment_id }}"
+                            target="_blank"
+                            rel="noopener"
+                          >Ver PDF</a>
+                          <a
+                            class="attachment-link"
+                            href="/leads/{{ selected_lead_id }}/adjuntos/{{ attachment.attachment_id }}?descargar=1"
+                          >Descargar</a>
+                        {% endif %}
+                        {% if can_delete_attachments %}
+                          <form
+                            class="attachment-delete"
+                            method="post"
+                            action="/leads/{{ selected_lead_id }}/adjuntos/{{ attachment.attachment_id }}/eliminar"
+                          >
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <input type="hidden" name="return_to" value="{{ return_to_url or '/leads' }}">
+                            <button class="link-button attachment-delete-btn" type="submit">Eliminar</button>
+                          </form>
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
               {% endif %}
             </article>
           {% endfor %}
@@ -274,7 +314,7 @@
       {% endif %}
 
       {% if can_write %}
-        <form class="note-form" method="post" action="/leads/{{ selected_lead_id }}/comments">
+        <form class="note-form" method="post" action="/leads/{{ selected_lead_id }}/comments" enctype="multipart/form-data">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <input type="hidden" name="return_to" value="{{ return_to_url or '/leads' }}">
           <label for="new_comment" class="note-label">Agregar nueva nota de seguimiento</label>
@@ -285,6 +325,17 @@
             maxlength="1000"
             placeholder="Escribe una nueva nota de seguimiento..."
           ></textarea>
+          {% if attachments_enabled %}
+            <label class="note-label" for="note-files">Adjuntar archivos (PNG, JPEG o PDF; máximo 10 MiB cada uno, 5 por nota)</label>
+            <input
+              id="note-files"
+              name="files"
+              type="file"
+              multiple
+              accept=".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf"
+            >
+            <p class="attachment-warning">No subas documentos de identidad completos salvo que sea necesario.</p>
+          {% endif %}
           <div class="note-actions">
             <button class="primary note-submit" type="submit">+ Agregar nota</button>
           </div>
