@@ -22,6 +22,58 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-21 - CRM: adjuntos de notas desplegados y aceptados con observaciones (CRM-ADJUNTOS-2-CODIGO)
+
+- Resultado: el humano aceptó AC-11 (documentación) y AC-12 (smoke humano en DEV) **con observaciones**, que recoge la tarea
+  `CRM-ADJUNTOS-3-AJUSTES`. Funciona el flujo central: subida junto con la nota, vista en línea de imágenes, PDF en pestaña nueva,
+  descarga, control de acceso por lead, escaneo de GuardDuty, auditoría y borrado por `ceo` o `cto`.
+- Cambio (PR #111, `03436de`; clase C porque agrega dos variables literales al compose del backoffice): paquete `app/attachments/`
+  (validación por contenido, almacenamiento en S3 con cliente inyectable, marcas en la nota y auditoría), rutas de vista, descarga y
+  borrado, plantilla y estilos, y pruebas (unitarias y de seguridad con S3 simulado). Sin tabla nueva ni migración.
+- Rondas: 1 rechazo del Reviewer. El hallazgo mayor fue que la subida sin `Content-Length` (petición `chunked`) esquivaba los topes de
+  10 MiB y 25 MiB: el parser de Starlette 1.3.1 solo limita con `max_part_size` los campos de texto y no las partes de archivo. El criterio
+  de aceptación lo pedía así por un error de la especificación, no del Developer. Se corrigió rechazando con 411 la petición sin
+  `Content-Length` válido cuando los adjuntos están activos, con su prueba.
+- Release: publish a ECR en el primer intento (run 39676430248, escaneo `COMPLETE` sin hallazgos), despliegue con un único
+  `update-environment` de unos 42 s, sin rollback, y verificación automática PASS (smoke HTTP y 0 coincidencias en los logs).
+- Observaciones del smoke del humano: (1) un PDF liviano se rechaza con el mensaje genérico «Uno de los archivos no es válido»; los 4
+  rechazos de DEV fueron `unsafe_pdf` y el PDF diagnosticado trae un archivo incrustado real (`/EmbeddedFile`), por lo que la regla lo
+  rechaza como está diseñada pero el usuario no sabe por qué; (2) una imagen recién subida muestra «adjunto eliminado» mientras
+  GuardDuty la escanea; (3) un PDF eliminado sigue mostrando «Ver PDF» y «Descargar» y abre una pestaña con 404. Las observaciones 2 y 3
+  corresponden al hallazgo F-3 que el Reviewer dejó como opcional; no se registraba el borrado dentro de la nota, algo que la
+  especificación tampoco pedía.
+- Incidentes con el guard (tres bloqueos de forma, sin pérdida de trabajo): el Developer intentó editar `.env.example`, fuera de su
+  alcance; el Developer escribió el payload de evidencia dentro de su worktree y no en la raíz de control, donde la regla lo permite; el
+  Reviewer del candidato intentó anotar su decisión con un script de Python que calculaba la ruta, que el guard tomó por una escritura a
+  archivos protegidos (la evidencia `APPROVED` ya estaba escrita; una sesión nueva aplicó la transición). Además el Reviewer de la ronda 0
+  reportó una denegación (`Remove-Item on system path 'C:'`) en un comando que no contenía esa operación, que parece un falso positivo del
+  guard con PowerShell y queda pendiente de investigar.
+- Cosas a recordar: la nota del humano en `progress/current.md` hizo que el Reviewer confirmara y subiera a mayor un hallazgo que ya
+  había visto como menor (`review-01.json`, una aprobación descartada en su misma sesión, y `review-02.json`, el rechazo); el
+  `main` local atrasado hizo que el Deployer descartara un primer bundle sin las variables de adjuntos antes de subir nada, así que
+  conviene sincronizarlo tras cada merge; el disco `C:\` quedó con unos 9 GB libres.
+- Lecciones:
+  - Un criterio que depende del comportamiento de una biblioteca se verifica contra la versión instalada antes de escribirlo.
+  - Los avisos de forma del guard se repiten de una sesión a otra; las reglas sobre rutas permitidas (`.env.example`, el payload en la
+    raíz de control, no usar Python para escribir `progress/current.md`) pasan a las vistas de los roles.
+  - Lo que S3 devuelve sin `ListBucket` (403 para inexistente, no escaneado e infectado) no alcanza para mostrar estados distintos; hace
+    falta una marca de eliminado en la nota y leer la etiqueta de escaneo.
+- Pendiente: `CRM-ADJUNTOS-3-AJUSTES` (clase A, solo resumen hasta decidir qué hacer con los PDF con archivos incrustados); llevar las
+  lecciones de forma del guard a `agents/developer/CONTEXT.md` y a la vista del Reviewer; investigar el falso positivo de PowerShell.
+
+### 2026-10-21 - Harness: tarea CRM-ADJUNTOS-2-CODIGO cerrada (DONE)
+
+- Titulo: Adjuntos de notas, paso 2: subida, vista en linea, descarga y borrado
+- Evidencia: `evidence/CRM-ADJUNTOS-2-CODIGO/` y `tasks/completed/CRM-ADJUNTOS-2-CODIGO.yaml`.
+- release_sha: `03436de2e1a66c6c5950633111075521c4122b5f`
+- pr_number: `111`
+- application_version: `h3-crm-adjuntos-2-codigo-03436de-domainlocked-r1`
+- bundle_sha256: `c24f2e7e8530a61b3bbf7504c7c8c9574d387845fe6b78e274eec755148d2bde`
+- lkg: `h3-seg-desacoplar-streamlit-0c9b165-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `03436de2e1a66c6c5950633111075521c4122b5f`
+- verification: `PASS`
+
 ### 2026-10-21 - CRM: infraestructura de los adjuntos aplicada y verificada; paso 2 definido (CRM-ADJUNTOS-COMENTARIOS)
 
 - Resultado del paso 1 (`CRM-ADJUNTOS-1-INFRA-S3`, PR #109): el humano ejecutó `apply` y `verify` con `deployment/aws/adjuntos_s3_infra.py`

@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "kind": "deployment",
+  "task_id": "CRM-ADJUNTOS-2-CODIGO",
+  "created_at": "2026-10-21T21:39:42Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610212135-deployer-supa8f7d1",
+  "approved_commit": "03436de2e1a66c6c5950633111075521c4122b5f",
+  "deployed_commit": "03436de2e1a66c6c5950633111075521c4122b5f",
+  "application_version": "h3-crm-adjuntos-2-codigo-03436de-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "update_accepted": true,
+  "result": "success",
+  "started_at": "2026-10-21T21:37:18Z",
+  "finished_at": "2026-10-21T21:38:00Z",
+  "failure_class": null,
+  "previous_version_label": "h3-seg-desacoplar-streamlit-0c9b165-domainlocked-r1",
+  "final_state": {
+    "version_label": "h3-crm-adjuntos-2-codigo-03436de-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "observed_at": "2026-10-21T21:39:30Z"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-crm-adjuntos-2-codigo-03436de-domainlocked-r1/c24f2e7e8530a61b3bbf7504c7c8c9574d387845fe6b78e274eec755148d2bde.zip",
+    "s3_checksum_sha256_b64": "wk8ufoUwphs7v3UEx8jJV004eEX+a3jidO7HVRSNK94=",
+    "s3_content_length": 4917,
+    "bundle_sha256": "c24f2e7e8530a61b3bbf7504c7c8c9574d387845fe6b78e274eec755148d2bde",
+    "digests_equal_approval_01": true,
+    "note": "describe-environments post-cutover VersionLabel = aprobada; AV SourceBundle (describe-application-versions en el preflight, sin cambio) = key de approval-01; head-object post-cutover ChecksumSHA256 = base64 del bundle_sha256 aprobado, cuyo compose fija los digests app 8caad557... / caddy 83e3c337... segun approval-01 y candidate-01; ambos digests ACTIVE en ECR en el preflight."
+  },
+  "preflight": {
+    "at": "2026-10-21T21:36Z",
+    "result": "PASS",
+    "checks": [
+      "init PASS (DEPLOYING, rol deployer)",
+      "approval-01 para 03436de coincide con candidate-01 (bundle, key, digests, AV, LKG)",
+      "sts account 821656895812; region us-east-2 por aws_guard",
+      "environment en LKG h3-seg-desacoplar-streamlit-0c9b165-domainlocked-r1, Ready/Green/Ok, AbortableOperationInProgress false",
+      "AV candidata UNPROCESSED con SourceBundle = key aprobada; AV del LKG UNPROCESSED",
+      "digests app/caddy del candidato y del LKG ACTIVE en ECR",
+      "CodePipeline Promote inbound transition deshabilitada"
+    ]
+  },
+  "cutover": {
+    "mechanism": "aws_guard update-environment version-label only",
+    "executed_by": "deployer",
+    "updates_applied": 1,
+    "retries": 0,
+    "option_settings": false,
+    "restart_app_server": false,
+    "rollback_executed": false,
+    "convergence": "exitosa en ~42 s (start 21:37:18Z, completed 21:38:00Z)"
+  },
+  "events": {
+    "levels_observed": [
+      "INFO"
+    ],
+    "errors": 0,
+    "note": "Environment update completed successfully; Ready/Green/Ok."
+  },
+  "warnings": [
+    "AC-12 (smoke humano) sigue pendiente; conteos de logs y smoke HTTP corresponden a VERIFYING."
+  ]
+}

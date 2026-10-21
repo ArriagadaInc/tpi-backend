@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "CRM-ADJUNTOS-2-CODIGO",
+  "created_at": "2026-10-21T19:58:26Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610211956-reviewer-sup3528bc",
+  "reviewed_sha": "bc8b95c16cc60dd8cbc54d433e6700d202558fd9",
+  "reviewed_tree": "2ddb00bc35ca4ee70635e6c3be474da36429b565",
+  "pr_number": 111,
+  "ci": {
+    "run_id": "39663531632",
+    "conclusion": "success",
+    "jobs": [
+      "Docker Build",
+      "Lint & Format",
+      "Release Tooling Validation",
+      "Security Audit",
+      "Tests"
+    ]
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "info",
+      "file": "app/web/routes/leads.py",
+      "summary": "Resuelto: con adjuntos activos, una peticion sin Content-Length valido recibe 411 antes de leer el cuerpo; mayor a 25 MiB declarado sigue en 413. Con la funcion apagada no cambia el comportamiento.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F-2",
+      "severity": "info",
+      "file": "docs/SEGURIDAD.md",
+      "summary": "Resuelto: limitacion del escaneo de PDF por tokens crudos documentada como riesgo aceptado.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F-4",
+      "severity": "info",
+      "file": "app/attachments/storage.py",
+      "summary": "Resuelto: get() captura tambien BotoCoreError y responde adjunto no disponible; con prueba.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F-3",
+      "severity": "minor",
+      "file": "app/web/templates/lead_detail_panel.html",
+      "summary": "Texto de no disponible para PDF eliminado o no escaneado sin aclarar (opcional, no bloqueante).",
+      "required_action": "Opcional, para una iteracion posterior."
+    }
+  ],
+  "checks": [
+    {
+      "name": "CI verde en el SHA exacto (5 jobs); PR 111 mergeable, CLEAN y al dia con main (origin/main es ancestro)",
+      "result": "PASS"
+    },
+    {
+      "name": "Diff del rework acotado a 5 archivos (storage, rutas de leads, SEGURIDAD.md, 2 pruebas); sin rutas protegidas ni dependencias nuevas",
+      "result": "PASS"
+    },
+    {
+      "name": "Pruebas de adjuntos y bundle reproducidas en worktree del SHA exacto: 84 passed; ruff sin observaciones",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-4 limite de peticion: 413 por Content-Length declarado y 411 sin Content-Length antes de leer el cuerpo, con prueba",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-1 a AC-3 y AC-5 a AC-11 sin regresion respecto de la revision previa",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "Visibilidad de documentos con datos personales y EXIF/GPS sin re-codificar: riesgo aceptado y documentado",
+    "Escaneo de PDF por tokens crudos no ve streams comprimidos: riesgo aceptado y documentado; capa siguiente GuardDuty",
+    "AC-12 requiere smoke humano en DEV tras el despliegue (clase C: merged_non_fast_path a BLOCKED_HUMAN)"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "kind": "acceptance",
+  "task_id": "CRM-ADJUNTOS-2-CODIGO",
+  "created_at": "2026-10-21T22:00:25Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "decision": "accepted",
+  "criteria": [
+    {
+      "id": "AC-11",
+      "status": "accepted"
+    },
+    {
+      "id": "AC-12",
+      "status": "accepted"
+    }
+  ],
+  "notes": "Smoke DEV OK con observaciones: (1) rechazo de PDF sin motivo especifico (2) imagen recien subida dice adjunto eliminado mientras se escanea (3) PDF eliminado sigue mostrando enlaces y abre 404. Se co"
+}

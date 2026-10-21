@@ -131,3 +131,4 @@ Alcance del turno:
 Un solo comando por llamada, sin rm, del, Remove-Item ni limpieza.
 Ante DENIED, STOP absoluto sin mas herramientas o transiciones.
 Si los guards requieren algo adicional, informar y detenerse.
+| D-019 | 2026-10-21 | rework CRM-ADJUNTOS-2-CODIGO ronda 1/3 listo para re-review (commit bc8b95c en PR 111, CI 5/5 verde). F-1 (major) resuelto con 411 ante multipart sin Content-Length valido; F-2 documentado en docs/SEGURIDAD.md (PDF no ve streams comprimidos); F-4 resuelto (BotoCoreError tratado como no disponible). F-3 opcional y F-5 info sin accion. Gates locales PASS (ruff/black/mypy/bandit/pip-audit; 84 pruebas de adjuntos+bundle). Evidencia: evidence/CRM-ADJUNTOS-2-CODIGO/developer/developer-02.json. | progress/sessions/2026-10-21-CRM-ADJUNTOS-2-CODIGO-developer-rework.md |

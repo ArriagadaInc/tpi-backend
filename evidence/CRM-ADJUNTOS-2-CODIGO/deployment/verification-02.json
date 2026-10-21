@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "CRM-ADJUNTOS-2-CODIGO",
+  "created_at": "2026-10-21T22:04:43Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610212203-deployer-sup9c8683",
+  "verification_scope": "Cierre de VERIFYING de CRM-ADJUNTOS-2-CODIGO: verificacion tecnica ya registrada en verification-01 (estado EB, eventos, identidad de runtime, smoke HTTP 7/7, conteos de logs en 0) mas la aceptacion humana de AC-11 y AC-12 registrada por approve.py (acceptance-01). Sin lecturas ni escrituras AWS nuevas en esta sesion.",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "03436de2e1a66c6c5950633111075521c4122b5f",
+  "deployed_commit": "03436de2e1a66c6c5950633111075521c4122b5f",
+  "application_version": "h3-crm-adjuntos-2-codigo-03436de-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "PASS",
+  "failure_class": null,
+  "final_state": {
+    "version_label": "h3-crm-adjuntos-2-codigo-03436de-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-21T21:38:00Z",
+    "observed_at": "2026-10-21T21:39:30Z"
+  },
+  "events": {
+    "observed": 6,
+    "levels": {
+      "INFO": 6
+    },
+    "errors": 0,
+    "note": "Tomado de verification-01: eventos del cutover todos INFO; sin abortos ni degradacion."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "note": "Verificada en verification-01 (21:41Z); no se repitio en esta sesion."
+  },
+  "smoke_client": "python urllib (cliente independiente), TLS por defecto, sin seguir redirects (verification-01)",
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "adjuntos_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login (sin sesion no se llega a S3)"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "observed": "ninguna respuesta redirige a genialabs.cl"
+    }
+  ],
+  "logs": {
+    "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+    "window_start": "2026-10-21T21:37:18Z",
+    "method": "Conteos de verification-01 (aws_guard, --query length(events), sin leer lineas)."
+  },
+  "pii_log_scan": {
+    "matches": 0,
+    "raw_pattern_hits": {
+      "Authorization -REDACTED": 0,
+      "Bearer": 0,
+      "password": 0,
+      "cookie": 0,
+      "raw_payload": 0,
+      "secret": 0,
+      "token": 0,
+      "hash -ACME": 0
+    },
+    "strong_matches": 0,
+    "strong_hits": {},
+    "weak_matches": {},
+    "classification_required": false,
+    "patterns": [
+      "Authorization -REDACTED",
+      "Bearer",
+      "raw_payload",
+      "password",
+      "hash -ACME",
+      "cookie",
+      "secret",
+      "token"
+    ]
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-03 aprobada con CI verde (PR #111)."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-03 aprobada con CI verde."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-03 aprobada con CI verde."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-03 aprobada con CI verde."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-03 aprobada con CI verde."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-03 aprobada con CI verde."
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-03 aprobada con CI verde."
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-03 aprobada; publish run 39676430248 6/6; bundle con las variables solo en backoffice (candidate_review-01)."
+    },
+    {
+      "id": "AC-9",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-03 aprobada con CI verde."
+    },
+    {
+      "id": "AC-10",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-03 aprobada; gates del publish run 6/6."
+    },
+    {
+      "id": "AC-11",
+      "status": "met",
+      "method": "both",
+      "evidence": "Documentacion en el PR revisado (review-03); aceptada por el humano en acceptance-01."
+    },
+    {
+      "id": "AC-12",
+      "status": "met",
+      "method": "human",
+      "evidence": "Aceptado por el humano en evidence/CRM-ADJUNTOS-2-CODIGO/approvals/acceptance-01.json (smoke DEV OK con observaciones). El humano reporta tres observaciones funcionales que no bloquean la aceptacion: rechazo de PDF sin motivo especifico; imagen recien subida se muestra como adjunto eliminado mientras se escanea; PDF eliminado conserva los enlaces y abre 404. Quedan para seguimiento humano (defectos funcionales, sin rollback; contrato seccion 9)."
+    }
+  ],
+  "rollback_executed": false,
+  "safety": {
+    "aws_writes": [],
+    "update_environment_executed": false,
+    "secrets_accessed": false,
+    "log_lines_read": false,
+    "denied_events": 0
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "CRM-ADJUNTOS-2-CODIGO",
+  "created_at": "2026-10-21T21:30:26Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610212127-reviewer-sup8fac69",
+  "release_sha": "03436de2e1a66c6c5950633111075521c4122b5f",
+  "reviewed_tree": "2ddb00bc35ca4ee70635e6c3be474da36429b565",
+  "release_tree": "2ddb00bc35ca4ee70635e6c3be474da36429b565",
+  "decision": "APPROVED",
+  "cause": null,
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse del release_sha y del reviewed_sha bc8b95c: ambos 2ddb00b"
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "origin/main tras fetch == 03436de; merge squash con padre 496213e"
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "run 39676430248 conclusion success, headSha == release_sha"
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "describe-images: app 8caad557 y caddy 83e3c337 ACTIVE con tag release_sha"
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "scan COMPLETE, findingSeverityCounts vacio en ambos digests"
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "reconstruido por el Reviewer en worktree del release_sha: sha256 c24f2e7e... identico al del candidate"
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "un unico docker-compose.yml, sin build, sin genialabs.cl, imagenes por digest"
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "head-object ChecksumSHA256 wk8ufoUw... FULL_OBJECT, ContentLength 4917 == bundle"
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "AV UNPROCESSED con SourceBundle bucket/key igual al objeto S3 content-addressed"
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "commit -> digests -> bundle sha -> key S3 -> AV -> label verificados con lecturas propias"
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "describe-environments: VersionLabel h3-seg-desacoplar-streamlit-0c9b165-domainlocked-r1, Ready/Green/Ok, sin operacion abortable"
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "AV del LKG existe con SourceBundle intacto"
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "app 202e9133 y caddy 070ce617 ACTIVE"
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "inspeccion estructural: las variables sensibles del compose son referencias, los literales son no secretos (dominios, upstreams, ATTACHMENTS_ENABLED y nombre del bucket); candidate-01 sin valores sensibles"
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "incluye leads_requires_auth, adjuntos_requires_auth, identidad runtime, conteos de logs y AC-12 humano"
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "un solo update-environment con --version-label, sin option settings"
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "inspeccion del plan frente a policies del Deployer en DEPLOYING; no se ejecuto dry-run"
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "note": "un comando de cutover, sin reintentos"
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "rollback al LKG nombrado, max_attempts 1, condicionado a las condiciones de politicas"
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": "sin IAM, DNS, secretos ni migraciones; sin tabla nueva"
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "note": "evidencia con identificadores, hashes y labels; sin cuerpos de respuesta sensibles"
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS",
+      "note": "residuos de stage: imagenes ECR, objeto S3 y AV UNPROCESSED, inertes hasta el cutover"
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "note": "el plan indica que un defecto funcional no autoriza rollback"
+    }
+  ],
+  "findings": [
+    {
+      "id": "C-1",
+      "severity": "info",
+      "file": "evidence/CRM-ADJUNTOS-2-CODIGO/deployment/candidate-01.json",
+      "summary": "El checkout local de main esta un commit atras de origin/main; el template y el constructor se compararon y se reconstruyeron desde un worktree del release_sha, no desde el arbol de trabajo. El bundle incluye las variables de adjuntos solo en backoffice.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "C-2",
+      "severity": "info",
+      "file": "deployment/aws/docker-compose.domainlocked.yml",
+      "summary": "Clase C: el humano resolvio BLOCKED_HUMAN hacia PREPARING_DEPLOYMENT (resolution-01); el despliegue sigue requiriendo Human Gate. La infraestructura de adjuntos (bucket, GuardDuty) no se verifico desde el Reviewer; se declara aplicada por el humano segun el candidate.",
+      "required_action": "AC-12 humano tras el cutover."
+    }
+  ],
+  "risks": [
+    "Visibilidad de documentos con datos personales y EXIF/GPS sin re-codificar: riesgo aceptado y documentado",
+    "El bucket de adjuntos no fue verificado por el Reviewer; si faltara, la funcion degrada a no disponible y se puede apagar con una nueva version del compose",
+    "AC-12 requiere smoke humano en DEV tras el despliegue"
+  ]
+}

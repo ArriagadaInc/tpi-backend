@@ -8,16 +8,10 @@ items:
   status: blocked
   change_class: none
   summary: 'Funcion paraguas: permitir que los usuarios suban imagenes y PDF en las notas de seguimiento
-    de un lead. NO se activa: se implementa en 2 pasos. El paso 1 (CRM-ADJUNTOS-1-INFRA-S3: bucket, permisos
-    y antivirus de S3) quedo aplicado y verificado en AWS DEV el 2026-10-21; falta el paso 2 (CRM-ADJUNTOS-2-CODIGO,
-    definido y activable). El diseno, las decisiones del humano del 2026-10-21 y los resguardos estan
-    en docs/ADJUNTOS_COMENTARIOS_DISENO.md. Decisiones: PDF, PNG y JPEG verificados por contenido; 10
-    MB por archivo, 5 por nota y 25 MB por peticion; vista en linea (imagenes en el detalle, PDF en pestana
-    nueva) y descarga; retencion mientras exista el lead y borrado a solicitud del titular (Ley 21.719);
-    cada subida, vista y descarga auditada; visibles para todos los usuarios con acceso al lead (riesgo
-    aceptado: un archivo no se puede enmascarar). Diseno simplificado: sin tabla (archivo y datos en S3,
-    marca en la nota, antivirus con GuardDuty Malware Protection for S3) y sin re-codificar imagenes en
-    la primera version.'
+    de un lead. NO se activa. Paso 1 (CRM-ADJUNTOS-1-INFRA-S3: bucket, permisos y antivirus de S3) aplicado
+    y verificado el 2026-10-21. Paso 2 (CRM-ADJUNTOS-2-CODIGO: subida, vista en linea, descarga y borrado)
+    desplegado en AWS DEV y aceptado por el humano el 2026-10-21 CON OBSERVACIONES, que recoge CRM-ADJUNTOS-3-AJUSTES.
+    El diseno y los resguardos estan en docs/ADJUNTOS_COMENTARIOS_DISENO.md.'
   evidence:
   - 'docs/ADJUNTOS_COMENTARIOS_DISENO.md: decisiones, riesgos aceptados, resguardos obligatorios y los
     2 pasos'
@@ -36,224 +30,44 @@ items:
   - 'paso 1 aplicado y verificado el 2026-10-21 con deployment/aws/adjuntos_s3_infra.py (apply: 12 comprobaciones
     OK; verify: 7 PASA; plan de GuardDuty 12d0afd1193ea2e81987 ACTIVE, creado sin necesitar un detector);
     ver docs/ADJUNTOS_INFRA_S3.md'
-- id: CRM-ADJUNTOS-2-CODIGO
-  title: 'Adjuntos de notas, paso 2: subida, vista en linea, descarga y borrado'
+  - paso 2 desplegado el 2026-10-21 (PR 111, release 03436de, version h3-crm-adjuntos-2-codigo-03436de-domainlocked-r1)
+    y aceptado por el humano con observaciones; ver evidence/CRM-ADJUNTOS-2-CODIGO y tasks/completed/CRM-ADJUNTOS-2-CODIGO.yaml
+- id: CRM-ADJUNTOS-3-AJUSTES
+  title: 'Adjuntos de notas: mensajes de rechazo claros y estados de escaneo y borrado visibles'
   priority: P2
   category: functional
   status: pending
-  change_class: C
-  summary: 'Codigo de la funcion de adjuntos en las notas del lead, listo para activar: la infraestructura
-    (bucket privado, permisos del rol de la instancia y antivirus de S3) ya esta aplicada y verificada
-    en AWS DEV. Subida junto con la nota, validacion por contenido, almacenamiento en S3, marca en la
-    nota, vista en linea, descarga, borrado, auditoria y la configuracion en el compose de despliegue
-    de DEV.'
+  change_class: A
+  summary: 'Observaciones del smoke humano en DEV del 2026-10-21 (aceptacion de CRM-ADJUNTOS-2-CODIGO
+    con notas): (1) un PDF liviano se rechaza con el mensaje generico ''Uno de los archivos no es valido'';
+    en DEV hubo 4 rechazos, todos con codigo unsafe_pdf, y el PDF de prueba que el humano diagnostico
+    trae un archivo incrustado de verdad (/EmbeddedFile exacto), de modo que la regla lo rechaza segun
+    el diseno pero el usuario no sabe por que; el mensaje debe decir el motivo concreto (por ejemplo cifrado,
+    archivos incrustados o JavaScript) y que el codigo unsafe_pdf se divida por causa. (2) Una imagen
+    recien subida muestra ''adjunto eliminado'' mientras GuardDuty la escanea, y deberia decir que se
+    esta escaneando. (3) Un PDF eliminado por ceo o cto sigue mostrando ''Ver PDF'' y ''Descargar'' y
+    abre una pestana nueva con 404; debe aparecer ''archivo eliminado'' en el mismo comentario. Propuesta
+    de diseno: (a) registrar el borrado dentro de la propia nota reemplazando la marca por una marca de
+    eliminado, para que no haya enlaces ni 404; (b) leer la etiqueta GuardDutyMalwareScanStatus (permiso
+    s3:GetObjectTagging de solo lectura para el rol de la app, que se aplica con deployment/aws/adjuntos_s3_infra.py)
+    para mostrar escaneando, bloqueado o disponible; (c) mensajes de rechazo por causa, indicando el archivo
+    por su posicion y sin repetir nombres. Decision pendiente del humano: si un PDF con archivos incrustados
+    se sigue rechazando con un mensaje claro (recomendado para esta etapa) o se permite.'
   evidence:
-  - docs/ADJUNTOS_COMENTARIOS_DISENO.md, resguardos 1 a 11 y criterios de la seccion 9
-  - 'docs/ADJUNTOS_INFRA_S3.md: infraestructura aplicada y verificada el 2026-10-21; el bucket tpi-dev-adjuntos-821656895812-us-east-2
-    solo entrega objetos con la etiqueta GuardDutyMalwareScanStatus=NO_THREATS_FOUND; el rol de la app
-    tiene PutObject, GetObject y DeleteObject sobre leads/* y nada mas (sin ListBucket ni etiquetas)'
-  - 'app/web/routes/leads.py: POST /leads/{id}/comments (CSRF, nota con service.append_lead_comment) y
-    GET /leads/{id} (visibilidad con get_solicitud_detalle_masked); app/services/solicitud_service.py:
-    append_lead_comment, _advisor_mutation_scope, _format_follow_up_fragment (la nota es una sola linea
-    de texto normalizado con ''<'' y ''>'' escapados)'
-  - 'app/web/presentation.py: parse_lead_comments divide tpi.leads.comentarios en bloques separados por
-    una linea en blanco y falla cerrado si un bloque no calza; un bloque de nota admite varias lineas'
-  - 'app/services/simulador_auditoria.py: precedente de eventos en tpi.auditoria sin cambio de esquema
-    (clase A); app/api/abuse.py: InMemoryRateLimiter reutilizable; app/notifications/sns.py: adaptador
-    del SDK de AWS con cliente inyectable para pruebas'
-  - 'deployment/caddy/Caddyfile: el sitio del backoffice no pone Content-Security-Policy ni X-Content-Type-Options,
-    asi que cada respuesta de adjunto debe llevar sus propias cabeceras'
-  - 'deployment/aws/docker-compose.domainlocked.yml y tests/unit/test_domain_locked_bundle.py: las variables
-    llegan por el compose; el cutover es version-only, por eso se usan valores literales'
-  - 'no hay limite de tamano de peticion en la web (solo la API tiene un middleware): la subida debe imponer
-    el suyo'
-  task:
-    id: CRM-ADJUNTOS-2-CODIGO
-    title: 'Adjuntos de notas, paso 2: subida, vista en linea, descarga y borrado'
-    objective: 'Que quien escribe una nota de seguimiento en el detalle de un lead pueda adjuntarle imagenes
-      (PNG y JPEG) y PDF, y que todos los usuarios con acceso a ese lead los vean en linea o los descarguen,
-      con los resguardos de docs/ADJUNTOS_COMENTARIOS_DISENO.md: validacion por contenido, almacenamiento
-      privado en S3 con antivirus de GuardDuty (ya aplicado), todo servido por la app con la visibilidad
-      del lead, auditoria de cada accion y borrado a solicitud del titular. Sin tabla nueva: el archivo
-      vive en S3 y la nota guarda una marca.'
-    source:
-      type: story
-      ref: Peticion del humano (2026-10-20), decisiones del 2026-10-21 y docs/ADJUNTOS_COMENTARIOS_DISENO.md;
-        definida en sesion interactiva con Claude.
-    change_class: C
-    deploy_required: true
-    requires_human_acceptance: true
-    acceptance_criteria:
-    - id: AC-1
-      verification: automated
-      description: 'Configuracion fail-closed. Settings agrega ATTACHMENTS_ENABLED (falso por defecto),
-        ATTACHMENTS_BUCKET (vacio por defecto) y la region de S3 (us-east-2 por defecto). Con ATTACHMENTS_ENABLED=true
-        y sin bucket, la app no arranca (error de validacion de Settings). Con la funcion apagada el comportamiento
-        de las notas es IDENTICO al actual: sin campo de archivos en el formulario, las rutas de adjuntos
-        responden 404 y una nota de solo texto se agrega exactamente igual (prueba de regresion). Los
-        limites (10 MiB por archivo, 5 archivos por nota y 25 MiB por peticion) son constantes o ajustes
-        con esos valores por defecto.'
-    - id: AC-2
-      verification: automated
-      description: 'Validacion por contenido en un modulo propio (por ejemplo app/attachments/validation.py).
-        El tipo lo decide el contenido, nunca la extension ni el Content-Type declarado: PNG por su firma
-        y su IHDR, JPEG por su SOI y un marcador SOF valido, PDF por ''%PDF-'' al inicio y ''%%EOF'' en
-        los ultimos 1024 bytes. De las imagenes se leen solo las dimensiones, SIN decodificar los pixeles
-        (nada de load, convert ni re-codificar) y con un tope de pixeles (50 millones). Se rechazan: archivo
-        vacio, mas de 10 MiB, firma valida con estructura invalida o truncada, y cualquier otro tipo (SVG,
-        HTML, GIF, TIFF, WebP, EPS, PPM, ejecutables). Un PDF se rechaza si contiene JavaScript (/JS,
-        /JavaScript), /Launch, /EmbeddedFile o /Encrypt, comparando despues de decodificar los escapes
-        ''#xx'' de los nombres de PDF (por ejemplo ''/J#53''). Devuelve el tipo verificado (pdf, png o
-        jpg), el tamano y el SHA-256, y un codigo de rechazo sin texto del usuario.'
-    - id: AC-3
-      verification: automated
-      description: 'Almacenamiento en S3 detras de una interfaz con cliente inyectable (patron de app/notifications/sns.py;
-        pruebas con un doble, sin red). La clave es ''leads/<id_lead>/<uuid4 generado por el servidor>''.
-        Se guardan como metadatos del objeto el tipo verificado, el tamano, el SHA-256, el sujeto de quien
-        lo subio y la fecha UTC; NO se guarda el nombre original del archivo. ContentType es el tipo verificado.
-        Las llamadas a S3 NUNCA llevan etiquetas (ni Tagging ni PutObjectTagging): la politica del bucket
-        las deniega y las pone solo GuardDuty. Un 403 o un NoSuchKey de S3 se tratan igual: adjunto no
-        disponible (el bucket no entrega lo que aun no se escaneo, lo infectado ni lo borrado, y no se
-        puede listar).'
-    - id: AC-4
-      verification: automated
-      description: 'Subida en POST /leads/{id}/comments (multipart; el campo de texto sigue siendo obligatorio).
-        Orden obligatorio: (1) CSRF; (2) comprobar que el usuario puede escribir en ese lead, con la misma
-        regla de alcance de asesor que ya usa la nota, ANTES de leer ni subir ningun archivo; (3) validar
-        TODOS los archivos (si uno falla, se rechaza todo con 400 y no se sube nada); (4) subir a S3;
-        (5) agregar la nota con una marca ''[adjunto:<tipo>:<uuid>]'' por archivo, cada una en su propia
-        linea despues del texto, en el MISMO UPDATE de tpi.leads.comentarios; (6) si la nota no se pudo
-        agregar (devuelve falso o falla), borrar los objetos subidos (mejor esfuerzo, sin contenido en
-        los logs). Las marcas las agrega solo el servidor, no cuentan para el tope de 1000 caracteres
-        de la nota y el texto del usuario que imite una marca se neutraliza. Limites: maximo 5 archivos
-        por nota; peticion de mas de 25 MiB rechazada con 413 usando Content-Length y, sin el, los limites
-        del parser multipart (max_files y max_part_size de Starlette), sin leer todo el cuerpo. Limite
-        de tasa por usuario reutilizando InMemoryRateLimiter (por ejemplo 20 archivos cada 10 minutos;
-        429 al excederlo).'
-    - id: AC-5
-      verification: automated
-      description: 'Presentacion de las notas. FollowUpNote incorpora sus adjuntos (tipo y uuid) y las
-        marcas se quitan del texto mostrado; parse_lead_comments sigue fallando cerrado ante un bloque
-        mal formado y una nota con marcas no rompe el formato. El detalle del lead muestra cada imagen
-        en linea (''<img>'' con carga diferida, alt generico y sin nombre de archivo) y cada PDF como
-        enlace ''Ver PDF'' (pestana nueva, rel noopener) y ''Descargar''; un adjunto eliminado se muestra
-        como ''adjunto eliminado''. NO se llama a S3 al renderizar la pagina del lead (sin HEAD ni listado):
-        el navegador pide cada archivo. Las marcas se ocultan tambien en la exportacion a Excel y en cualquier
-        otro lugar que muestre el texto de tpi.leads.comentarios (buscar todos los usos y cubrirlos con
-        una funcion unica). El formulario de la nota (enctype multipart) muestra el campo de archivos
-        con los tipos y limites y el aviso ''no subas documentos de identidad completos salvo que sea
-        necesario''.'
-    - id: AC-6
-      verification: automated
-      description: 'Vista y descarga en GET /leads/{id}/adjuntos/{uuid} (en linea) y con ?descargar=1
-        (attachment). Sin sesion redirige al login. Se responde 404 generico si el uuid no es valido,
-        el lead no es visible para el usuario (misma regla que el detalle del lead; un asesor solo ve
-        su cartera), la marca de ese uuid no esta en la nota de ESE lead (un uuid de otro lead no sirve),
-        o S3 no entrega el objeto; no se llama a S3 hasta superar esas comprobaciones. Cabeceras de la
-        respuesta: Content-Type del tipo verificado (application/pdf, image/png o image/jpeg; si el tipo
-        de los metadatos no coincide con el de la marca, 404), X-Content-Type-Options: nosniff, Cache-Control:
-        private, no-store, Content-Disposition con un nombre generado por el servidor (''adjunto-<fecha>.<ext>'',
-        nunca el del usuario), Content-Security-Policy restrictiva (default-src ''none''; con sandbox
-        en las imagenes; el visor de PDF de los navegadores no funciona con sandbox, se prueba y se documenta)
-        y Referrer-Policy: no-referrer.'
-    - id: AC-7
-      verification: automated
-      description: 'Auditoria y borrado. Cada subida, rechazo, vista, descarga y borrado inserta una fila
-        en tpi.auditoria (acciones adjunto_subido, adjunto_rechazado, adjunto_visto, adjunto_descargado
-        y adjunto_eliminado; tabla_afectada tpi.leads; id_lead; detalle con el sujeto, el uuid, el tipo,
-        el tamano y el SHA-256, y para los rechazos solo el codigo de rechazo; NUNCA nombres de archivo
-        ni contenido), sin cambio de esquema, siguiendo app/services/simulador_auditoria.py. Borrado:
-        POST con CSRF en /leads/{id}/adjuntos/{uuid}/eliminar, solo para los roles que ya ven los datos
-        personales completos (los mismos de can_view_full_pii); borra el objeto de S3, deja la marca en
-        la nota (se muestra como eliminado) y audita. La limpieza de leads de prueba de DEV (delete_test_lead)
-        borra antes los objetos de los adjuntos del lead, encontrados por las marcas.'
-    - id: AC-8
-      verification: automated
-      description: 'Configuracion de despliegue. deployment/aws/docker-compose.domainlocked.yml agrega
-        al servicio backoffice ATTACHMENTS_ENABLED: "true" y ATTACHMENTS_BUCKET: "tpi-dev-adjuntos-821656895812-us-east-2"
-        como valores LITERALES (el cutover es version-only, sin option settings de Elastic Beanstalk);
-        el servicio api no las recibe. tests/unit/test_domain_locked_bundle.py lo comprueba. docker-compose.yml
-        (local) y el Dockerfile no cambian: localmente la funcion queda apagada. docker compose config
-        y docker build pasan en el CI.'
-    - id: AC-9
-      verification: automated
-      description: 'Pruebas de seguridad (sin red; S3 simulado), como minimo: PDF con extension .png y
-        PNG con extension .pdf (decide el contenido); Content-Type declarado distinto del real; firma
-        valida con contenido truncado; PDF con /JavaScript, /JS, /Launch, /EmbeddedFile y /Encrypt, incluidos
-        los escapes ''#xx''; SVG, HTML, GIF, TIFF y WebP rechazados; archivo de mas de 10 MiB; imagen
-        con dimensiones sobre el tope; 6 archivos; peticion de mas de 25 MiB (413); CSRF ausente (403
-        y cero llamadas a S3); un asesor sobre un lead que no es suyo (cero llamadas a S3 y la misma respuesta
-        que la nota de hoy); GET con el uuid de un adjunto de otro lead (404); sin sesion (login); asesor
-        sin acceso al lead (404); cabeceras de AC-6 presentes en vista y descarga; marca escrita a mano
-        en el texto neutralizada; nombre de archivo malicioso (''<script>.pdf'', ''../../x'') que no se
-        guarda, no se refleja en HTML, logs ni cabeceras; los logs no contienen bytes ni nombres (caplog);
-        S3 devuelve 403 (aun sin escanear o infectado) y se muestra como no disponible; limite de tasa
-        (429); nota con adjuntos cuyo UPDATE devuelve falso borra los objetos subidos.'
-    - id: AC-10
-      verification: automated
-      description: El resto de las pruebas (unitarias, integracion, seguridad y e2e que sigan vigentes)
-        pasa con cobertura total >= 85%, incluido el codigo nuevo; ruff, black, mypy y bandit sin observaciones;
-        'pip-audit' sin excepciones y SIN dependencias nuevas (boto3, Pillow y python-multipart ya estan
-        en el lock).
-    - id: AC-11
-      verification: both
-      description: 'Documentacion al dia: docs/SEGURIDAD.md deja constancia de la funcion de adjuntos
-        y de los riesgos aceptados (visibilidad, EXIF y GPS sin re-codificar); docs/ADJUNTOS_COMENTARIOS_DISENO.md
-        pasa a ''implementado'' con el detalle real (nombres de modulos y de acciones de auditoria); README
-        o DEVELOPMENT_GUIDE explican las variables nuevas y como se prueba localmente con S3 simulado;
-        CHANGELOG y BITACORA.'
-    - id: AC-12
-      verification: human
-      description: 'Smoke humano en AWS DEV tras el despliegue: subir en una nota un PNG o JPEG y un PDF
-        y verlos en linea (la imagen dentro del detalle y el PDF en una pestana); descargarlos; entrar
-        con un asesor con acceso al lead (los ve) y con otro sin acceso (404); subir el archivo de prueba
-        de antivirus EICAR y comprobar que se muestra como no disponible; intentar un archivo no permitido
-        (por ejemplo un GIF) y ver el rechazo; eliminar un adjunto como ceo o cto y ver ''adjunto eliminado'';
-        revisar en tpi.auditoria los eventos; sin errores en los logs.'
-    constraints:
-    - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
-      desde ramas o worktrees antiguos.'
-    - 'change_class C (toca deployment/**): tras el merge la transicion obligatoria es merged_non_fast_path
-      hacia BLOCKED_HUMAN, sin excepcion. El humano resuelve el estado hacia PREPARING_DEPLOYMENT (release
-      completo), NUNCA hacia VERIFYING.'
-    - 'Sin tabla nueva ni migracion: la relacion nota-adjunto es la marca ''[adjunto:<tipo>:<uuid>]''
-      en tpi.leads.comentarios y los datos del archivo estan en S3 (decision del humano del 2026-10-21).
-      tpi.auditoria solo recibe eventos: su contrato prohibe usar detalle como almacen de relaciones.'
-    - 'Imagenes: SIN re-codificar en esta version (decision del humano): se valida la firma y se leen
-      las dimensiones del encabezado, sin decodificar pixeles. EXIF y GPS se conservan: riesgo aceptado
-      y documentado.'
-    - No guardar ni mostrar el nombre original del archivo en ningun lado (S3, marcas, auditoria, HTML,
-      cabeceras ni logs).
-    - 'Nada de red ni de AWS en las pruebas: el cliente de S3 se inyecta y se simula (patron de app/notifications/sns.py).
-      No ejecutar comandos contra AWS.'
-    - No cambiar el comportamiento de las notas de solo texto ni la regla de visibilidad de los leads;
-      no modificar app/simulador_pension/**. No reducir la cobertura minima (85%) ni agregar dependencias.
-    - 'No tocar IAM, el bucket ni GuardDuty: la infraestructura ya esta aplicada (docs/ADJUNTOS_INFRA_S3.md).
-      Solo se agregan al compose del backoffice las dos variables de AC-8, con valores literales.'
-    - 'Orden sugerido: modulo de validacion y su prueba, adaptador de S3 y su prueba, marcas (agregar,
-      quitar y neutralizar), servicio y subida, rutas de vista y descarga, borrado, auditoria, plantillas
-      y estilos, compose y documentacion.'
-    - 'Lecciones del guard (agents/developer/CONTEXT.md): ningun comando de shell puede nombrar un paquete
-      o texto denegado por policies.yaml ni se crean archivos sueltos en la raiz del worktree; un DENIED
-      es definitivo: detenerse y reportar.'
-    dependencies: []
-    risk:
-      level: high
-      notes: Procesa archivos de usuarios, agrega una ruta que sirve contenido y expone documentos que
-        pueden traer datos personales a todos los usuarios con acceso al lead (riesgo aceptado por el
-        humano). Mitigado por validacion por contenido, por el bucket (nadie lee lo no escaneado), por
-        servir todo desde la app con la visibilidad del lead, por la auditoria de cada vista, por las
-        pruebas de seguridad de AC-9, por la revision del Reviewer, por el smoke humano en DEV y por el
-        rollback version-only al LKG; el compose puede dejar la funcion apagada si hay un incidente.
-    scope:
-      paths:
-      - app/**
-      - tests/**
-      - deployment/aws/docker-compose.domainlocked.yml
-      - docs/**
-      - README.md
-      - CHANGELOG.md
-    status: active
+  - 'evidence/CRM-ADJUNTOS-2-CODIGO/approvals/acceptance-01.json: AC-11 y AC-12 aceptados con las tres
+    observaciones'
+  - eventos adjunto_rechazado en tpi.auditoria el 2026-10-21 (4, todos unsafe_pdf), consultados por el
+    humano
+  - 'diagnostico local del humano de un PDF rechazado: /EmbeddedFile 2 coincidencias (1 como nombre exacto
+    y 1 como prefijo /EmbeddedFiles), sin cifrado'
+  - 'app/attachments/validation.py: _FORBIDDEN_PDF_TOKENS busca los nombres como texto, sin comprobar
+    donde termina el nombre (un prefijo como /EmbeddedFiles o /JSON tambien coincide)'
+  - 'app/web/templates/lead_detail_panel.html: el texto ''adjunto eliminado'' sale del onerror de la imagen;
+    los PDF no tienen equivalente'
+  - 'revision del PR 111, hallazgo F-3 (menor, opcional): PDF eliminado o no escaneado sigue mostrando
+    Ver PDF y Descargar'
+  - S3 sin ListBucket responde 403 tanto al objeto inexistente como al aun no escaneado o infectado, por
+    eso la pagina no puede distinguirlos sin leer la etiqueta o sin una marca de eliminado
 - id: SIM-CANARIA-MENSUAL
   title: Campana canaria mensual del simulador de renta vitalicia
   priority: P2
