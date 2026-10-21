@@ -839,6 +839,10 @@ resguardos están documentados en [`ADJUNTOS_COMENTARIOS_DISENO.md`](ADJUNTOS_CO
   auditoría de cada vista/descarga y el borrado a solicitud del titular.
 - **EXIF y GPS sin re-codificar.** Las imágenes no se re-codifican en esta primera versión (decisión del humano), así que
   los metadatos EXIF y la ubicación GPS quedan visibles para quien vea el adjunto. Revisar en una segunda versión.
+- **Escaneo de PDF por tokens crudos.** La validación busca los tokens prohibidos (`/JS`, `/JavaScript`, `/Launch`,
+  `/EmbeddedFile`, `/Encrypt`) en los bytes crudos del PDF, así que no ve JavaScript dentro de streams comprimidos
+  (object streams con FlateDecode). GuardDuty y el visor del navegador son las capas siguientes. Revisar en una segunda
+  versión.
 
 ---
 

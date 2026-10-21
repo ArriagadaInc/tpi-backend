@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from botocore.exceptions import ClientError
+from botocore.exceptions import BotoCoreError, ClientError
 
 from app.attachments.storage import (
     DisabledAttachmentStorage,
@@ -92,6 +92,26 @@ def test_get_returns_none_on_access_denied_403() -> None:
             return {}
 
     storage = S3AttachmentStorage(bucket="b", client=_DeniedClient())
+    assert storage.get("leads/1/2") is None
+
+
+def test_get_returns_none_on_network_error() -> None:
+    # Un fallo de red de botocore (no ClientError) también es «adjunto no
+    # disponible» y no debe propagarse como 500 (F-4).
+    class _NetworkClient:
+        def put_object(self, **kwargs: Any) -> dict[str, Any]:
+            del kwargs
+            return {}
+
+        def get_object(self, **kwargs: Any) -> dict[str, Any]:
+            del kwargs
+            raise BotoCoreError
+
+        def delete_object(self, **kwargs: Any) -> dict[str, Any]:
+            del kwargs
+            return {}
+
+    storage = S3AttachmentStorage(bucket="b", client=_NetworkClient())
     assert storage.get("leads/1/2") is None
 
 

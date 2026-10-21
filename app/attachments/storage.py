@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 import boto3
-from botocore.exceptions import ClientError
+from botocore.exceptions import BotoCoreError, ClientError
 
 from app.config import Settings
 
@@ -85,7 +85,9 @@ class S3AttachmentStorage:
     def get(self, key: str) -> StoredObject | None:
         try:
             response = self.client.get_object(Bucket=self.bucket, Key=key)
-        except ClientError:
+        except (ClientError, BotoCoreError):
+            # NoSuchKey, 403 (aún sin escanear/infectado) y un fallo de red de
+            # botocore se tratan igual: adjunto no disponible (404 genérico).
             return None
         body = response.get("Body")
         if body is None:

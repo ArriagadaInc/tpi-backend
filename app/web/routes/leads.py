@@ -805,26 +805,46 @@ async def lead_comment_append(request: Request, lead_id: str):
     service = _resolve_service(request)
     attachments_enabled = _attachments_enabled(request)
 
-    # 413 sin leer el cuerpo cuando el Content-Length declara una petición mayor
-    # al tope de 25 MiB (AC-4).
-    content_length = request.headers.get("content-length")
-    if content_length:
-        try:
-            if int(content_length) > MAX_REQUEST_BYTES:
-                context, _ = _resolve_detail_context(
-                    request,
-                    lead_id,
-                    lead_not_found=False,
-                    error_message="La peticion excede el limite de tamano permitido.",
-                )
-                return request.app.state.templates.TemplateResponse(
-                    request,
-                    "lead_detail.html",
-                    context,
-                    status_code=413,
-                )
-        except ValueError:
-            pass
+    # Límites de tamaño de la petición (AC-4). El Content-Length declarado corta
+    # la subida en 413 antes de leer el cuerpo.
+    content_length_raw = request.headers.get("content-length")
+    try:
+        content_length = int(content_length_raw) if content_length_raw else None
+    except ValueError:
+        content_length = None
+
+    if content_length is not None and content_length > MAX_REQUEST_BYTES:
+        context, _ = _resolve_detail_context(
+            request,
+            lead_id,
+            lead_not_found=False,
+            error_message="La peticion excede el limite de tamano permitido.",
+        )
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "lead_detail.html",
+            context,
+            status_code=413,
+        )
+
+    # Sin Content-Length válido, max_part_size de Starlette solo limita los campos
+    # de texto, no las partes de archivo (MultiPartParser.on_part_data): una
+    # petición con Transfer-Encoding: chunked escribiría todo el cuerpo a un
+    # temporal en disco antes de que la validación por contenido la rechace. Con
+    # adjuntos activos se rechaza con 411 antes de leer el cuerpo (hallazgo F-1).
+    if attachments_enabled and content_length is None:
+        context, _ = _resolve_detail_context(
+            request,
+            lead_id,
+            lead_not_found=False,
+            error_message="La peticion no declara su tamano; recarga la pagina e intenta nuevamente.",
+        )
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "lead_detail.html",
+            context,
+            status_code=411,
+        )
 
     try:
         form = await request.form(

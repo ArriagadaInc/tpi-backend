@@ -272,6 +272,55 @@ def test_upload_over_request_limit_is_413(monkeypatch: pytest.MonkeyPatch) -> No
     assert storage.put_calls == []
 
 
+def test_upload_without_content_length_is_411_when_attachments_enabled() -> None:
+    # F-1: sin Content-Length (Transfer-Encoding: chunked), max_part_size de
+    # Starlette no limita las partes de archivo, así que la ruta debe rechazar
+    # con 411 antes de leer el cuerpo para no escribir un temporal sin tope.
+    client, _, storage, _audit = _client("ceo")
+    csrf = _csrf(client)
+
+    def body() -> Any:
+        yield (
+            f'--b\r\nContent-Disposition: form-data; name="csrf_token"\r\n\r\n{csrf}\r\n'
+            f'--b\r\nContent-Disposition: form-data; name="new_comment"\r\n\r\nNota\r\n'
+            f"--b--\r\n"
+        ).encode()
+
+    response = client.post(
+        f"/leads/{LEAD_ID}/comments",
+        content=body(),
+        headers={"Content-Type": "multipart/form-data; boundary=b"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 411
+    assert storage.put_calls == []
+
+
+def test_upload_without_content_length_works_when_attachments_disabled() -> None:
+    # AC-1: con la función apagada el comportamiento es idéntico al actual; una
+    # petición sin Content-Length no se rechaza con 411 (no hay adjuntos que acotar).
+    client, repo, storage, audit = _client("ceo", attachments_enabled=False)
+    csrf = _csrf(client)
+
+    def body() -> Any:
+        yield (
+            f'--b\r\nContent-Disposition: form-data; name="csrf_token"\r\n\r\n{csrf}\r\n'
+            f'--b\r\nContent-Disposition: form-data; name="new_comment"\r\n\r\nSeguimiento simple\r\n'
+            f"--b--\r\n"
+        ).encode()
+
+    response = client.post(
+        f"/leads/{LEAD_ID}/comments",
+        content=body(),
+        headers={"Content-Type": "multipart/form-data; boundary=b"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert repo.comments[-1].endswith("Seguimiento simple")
+    assert storage.put_calls == []
+    assert audit == []
+
+
 def test_text_only_note_still_works_when_attachments_enabled() -> None:
     client, repo, storage, audit = _client("ceo")
     csrf = _csrf(client)
