@@ -22,6 +22,20 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-21 - CRM: diseño de los adjuntos en las notas del lead (CRM-ADJUNTOS-COMENTARIOS)
+
+- Decisiones del humano: PDF, PNG y JPEG verificados por contenido; 10 MB por archivo, 5 por nota y 25 MB por petición; **vista en línea**
+  (imágenes en el detalle y PDF en una pestaña nueva) además de la descarga; retención mientras exista el lead y borrado a solicitud del
+  titular (Ley 21.719); cada subida, vista y descarga auditada; visibles para **todos los usuarios con acceso al lead**.
+- Riesgo aceptado: la interfaz enmascara los datos personales, pero un archivo no se puede enmascarar (una foto de una cédula la vería
+  cualquier usuario con acceso al lead). Compensaciones: aviso al subir, auditoría de cada vista, borrado a solicitud y revisión tras el
+  primer mes. Se deja constancia en `docs/SEGURIDAD.md` al implementar.
+- Hallazgo que condiciona el diseño: las notas no son una entidad; son texto agregado a `tpi.leads.comentarios` (máximo 1000 caracteres
+  por nota). Los adjuntos serán una tabla propia ligada al lead, que se sube junto con la nota, sin migrar las notas.
+- Cambio de este PR (solo documentación y backlog): `docs/ADJUNTOS_COMENTARIOS_DISENO.md` y la división en cuatro pasos en el backlog:
+  bucket S3 y permisos (clase C), tabla y migración 010 (clase D), código con interruptor apagado (clase A) y antivirus con habilitación
+  (clase C). Los pasos 1 y 2 son independientes. `CRM-ADJUNTOS-COMENTARIOS` queda como paraguas y no se activa.
+
 ### 2026-10-21 - Seguridad: Streamlit retirado y Pillow 13 desplegados; excepción de pip-audit cerrada (SEG-DESACOPLAR-STREAMLIT)
 
 - Resultado: el humano aceptó AC-7 y AC-8 en DEV (inicio de sesión en el backoffice, lista y detalle de leads, asistente del simulador con
