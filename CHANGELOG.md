@@ -56,6 +56,13 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ### 🔄 Cambiado
 
+- **Publish a ECR: esperar el escaneo hasta 20 minutos y fallar con mensajes claros** (H3.2-ECR-SCAN-WAIT)
+  - El paso de escaneo de `publish-dev-ecr-images.yml` espera hasta `SCAN_TIMEOUT_MINUTES=20` minutos (sondeo cada `SCAN_POLL_SECONDS=15` s) a que ambas imagenes (`tpi-dev-app` y `tpi-dev-caddy`) tengan el escaneo `COMPLETE`, con gate fail-closed: `CRITICAL=0` y `HIGH=0` en ambas imagenes; `IN_PROGRESS` nunca cuenta como exito y los tags siguen siendo inmutables.
+  - Los fallos se distinguen con mensajes propios: (a) el escaneo no termino en el plazo, aclarando que NO hay hallazgos verificados, con los digests y el procedimiento de recuperacion; (b) termino en `FAILED` o `UNSUPPORTED_IMAGE`; (c) hay hallazgos HIGH/CRITICAL, con el detalle como hasta ahora.
+  - La logica de espera se extrae a `scripts/release/wait_for_ecr_scan.py` (CLI de AWS inyectable para pruebas). Sin cambios de permisos IAM/OIDC ni de la politica de tags ni de la publicacion de imagenes.
+  - Recuperacion cuando el publish falla por el escaneo: revisar el estado del escaneo de ambos digests, borrar las dos imagenes del release (los tags son inmutables, lo hace el humano) y relanzar el workflow con el mismo SHA; documentada en `docs/DEV_EB_DEPLOYMENT_RUNBOOK.md`.
+  - Pruebas nuevas `tests/unit/test_ecr_scan_wait.py` y `tests/security/test_ecr_scan_wait_workflow.py`.
+
 - **Lifecycle de ECR compatible con rollback: conservar 100 imágenes** (H3.2-ECR-LIFECYCLE)
   - La política de lifecycle de ECR de AWS DEV (`deployment/ecr/lifecycle-policy.json`) pasa la regla de retención de `imageCountMoreThan: 20` a `imageCountMoreThan: 100`, para que el LKG y los candidatos de rollback no se expiren al acumularse publicaciones. La regla 1 (capas sin etiqueta a los 7 días) no cambia.
   - Nuevo test sin AWS (`tests/unit/test_ecr_lifecycle_policy.py`) que lee la política y rompe CI si no hay reglas, hay prioridades repetidas, una regla expira por antigüedad imágenes con etiqueta o el conteo de retención baja de 100.

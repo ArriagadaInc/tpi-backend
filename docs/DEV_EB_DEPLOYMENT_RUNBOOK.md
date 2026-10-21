@@ -274,3 +274,30 @@ ejecuta desde una sesión AWS administrativa controlada y auditada.
 
 No borrar `h3-3-crm-web-28cf009-r1` para reanudar. Una discrepancia de source
 requiere detenerse, no sobrescribir ni eliminar automáticamente.
+
+## Recuperación cuando el publish falla por el escaneo de ECR
+
+El workflow `publish-dev-ecr-images.yml` espera hasta `SCAN_TIMEOUT_MINUTES` minutos
+(sondeando cada `SCAN_POLL_SECONDS` segundos) a que el escaneo de ECR de ambas imagenes
+(`tpi-dev-app` y `tpi-dev-caddy`) termine en `COMPLETE`, y mantiene el gate fail-closed:
+sin un `COMPLETE` con `CRITICAL=0` y `HIGH=0` en ambas imagenes no se arma el bundle ni
+se sube el artefacto, y `IN_PROGRESS` nunca cuenta como exito. Un escaneo atascado mas de
+20 minutos seguira fallando: la solucion no es esperar indefinidamente, es el
+procedimiento de recuperacion.
+
+Los tres mensajes de fallo se distinguen asi:
+
+| Mensaje | Significado | Accion |
+| --- | --- | --- |
+| «no termino en el plazo ... NO hay hallazgos verificados» | El escaneo no llego a `COMPLETE` dentro del plazo (suele quedar en `IN_PROGRESS`). No se puede afirmar nada sobre la seguridad de la imagen. | Borrar y relanzar (abajo). |
+| «termino en FAILED» o «termino en UNSUPPORTED_IMAGE» | ECR no pudo escanear la imagen; no hay un resultado utilizable. | Borrar y relanzar (abajo). |
+| «Hallazgos HIGH o CRITICAL ... CRITICAL=... HIGH=...» | El escaneo termino y encontro hallazgos reales, con el detalle a continuacion. | Remediar la imagen (dependencias/base) y volver a publicar. |
+
+Procedimiento de recuperacion (lo ejecuta el humano; los tags son inmutables):
+
+1. Revisar el estado del escaneo de ambos digests:
+   `aws ecr describe-image-scan-findings --repository-name <repo> --image-id imageDigest=<digest> --query 'imageScanStatus.status' --output text`.
+2. Borrar las dos imagenes del release (`tpi-dev-app` y `tpi-dev-caddy`). Los tags son
+   inmutables, por lo que solo el humano puede borrarlas; sin borrarlas, relanzar el
+   workflow no vuelve a escanearlas (el tag ya existe y ECR no reescanea por push).
+3. Relanzar el workflow con el mismo SHA (`workflow_dispatch` con el `source_sha` original).
