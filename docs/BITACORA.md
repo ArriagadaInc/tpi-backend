@@ -22,6 +22,22 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-21 - CRM: los adjuntos se simplifican a dos pasos y sin tabla (CRM-ADJUNTOS-COMENTARIOS)
+
+- Decisión del humano: el mismo día de definir el diseño (PR #107) se pidió una forma más simple que una tabla de adjuntos. Se
+  aprobó un diseño **sin tabla** y **sin re-codificar imágenes** en la primera versión.
+- Nuevo diseño: el archivo y sus datos (tipo verificado, tamaño, SHA-256, quién lo subió) viven en S3 con clave `leads/<id_lead>/<uuid>`;
+  la nota guarda una marca `[adjunto:<tipo>:<uuid>]` que agrega el servidor; el antivirus es GuardDuty Malware Protection for S3, que
+  etiqueta cada objeto, y una política del bucket impide leer lo que no tenga `NO_THREATS_FOUND`; los eventos se auditan en `tpi.auditoria`.
+  `tpi.auditoria` no sirve de registro porque su contrato prohíbe usar `detalle` como almacén de relaciones operativas.
+- Efecto en el backlog: de cuatro pasos a dos. Se eliminan la tabla con su migración 010 (clase D) y el paso del antivirus. Quedan
+  `CRM-ADJUNTOS-1-INFRA-S3` (bucket, permisos y GuardDuty; lo aplica el humano con Claude interactivo) y `CRM-ADJUNTOS-2-CODIGO`
+  (clase C, porque agrega variables al compose de despliegue de DEV).
+- Riesgos aceptados además de la visibilidad: al no re-codificar, EXIF y GPS de las imágenes quedan visibles; no hay transacción entre S3 y
+  la nota (puede quedar un objeto huérfano si falla el borrado tras un error); no se puede consultar por SQL qué leads tienen adjuntos.
+  Camino de vuelta: migrar a una tabla con los datos de las marcas y de S3.
+- Cambio de este PR (solo documentación y backlog): `docs/ADJUNTOS_COMENTARIOS_DISENO.md` reescrito y `tasks/backlog.yaml` actualizado.
+
 ### 2026-10-21 - CRM: diseño de los adjuntos en las notas del lead (CRM-ADJUNTOS-COMENTARIOS)
 
 - Decisiones del humano: PDF, PNG y JPEG verificados por contenido; 10 MB por archivo, 5 por nota y 25 MB por petición; **vista en línea**

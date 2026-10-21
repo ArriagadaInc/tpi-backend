@@ -8,89 +8,76 @@ items:
   status: blocked
   change_class: none
   summary: 'Funcion paraguas: permitir que los usuarios suban imagenes y PDF en las notas de seguimiento
-    de un lead. NO se activa: se implementa en 4 pasos (CRM-ADJUNTOS-1-INFRA-S3, -2-TABLA, -3-CODIGO y
-    -4-ESCANEO). El diseno, las decisiones del humano del 2026-10-21 y los resguardos estan en docs/ADJUNTOS_COMENTARIOS_DISENO.md.
+    de un lead. NO se activa: se implementa en 2 pasos (CRM-ADJUNTOS-1-INFRA-S3 y CRM-ADJUNTOS-2-CODIGO).
+    El diseno, las decisiones del humano del 2026-10-21 y los resguardos estan en docs/ADJUNTOS_COMENTARIOS_DISENO.md.
     Decisiones: PDF, PNG y JPEG verificados por contenido; 10 MB por archivo, 5 por nota y 25 MB por peticion;
     vista en linea (imagenes en el detalle, PDF en pestana nueva) y descarga; retencion mientras exista
     el lead y borrado a solicitud del titular (Ley 21.719); cada subida, vista y descarga auditada; visibles
-    para todos los usuarios con acceso al lead (riesgo aceptado: un archivo no se puede enmascarar).'
+    para todos los usuarios con acceso al lead (riesgo aceptado: un archivo no se puede enmascarar). Diseno
+    simplificado: sin tabla (archivo y datos en S3, marca en la nota, antivirus con GuardDuty Malware
+    Protection for S3) y sin re-codificar imagenes en la primera version.'
   evidence:
-  - 'docs/ADJUNTOS_COMENTARIOS_DISENO.md: decisiones, riesgo aceptado, resguardos obligatorios y los 4
-    pasos'
+  - 'docs/ADJUNTOS_COMENTARIOS_DISENO.md: decisiones, riesgos aceptados, resguardos obligatorios y los
+    2 pasos'
   - 'peticion del humano el 2026-10-20: ''en el crm quiero incorporar una nueva feature, que en los comentarios
     el usuario pueda subir imagenes y pdf, etc.. dado esto, hay que tomar los resguardos'''
-  - 'decisiones del humano el 2026-10-21: vista en linea (no solo descarga) y visibilidad para todos los
-    que tienen acceso al lead (opcion B); el resto de los valores propuestos se acepto sin objecion'
+  - 'decisiones del humano el 2026-10-21: vista en linea (no solo descarga), visibilidad para todos los
+    que tienen acceso al lead (opcion B), diseno sin tabla y sin re-codificar imagenes en la primera version;
+    el resto de los valores propuestos se acepto sin objecion'
   - 'dependencia cumplida: SEG-DESACOPLAR-STREAMLIT cerrada el 2026-10-21 (Pillow 13.0.0 y pip-audit sin
     excepciones)'
   - 'hallazgo del codigo: las notas no son una entidad, son texto agregado a tpi.leads.comentarios (maximo
-    1000 caracteres por nota, con encabezado de fecha y autor); los adjuntos seran una tabla propia ligada
-    al lead'
+    1000 caracteres por nota, con encabezado de fecha y autor); cada adjunto se enlaza con una marca en
+    la nota'
+  - 'tpi.auditoria: su contrato prohibe usar detalle como almacen de relaciones operativas, por eso solo
+    guarda los eventos de los adjuntos y no sirve de registro'
 - id: CRM-ADJUNTOS-1-INFRA-S3
-  title: 'Adjuntos de notas, paso 1: bucket S3 privado y permisos del rol de la instancia'
+  title: 'Adjuntos de notas, paso 1: bucket S3 privado, permisos del rol y antivirus de S3'
   priority: P2
   category: infra
   status: pending
   change_class: C
-  summary: 'Crear el bucket privado de adjuntos (acceso publico bloqueado, cifrado en reposo, solo TLS,
-    versionado, sin listado) y el permiso minimo del rol de la instancia de Elastic Beanstalk (leer, escribir
-    y borrar objetos del prefijo de adjuntos). Entregable: una plantilla revisable y un script de aplicacion
-    que simula por defecto, pide una frase de confirmacion y tiene retroceso, como el de la migracion
-    009. Lo aplica el humano con Claude interactivo; no es una tarea del Developer porque toca IAM.'
+  summary: 'Crear el bucket privado de adjuntos (acceso publico bloqueado, cifrado SSE-S3, solo TLS, sin
+    versionado, regla para abortar subidas multiparte incompletas), el permiso minimo del rol de la instancia
+    de Elastic Beanstalk (PutObject, GetObject y DeleteObject sobre leads/*, sin ListBucket), GuardDuty
+    Malware Protection for S3 con etiquetado y la politica del bucket que deniega GetObject si la etiqueta
+    GuardDutyMalwareScanStatus no es NO_THREATS_FOUND. Antes se comprueba con comandos de solo lectura
+    que GuardDuty Malware Protection esta disponible en la cuenta y su costo. Entregable: una plantilla
+    revisable y un script de aplicacion que simula por defecto, pide una frase de confirmacion y tiene
+    retroceso, como el de la migracion 009, y una prueba con un archivo de antivirus de prueba (EICAR).
+    Lo aplica el humano con Claude interactivo; no es una tarea del Developer porque toca IAM.'
   evidence:
-  - docs/ADJUNTOS_COMENTARIOS_DISENO.md, resguardos 4 y 5
+  - docs/ADJUNTOS_COMENTARIOS_DISENO.md, resguardos 4, 5 y 8
+  - GuardDuty Malware Protection for S3 etiqueta cada objeto con GuardDutyMalwareScanStatus (NO_THREATS_FOUND,
+    THREATS_FOUND, UNSUPPORTED, ACCESS_DENIED, FAILED); el etiquetado se activa al crear el plan de proteccion;
+    una politica del bucket puede negar la lectura de lo que no tenga NO_THREATS_FOUND (https://docs.aws.amazon.com/guardduty/latest/ug/how-malware-protection-for-s3-gdu-works.html)
+  - tarifa por GB escaneado publicada en https://docs.aws.amazon.com/guardduty/latest/ug/pricing-malware-protection-for-s3-guardduty.html;
+    la tarifa por objeto se confirma al empezar
   - 'contrato CI/CD: los buckets e IAM son clase C (INFRA PATH: PR separado, inspeccion, ventana y retroceso)'
   - 'deployment/aws/check_eb_iam_isolation.py: comprobacion existente del aislamiento de IAM de EB'
-- id: CRM-ADJUNTOS-2-TABLA
-  title: 'Adjuntos de notas, paso 2: tabla tpi.lead_adjuntos y su migracion 010'
-  priority: P2
-  category: db
-  status: pending
-  change_class: D
-  summary: Tabla tpi.lead_adjuntos ligada al lead (id, id_lead, subido_por, fecha_hora, tipo verificado,
-    tamano, hash SHA-256, clave aleatoria en S3, nombre original saneado, estado pendiente/limpio/infectado/error,
-    borrado) con sus permisos para tpi_app, una vista de auditoria y la migracion 010 con su script de
-    retroceso. El Developer escribe el SQL y las pruebas; el humano lo aplica una sola vez con un script
-    como el de la migracion 009 (simula y revierte por defecto).
-  evidence:
-  - docs/ADJUNTOS_COMENTARIOS_DISENO.md, secciones 3 y 4
-  - 'scripts/sql/009_create_historial_simulaciones.sql y su aplicacion: patron de migracion con vista
-    y permisos solo para tpi_app'
-  - 'docs/database/02_PHYSICAL_SCHEMA.md y 03_BUSINESS_RULES.md: fuentes del modelo de datos'
-- id: CRM-ADJUNTOS-3-CODIGO
-  title: 'Adjuntos de notas, paso 3: subida, vista en linea, descarga y borrado'
+- id: CRM-ADJUNTOS-2-CODIGO
+  title: 'Adjuntos de notas, paso 2: subida, vista en linea, descarga y borrado'
   priority: P2
   category: functional
   status: blocked
-  change_class: A
-  summary: 'Codigo de la funcion detras del interruptor ATTACHMENTS_ENABLED (apagado por defecto): subida
-    junto con la nota (misma transaccion y marca de tiempo), validacion por contenido, rechazo de PDF
-    con partes activas, re-codificacion de imagenes en un proceso aislado con Pillow 13, almacenamiento
-    en S3, vista en linea y descarga con las cabeceras de seguridad, borrado, auditoria y linea de tiempo
-    del lead. La configuracion nueva (nombre del bucket e interruptor) entra por el bundle del ambiente
-    (clase B).'
+  change_class: C
+  summary: 'Codigo de la funcion: subida junto con la nota, validacion por contenido (firma y estructura),
+    rechazo de PDF con partes activas, lectura solo del encabezado de las imagenes con tope de pixeles
+    (sin re-codificar), almacenamiento en S3 con clave leads/<id_lead>/<uuid> y metadatos del objeto,
+    marca [adjunto:<tipo>:<uuid>] en la nota (oculta en la vista, los resumenes del dashboard y la exportacion
+    a Excel), vista en linea y descarga con las cabeceras de seguridad, borrado, auditoria en tpi.auditoria,
+    limpieza de los objetos al borrar un lead de prueba y variables ATTACHMENTS_ENABLED y bucket en el
+    compose de despliegue de DEV con valores literales. Es clase C porque toca deployment/**: tras el
+    merge pasa por BLOCKED_HUMAN y el humano resuelve hacia PREPARING_DEPLOYMENT.'
   evidence:
   - docs/ADJUNTOS_COMENTARIOS_DISENO.md, resguardos 1 a 11 y criterios de la seccion 9
   - 'app/web/routes/leads.py (ruta de notas con CSRF) y SolicitudService.append_lead_comment: punto de
     enganche de la subida'
-  - 'app/notifications/sns.py: la app ya usa el SDK de AWS'
+  - 'app/notifications/sns.py: la app ya usa el SDK de AWS con un adaptador facil de simular en pruebas'
+  - 'deployment/aws/docker-compose.domainlocked.yml: las variables de configuracion llegan por el compose,
+    con valores literales para el cutover version-only'
   dependencies:
   - CRM-ADJUNTOS-1-INFRA-S3
-  - CRM-ADJUNTOS-2-TABLA
-- id: CRM-ADJUNTOS-4-ESCANEO
-  title: 'Adjuntos de notas, paso 4: antivirus y habilitacion de la funcion'
-  priority: P2
-  category: infra
-  status: blocked
-  change_class: C
-  summary: Escaneo de cada adjunto antes de servirlo (ClamAV o la proteccion contra malware de S3, a decidir
-    al empezar segun costo y operacion), paso de los estados pendiente a limpio, infectado o error, y
-    habilitacion de la funcion (ATTACHMENTS_ENABLED) tras el smoke humano en DEV. Deja constancia en docs/SEGURIDAD.md
-    del riesgo aceptado por la visibilidad de los adjuntos.
-  evidence:
-  - docs/ADJUNTOS_COMENTARIOS_DISENO.md, resguardo 8 y secciones 5 y 9
-  dependencies:
-  - CRM-ADJUNTOS-3-CODIGO
 - id: SIM-CANARIA-MENSUAL
   title: Campana canaria mensual del simulador de renta vitalicia
   priority: P2
