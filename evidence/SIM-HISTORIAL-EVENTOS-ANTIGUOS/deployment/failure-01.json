@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "kind": "failure",
+  "task_id": "SIM-HISTORIAL-EVENTOS-ANTIGUOS",
+  "created_at": "2026-10-20T21:16:59Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610202102-deployer-supb11e0e",
+  "action": "publish_ecr_images_scan_gate",
+  "resource": "workflow publish-dev-ecr-images.yml run 39495647051, job 'Publish immutable images and release bundle', paso 'Fail closed on high or critical ECR findings' (source_sha 793e718aaf8f4dcd52e1cd12644f8b514984202f)",
+  "principal": "GitHub Actions OIDC role (workflow dispatch lanzado por una sesion Deployer previa de esta tarea, 2026-10-20T20:52:12Z; esta sesion lo observo y no lanzo otro)",
+  "error": "El gate de escaneo agoto la espera en ambas imagenes: 'ECR scan did not complete for tpi-dev-app within five minutes.' y 'ECR scan did not complete for tpi-dev-caddy within five minutes.' El job termino con exit code 1; los pasos de bundle y artifact se omitieron. No es un hallazgo HIGH/CRITICAL: el escaneo no se completo en la ventana del workflow, por lo que CRITICAL=0/HIGH=0 no esta verificado.",
+  "state": "PREPARING_DEPLOYMENT",
+  "release_sha": "793e718aaf8f4dcd52e1cd12644f8b514984202f",
+  "release_tree": "f48c0e753855f0d394d284a19461fb3a09e79c0e",
+  "publish_run": {
+    "run_id": 39495647051,
+    "url": "https://github.com/ArriagadaInc/tpi-backend/actions/runs/39495647051",
+    "conclusion": "failure",
+    "attempt": 1,
+    "event": "workflow_dispatch",
+    "jobs": {
+      "Authorize source revision": "success",
+      "Lint & Format": "success",
+      "Tests": "success",
+      "Security Audit": "success",
+      "Docker Build": "success",
+      "Publish immutable images and release bundle": "failure"
+    },
+    "failed_step": "Fail closed on high or critical ECR findings",
+    "steps_skipped": [
+      "Build and validate release bundle",
+      "Upload DEV release artifacts"
+    ]
+  },
+  "images_pushed_by_workflow": [
+    {
+      "repository": "tpi-dev-app",
+      "tag": "793e718aaf8f4dcd52e1cd12644f8b514984202f",
+      "digest": "sha256:308734f48c8a87b6554d342a7581b74bd65fc27264c9c99219608a0c913774a4",
+      "status": "ACTIVE",
+      "scan": "no completado en 5 min segun el workflow (sin conteos verificados)"
+    },
+    {
+      "repository": "tpi-dev-caddy",
+      "tag": "793e718aaf8f4dcd52e1cd12644f8b514984202f",
+      "digest": "sha256:b3181a6dbcd992279e0b1ad70f6b990de90ffb1dbdcc67569f6b43da15213863",
+      "status": "ACTIVE",
+      "scan": "no completado en 5 min segun el workflow (sin conteos verificados)"
+    }
+  ],
+  "root_cause_analysis": {
+    "classification": "timeout del escaneo ECR (infraestructura/tiempo), no hallazgo de seguridad ni defecto del release",
+    "note": "Ambas imagenes existen y estan ACTIVE, pero no se verifico CRITICAL=0/HIGH=0, asi que el gate fail-closed no se puede dar por cumplido. Mismo patron que SIM-EVIDENCIA-ENTRADAS (failure-01)."
+  },
+  "recommendation": "El Harness no reintenta el publish ni reconstruye imagenes. Los tags de ECR son IMMUTABLE y el tag del release_sha ya esta ocupado por las imagenes publicadas, por lo que un re-dispatch del mismo SHA probablemente falle al publicar. Decision humana: (a) consultar el resultado del escaneo de ambos digests fuera del Harness; (b) si termino con HIGH=0 CRITICAL=0, definir como continuar con el mismo SHA (p. ej. re-run controlado del workflow o publicar un artifact valido); (c) si hay hallazgos, abrir tarea nueva. Despues usar approve.py resolve. No hay despliegue ni cambio en el environment.",
+  "residues": [
+    {
+      "type": "ecr_image",
+      "repository": "tpi-dev-app",
+      "tag": "793e718aaf8f4dcd52e1cd12644f8b514984202f",
+      "digest": "sha256:308734f48c8a87b6554d342a7581b74bd65fc27264c9c99219608a0c913774a4",
+      "status": "ACTIVE",
+      "note": "Inerte: no referenciada por ningun bundle ni Application Version. El Harness no puede borrarla."
+    },
+    {
+      "type": "ecr_image",
+      "repository": "tpi-dev-caddy",
+      "tag": "793e718aaf8f4dcd52e1cd12644f8b514984202f",
+      "digest": "sha256:b3181a6dbcd992279e0b1ad70f6b990de90ffb1dbdcc67569f6b43da15213863",
+      "status": "ACTIVE",
+      "note": "Inerte: no referenciada por ningun bundle ni Application Version. El Harness no puede borrarla."
+    }
+  ],
+  "access_denied": false,
+  "preflight": {
+    "account_id": "821656895812",
+    "region": "us-east-2",
+    "caller": "arn:aws:iam::821656895812:user/Alvaro",
+    "environment": {
+      "name": "tpi-backoffice-dev-green",
+      "version_label": "h3-sim-historial-linea-tiempo-e4476c3-domainlocked-r1",
+      "status": "Ready",
+      "health": "Green",
+      "health_status": "Ok",
+      "abortable_operation_in_progress": false,
+      "date_updated": "2026-10-20T14:17:14Z"
+    },
+    "lkg": {
+      "version_label": "h3-sim-historial-linea-tiempo-e4476c3-domainlocked-r1",
+      "av_status": "UNPROCESSED",
+      "images": [
+        {
+          "repository": "tpi-dev-app",
+          "digest": "sha256:74d8dab2c842cdd779d1ad34407595cef4a298925eb3ecece8864631ce193429",
+          "present": true
+        },
+        {
+          "repository": "tpi-dev-caddy",
+          "digest": "sha256:c65ca702879771a745031a834f5c580733ad76ab2ccf6f6464ec619b3aeaad73",
+          "present": true
+        }
+      ],
+      "selected_by": "observacion de describe-environments en el preflight"
+    },
+    "codepipeline_promote": "inbound transition deshabilitada"
+  },
+  "environment_after_failure": {
+    "version_label": "h3-sim-historial-linea-tiempo-e4476c3-domainlocked-r1",
+    "mutated": false
+  },
+  "safety": {
+    "update_environment": false,
+    "environment_mutated": false,
+    "option_settings": false,
+    "aws_writes_by_session": [],
+    "github_writes": [],
+    "s3_object_created": false,
+    "application_version_created": false,
+    "publish_rerun_or_redispatch": false,
+    "local_image_rebuild": false,
+    "secrets_accessed": false,
+    "code_or_dependencies_modified": false
+  }
+}

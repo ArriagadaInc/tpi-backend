@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "resolution",
+  "task_id": "SIM-HISTORIAL-EVENTOS-ANTIGUOS",
+  "created_at": "2026-10-21T00:30:21Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "from_state": "BLOCKED_HUMAN",
+  "to_state": "PREPARING_DEPLOYMENT",
+  "reason": "Publish relanzado con exito (run 39516711668) tras la excepcion acotada de pip-audit para Pillow (PR 99); escaneo de ECR COMPLETE sin hallazgos"
+}

@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "SIM-HISTORIAL-EVENTOS-ANTIGUOS",
+  "created_at": "2026-10-20T20:48:47Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610202047-reviewer-sup9a0140",
+  "reviewed_sha": "1ca0fbaea7693fa6b18648cf1945b38784ce1d10",
+  "reviewed_tree": "f48c0e753855f0d394d284a19461fb3a09e79c0e",
+  "pr_number": 97,
+  "ci": {
+    "conclusion": "success",
+    "status": "PASS",
+    "checks": "5/5 en el SHA exacto",
+    "verification": "gh pr view 97 statusCheckRollup; mergeable",
+    "run_id": 39493501085
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "info",
+      "file": "app/web/presentation.py",
+      "summary": "_normalize_simulation_entradas asume que entradas es un dict; la vista devuelve jsonb objeto, por lo que no es un riesgo real.",
+      "required_action": "ninguna"
+    }
+  ],
+  "checks": [
+    {
+      "name": "sha_pr_igual_a_evidencia_y_main_ancestro",
+      "result": "PASS"
+    },
+    {
+      "name": "ci_verde_5_de_5_en_sha_exacto",
+      "result": "PASS"
+    },
+    {
+      "name": "alcance_sin_migraciones_vistas_ni_modulos_prohibidos",
+      "result": "PASS"
+    },
+    {
+      "name": "ac1_evento_antiguo_con_nota_sin_detalle",
+      "result": "PASS"
+    },
+    {
+      "name": "ac2_normalizacion_tolera_datos_faltantes",
+      "result": "PASS"
+    },
+    {
+      "name": "ac3_sin_regresion_evidencia_completa",
+      "result": "PASS"
+    },
+    {
+      "name": "ac4_pruebas_unitarias_render_e_integracion",
+      "result": "PASS"
+    },
+    {
+      "name": "ac5_documentacion_actualizada",
+      "result": "PASS"
+    },
+    {
+      "name": "sin_secretos_ni_datos_inventados",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "AC-6 (smoke humano en AWS DEV con el lead indicado) queda pendiente de la verificacion posterior al deploy",
+    "Los tests de integracion con PostgreSQL solo se ejecutaron en CI, no localmente"
+  ]
+}

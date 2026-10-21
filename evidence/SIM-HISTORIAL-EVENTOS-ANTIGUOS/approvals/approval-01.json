@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "approval",
+  "task_id": "SIM-HISTORIAL-EVENTOS-ANTIGUOS",
+  "created_at": "2026-10-21T01:05:58Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "approved_commit": "793e718aaf8f4dcd52e1cd12644f8b514984202f",
+  "app_digest": "sha256:fd44874966e1ab0c9816612b66240d60a6ff23ca04674aa5427a67880ea4ed94",
+  "caddy_digest": "sha256:3c8dd868888c74cdb5bd671bba39d2b15406d0c3ff39532e95ab60809c1ae0ad",
+  "bundle_sha256": "8c341278fdf069cd925219bf6d7004c963ac485738a04a4c17c3a6f5e000aa79",
+  "s3_key": "tpi-backoffice/dev-releases/h3-sim-historial-eventos-antiguos-793e718-domainlocked-r1/8c341278fdf069cd925219bf6d7004c963ac485738a04a4c17c3a6f5e000aa79.zip",
+  "application_version": "h3-sim-historial-eventos-antiguos-793e718-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "lkg_version_label": "h3-sim-historial-linea-tiempo-e4476c3-domainlocked-r1",
+  "candidate_evidence": {
+    "path": "evidence/SIM-HISTORIAL-EVENTOS-ANTIGUOS/deployment/candidate-01.json",
+    "sha256": "8090aeb0c2aae1afc51234e766327f830f727eda32dfa5cde24e5b993a0f9a33"
+  },
+  "rollback_authorization": {
+    "scope": "single_version_only_rollback_to_named_lkg",
+    "max_attempts": 1,
+    "lkg_version_label": "h3-sim-historial-linea-tiempo-e4476c3-domainlocked-r1",
+    "conditions": [
+      "update_environment_accepted",
+      "environment_degraded_inconsistent_or_not_expected_state",
+      "lkg_application_version_usable",
+      "lkg_images_present_in_ecr",
+      "no_option_settings_required",
+      "not_purely_functional_defect",
+      "no_previous_rollback_attempt"
+    ]
+  },
+  "decision": "approved"
+}

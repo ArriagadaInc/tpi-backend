@@ -1,0 +1,95 @@
+schema_version: 1
+task:
+  id: SIM-HISTORIAL-EVENTOS-ANTIGUOS
+  title: 'Linea de tiempo del lead: no fallar con simulaciones registradas antes de guardar sus entradas'
+  objective: El detalle del lead no debe fallar por la forma de un evento de simulacion. Las simulaciones
+    registradas antes de SIM-EVIDENCIA-ENTRADAS (detalle con solo actor_subject, role, tipo_escenario,
+    version_modelo y codigo_verificacion; la vista devuelve entradas y resultado NULL) se muestran en
+    la linea de tiempo con los datos que tienen y una nota, y la presentacion tolera cualquier dato faltante
+    de la evidencia.
+  source:
+    type: story
+    ref: Defecto hallado por el humano al verificar SIM-HISTORIAL-LINEA-TIEMPO (2026-10-20); definida
+      en sesion interactiva con Claude.
+  change_class: A
+  deploy_required: true
+  requires_human_acceptance: true
+  acceptance_criteria:
+  - id: AC-1
+    verification: automated
+    description: 'Un evento de simulacion antiguo (la vista devuelve entradas y resultado NULL) no rompe
+      el detalle del lead: la pagina responde 200 y la linea de tiempo muestra ''Simulacion generada''
+      con ejecutivo, escenario, version del modelo y codigo, mas la nota ''Registro anterior al guardado
+      de entradas: solo se conservan escenario, version y codigo'', sin el detalle desplegable de entradas.'
+  - id: AC-2
+    verification: automated
+    description: 'La presentacion y la plantilla toleran cualquier dato faltante o nulo de la evidencia:
+      entradas o resultado ausentes, entradas sin causante, beneficiarios nulo o vacio, beneficiario con
+      campos faltantes y fechas nulas. Ninguna combinacion produce 500. Se prueba con cargas parciales,
+      no solo con la evidencia completa.'
+  - id: AC-3
+    verification: automated
+    description: 'Sin regresion: un evento con la evidencia completa se muestra como hasta ahora (entradas,
+      causante, beneficiarios con fecha de nacimiento, invalidez y relacion, y resultado); el orden por
+      fecha, la visibilidad (404 si el lead no es visible) y el resto de la linea de tiempo no cambian.'
+  - id: AC-4
+    verification: automated
+    description: Pruebas unitarias de la presentacion y de la plantilla, y de integracion en PostgreSQL
+      (CI) con filas de tpi.auditoria de ambas formas (antigua y completa) leidas a traves de tpi.v_historial_simulaciones;
+      cobertura total >= 85%.
+  - id: AC-5
+    verification: both
+    description: 'CHANGELOG, BITACORA y docs/SIMULADOR_USO.md: las simulaciones anteriores al 2026-10-16
+      solo conservan escenario, version del modelo y codigo, y la linea de tiempo lo indica.'
+  - id: AC-6
+    verification: human
+    description: 'Smoke humano en AWS DEV: el lead ffd67c7a-8c1d-4891-8a6e-fa049446facc abre sin error
+      y su linea de tiempo muestra sus 5 simulaciones: 4 antiguas con la nota y 1 completa con su detalle
+      desplegable.'
+  constraints:
+  - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
+    desde ramas o worktrees antiguos.'
+  - 'change_class A (fast path version-only): sin migraciones, grants, vistas ni infraestructura. La vista
+    tpi.v_historial_simulaciones y scripts/sql/** no se modifican.'
+  - 'Leccion de SIM-HISTORIAL-LINEA-TIEMPO: toda presentacion que lea datos historicos se prueba con cada
+    forma que el dato ha tenido en el tiempo, no solo con la actual. Formas de la evidencia de simulacion
+    en DEV: (1) desde SIM-RV-V1 (2026-10-14): detalle con actor_subject, role, tipo_escenario, version_modelo
+    y codigo_verificacion; (2) desde SIM-EVIDENCIA-ENTRADAS (2026-10-16): ademas schema_version, entradas
+    y resultado.'
+  - En Jinja, acceder a un atributo de un valor indefinido lanza UndefinedError (por ejemplo item.entradas.causante.sexo
+    con entradas vacio). Normalizar los datos en app/web/presentation.py o comprobar cada nivel antes
+    de encadenar atributos.
+  - 'No inventar datos de eventos antiguos: no completar entradas ni resultado; mostrar solo lo que el
+    evento tiene.'
+  - No modificar app/simulador_pension/** ni app/auth/**, ni dependencias; no reducir la cobertura minima
+    (85%).
+  dependencies:
+  - SIM-HISTORIAL-LINEA-TIEMPO
+  risk:
+    level: low
+    notes: Cambio de presentacion acotado, sin base de datos; la regresion queda cubierta con pruebas
+      de ambas formas de evento. Se despliega por fast path version-only con rollback al LKG.
+  scope:
+    paths:
+    - app/web/presentation.py
+    - app/web/templates/lead_detail_panel.html
+    - app/web/static/css/app.css
+    - tests/**
+    - CHANGELOG.md
+    - docs/BITACORA.md
+    - docs/SIMULADOR_USO.md
+  status: closed
+closure:
+  closed_at: '2026-10-21T01:30:28Z'
+  final_state: DONE
+  evidence_dir: evidence/SIM-HISTORIAL-EVENTOS-ANTIGUOS
+  release:
+    release_sha: 793e718aaf8f4dcd52e1cd12644f8b514984202f
+    pr_number: 97
+    application_version: h3-sim-historial-eventos-antiguos-793e718-domainlocked-r1
+    bundle_sha256: 8c341278fdf069cd925219bf6d7004c963ac485738a04a4c17c3a6f5e000aa79
+    lkg: h3-sim-historial-linea-tiempo-e4476c3-domainlocked-r1
+    deployment: success
+    deployed_commit: 793e718aaf8f4dcd52e1cd12644f8b514984202f
+    verification: PASS
+  rework_rounds: 0

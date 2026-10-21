@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "SIM-HISTORIAL-EVENTOS-ANTIGUOS",
+  "created_at": "2026-10-21T01:13:17Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610210107-deployer-sup97da0c",
+  "verification_scope": "VERIFYING de SIM-HISTORIAL-EVENTOS-ANTIGUOS tras deployment-01: estado EB, eventos, identidad de runtime, smoke HTTP no autenticado y conteos de logs desde el inicio del cutover. Solo lecturas AWS via aws_guard. AC-6 (smoke humano) queda pendiente de approve.py accept.",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "793e718aaf8f4dcd52e1cd12644f8b514984202f",
+  "deployed_commit": "793e718aaf8f4dcd52e1cd12644f8b514984202f",
+  "application_version": "h3-sim-historial-eventos-antiguos-793e718-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "PASS",
+  "failure_class": null,
+  "final_state": {
+    "version_label": "h3-sim-historial-eventos-antiguos-793e718-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-21T01:09:51Z",
+    "observed_at": "2026-10-21T01:10:30Z"
+  },
+  "events": {
+    "observed": 20,
+    "levels": {
+      "INFO": 20
+    },
+    "errors": 0,
+    "note": "describe-events --max-records 20: todos INFO; update completado 01:09:51Z; sin abortos ni degradacion."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "note": "VersionLabel == aprobado; AV SourceBundle == key de approval-01; head-object ChecksumSHA256 jDQSeP3wac2SUhm/bXAEyWOsSFc4oEpMF8Om9eAAqnk= == bundle aprobado 8c341278..., cuyo compose fija los digests aprobados (app fd448749... / caddy 3c8dd868...), presentes en ECR."
+  },
+  "smoke_client": "python urllib (cliente independiente), TLS por defecto, sin seguir redirects",
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "observed": "ninguna respuesta redirige a genialabs.cl"
+    }
+  ],
+  "logs": {
+    "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+    "window_start": "2026-10-21T01:09:00Z",
+    "method": "aws_guard logs filter-log-events con --query length(events); solo conteos; no se leyeron lineas; patrones exactos de harness/policies.yaml."
+  },
+  "pii_log_scan": {
+    "matches": 0,
+    "raw_pattern_hits": {
+      "Authorization -REDACTED": 0,
+      "Bearer": 0,
+      "password": 0,
+      "cookie": 0,
+      "raw_payload": 0,
+      "secret": 0,
+      "token": 0,
+      "hash -ACME": 0
+    },
+    "strong_matches": 0,
+    "strong_hits": {},
+    "weak_matches": {},
+    "classification_required": false,
+    "patterns": [
+      "Authorization -REDACTED",
+      "Bearer",
+      "raw_payload",
+      "password",
+      "hash -ACME",
+      "cookie",
+      "secret",
+      "token"
+    ]
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde (PR #97)."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde; cobertura >= 85%."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada; CHANGELOG, BITACORA y SIMULADOR_USO dentro del PR revisado."
+    },
+    {
+      "id": "AC-6",
+      "status": "pending_human",
+      "method": "human",
+      "evidence": "Smoke humano en AWS DEV: el lead ffd67c7a-8c1d-4891-8a6e-fa049446facc abre sin error y su linea de tiempo muestra sus 5 simulaciones: 4 antiguas con la nota y 1 completa con su detalle desplegable. Conteos de logs en 0 en todos los patrones antes del smoke humano."
+    }
+  ],
+  "rollback_executed": false,
+  "safety": {
+    "aws_writes": [],
+    "update_environment_executed": false,
+    "secrets_accessed": false,
+    "log_lines_read": false,
+    "denied_events": 0
+  }
+}
