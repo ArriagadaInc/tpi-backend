@@ -22,6 +22,19 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-21 - CRM: permiso de solo lectura de la etiqueta de escaneo para la app (CRM-ADJUNTOS-3-AJUSTES, requisito previo)
+
+- Cambio (solo repositorio; **no se aplicó nada en AWS**): la política `tpi-backoffice-dev-adjuntos-s3` del rol de la instancia agrega un
+  segundo statement con `s3:GetObjectTagging` sobre `leads/*`. Es de **solo lectura**: la app puede leer el resultado del escaneo de
+  GuardDuty para mostrar «Escaneando» o «Bloqueado», pero no puede escribir ni borrar etiquetas, y la política del bucket sigue
+  impidiéndolo a cualquiera que no sea GuardDuty.
+- Pruebas: la prueba de seguridad del rol de la app ahora exige exactamente dos statements, que la única acción de etiquetas sea
+  `s3:GetObjectTagging`, y que no haya `ListBucket` ni acciones sobre el bucket; `verify` del script comprueba además con el simulador de
+  IAM que `GetObjectTagging` está permitido y que `PutObjectTagging` y `DeleteObjectTagging` siguen denegados.
+- Aplicación: `python deployment/aws/adjuntos_s3_infra.py plan` mostrará la política de la app como `DIFIERE`; `apply` con la frase de
+  confirmación la actualiza (el resto queda igual) y `verify` la comprueba. Debe aplicarse antes de desplegar `CRM-ADJUNTOS-3-AJUSTES`,
+  aunque el código de esa tarea degrada bien si el permiso todavía falta.
+
 ### 2026-10-21 - CRM: adjuntos de notas desplegados y aceptados con observaciones (CRM-ADJUNTOS-2-CODIGO)
 
 - Resultado: el humano aceptó AC-11 (documentación) y AC-12 (smoke humano en DEV) **con observaciones**, que recoge la tarea

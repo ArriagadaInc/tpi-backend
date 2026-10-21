@@ -13,7 +13,7 @@ Estado: **aplicado y verificado en AWS DEV el 2026-10-21** (`apply`: 12 comproba
 | Bucket `tpi-dev-adjuntos-821656895812-us-east-2` | Acceso público bloqueado, ACL deshabilitadas, cifrado SSE-S3, **sin versionado**, regla que aborta subidas multiparte incompletas, etiquetas del proyecto | creado por el script |
 | Política del bucket | Solo TLS; **nadie lee `leads/*` si el objeto no tiene la etiqueta `GuardDutyMalwareScanStatus=NO_THREATS_FOUND`** (salvo el rol de GuardDuty); solo GuardDuty puede escribir o borrar esa etiqueta | `deployment/iam/tpi-dev-adjuntos-bucket-policy.json` |
 | Rol `tpi-dev-guardduty-malware-s3-role` | Lo asume GuardDuty para leer, etiquetar y registrar los eventos del bucket | `…-guardduty-malware-s3-role-trust.json` y `…-role.json` |
-| Permiso del rol `tpi-backoffice-dev-ec2-role` | `PutObject`, `GetObject` y `DeleteObject` sobre `leads/*`. Sin `ListBucket` y sin permisos de etiquetas, para que la app no pueda falsificar el resultado del escaneo | `deployment/iam/tpi-backoffice-dev-adjuntos-s3.json` |
+| Permiso del rol `tpi-backoffice-dev-ec2-role` | `PutObject`, `GetObject` y `DeleteObject` sobre `leads/*`, y `GetObjectTagging` (solo lectura, para mostrar el estado del escaneo). Sin `ListBucket` y sin permisos para escribir o borrar etiquetas, para que la app no pueda falsificar el resultado del escaneo | `deployment/iam/tpi-backoffice-dev-adjuntos-s3.json` |
 | Plan de GuardDuty Malware Protection for S3 | Protege el prefijo `leads/` y etiqueta cada objeto escaneado | creado por el script |
 
 ## Cómo se aplica

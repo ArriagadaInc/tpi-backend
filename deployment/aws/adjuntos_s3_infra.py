@@ -577,7 +577,9 @@ def _app_permissions_ok(aws: Aws) -> bool:
         ("s3:GetObject", f"arn:aws:s3:::{BUCKET}/{OBJECT_PREFIX}x"): True,
         ("s3:DeleteObject", f"arn:aws:s3:::{BUCKET}/{OBJECT_PREFIX}x"): True,
         ("s3:ListBucket", f"arn:aws:s3:::{BUCKET}"): False,
+        ("s3:GetObjectTagging", f"arn:aws:s3:::{BUCKET}/{OBJECT_PREFIX}x"): True,
         ("s3:PutObjectTagging", f"arn:aws:s3:::{BUCKET}/{OBJECT_PREFIX}x"): False,
+        ("s3:DeleteObjectTagging", f"arn:aws:s3:::{BUCKET}/{OBJECT_PREFIX}x"): False,
         ("s3:PutObject", f"arn:aws:s3:::{BUCKET}/otro/x"): False,
     }
     for (action, resource), allowed in expected.items():
