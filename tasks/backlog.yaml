@@ -65,8 +65,8 @@ items:
     a importarse, pero quedaron menciones sin efecto: docstrings y descripciones en app/ (app/__init__.py,
     app/database/connection.py, app/database/errors.py, app/security/masking.py), texto estatico en scripts/generate_coverage_report.py,
     el script suelto check_streamlit.py de la raiz y los diagramas de docs/ARCHITECTURE.md que aun dibujan
-    ''Streamlit UI''. El directorio .streamlit/ lo borra el humano en un PR aparte (el guard no lo permite
-    al Developer).'
+    ''Streamlit UI''. El directorio .streamlit/ ya se elimino en un PR aparte (2026-10-21) y no forma
+    parte de esta tarea.'
   evidence:
   - 'evidence/SEG-DESACOPLAR-STREAMLIT/reviewer/review-01.json, hallazgos F-1 (menor), F-2 (informativo)
     y F-3 (humano: .streamlit/)'
