@@ -781,44 +781,25 @@ aws ecs create-service \
 como en el workflow de publicación de imágenes. Una excepción es una decisión de riesgo del humano: va acotada a IDs
 concretos, con justificación, condición de salida y fecha de vencimiento, y está vigilada por pruebas.
 
-### Excepción vigente: 8 avisos de Pillow 12.3.0 (desde 2026-10-20, vence 2026-11-20)
+### Excepción cerrada: 8 avisos de Pillow 12.3.0 (cerrada 2026-10-21)
 
-| Aviso | Alias GHSA | Qué requiere para explotarse |
-| ----- | ---------- | ---------------------------- |
-| CVE-2026-112395 | GHSA-462x-pgg6-55fp | Abrir un TIFF por teselas malicioso |
-| CVE-2026-112397 | GHSA-58r4-6rv3-gfh8 | Abrir un PPM/PGM de ancho 0 y aplicarle `ImageMorph` |
-| CVE-2026-112400 | GHSA-65qm-jvmh-6pqg | Recorrer cuadros de un GIF malicioso |
-| CVE-2026-112404 | GHSA-c6hw-5grf-ff96 | Abrir ciertos TIFF comprimidos malformados |
-| CVE-2026-112895 | GHSA-p4wg-p73j-c528 | Añadir (`append=True`) a un PDF malicioso con Pillow |
-| CVE-2026-112896 | GHSA-pchr-8j38-3x4p | Abrir y volver a guardar un TIFF malicioso con metadatos |
-| CVE-2026-112897 | GHSA-q45j-58j2-45rg | Abrir un TIFF malicioso con tiras JPEG cortas |
-| CVE-2026-112899 | GHSA-vx6w-vv9f-6gvg | Renderizar un EPS malicioso con Ghostscript |
+Entre 2026-10-20 y 2026-10-21 existió una excepción acotada para 8 avisos de Pillow 12.3.0
+(CVE-2026-112395, CVE-2026-112397, CVE-2026-112400, CVE-2026-112404, CVE-2026-112895,
+CVE-2026-112896, CVE-2026-112897 y CVE-2026-112899), todos corregidos únicamente en Pillow 13.0.0.
 
-Todos se corrigen **sólo en Pillow 13.0.0**.
+**Por qué se mantuvo temporalmente.** `streamlit` (1.60.0 y también la última 1.66.0) declara `pillow<13`,
+por lo que el resolvedor de dependencias rechazaba Pillow 13 mientras Streamlit siguiera en el runtime.
 
-**Por qué no se actualiza ya.** `streamlit` (1.60.0 y también la última, 1.66.0) declara `pillow<13`, por lo que el
-resolvedor de dependencias rechaza Pillow 13. Streamlit no puede quitarse del runtime todavía porque `app.web.main` y la API
-importan `app.auth.guards` y `app.components.ui`, que usan Streamlit.
+**Por qué y cómo se cerró.** La tarea `SEG-DESACOPLAR-STREAMLIT` retiró el código legado de Streamlit
+(`app/streamlit_app.py`, `app/backoffice_app.py`, `app/pages/`, `app/presentation/`, `app/internal_tools/`,
+`app/components/ui.py`, `app/auth/guards.py` y `app/runtime.py`), movió a módulos sin Streamlit los helpers que
+la web y la API sí usan (`get_public_site_url`, `get_public_simulator_url`, `format_currency_clp`), subió Pillow a
+13.0.0 y eliminó los `--ignore-vuln` de `ci.yml` y `publish-dev-ecr-images.yml` junto con la prueba de vigilancia
+`tests/security/test_excepcion_pip_audit_pillow.py`. El gate vuelve a ser `pip-audit` sin ninguna excepción, y el
+proyecto queda listo para aceptar archivos de usuarios (por ejemplo, adjuntos de comentarios del CRM) sobre Pillow 13.
 
-**Por qué el riesgo es bajo hoy.** Los avisos exigen que la aplicación abra una imagen o un PDF enviado por un atacante.
-La aplicación no tiene ninguna ruta que reciba archivos, no usa Pillow directamente, y la única imagen que se abre es el logo
-fijo del repositorio, a través de `reportlab`. El escaneo básico de ECR revisa paquetes del sistema operativo, no librerías de
-Python, así que no vigila esto.
-
-**Condición de salida (obligatoria).** Subir a Pillow >= 13 y quitar la excepción **antes de aceptar archivos de usuarios**
-(por ejemplo, los adjuntos de comentarios del CRM). Camino: tarea `SEG-DESACOPLAR-STREAMLIT` (desacoplar Streamlit del runtime y
-mover Streamlit al `dev.lock`).
-
-**Vigilancia automática** (`tests/security/test_excepcion_pip_audit_pillow.py`). El CI falla si:
-
-* los dos workflows (`ci.yml` y `publish-dev-ecr-images.yml`) ignoran algo distinto de estos 8 avisos, o dejan de coincidir;
-* aparece código que reciba archivos de usuarios en `app/` (`UploadFile`, `st.file_uploader`, `Image.open(`, `type="file"`, etc.);
-* `pillow` cambia de versión en `requirements/runtime.lock` (la excepción se revisa);
-* llega la fecha de vencimiento (`Vence: 2026-11-20` en los workflows) sin que alguien la haya revisado.
-
-**Cómo extender o quitar la excepción.** Para quitarla: subir Pillow, borrar los `--ignore-vuln` de los dos workflows, esta
-sección y la prueba. Para extender la fecha: revisar si ya es posible Pillow 13 y, si no, cambiar `Vence:` en ambos workflows y
-en el título de arriba, anotando el motivo en la bitácora. Nunca agregar IDs nuevos sin documentarlos aquí y en la prueba.
+**Regla para el futuro.** Nunca se agregan IDs de `--ignore-vuln` sin una justificación del humano documentada aquí,
+con condición de salida y fecha de vencimiento, y con su vigilancia automática en `tests/security/`.
 
 ---
 

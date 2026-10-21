@@ -48,7 +48,7 @@ def test_dsn_password_is_redacted() -> None:
     assert "postgresql://user:***@db-host:5432/tpi" in sanitized
 
 
-def test_safe_streamlit_message_prefers_public_text() -> None:
+def test_safe_error_message_prefers_public_text() -> None:
     exc = psycopg.OperationalError('password authentication failed for user "tpi_app"')
     error = classify_database_exception(exc, operation="connect", app_env="aws-dev")
 

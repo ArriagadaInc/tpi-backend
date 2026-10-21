@@ -7,7 +7,7 @@ from datetime import date, datetime
 from typing import Any, Protocol
 
 from app.auth.models import AuthenticatedUser, is_superuser
-from app.components.ui import get_public_simulator_url, get_public_site_url
+from app.components.urls import get_public_simulator_url, get_public_site_url
 from app.config import get_settings
 from app.models.crm_states import CRM_STATE_CONTRACT
 from app.services import SolicitudService

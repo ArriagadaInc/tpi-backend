@@ -7,7 +7,7 @@ import json
 import pytest
 from argon2 import PasswordHasher
 
-from app.auth import AuthConfigurationError, AuthenticatedUser, SimpleDevAuth, guards
+from app.auth import AuthConfigurationError, AuthenticatedUser, SimpleDevAuth
 from app.config import Settings
 
 
@@ -128,75 +128,3 @@ def test_disabled_auth_is_allowed_only_for_controlled_local_testing() -> None:
 
     assert settings.authentication_required is False
     settings.validate_auth_configuration()
-
-
-class _StopRenderingError(Exception):
-    pass
-
-
-class _Sidebar:
-    def caption(self, _: str) -> None:
-        return None
-
-    def button(self, _: str, *, key: str) -> bool:
-        return False
-
-
-class _FakeStreamlit:
-    def __init__(self) -> None:
-        self.session_state: dict[str, object] = {}
-        self.sidebar = _Sidebar()
-        self.rerun_called = False
-
-    def markdown(self, *_: object, **__: object) -> None:
-        return None
-
-    def title(self, _: str) -> None:
-        return None
-
-    def caption(self, _: str) -> None:
-        return None
-
-    def error(self, _: str) -> None:
-        return None
-
-    def stop(self) -> None:
-        raise _StopRenderingError
-
-    def rerun(self) -> None:
-        self.rerun_called = True
-
-
-def test_guard_blocks_unauthenticated_deployed_access(monkeypatch: pytest.MonkeyPatch) -> None:
-    fake_streamlit = _FakeStreamlit()
-    monkeypatch.setattr(guards, "st", fake_streamlit)
-
-    with pytest.raises(_StopRenderingError):
-        guards.require_authenticated_user(settings=_settings(secret=None))
-
-
-def test_guard_allows_authenticated_session_and_logout_clears_it(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    fake_streamlit = _FakeStreamlit()
-    user = AuthenticatedUser("user-001", "tester", "Tester DEV", "tester")
-    fake_streamlit.session_state["_tpi_auth_user"] = user
-    fake_streamlit.session_state["_tpi_auth_failed_attempts"] = 3
-    monkeypatch.setattr(guards, "st", fake_streamlit)
-
-    assert guards.require_authenticated_user(settings=_settings(secret=None)) == user
-    guards.logout()
-
-    assert guards.get_current_user() is None
-    assert fake_streamlit.rerun_called is True
-
-
-def test_session_throttle_blocks_after_five_failures(monkeypatch: pytest.MonkeyPatch) -> None:
-    fake_streamlit = _FakeStreamlit()
-    monkeypatch.setattr(guards, "st", fake_streamlit)
-
-    for _ in range(5):
-        guards._record_failed_attempt(now=100.0)
-
-    assert guards._blocked_seconds_remaining(now=100.0) == 5
-    assert guards._auth_session_snapshot()["failed_attempts"] == 5

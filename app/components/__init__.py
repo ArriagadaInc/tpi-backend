@@ -1,43 +1,10 @@
-"""Componentes de UI reutilizables."""
+"""Reusable presentation helpers for the web CRM layer."""
 
-from app.components.ui import (
-    format_currency_clp,
-    format_datetime_short,
-    get_public_simulator_url,
-    lead_stage_label,
-    lead_stage_tone,
-    render_crm_board,
-    render_error_form_message,
-    render_form_validation_error,
-    render_lead_detail_panel,
-    render_solicitud_table,
-    show_database_status,
-    show_error_message,
-    show_header,
-    show_info_message,
-    show_pagination_info,
-    show_solicitud_detalle,
-    show_success_message,
-    show_warning_message,
-)
+from app.components.formatting import format_currency_clp
+from app.components.urls import get_public_simulator_url, get_public_site_url
 
 __all__ = [
-    "show_header",
-    "show_success_message",
-    "show_error_message",
-    "show_warning_message",
-    "show_info_message",
-    "show_database_status",
     "format_currency_clp",
-    "format_datetime_short",
     "get_public_simulator_url",
-    "lead_stage_label",
-    "lead_stage_tone",
-    "render_solicitud_table",
-    "render_crm_board",
-    "render_lead_detail_panel",
-    "show_solicitud_detalle",
-    "show_pagination_info",
-    "render_error_form_message",
-    "render_form_validation_error",
+    "get_public_site_url",
 ]

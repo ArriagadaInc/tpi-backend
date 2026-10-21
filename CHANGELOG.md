@@ -8,6 +8,17 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ## [Unreleased]
 
+### ♻️ Retirado
+
+- **Retirada de Streamlit del runtime y Pillow 13** (SEG-DESACOPLAR-STREAMLIT)
+  - Se elimina el código legado de Streamlit: `app/streamlit_app.py`, `app/backoffice_app.py`, `app/pages/`, `app/presentation/`, `app/internal_tools/`, `app/components/ui.py`, `app/auth/guards.py` y `app/runtime.py`, junto con las pruebas que solo los ejercitaban.
+  - Los helpers que la web y la API sí usaban se movieron sin reescribirlos a módulos sin Streamlit: `get_public_site_url`/`get_public_simulator_url` a `app/components/urls.py`, `format_currency_clp` a `app/components/formatting.py` y `log_health_status` a `app/database/healthcheck.py`.
+  - `streamlit` y sus dependencias exclusivas salen de `requirements/runtime.lock`; `pillow` sube a 13.0.0 (era la dependencia que bloqueaba el bump por `pillow<13` de Streamlit). Se declaran explícitamente `uvicorn`, `Jinja2`, `python-multipart` e `itsdangerous`, que antes llegaban de forma transitiva vía Streamlit.
+  - El Dockerfile ya no instala ni configura Streamlit (sin `STREAMLIT_*`, sin `COPY .streamlit`) y su `CMD` por defecto arranca la web con uvicorn en `:8501`; el backoffice del `docker-compose.yml` local hace lo mismo (el compose de despliegue ya usaba uvicorn y no cambia).
+  - La excepción de `pip-audit` para los 8 avisos de Pillow 12.3.0 queda cerrada: se eliminan los `--ignore-vuln` de `ci.yml` y `publish-dev-ecr-images.yml`, la prueba `tests/security/test_excepcion_pip_audit_pillow.py` y la sección correspondiente de `docs/SEGURIDAD.md` (que ahora deja constancia del cierre). `pip-audit` vuelve a correr sin excepciones.
+  - Nuevo test `tests/unit/test_streamlit_retired.py`: importa `app.web.main` y `app.api.main` con el módulo `streamlit` bloqueado y verifica estáticamente que ningún archivo de `app/` lo importa.
+  - La API y la web no cambian de comportamiento (rutas, autorización y respuestas idénticas); el historial de git conserva el código retirado.
+
 ### ✅ Agregado
 
 - **Línea de tiempo del lead: simulaciones generadas** (SIM-HISTORIAL-LINEA-TIEMPO)

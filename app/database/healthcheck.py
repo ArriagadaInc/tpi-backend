@@ -5,7 +5,7 @@ Database health checks for connectivity and application readiness.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from psycopg import sql
 
@@ -289,3 +289,27 @@ def full_health_check() -> dict[str, Any]:
         "tables": tables,
         "catalogs": catalogs,
     }
+
+
+def log_health_status(health: dict[str, Any], logger: logging.Logger | None = None) -> None:
+    """Log a compact health summary without sensitive data."""
+    active_logger = logger or logging.getLogger("tpi.backoffice")
+    connection = health.get("connection")
+    connection_data = cast(dict[str, Any], connection) if isinstance(connection, dict) else {}
+
+    active_logger.info(
+        "Health check completed | all_ready=%s | connected=%s | schema_accessible=%s | leads_accessible=%s",
+        health.get("all_ready"),
+        health.get("connected"),
+        connection_data.get("schema_accessible"),
+        connection_data.get("leads_accessible"),
+    )
+
+    if not health.get("all_ready"):
+        active_logger.warning(
+            "Health check failed | connected=%s | schema_exists=%s | required_tables=%s | catalogs_ready=%s",
+            health.get("connected"),
+            health.get("schema", {}).get("exists"),
+            health.get("tables", {}).get("all_present"),
+            health.get("catalogs", {}).get("all_ready"),
+        )

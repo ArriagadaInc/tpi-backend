@@ -111,10 +111,10 @@ class TestXSSPrevention:
     def test_xss_attempt_in_name(self):
         """Test que un nombre con XSS se almacena literal y se neutraliza al renderizar.
 
-        Streamlit escapa por defecto el contenido pasado a st.text/st.text_input
-        (unsafe_allow_html=True sólo se usa en la app para CSS estático, nunca
-        para datos de usuario), por lo que la protección contra XSS no depende
-        de rechazar el nombre en la capa de validación.
+        El backoffice web usa Jinja2 con autoescapado activo (Jinja2Templates de
+        Starlette escapa HTML por defecto). Las plantillas muestran los datos de
+        usuario con ``{{ ... }}`` sin el filtro ``|safe``, por lo que la
+        protección contra XSS no depende de rechazar el nombre en la validación.
         """
         xss_name = "<script>alert('XSS')</script>"
 
@@ -128,14 +128,15 @@ class TestXSSPrevention:
 
         assert persona.nombre_completo == xss_name
 
-        # Confirmar que el renderizado usa componentes que escapan HTML
-        # (no unsafe_allow_html) para mostrar el nombre
-        import inspect
+        # Confirmar que el renderizado usa el autoescapado de Jinja2 para mostrar
+        # el nombre (no unsafe_allow_html ni |safe) en las plantillas web.
+        from pathlib import Path
 
-        from app.components import ui
+        templates_dir = Path(__file__).resolve().parents[2] / "app" / "web" / "templates"
+        lead_panel = (templates_dir / "lead_detail_panel.html").read_text(encoding="utf-8")
 
-        source = inspect.getsource(ui)
-        assert "nombre_completo" in source
+        assert "{{ selected_lead.nombre_completo }}" in lead_panel
+        assert "|safe" not in lead_panel
 
     def test_xss_attempt_in_email(self):
         """Test que XSS en email es rechazado."""
