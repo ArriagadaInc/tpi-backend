@@ -10,7 +10,18 @@ from uuid import UUID
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
+from starlette.datastructures import UploadFile
+from starlette.formparsers import MultiPartException
 
+from app.attachments.validation import (
+    ATTACHMENT_MIME_TYPES,
+    MAX_ATTACHMENT_BYTES,
+    MAX_FILES_PER_NOTE,
+    MAX_REQUEST_BYTES,
+    AttachmentValidationError,
+    ValidatedAttachment,
+    validate_attachment_content,
+)
 from app.auth.models import AuthenticatedUser, UserRole, is_superuser
 from app.models.crm_states import normalize_crm_state_for_display
 from app.models.lead_assignment import (
@@ -119,6 +130,32 @@ def _can_cleanup(user: AuthenticatedUser | None) -> bool:
     if not user:
         return False
     return is_superuser(user.role) or user.role in _CLEANUP_ROLES
+
+
+_ATTACHMENT_EXTENSIONS = {"pdf": "pdf", "png": "png", "jpg": "jpg"}
+
+
+def _attachments_enabled(request: Request) -> bool:
+    settings = getattr(request.app.state, "settings", None)
+    return bool(getattr(settings, "attachments_enabled", False))
+
+
+def _attachment_not_found() -> PlainTextResponse:
+    """404 genérico para todas las causas de adjunto no disponible (AC-6)."""
+    return PlainTextResponse("No disponible", status_code=404)
+
+
+def _attachment_download_filename(verified_type: str) -> str:
+    extension = _ATTACHMENT_EXTENSIONS.get(verified_type, "bin")
+    return f"adjunto-{datetime.now(UTC).strftime('%Y%m%d')}.{extension}"
+
+
+def _attachment_content_security_policy(verified_type: str) -> str:
+    # El visor de PDF integrado del navegador no funciona con sandbox (AC-6);
+    # la excepción queda documentada en docs/ADJUNTOS_COMENTARIOS_DISENO.md.
+    if verified_type == "pdf":
+        return "default-src 'none'"
+    return "default-src 'none'; sandbox"
 
 
 def _build_query_url(base_path: str, params: dict[str, Any]) -> str:
@@ -413,6 +450,8 @@ def _resolve_detail_context(
         "web_cleanup_enabled": bool(getattr(request.app.state, "web_cleanup_enabled", False)),
         "public_site_url": getattr(request.app.state, "web_public_site_url", None),
         "mask_pii": not (user is not None and service.can_view_full_pii(user)),
+        "attachments_enabled": _attachments_enabled(request),
+        "can_delete_attachments": user is not None and service.can_view_full_pii(user),
         "selected_lead": selected_lead,
         "selected_lead_id": lead_id,
         "selected_lead_state_canonical": normalize_crm_state_for_display(
@@ -763,7 +802,70 @@ async def lead_comment_append(request: Request, lead_id: str):
             status_code=403,
         )
 
-    form = await request.form()
+    service = _resolve_service(request)
+    attachments_enabled = _attachments_enabled(request)
+
+    # Límites de tamaño de la petición (AC-4). El Content-Length declarado corta
+    # la subida en 413 antes de leer el cuerpo.
+    content_length_raw = request.headers.get("content-length")
+    try:
+        content_length = int(content_length_raw) if content_length_raw else None
+    except ValueError:
+        content_length = None
+
+    if content_length is not None and content_length > MAX_REQUEST_BYTES:
+        context, _ = _resolve_detail_context(
+            request,
+            lead_id,
+            lead_not_found=False,
+            error_message="La peticion excede el limite de tamano permitido.",
+        )
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "lead_detail.html",
+            context,
+            status_code=413,
+        )
+
+    # Sin Content-Length válido, max_part_size de Starlette solo limita los campos
+    # de texto, no las partes de archivo (MultiPartParser.on_part_data): una
+    # petición con Transfer-Encoding: chunked escribiría todo el cuerpo a un
+    # temporal en disco antes de que la validación por contenido la rechace. Con
+    # adjuntos activos se rechaza con 411 antes de leer el cuerpo (hallazgo F-1).
+    if attachments_enabled and content_length is None:
+        context, _ = _resolve_detail_context(
+            request,
+            lead_id,
+            lead_not_found=False,
+            error_message="La peticion no declara su tamano; recarga la pagina e intenta nuevamente.",
+        )
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "lead_detail.html",
+            context,
+            status_code=411,
+        )
+
+    try:
+        form = await request.form(
+            max_files=MAX_FILES_PER_NOTE,
+            max_fields=30,
+            max_part_size=MAX_ATTACHMENT_BYTES + 1,
+        )
+    except MultiPartException:
+        context, _ = _resolve_detail_context(
+            request,
+            lead_id,
+            lead_not_found=False,
+            error_message="Demasiados archivos o un archivo excede el limite permitido.",
+        )
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "lead_detail.html",
+            context,
+            status_code=400,
+        )
+
     if not _validate_csrf_token(request, str(form.get("csrf_token") or "")):
         context, _ = _resolve_detail_context(
             request,
@@ -793,12 +895,126 @@ async def lead_comment_append(request: Request, lead_id: str):
             status_code=400,
         )
 
-    service = _resolve_service(request)
+    files = (
+        [item for item in form.getlist("files") if isinstance(item, UploadFile)]
+        if attachments_enabled
+        else []
+    )
+
+    if not files:
+        try:
+            updated = service.append_lead_comment(
+                lead_id,
+                comment_text,
+                actor=user,
+            )
+        except ValueError:
+            context, _ = _resolve_detail_context(
+                request,
+                lead_id,
+                lead_not_found=False,
+                error_message="La nota de seguimiento no es valida.",
+            )
+            return request.app.state.templates.TemplateResponse(
+                request,
+                "lead_detail.html",
+                context,
+                status_code=400,
+            )
+
+        if not updated:
+            context, _ = _resolve_detail_context(
+                request,
+                lead_id,
+                lead_not_found=True,
+                error_message="No encontramos el lead solicitado.",
+            )
+            return request.app.state.templates.TemplateResponse(
+                request,
+                "lead_detail.html",
+                context,
+                status_code=404,
+            )
+
+        return_to = str(form.get("return_to") or "")
+        _set_flash(request, "Seguimiento agregado.")
+        return RedirectResponse(
+            url=_build_detail_redirect_url_from_value(lead_id, return_to),
+            status_code=303,
+        )
+
+    # Ruta con adjuntos: el alcance del asesor se comprueba antes de leer o subir
+    # ningún archivo (AC-4), con la misma respuesta 404 que la nota de hoy.
+    if not service.can_append_comment_to_lead(lead_id, user):
+        context, _ = _resolve_detail_context(
+            request,
+            lead_id,
+            lead_not_found=True,
+            error_message="No encontramos el lead solicitado.",
+        )
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "lead_detail.html",
+            context,
+            status_code=404,
+        )
+
+    limiter = getattr(request.app.state, "attachment_rate_limiter", None)
+    if limiter is not None:
+        for _upload in files:
+            if not limiter.allow(user.subject):
+                context, _ = _resolve_detail_context(
+                    request,
+                    lead_id,
+                    lead_not_found=False,
+                    error_message="Demasiados adjuntos. Intenta nuevamente mas tarde.",
+                )
+                return request.app.state.templates.TemplateResponse(
+                    request,
+                    "lead_detail.html",
+                    context,
+                    status_code=429,
+                )
+
+    attachments: list[ValidatedAttachment] = []
     try:
-        updated = service.append_lead_comment(
+        for upload in files:
+            content = await upload.read()
+            attachments.append(validate_attachment_content(content))
+    except AttachmentValidationError as exc:
+        service.audit_attachment_rejection(lead_id, actor=user, rejection_code=exc.code)
+        context, _ = _resolve_detail_context(
+            request,
+            lead_id,
+            lead_not_found=False,
+            error_message="Uno de los archivos no es valido.",
+        )
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "lead_detail.html",
+            context,
+            status_code=400,
+        )
+
+    try:
+        updated = service.append_lead_comment_with_attachments(
             lead_id,
             comment_text,
+            attachments,
             actor=user,
+        )
+    except AttachmentValidationError:
+        context, _ = _resolve_detail_context(
+            request,
+            lead_id,
+            lead_not_found=False,
+            error_message="Uno de los archivos no es valido.",
+        )
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "lead_detail.html",
+            context,
+            status_code=400,
         )
     except ValueError:
         context, _ = _resolve_detail_context(
@@ -832,6 +1048,76 @@ async def lead_comment_append(request: Request, lead_id: str):
     _set_flash(request, "Seguimiento agregado.")
     return RedirectResponse(
         url=_build_detail_redirect_url_from_value(lead_id, return_to),
+        status_code=303,
+    )
+
+
+@router.get("/leads/{lead_id}/adjuntos/{attachment_uuid}")
+def attachment_view_or_download(request: Request, lead_id: str, attachment_uuid: str):
+    if not _require_web_user(request):
+        return RedirectResponse(url="/login", status_code=307)
+    if not _attachments_enabled(request):
+        return _attachment_not_found()
+
+    try:
+        parsed_uuid = UUID(str(attachment_uuid).strip())
+    except (ValueError, AttributeError):
+        return _attachment_not_found()
+
+    user = _require_web_user(request)
+    service = _resolve_service(request)
+    as_download = _parse_flag(request.query_params.get("descargar"))
+    stored = service.get_attachment(lead_id, parsed_uuid, actor=user, as_download=as_download)
+    if stored is None:
+        return _attachment_not_found()
+
+    verified_type = stored.metadata.get("verified_type")
+    if verified_type not in ATTACHMENT_MIME_TYPES:
+        return _attachment_not_found()
+
+    disposition_type = "attachment" if as_download else "inline"
+    return Response(
+        content=stored.content,
+        media_type=ATTACHMENT_MIME_TYPES[verified_type],
+        headers={
+            "Content-Disposition": (
+                f'{disposition_type}; filename="{_attachment_download_filename(verified_type)}"'
+            ),
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "private, no-store",
+            "Content-Security-Policy": _attachment_content_security_policy(verified_type),
+            "Referrer-Policy": "no-referrer",
+        },
+    )
+
+
+@router.post("/leads/{lead_id}/adjuntos/{attachment_uuid}/eliminar")
+async def attachment_delete(request: Request, lead_id: str, attachment_uuid: str):
+    if not _require_web_user(request):
+        return RedirectResponse(url="/login", status_code=307)
+    if not _attachments_enabled(request):
+        return _attachment_not_found()
+    user = _require_web_user(request)
+    if not user or not is_superuser(user.role):
+        return PlainTextResponse("No autorizado", status_code=403)
+
+    try:
+        parsed_uuid = UUID(str(attachment_uuid).strip())
+    except (ValueError, AttributeError):
+        return _attachment_not_found()
+
+    form = await request.form()
+    if not _validate_csrf_token(request, str(form.get("csrf_token") or "")):
+        return PlainTextResponse("No autorizado", status_code=403)
+
+    service = _resolve_service(request)
+    deleted = service.delete_attachment(lead_id, parsed_uuid, actor=user)
+    if not deleted:
+        return _attachment_not_found()
+
+    _set_flash(request, "Adjunto eliminado.")
+    return RedirectResponse(
+        url=_build_detail_redirect_url_from_value(lead_id, str(form.get("return_to") or "")),
         status_code=303,
     )
 

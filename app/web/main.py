@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.templating import Jinja2Templates
 
+from app.api.abuse import InMemoryRateLimiter
 from app.auth import build_auth_provider
 from app.components.formatting import format_currency_clp
 from app.config import get_settings
@@ -45,6 +46,10 @@ def create_web_app() -> FastAPI:
     app.state.settings = settings
     app.state.web_service = None
     app.state.executive_dashboard_service = None
+    app.state.attachment_rate_limiter = InMemoryRateLimiter(
+        max_requests=settings.attachments_rate_limit_requests,
+        window_seconds=settings.attachments_rate_limit_window_seconds,
+    )
     try:
         app.state.auth_provider = build_auth_provider(settings)
     except Exception:

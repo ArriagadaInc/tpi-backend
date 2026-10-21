@@ -17,7 +17,7 @@ CADDY_IMAGE = (
     "sha256:30ace9145a21209f41799d345f4d6f641f0b882478fede76d0e19a575656aaaf"
 )
 RUNTIME_SHA = "43101be7835088f93267bee85b0f11c8bc879867"
-EXPECTED_BUNDLE_SHA256 = "18f1425f4e37cca3913ef27c689ea61c1bf92a75c0e34707e4ae578b179e1a7e"
+EXPECTED_BUNDLE_SHA256 = "506088af1596c6e9d4711376df7ac8e8ff47f6c448b796562ed6fc62aed0edcd"
 
 DOMAIN_LOCK = {
     "TPI_PUBLIC_SITE_URL": "https://dev.tupensioninteligente.cl/",
@@ -88,6 +88,22 @@ def test_domain_locked_bundle_forwards_lead_state_history_cutover_to_backoffice(
     # public API must not receive it.
     assert "LEAD_STATE_HISTORY_CUTOVER: ${LEAD_STATE_HISTORY_CUTOVER:-}" in backoffice
     assert "LEAD_STATE_HISTORY_CUTOVER" not in api
+
+
+def test_domain_locked_bundle_enables_attachments_only_in_backoffice(tmp_path: Path) -> None:
+    _, _, compose = _build(tmp_path)
+
+    backoffice = compose.split("  backoffice:", 1)[1].split("  caddy:", 1)[0]
+    api = compose.split("  api:", 1)[1].split("  backoffice:", 1)[0]
+
+    # La función de adjuntos se enciende solo en el backoffice con valores
+    # literales (el cutover es version-only, sin option settings de EB).
+    assert 'ATTACHMENTS_ENABLED: "true"' in backoffice
+    assert 'ATTACHMENTS_BUCKET: "tpi-dev-adjuntos-821656895812-us-east-2"' in backoffice
+    assert "ATTACHMENTS_ENABLED" not in api
+    assert "ATTACHMENTS_BUCKET" not in api
+    assert "${ATTACHMENTS_ENABLED" not in compose
+    assert "${ATTACHMENTS_BUCKET" not in compose
 
 
 def test_domain_locked_bundle_manifest_and_reproducibility(tmp_path: Path) -> None:

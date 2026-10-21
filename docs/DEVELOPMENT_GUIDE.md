@@ -211,6 +211,30 @@ and the temporary DEV domain are not production architecture.
 - `API_MAX_REQUEST_BYTES`, `API_RATE_LIMIT_REQUESTS`,
   `API_RATE_LIMIT_WINDOW_SECONDS`, `API_TRUSTED_PROXY_CIDRS`: public API DEV
   safeguards.
+- `ATTACHMENTS_ENABLED`: enciende los adjuntos de notas. Falso por defecto, así que
+  localmente y en pruebas la función queda apagada.
+- `ATTACHMENTS_BUCKET`: bucket S3 privado de los adjuntos. Obligatorio si
+  `ATTACHMENTS_ENABLED=true`; sin él la app no arranca (fail-closed).
+- `ATTACHMENTS_S3_REGION`: región del bucket (por defecto `us-east-2`).
+- `ATTACHMENTS_RATE_LIMIT_REQUESTS` y `ATTACHMENTS_RATE_LIMIT_WINDOW_SECONDS`:
+  límite de tasa por usuario para la subida (por defecto 20 archivos cada 10 minutos).
+
+### Adjuntos de notas: prueba local con S3 simulado
+
+La función de adjuntos nunca usa red ni AWS en las pruebas: el cliente S3 se inyecta
+(patrón de `app/notifications/sns.py`) y se simula con un doble. Para ejercitar el
+flujo localmente:
+
+```python
+from app.attachments.storage import DisabledAttachmentStorage
+from app.services.solicitud_service import SolicitudService
+```
+
+Con `ATTACHMENTS_ENABLED=false` (valor local por defecto) el almacenamiento es
+`DisabledAttachmentStorage` y las rutas de adjuntos responden 404; el formulario de la
+nota no muestra el campo de archivos. Los módulos quedan en `app/attachments/`
+(`validation.py` valida por contenido, `marks.py` interpreta las marcas
+`[adjunto:<tipo>:<uuid>]`, `storage.py` adapta S3 y `audit.py` escribe `tpi.auditoria`).
 
 ## Tests and quality gates
 

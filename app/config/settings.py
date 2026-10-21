@@ -16,7 +16,7 @@ from typing import Any, Literal
 from urllib.parse import parse_qs, unquote, urlparse
 
 from psycopg.conninfo import make_conninfo
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 AppEnvironment = Literal["local", "testing", "aws-dev", "production"]
@@ -149,6 +149,15 @@ class Settings(BaseSettings):
     lead_notification_topic_arn: str | None = Field(
         default=None, alias="LEAD_NOTIFICATION_TOPIC_ARN"
     )
+    attachments_enabled: bool = Field(default=False, alias="ATTACHMENTS_ENABLED")
+    attachments_bucket: str | None = Field(default=None, alias="ATTACHMENTS_BUCKET")
+    attachments_s3_region: str = Field(default="us-east-2", alias="ATTACHMENTS_S3_REGION")
+    attachments_rate_limit_requests: int = Field(
+        default=20, alias="ATTACHMENTS_RATE_LIMIT_REQUESTS"
+    )
+    attachments_rate_limit_window_seconds: int = Field(
+        default=600, alias="ATTACHMENTS_RATE_LIMIT_WINDOW_SECONDS"
+    )
     auth_enabled: bool = Field(default=False, alias="AUTH_ENABLED")
     auth_mode: str = Field(default="simple-dev", alias="AUTH_MODE")
     auth_users_json: SecretStr | None = Field(default=None, alias="AUTH_USERS_JSON")
@@ -269,6 +278,8 @@ class Settings(BaseSettings):
         "api_rate_limit_requests",
         "api_rate_limit_window_seconds",
         "web_session_max_age_seconds",
+        "attachments_rate_limit_requests",
+        "attachments_rate_limit_window_seconds",
     )
     @classmethod
     def validate_positive_api_limit(cls, value: int) -> int:
@@ -351,6 +362,18 @@ class Settings(BaseSettings):
             or not self.api_idempotency_hmac_secret.get_secret_value().strip()
         ):
             raise ValueError("API_IDEMPOTENCY_HMAC_SECRET must be configured for the public API")
+
+    def validate_attachments_configuration(self) -> None:
+        """Fail closed when attachments are enabled without their bucket (AC-1)."""
+        if not self.attachments_enabled:
+            return
+        if not self.attachments_bucket or not self.attachments_bucket.strip():
+            raise ValueError("ATTACHMENTS_BUCKET must be configured when ATTACHMENTS_ENABLED=true")
+
+    @model_validator(mode="after")
+    def _validate_attachments_config(self) -> Settings:
+        self.validate_attachments_configuration()
+        return self
 
     @property
     def database_config(self) -> DatabaseConnectionConfig:

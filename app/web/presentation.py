@@ -7,6 +7,12 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
+from app.attachments.marks import (
+    AttachmentMark,
+    match_full_attachment_mark,
+    strip_attachment_marks,
+)
+
 _CRM_TZ = ZoneInfo("America/Santiago")
 _FOLLOW_UP_HEADER = re.compile(r"^\[(\d{2}/\d{2}/\d{4} \d{2}:\d{2})\]\s+(.+)$")
 
@@ -16,6 +22,7 @@ class FollowUpNote:
     timestamp: str
     author: str
     text: str
+    attachments: tuple[AttachmentMark, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,9 +46,9 @@ def parse_lead_comments(raw_comments: str | None) -> ParsedLeadComments:
 
     blocks = raw.split("\n\n")
     if len(blocks) == 1:
-        return ParsedLeadComments(original_request=raw, notes=[])
+        return ParsedLeadComments(original_request=strip_attachment_marks(raw), notes=[])
 
-    original_request = blocks[0].strip()
+    original_request = strip_attachment_marks(blocks[0].strip())
     notes: list[FollowUpNote] = []
 
     for block in blocks[1:]:
@@ -63,8 +70,27 @@ def _parse_follow_up_block(block: str) -> FollowUpNote | None:
     if match is None:
         return None
 
-    body = "\n".join(lines[1:]).strip()
-    return FollowUpNote(timestamp=match.group(1), author=match.group(2).strip(), text=body)
+    body_lines = lines[1:]
+    # Las marcas del servidor van al final, cada una en su propia línea; se
+    # extraen solo las líneas finales que son exactamente una marca válida.
+    mark_lines: list[AttachmentMark] = []
+    text_end = len(body_lines)
+    while text_end > 0:
+        mark = match_full_attachment_mark(body_lines[text_end - 1])
+        if mark is None:
+            break
+        mark_lines.append(mark)
+        text_end -= 1
+    mark_lines.reverse()
+
+    text = "\n".join(body_lines[:text_end]).strip()
+    text = strip_attachment_marks(text)
+    return FollowUpNote(
+        timestamp=match.group(1),
+        author=match.group(2).strip(),
+        text=text,
+        attachments=tuple(mark_lines),
+    )
 
 
 def build_timeline_items(
@@ -155,6 +181,7 @@ def build_timeline_items(
                 "display_time": note.timestamp,
                 "author": note.author,
                 "text": note.text,
+                "attachments": note.attachments,
             }
         )
 

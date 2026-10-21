@@ -64,6 +64,8 @@ services:
       WEB_MASK_PII: ${WEB_MASK_PII:-true}
       TPI_PUBLIC_SITE_URL: "https://dev.tupensioninteligente.cl/"
       LEAD_STATE_HISTORY_CUTOVER: ${LEAD_STATE_HISTORY_CUTOVER:-}
+      ATTACHMENTS_ENABLED: "true"
+      ATTACHMENTS_BUCKET: "tpi-dev-adjuntos-821656895812-us-east-2"
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     command: ["uvicorn", "app.web.main:app", "--host", "0.0.0.0", "--port", "8501"]
     networks:

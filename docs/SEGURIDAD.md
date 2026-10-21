@@ -803,6 +803,49 @@ con condición de salida y fecha de vencimiento, y con su vigilancia automática
 
 ---
 
+## 📎 Adjuntos de notas (CRM-ADJUNTOS-2)
+
+La función de adjuntos permite subir imágenes (PNG y JPEG) y PDF a una nota de seguimiento del detalle de un lead. Los
+resguardos están documentados en [`ADJUNTOS_COMENTARIOS_DISENO.md`](ADJUNTOS_COMENTARIOS_DISENO.md) y se implementan en
+`app/attachments/`.
+
+### Qué protege
+
+- **Validación por contenido** (`app/attachments/validation.py`). El tipo lo decide el contenido (firma PNG/JPEG o
+  `%PDF-`), nunca la extensión ni el `Content-Type` declarado. Se rechazan SVG, HTML, GIF, TIFF, WebP, ejecutables y
+  cualquier otro tipo. Las imágenes se validan leyendo solo el encabezado (dimensiones) sin decodificar píxeles, con
+  tope de 50 millones de píxeles. Los PDF con `/JS`, `/JavaScript`, `/Launch`, `/EmbeddedFile` o `/Encrypt` (incluidos
+  los escapes `#xx` de los nombres) se rechazan.
+- **Almacenamiento privado en S3** (`app/attachments/storage.py`). Bucket sin acceso público, claves aleatorias
+  `leads/<id_lead>/<uuid>`, sin el nombre original, sin etiquetas de la app (solo GuardDuty etiqueta el resultado del
+  escaneo) y una política que deniega leer lo que no está `NO_THREATS_FOUND`. La app nunca lista el bucket: un `403` y
+  un `NoSuchKey` se tratan igual («adjunto no disponible»).
+- **Todo pasa por la app** (`app/web/routes/leads.py`). La vista y la descarga aplican la misma regla de visibilidad
+  que el detalle del lead (un asesor solo ve su cartera) y comprueban que la marca de ese `uuid` esté en la nota de ese
+  lead antes de tocar S3. Cabeceras de respuesta endurecidas: `Content-Type` del tipo verificado, `nosniff`,
+  `Cache-Control: private, no-store`, `Content-Disposition` con nombre generado por el servidor, `Content-Security-Policy`
+  restrictiva (`default-src 'none'`; con `sandbox` en las imágenes) y `Referrer-Policy: no-referrer`.
+- **CSRF y límites** en la subida: tope de 25 MiB por petición (413), 5 archivos y 10 MiB por archivo, y límite de tasa
+  por usuario (`InMemoryRateLimiter`).
+- **Auditoría append-only** (`app/attachments/audit.py`). Cada subida, rechazo, vista, descarga y borrado queda en
+  `tpi.auditoria` con el sujeto, el `uuid`, el tipo, el tamaño y el SHA-256 (para los rechazos solo el código). Nunca
+  nombres de archivo ni contenido. Los logs no contienen bytes ni nombres.
+
+### Riesgos aceptados
+
+- **Visibilidad.** La interfaz enmascara los datos personales para todos salvo `ceo`/`cto`, pero un archivo no se puede
+  enmascarar: una foto de una cédula la vería cualquier usuario con acceso al lead. Aceptado por el humano (2026-10-21);
+  se mitiga con el aviso visible al subir («no subas documentos de identidad completos salvo que sea necesario»), la
+  auditoría de cada vista/descarga y el borrado a solicitud del titular.
+- **EXIF y GPS sin re-codificar.** Las imágenes no se re-codifican en esta primera versión (decisión del humano), así que
+  los metadatos EXIF y la ubicación GPS quedan visibles para quien vea el adjunto. Revisar en una segunda versión.
+- **Escaneo de PDF por tokens crudos.** La validación busca los tokens prohibidos (`/JS`, `/JavaScript`, `/Launch`,
+  `/EmbeddedFile`, `/Encrypt`) en los bytes crudos del PDF, así que no ve JavaScript dentro de streams comprimidos
+  (object streams con FlateDecode). GuardDuty y el visor del navegador son las capas siguientes. Revisar en una segunda
+  versión.
+
+---
+
 ## 📞 Reporte de Vulnerabilidades
 
 Si encuentras una vulnerabilidad:

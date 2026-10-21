@@ -973,6 +973,76 @@ select:focus {
   width: 100%;
 }
 
+.note-form input[type="file"] {
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.attachment-warning {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.timeline-attachments {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.timeline-attachment {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.timeline-attachment-img {
+  max-width: 320px;
+  max-height: 240px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  object-fit: contain;
+  background: #fff;
+}
+
+.attachment-link {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.attachment-link:hover {
+  text-decoration: underline;
+}
+
+.attachment-deleted {
+  font-size: 0.82rem;
+  font-style: italic;
+  color: var(--muted);
+}
+
+.attachment-delete {
+  margin: 0;
+  display: inline-flex;
+}
+
+.attachment-delete-btn {
+  font-size: 0.8rem;
+  color: #b91c1c;
+  border: 1px solid rgba(185, 28, 28, 0.35);
+  border-radius: 6px;
+  padding: 2px 8px;
+  background: transparent;
+}
+
+[data-theme="dark"] .attachment-delete-btn {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
 .note-actions {
   display: flex;
   justify-content: end;
