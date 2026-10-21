@@ -6,16 +6,16 @@
 - Tarea: ninguna
 - Proximo paso: Humano elige tarea: python scripts/harness/approve.py activate --task <ID>
 - Ultima transicion: close (DONE -> IDLE)
-- Actualizado: 2026-10-21T12:43:46Z
+- Actualizado: 2026-10-21T15:46:12Z
 <!-- harness:projection:end -->
-- Ultima sesion archivada: progress/sessions/2026-10-21-H3.2-ECR-SCAN-WAIT-closure.md
+- Ultima sesion archivada: progress/sessions/2026-10-21-SEG-DESACOPLAR-STREAMLIT-closure.md
 
 ## Estado reciente
-- DECISION (VERIFYING, SIM-HISTORIAL-EVENTOS-ANTIGUOS, sesion claude-202610210107-deployer-sup97da0c): verificacion automatizada PASS (smoke HTTP 5/5 + sin redirect legacy, eventos EB solo INFO, cadena de identidad OK, conteos de logs 0 en los 8 patrones). Evidencia: deployment/verification-01.json. PENDIENTE HUMANO (AC-6): abrir en DEV el lead ffd67c7a-8c1d-4891-8a6e-fa049446facc y comprobar que su linea de tiempo muestra 5 simulaciones (4 antiguas con la nota, 1 completa con detalle desplegable); luego ejecutar `python scripts/harness/approve.py accept --decision accept --criteria AC-6`. Despues, el Deployer registra `verified`.
-- 2026-10-21: Tarea SIM-HISTORIAL-EVENTOS-ANTIGUOS cerrada; resumen en tasks/completed/SIM-HISTORIAL-EVENTOS-ANTIGUOS.yaml
-- DECISION (DEVELOPING, H3.2-ECR-SCAN-WAIT, sesion other-202610211235-developer-sup77a45a): la implementacion ya estaba commiteada en dfb1d7f (PR #101) por una sesion anterior. Verificado contra los 5 AC: workflow espera hasta SCAN_TIMEOUT_MINUTES=20 (sondeo 15 s), tres mensajes de fallo distinguibles, gate fail-closed y documentacion de recuperacion. CI del PR verde (Lint & Format, Tests, Security Audit, Docker Build, Release Tooling Validation). Local: pytest 15 passed (--no-cov), ruff/black limpios. Evidencia: evidence/H3.2-ECR-SCAN-WAIT/developer/developer-01.json.
-- DECISION (REVIEWING, H3.2-ECR-SCAN-WAIT, sesion claude-202610211240-reviewer-sup8252e8): APPROVED en dfb1d7f (tree 42236be). CI 5/5 verde en el SHA exacto; AC-1..AC-5 verificados contra el diff (plazo 20 min / sondeo 15 s, tres mensajes, gate fail-closed antes del bundle, recuperacion documentada); base = origin/main. Hallazgos solo info. Evidencia: evidence/H3.2-ECR-SCAN-WAIT/reviewer/review-01.json.
-- 2026-10-21: Tarea H3.2-ECR-SCAN-WAIT cerrada; resumen en tasks/completed/H3.2-ECR-SCAN-WAIT.yaml
+- DECISION (PREPARING_DEPLOYMENT, SEG-DESACOPLAR-STREAMLIT, sesion claude-202610211502-deployer-sup1b02b9): candidate listo para release 0c9b165 (tree deba86f = reviewed_tree). Preflight PASS (LKG h3-sim-historial-eventos-antiguos-793e718-domainlocked-r1, digests presentes, Promote deshabilitado); publish run 39622446165 6/6, scan 0/0; bundle domain-locked reproducible sha256 c187fd6b...; S3 + AV h3-seg-desacoplar-streamlit-0c9b165-domainlocked-r1 UNPROCESSED. Evidencia: evidence/SEG-DESACOPLAR-STREAMLIT/deployment/candidate-01.json.
+- DECISION (CANDIDATE_REVIEW, SEG-DESACOPLAR-STREAMLIT, sesion claude-202610211517-reviewer-supad9892): APPROVED, cause null. Arbol del release = arbol revisado (deba86f), release en main; publish run 39622446165 success para el SHA; digests app/caddy ACTIVE con scan sin hallazgos; bundle reconstruido de forma independiente con sha256 c187fd6b... identico, solo compose por digest; S3 y AV coinciden; LKG sano con digests presentes; plan version-only y rollback unico al LKG. Sin dry-run. Evidencia: evidence/SEG-DESACOPLAR-STREAMLIT/reviewer/candidate_review-01.json.
+- DECISION (DEPLOYING, SEG-DESACOPLAR-STREAMLIT, sesion claude-202610211528-deployer-supfc8c32): cutover version-only a h3-seg-desacoplar-streamlit-0c9b165-domainlocked-r1 aceptado 15:30:23Z, completado 15:31:09Z; Ready/Green/Ok; cadena VersionLabel -> AV -> S3 checksum -> digests coincide; sin reintentos ni rollback. Evidencia: evidence/SEG-DESACOPLAR-STREAMLIT/deployment/deployment-01.json. Conteos de logs y smoke en VERIFYING; AC-8 pendiente de approve.py accept.
+- DECISION (VERIFYING, SEG-DESACOPLAR-STREAMLIT, sesion claude-202610211528-deployer-supfc8c32): verificacion automatizada PASS (identidad de runtime, smoke HTTP 5/5 + sin redirect legacy, conteos de logs en 0 incluido Traceback). Evidencia: evidence/SEG-DESACOPLAR-STREAMLIT/deployment/verification-01.json. AC-1..AC-7 met; AC-8 pendiente_humano.
+- 2026-10-21: Tarea SEG-DESACOPLAR-STREAMLIT cerrada; resumen en tasks/completed/SEG-DESACOPLAR-STREAMLIT.yaml
 
 ## Bloqueos
 - Ninguno.

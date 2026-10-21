@@ -1,0 +1,118 @@
+schema_version: 1
+task:
+  id: SEG-DESACOPLAR-STREAMLIT
+  title: Retirar Streamlit del proyecto y subir Pillow a 13 para eliminar la excepcion de pip-audit
+  objective: Retirar Streamlit del proyecto (codigo legado, dependencias, Dockerfile y pruebas) y subir
+    Pillow a 13.x para que pip-audit pase sin ninguna excepcion y sea posible aceptar archivos de usuarios
+    en el futuro. La aplicacion en produccion (la API y la web del backoffice, ambas con uvicorn) no cambia
+    de comportamiento.
+  source:
+    type: story
+    ref: Excepcion de pip-audit para Pillow (PR 99) y decision del humano del 2026-10-21; definida en
+      sesion interactiva con Claude.
+  change_class: C
+  deploy_required: true
+  allow_lockfile_update: true
+  requires_human_acceptance: true
+  acceptance_criteria:
+  - id: AC-1
+    verification: automated
+    description: app.web.main y app.api.main se importan sin streamlit instalado (prueba que bloquea el
+      modulo y los importa) y ningun archivo de app/ importa streamlit (comprobacion estatica en la misma
+      prueba).
+  - id: AC-2
+    verification: automated
+    description: 'Se retira el codigo legado de Streamlit: se elimina todo modulo de app/ que importe
+      streamlit y no sea necesario para app.api.main ni app.web.main (por ejemplo app/streamlit_app.py,
+      app/backoffice_app.py, app/pages/**, app/presentation/public/** y app/internal_tools/registrar_solicitud.py,
+      a confirmar con un analisis de imports) junto con las pruebas que solo los ejercitan. Lo que la
+      API o la web usan de app/auth/guards.py y de app/components/ui.py (get_public_site_url, get_public_simulator_url,
+      format_currency_clp y lo que exporta app.auth) se MUEVE sin reescribirlo a modulos sin streamlit,
+      con sus pruebas. Antes de borrar cada modulo se verifica por busqueda que ninguna ruta de api o
+      web lo importa.'
+  - id: AC-3
+    verification: automated
+    description: requirements/runtime.lock y requirements/dev.lock no contienen streamlit ni las dependencias
+      que solo este traia; pillow queda en 13.0.0 o superior; 'pip-audit --requirement requirements/runtime.lock'
+      pasa SIN ningun --ignore-vuln y la instalacion de dev.lock no tiene conflictos. No se actualiza
+      ninguna otra dependencia salvo las que Pillow 13 exija (reportlab, si hiciera falta, con sus pruebas
+      del PDF).
+  - id: AC-4
+    verification: automated
+    description: 'En el MISMO PR se elimina la excepcion de pip-audit para Pillow: los --ignore-vuln de
+      ci.yml y publish-dev-ecr-images.yml, la prueba tests/security/test_excepcion_pip_audit_pillow.py
+      y la seccion ''Excepciones de pip-audit'' de docs/SEGURIDAD.md, que pasa a dejar constancia de que
+      se cerro y por que.'
+  - id: AC-5
+    verification: automated
+    description: El Dockerfile ya no instala ni configura Streamlit (sin variables STREAMLIT_*, sin COPY
+      de .streamlit) y su CMD por defecto arranca la web del backoffice con uvicorn; docker build y docker
+      compose config pasan en el CI; los servicios api y backoffice del compose de despliegue no cambian.
+  - id: AC-6
+    verification: automated
+    description: El resto de las pruebas (unitarias, integracion, seguridad y e2e que sigan vigentes)
+      pasa con cobertura total >= 85%; el PDF del simulador se genera con Pillow 13 (pruebas del PDF y
+      del simulador en verde); ruff, black, mypy y bandit sin observaciones.
+  - id: AC-7
+    verification: both
+    description: 'Documentacion al dia: CHANGELOG y BITACORA; README, DEVELOPMENT_GUIDE, ARCHITECTURE,
+      ENGINEERING_STANDARDS y tests/README dejan de describir Streamlit como parte vigente del sistema;
+      docs/SEGURIDAD.md y docs/SIMULADOR_USO.md coherentes. Los documentos historicos de etapas se dejan
+      como historia con una nota de que Streamlit fue retirado.'
+  - id: AC-8
+    verification: human
+    description: 'Smoke humano en AWS DEV tras el despliegue: inicio de sesion en el backoffice, lista
+      y detalle de leads, asistente del simulador con descarga del PDF (con el logo) y la API publica
+      responde; sin errores.'
+  constraints:
+  - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
+    desde ramas o worktrees antiguos.'
+  - 'change_class C: tras el merge la transicion obligatoria es merged_non_fast_path hacia BLOCKED_HUMAN,
+    sin excepcion. No hay nada que aplicar en AWS: el humano resuelve el estado hacia PREPARING_DEPLOYMENT
+    (release completo), NUNCA hacia VERIFYING.'
+  - 'allow_lockfile_update: solo para quitar streamlit (y sus dependencias exclusivas) y subir pillow.
+    No hacer otras actualizaciones de dependencias.'
+  - 'Decision del humano (2026-10-21): se RETIRA el codigo legado de Streamlit; no se aisla en un lock
+    aparte. El historial de git lo conserva.'
+  - 'No cambiar el comportamiento de la API ni de la web (rutas, autorizacion, respuestas): lo que usan
+    se mueve, no se reescribe. No modificar app/simulador_pension/**. No reducir la cobertura minima (85%).'
+  - 'El directorio .streamlit/ queda fuera del alcance del Developer (el guard no lo permite): se quita
+    solo la linea COPY del Dockerfile y el humano borra el directorio en un PR aparte.'
+  - 'Lecciones de las tareas anteriores: verificar con la cadena real de imports (no solo con busqueda
+    de texto) y comprobar el bump con ''pip-audit'' sobre runtime.lock antes de entregar.'
+  dependencies: []
+  risk:
+    level: medium
+    notes: Elimina codigo legado y cambia dependencias de ejecucion. Mitigado porque el compose de despliegue
+      solo usa uvicorn, por las pruebas, por el smoke humano en DEV y por el rollback version-only al
+      LKG.
+  scope:
+    paths:
+    - app/**
+    - tests/**
+    - requirements/**
+    - pyproject.toml
+    - Dockerfile
+    - docker-compose*.yml
+    - deployment/**
+    - .github/workflows/ci.yml
+    - .github/workflows/publish-dev-ecr-images.yml
+    - scripts/*.py
+    - docs/**
+    - README.md
+    - CHANGELOG.md
+  status: closed
+closure:
+  closed_at: '2026-10-21T15:46:10Z'
+  final_state: DONE
+  evidence_dir: evidence/SEG-DESACOPLAR-STREAMLIT
+  release:
+    release_sha: 0c9b16599c84e1bd4c3e198f6efa4733f1785e76
+    pr_number: 103
+    application_version: h3-seg-desacoplar-streamlit-0c9b165-domainlocked-r1
+    bundle_sha256: c187fd6bf9bb9997efdce754068e5729621e3f3b8a0ab6a940f7ed4b419b4d39
+    lkg: h3-sim-historial-eventos-antiguos-793e718-domainlocked-r1
+    deployment: success
+    deployed_commit: 0c9b16599c84e1bd4c3e198f6efa4733f1785e76
+    verification: PASS
+  rework_rounds: 0

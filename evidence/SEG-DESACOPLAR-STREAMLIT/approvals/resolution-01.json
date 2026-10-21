@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "resolution",
+  "task_id": "SEG-DESACOPLAR-STREAMLIT",
+  "created_at": "2026-10-21T14:58:24Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "from_state": "BLOCKED_HUMAN",
+  "to_state": "PREPARING_DEPLOYMENT",
+  "reason": "Streamlit retirado y Pillow 13 mergeados (PR 103); sigue el release completo"
+}
