@@ -3,6 +3,9 @@
 Procedimiento del paso 1 de [`ADJUNTOS_COMENTARIOS_DISENO.md`](ADJUNTOS_COMENTARIOS_DISENO.md) (`CRM-ADJUNTOS-1-INFRA-S3`,
 clase C). Lo aplica el humano con Claude interactivo; no es una tarea del Developer porque toca IAM.
 
+Estado: **aplicado y verificado en AWS DEV el 2026-10-21** (`apply`: 12 comprobaciones en `OK`; `verify`: 7 en `PASA`; plan de GuardDuty
+`12d0afd1193ea2e81987` en `ACTIVE`).
+
 ## Qué crea
 
 | Recurso | Detalle | Archivo |
@@ -56,8 +59,8 @@ reales** (solo ignora los archivos de prueba de `verify`); en ese caso hay que d
 
 ## Cosas a vigilar
 
-- **GuardDuty y su detector.** En `us-east-2` GuardDuty no está activado. Si crear el plan lo exige, el script se detiene con un mensaje
-  claro y **no lo activa solo**: activarlo tiene costo y es decisión del humano.
+- **GuardDuty y su detector.** En `us-east-2` GuardDuty no estaba activado y el plan se creó igual, sin detector. Si en otro entorno lo
+  exigiera, el script se detiene con un mensaje claro y **no lo activa solo**: activarlo tiene costo y es decisión del humano.
 - **Costo.** GuardDuty cobra por GB escaneado (unos US$0,09 en us-east-1 desde febrero de 2025) y un cargo pequeño por objeto evaluado;
   la tarifa por objeto en esta región se confirma antes de habilitar la función. S3 cobra aparte las etiquetas.
 - **Sin `s3:ListBucket`, S3 responde 403** tanto a un objeto inexistente como a uno denegado. Es esperado.

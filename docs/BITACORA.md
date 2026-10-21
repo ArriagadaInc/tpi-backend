@@ -22,6 +22,26 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-21 - CRM: infraestructura de los adjuntos aplicada y verificada; paso 2 definido (CRM-ADJUNTOS-COMENTARIOS)
+
+- Resultado del paso 1 (`CRM-ADJUNTOS-1-INFRA-S3`, PR #109): el humano ejecutó `apply` y `verify` con `deployment/aws/adjuntos_s3_infra.py`
+  sobre AWS DEV. `apply` terminó con las 12 comprobaciones en `OK` y `verify` con las 7 en `PASA`: un objeto sin escanear no se puede
+  leer; el archivo limpio queda `NO_THREATS_FOUND` y entonces se lee; el archivo de prueba EICAR queda `THREATS_FOUND` y no se puede leer; no
+  se puede falsificar la etiqueta de escaneo; el permiso de la app cubre `leads/*` y nada más.
+- Hallazgos: GuardDuty Malware Protection for S3 creó el plan **sin necesitar un detector de GuardDuty activo** (plan
+  `12d0afd1193ea2e81987` en `ACTIVE`); no hubo que corregir ninguna acción del rol de GuardDuty; el escaneo de un objeto tardó segundos. La
+  tarifa por objeto de GuardDuty en `us-east-2` sigue sin confirmar.
+- Recursos creados: bucket `tpi-dev-adjuntos-821656895812-us-east-2`, rol `tpi-dev-guardduty-malware-s3-role`, política en línea
+  `tpi-backoffice-dev-adjuntos-s3` en `tpi-backoffice-dev-ec2-role` y el plan de GuardDuty. Retroceso: `rollback` del mismo script.
+- Paso 2 definido y activable (`CRM-ADJUNTOS-2-CODIGO`, clase C con despliegue, riesgo alto, aceptación humana): 12 criterios (configuración
+  fail-closed, validación por contenido, almacenamiento en S3 con cliente inyectable, subida con permiso comprobado antes de subir nada,
+  marcas en la nota, vista en línea y descarga con cabeceras de seguridad, auditoría y borrado, configuración literal en el compose de DEV,
+  pruebas de seguridad, documentación y smoke humano). Se leyó el código antes de definirlo: las notas son texto en `tpi.leads.comentarios`
+  y su parser falla cerrado; la web no tiene límite de tamaño de petición ni el backoffice cabeceras de seguridad en Caddy, por lo que la
+  tarea los exige en la ruta; hay un limitador de tasa y un patrón de auditoría reutilizables.
+- Decisión nueva: la página del lead no muestra el tamaño del archivo (no consulta S3 al renderizar); se muestra «Imagen adjunta» o «PDF
+  adjunto».
+
 ### 2026-10-21 - CRM: herramienta de infraestructura S3 de los adjuntos, sin aplicar todavía (CRM-ADJUNTOS-1-INFRA-S3)
 
 - Cambio (solo repositorio; **no se aplicó nada en AWS**): `deployment/aws/adjuntos_s3_infra.py` con los subcomandos `plan` (solo lectura),
