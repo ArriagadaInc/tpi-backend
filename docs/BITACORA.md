@@ -22,6 +22,32 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-21 - Publish de ECR: la espera del escaneo sube a 20 minutos (H3.2-ECR-SCAN-WAIT)
+
+- Cambio (PR #101, `dfb1d7f`): el paso del escaneo de `publish-dev-ecr-images.yml` espera hasta 20 minutos, con sondeo cada 15 segundos,
+  mediante el script `scripts/release/wait_for_ecr_scan.py`. Los fallos tienen mensajes propios: el escaneo no terminó en el plazo (aclara
+  que no hay hallazgos verificados y apunta a la recuperación), el escaneo terminó en `FAILED` o `UNSUPPORTED_IMAGE`, o hay hallazgos
+  HIGH/CRITICAL. El gate sigue cerrando en falso: sin escaneo `COMPLETE` con CRITICAL=0 y HIGH=0 no se arma el bundle. El procedimiento de
+  recuperación (revisar el escaneo, borrar las dos imágenes del release por sus tags inmutables y relanzar con el mismo SHA) quedó en
+  `docs/DEV_EB_DEPLOYMENT_RUNBOOK.md`.
+- Resultado: clase C con `deploy_required: false`; cerró sola al hacer merge (`merged_no_deploy`), sin pasar por `BLOCKED_HUMAN`. Confirma la
+  lección de `H3.2-ECR-LIFECYCLE`: una tarea de infraestructura sin cambio de la aplicación se define con `deploy_required: false`.
+- Validación real diferida: el workflow solo se ejercita en el próximo release; mientras tanto lo cubren pruebas estáticas del YAML y del
+  script con el CLI de AWS simulado (5 escenarios). Observación del Reviewer: el script se detiene en la primera imagen con fallo, sin evaluar
+  la segunda; sigue siendo fail-closed.
+- Incidente: el Developer (DeepSeek) se detuvo a los 22 minutos con `402 Insufficient Balance` cuando el PR ya estaba en verde. El supervisor
+  paró con `failed` y la tarea quedó intacta en `DEVELOPING`; tras recargar el saldo, el Developer entregó en menos de 5 minutos. Lección: un
+  `failed` con 402 no es un fallo de la tarea; se recarga el saldo y se relanza el orquestador.
+- Límite que no resuelve: un escaneo atascado más de 20 minutos (como el del 2026-10-20) sigue fallando el publish; para eso está el
+  procedimiento documentado.
+
+### 2026-10-21 - Harness: tarea H3.2-ECR-SCAN-WAIT cerrada (DONE)
+
+- Titulo: Publish de imagenes a ECR: esperar el escaneo hasta 20 minutos y fallar con un mensaje claro
+- Evidencia: `evidence/H3.2-ECR-SCAN-WAIT/` y `tasks/completed/H3.2-ECR-SCAN-WAIT.yaml`.
+- release_sha: `f82180fc57b479ddde307c12e2bdce41c0e045fa`
+- pr_number: `101`
+
 ### 2026-10-21 - Publish a ECR: esperar el escaneo hasta 20 minutos y fallar con mensajes claros (H3.2-ECR-SCAN-WAIT, en desarrollo)
 
 - Contexto: el publish del release fallo dos veces (2026-10-16 y 2026-10-20) porque el escaneo de ECR no terminaba en los 5 minutos que esperaba el workflow y quedaba atascado mas de 20-47 minutos (lo normal es de 14 a 35 s). El workflow tampoco distinguia entre «escaneo lento», «escaneo fallido» y «hallazgos reales».

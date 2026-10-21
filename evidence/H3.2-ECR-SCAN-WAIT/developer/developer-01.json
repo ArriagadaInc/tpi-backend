@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "H3.2-ECR-SCAN-WAIT",
+  "created_at": "2026-10-21T12:39:35Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610211235-developer-sup77a45a",
+  "head_sha": "dfb1d7f5d98f6adcab8c8e9e0f80534021f97a62",
+  "branch": "harness/H3.2-ECR-SCAN-WAIT-ecr-scan-wait",
+  "pr_number": 101,
+  "change_class": "C",
+  "tests": {
+    "command": "Local (worktree, Python 3.13.13): python -m pytest tests/unit/test_ecr_scan_wait.py tests/security/test_ecr_scan_wait_workflow.py --no-cov -q (15 passed). CI PR #101 (Python 3.12): pytest tests/ --cov=app --cov-fail-under=85 (PASS, job Tests). Las pruebas nuevas son sin AWS (runner simulado) y sin PostgreSQL.",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "docker_compose_config": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "El paso 'Wait for ECR scans and fail closed on findings' de publish-dev-ecr-images.yml sondea ambas imagenes invocando scripts/release/wait_for_ecr_scan.py con env SCAN_TIMEOUT_MINUTES='20' y SCAN_POLL_SECONDS='15' (constantes legibles del workflow). La prueba tests/security/test_ecr_scan_wait_workflow.py::test_plazo_e_intervalo_son_constantes_legibles_del_workflow exige timeout >= 20 y poll <= 30. El script espera imageScanStatus COMPLETE antes de evaluar hallazgos y sigue IN_PROGRESS/no visible hasta el plazo."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "Tres mensajes propios en scripts/release/wait_for_ecr_scan.py: (a) timeout_message 'El escaneo de ECR no termino en el plazo... NO hay hallazgos verificados...' con digests y procedimiento de recuperacion; (b) terminal_message 'termino en FAILED/UNSUPPORTED_IMAGE... la imagen no pudo ser verificada'; (c) findings_message 'Hallazgos HIGH o CRITICAL... CRITICAL=... HIGH=... Detalle: <json>'. Tests unitarios verifican cada camino (test_in_progress_que_no_termina_falla_con_mensaje_a, test_scan_terminado_en_failed/unsupported_image, test_hallazgos_high_o_critical_fallan_con_mensaje_c, test_los_tres_mensajes_son_distintos_y_con_sus_marcas)."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "Gate fail-closed: wait_for_scan solo retorna exito en COMPLETE con CRITICAL=0 y HIGH=0; IN_PROGRESS o no visible nunca cuenta como exito (sigue sondeando hasta el plazo y luego falla). FAILED/UNSUPPORTED_IMAGE y hallazgos elevan EcrScanError (exit 1), por lo que el bundle no se arma ni se sube el artefacto. La publicacion de imagenes y la politica de tags (inmutables, se construye/pushea cada run) no cambian; no se reutilizan imagenes ya publicadas."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "tests/security/test_ecr_scan_wait_workflow.py lee el YAML del workflow y comprueba plazo >= 20, intervalo <= 30, espera de ambas imagenes con sus digests y los tres mensajes referidos. tests/unit/test_ecr_scan_wait.py ejercita el CLI de AWS simulado (runner inyectable) para COMPLETE sin hallazgos, IN_PROGRESS que termina, IN_PROGRESS que no termina (timeout), FAILED, UNSUPPORTED_IMAGE y hallazgos HIGH/CRITICAL, mas estado desconocido y error transitorio. Cobertura total >= 85% verificada en CI (job Tests, pytest --cov=app --cov-fail-under=85 PASS)."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "docs/DEV_EB_DEPLOYMENT_RUNBOOK.md (seccion 'Recuperacion cuando el publish falla por el escaneo de ECR'), CHANGELOG.md y docs/BITACORA.md describen: revisar el estado del escaneo de ambos digests, borrar las dos imagenes del release (tags inmutables, lo hace el humano) y relanzar el workflow con el mismo SHA; y como interpretar cada mensaje de fallo (tabla con significado y accion). La prueba test_la_recuperacion_esta_documentada verifica 'relanzar el workflow con el mismo sha' y 'borrar las dos imagenes' en los tres documentos."
+    }
+  ],
+  "files_changed": [
+    ".github/workflows/publish-dev-ecr-images.yml",
+    "scripts/release/wait_for_ecr_scan.py",
+    "tests/unit/test_ecr_scan_wait.py",
+    "tests/security/test_ecr_scan_wait_workflow.py",
+    "docs/DEV_EB_DEPLOYMENT_RUNBOOK.md",
+    "docs/BITACORA.md",
+    "CHANGELOG.md"
+  ],
+  "assumptions": [
+    "La suite completa con cobertura (>= 85%), mypy, bandit, pip-audit, docker build y docker compose config se verifican en CI (PR #101 verde: Lint & Format, Tests, Security Audit, Docker Build, Release Tooling Validation). Localmente corrieron ruff/black sobre los archivos afectados y pytest de los dos archivos nuevos (--no-cov), porque la suite completa requiere PostgreSQL local y el CI ya la cubre.",
+    "El script wait_for_ecr_scan.py se ejerce solo con el CLI de AWS simulado (runner inyectable) en tests, sin AWS ni credenciales. El workflow real se validara en el proximo release (change_class C con deploy_required false, sin despliegue en esta tarea).",
+    "No se tocan permisos IAM/OIDC, la politica de tags, la publicacion de imagenes, el paso de pip-audit ni la excepcion de Pillow (fuera de alcance, restricciones de la tarea).",
+    "Un escaneo atascado mas de 20 minutos seguira fallando: la solucion documentada es el procedimiento de recuperacion (borrar y relanzar), no esperar indefinidamente."
+  ],
+  "migrations_included": false
+}

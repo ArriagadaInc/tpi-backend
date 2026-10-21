@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "H3.2-ECR-SCAN-WAIT",
+  "created_at": "2026-10-21T12:43:36Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610211242-deployer-sup02aadf",
+  "pr_number": 101,
+  "pr_url": "https://github.com/ArriagadaInc/tpi-backend/pull/101",
+  "pr_state_after_merge": "MERGED",
+  "reviewed_sha": "dfb1d7f5d98f6adcab8c8e9e0f80534021f97a62",
+  "reviewed_tree": "42236be10fba3ee2829d195c7a91263e1167c31b",
+  "release_sha": "f82180fc57b479ddde307c12e2bdce41c0e045fa",
+  "release_tree": "42236be10fba3ee2829d195c7a91263e1167c31b",
+  "main_parent_sha": "433d6a4be9469a0b195d0de8f317a47f6cfb608e",
+  "main_before_merge": "433d6a4be9469a0b195d0de8f317a47f6cfb608e",
+  "main_after_merge": "f82180fc57b479ddde307c12e2bdce41c0e045fa",
+  "method": "squash",
+  "match_head_commit_used": true,
+  "result": "PASS",
+  "change_class": "C",
+  "deploy_required": false,
+  "fast_path": false,
+  "gh_pr_merge_command": "python scripts/harness/merge_reviewed_pr.py",
+  "tree_equivalence": {
+    "reviewed_tree": "42236be10fba3ee2829d195c7a91263e1167c31b",
+    "release_tree": "42236be10fba3ee2829d195c7a91263e1167c31b",
+    "equal": true,
+    "verification": "git rev-parse f82180f^{tree} == reviewed_tree tras git fetch origin main; parent unico 433d6a4."
+  },
+  "references": {
+    "developer_evidence": "evidence/H3.2-ECR-SCAN-WAIT/developer/developer-01.json",
+    "review_evidence": "evidence/H3.2-ECR-SCAN-WAIT/reviewer/review-01.json"
+  },
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "42236be == 42236be."
+    },
+    {
+      "name": "merge_not_repeated",
+      "result": "PASS",
+      "note": "una sola ejecucion de merge_reviewed_pr.py; already_merged=false."
+    }
+  ],
+  "cloud_access": "ninguno (MERGING)"
+}
