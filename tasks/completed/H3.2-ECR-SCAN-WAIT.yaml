@@ -1,0 +1,77 @@
+schema_version: 1
+task:
+  id: H3.2-ECR-SCAN-WAIT
+  title: 'Publish de imagenes a ECR: esperar el escaneo hasta 20 minutos y fallar con un mensaje claro'
+  objective: 'El workflow de publicacion no debe fallar solo porque el escaneo de ECR tarde: espera hasta
+    20 minutos a que ambas imagenes tengan el escaneo COMPLETE y mantiene el gate fail-closed (CRITICAL=0
+    y HIGH=0). Cuando el escaneo no termina, el mensaje de fallo lo dice con claridad y apunta al procedimiento
+    de recuperacion.'
+  source:
+    type: story
+    ref: Fallos de publish por escaneo de ECR el 2026-10-16 y el 2026-10-20; definida en sesion interactiva
+      con Claude.
+  change_class: C
+  deploy_required: false
+  requires_human_acceptance: false
+  acceptance_criteria:
+  - id: AC-1
+    verification: automated
+    description: El paso del escaneo en publish-dev-ecr-images.yml espera hasta 20 minutos (sondeo cada
+      15 s o menos) a que cada imagen tenga imageScanStatus COMPLETE antes de dar el gate por fallido;
+      el plazo y el intervalo son constantes legibles del workflow.
+  - id: AC-2
+    verification: automated
+    description: 'Los fallos se distinguen con mensajes propios: (a) el escaneo no termino en el plazo,
+      aclarando que NO hay hallazgos verificados, con los digests y el procedimiento de recuperacion;
+      (b) el escaneo termino en FAILED o UNSUPPORTED_IMAGE; (c) hay hallazgos HIGH o CRITICAL, con el
+      detalle como hasta ahora.'
+  - id: AC-3
+    verification: automated
+    description: 'El gate sigue cerrando en falso: sin un escaneo COMPLETE con CRITICAL=0 y HIGH=0 en
+      ambas imagenes no se arma el bundle ni se sube el artefacto; IN_PROGRESS nunca cuenta como exito.
+      Los tags siguen siendo inmutables y el workflow no reutiliza imagenes ya publicadas.'
+  - id: AC-4
+    verification: automated
+    description: 'Pruebas en tests/ que leen el workflow (YAML) y comprueban plazo >= 20 minutos, intervalo
+      <= 30 s y los tres mensajes; si la logica de espera se extrae a un script bajo scripts/release/,
+      pruebas con el CLI de AWS simulado para: COMPLETE sin hallazgos, IN_PROGRESS que termina, IN_PROGRESS
+      que no termina, FAILED y hallazgos HIGH/CRITICAL; cobertura total >= 85%.'
+  - id: AC-5
+    verification: both
+    description: 'docs/DEV_EB_DEPLOYMENT_RUNBOOK.md (o el documento del release que corresponda), CHANGELOG
+      y BITACORA describen la recuperacion cuando el publish falla por el escaneo: revisar el estado del
+      escaneo de ambos digests, borrar las dos imagenes del release (tags inmutables, lo hace el humano)
+      y relanzar el workflow con el mismo SHA; y como interpretar cada mensaje de fallo.'
+  constraints:
+  - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
+    desde ramas o worktrees antiguos.'
+  - 'change_class C con deploy_required false: no hay despliegue; tras el merge la tarea cierra sola (merged_no_deploy).
+    La validacion real ocurre en el proximo release.'
+  - Solo cambia el paso del escaneo de publish-dev-ecr-images.yml (y sus pruebas y documentacion). No
+    tocar el paso de pip-audit ni la excepcion de Pillow (le corresponde a SEG-DESACOPLAR-STREAMLIT),
+    ni la politica de tags, ni la publicacion de imagenes.
+  - No ampliar permisos de IAM ni el OIDC del workflow; no agregar acciones de terceros nuevas.
+  - 'Un escaneo atascado mas de 20 minutos seguira fallando: la solucion para ese caso es el procedimiento
+    documentado, no esperar indefinidamente.'
+  dependencies: []
+  risk:
+    level: low
+    notes: Cambio acotado de un paso de CI sin despliegue; el gate sigue cerrando en falso. El mayor riesgo
+      es no poder ejercitar el workflow real hasta el proximo release, mitigado con pruebas estaticas
+      del YAML.
+  scope:
+    paths:
+    - .github/workflows/publish-dev-ecr-images.yml
+    - scripts/release/**
+    - tests/**
+    - docs/**
+    - CHANGELOG.md
+  status: closed
+closure:
+  closed_at: '2026-10-21T12:43:45Z'
+  final_state: DONE
+  evidence_dir: evidence/H3.2-ECR-SCAN-WAIT
+  release:
+    release_sha: f82180fc57b479ddde307c12e2bdce41c0e045fa
+    pr_number: 101
+  rework_rounds: 0

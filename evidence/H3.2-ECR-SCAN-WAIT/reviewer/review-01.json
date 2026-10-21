@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "H3.2-ECR-SCAN-WAIT",
+  "created_at": "2026-10-21T12:41:56Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610211240-reviewer-sup8252e8",
+  "reviewed_sha": "dfb1d7f5d98f6adcab8c8e9e0f80534021f97a62",
+  "reviewed_tree": "42236be10fba3ee2829d195c7a91263e1167c31b",
+  "pr_number": 101,
+  "ci": {
+    "conclusion": "success",
+    "status": "PASS",
+    "checks": "5/5 en el SHA exacto",
+    "verification": "gh pr checks 101; statusCheckRollup",
+    "run_id": 39530859352
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "info",
+      "file": "scripts/release/wait_for_ecr_scan.py",
+      "summary": "El script falla en la primera imagen (app) sin evaluar caddy; antes se evaluaban ambas y se fallaba al final. Sigue fail-closed; solo se reporta un fallo a la vez.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F-2",
+      "severity": "info",
+      "file": ".github/workflows/publish-dev-ecr-images.yml",
+      "summary": "El workflow real no se ejercita hasta el proximo release (change_class C, sin despliegue); el paso publish ya usa python del runner en el paso del bundle, por lo que la invocacion es consistente.",
+      "required_action": "Observar el proximo publish."
+    }
+  ],
+  "checks": [
+    {
+      "name": "alcance_acotado_sin_tocar_pip_audit_tags_iam",
+      "result": "PASS"
+    },
+    {
+      "name": "ac1_plazo_20min_intervalo_15s_constantes",
+      "result": "PASS"
+    },
+    {
+      "name": "ac2_tres_mensajes_distintos",
+      "result": "PASS"
+    },
+    {
+      "name": "ac3_gate_fail_closed_antes_del_bundle",
+      "result": "PASS"
+    },
+    {
+      "name": "ac4_pruebas_workflow_y_script_simulado",
+      "result": "PASS"
+    },
+    {
+      "name": "ac5_recuperacion_documentada",
+      "result": "PASS"
+    },
+    {
+      "name": "ci_verde_5_de_5_en_sha_exacto_cobertura_85",
+      "result": "PASS"
+    },
+    {
+      "name": "base_pr_igual_a_origin_main",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "Validacion real del workflow diferida al proximo release; mitigada con pruebas estaticas del YAML y del script con CLI simulado"
+  ]
+}

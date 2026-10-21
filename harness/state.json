@@ -13,107 +13,19 @@
     "deployer": null
   },
   "worktrees": [],
-  "updated_at": "2026-10-21T01:30:30Z",
+  "updated_at": "2026-10-21T12:43:46Z",
   "last_transition": {
-    "at": "2026-10-21T01:30:30Z",
+    "at": "2026-10-21T12:43:46Z",
     "transition": "close",
     "event": "close",
     "from": "DONE",
     "to": "IDLE",
     "actor": "system",
     "runtime": "claude",
-    "session_id": "claude-202610210129-deployer-supd9750c",
+    "session_id": "claude-202610211242-deployer-sup02aadf",
     "evidence": null
   },
   "history": [
-    {
-      "at": "2026-10-20T13:59:25Z",
-      "transition": "candidate_approve",
-      "event": "candidate_approve",
-      "from": "CANDIDATE_REVIEW",
-      "to": "WAITING_HUMAN_APPROVAL",
-      "actor": "reviewer",
-      "runtime": "claude",
-      "session_id": "claude-202610201356-reviewer-sup5628cc",
-      "evidence": "evidence/SIM-HISTORIAL-LINEA-TIEMPO/reviewer/candidate_review-01.json"
-    },
-    {
-      "at": "2026-10-20T14:13:36Z",
-      "transition": "human_approve",
-      "event": "human_approve",
-      "from": "WAITING_HUMAN_APPROVAL",
-      "to": "DEPLOYING",
-      "actor": "human",
-      "runtime": null,
-      "session_id": null,
-      "evidence": "evidence/SIM-HISTORIAL-LINEA-TIEMPO/approvals/approval-01.json"
-    },
-    {
-      "at": "2026-10-20T14:18:52Z",
-      "transition": "deploy_succeeded",
-      "event": "deploy_succeeded",
-      "from": "DEPLOYING",
-      "to": "VERIFYING",
-      "actor": "deployer",
-      "runtime": "claude",
-      "session_id": "claude-202610201413-deployer-sup19d530",
-      "evidence": "evidence/SIM-HISTORIAL-LINEA-TIEMPO/deployment/deployment-01.json"
-    },
-    {
-      "at": "2026-10-20T14:34:26Z",
-      "transition": "verified",
-      "event": "verified",
-      "from": "VERIFYING",
-      "to": "DONE",
-      "actor": "deployer",
-      "runtime": "claude",
-      "session_id": "claude-202610201433-deployer-sup794008",
-      "evidence": "evidence/SIM-HISTORIAL-LINEA-TIEMPO/deployment/verification-01.json"
-    },
-    {
-      "at": "2026-10-20T14:34:28Z",
-      "transition": "close",
-      "event": "close",
-      "from": "DONE",
-      "to": "IDLE",
-      "actor": "system",
-      "runtime": "claude",
-      "session_id": "claude-202610201433-deployer-sup794008",
-      "evidence": null
-    },
-    {
-      "at": "2026-10-20T19:55:21Z",
-      "transition": "activate_task",
-      "event": "activate_task",
-      "from": "IDLE",
-      "to": "NEW",
-      "actor": "human",
-      "runtime": null,
-      "session_id": null,
-      "evidence": null
-    },
-    {
-      "at": "2026-10-20T19:58:10Z",
-      "transition": "start_development",
-      "event": "start_development",
-      "from": "NEW",
-      "to": "DEVELOPING",
-      "actor": "developer",
-      "runtime": "other",
-      "session_id": "other-202610201957-developer-sup8256c2",
-      "evidence": null
-    },
-    {
-      "at": "2026-10-20T20:47:17Z",
-      "transition": "submit_for_review",
-      "event": "submit_for_review",
-      "from": "DEVELOPING",
-      "to": "READY_FOR_REVIEW",
-      "actor": "developer",
-      "runtime": "other",
-      "session_id": "other-202610202035-developer-sup87bf89",
-      "evidence": "evidence/SIM-HISTORIAL-EVENTOS-ANTIGUOS/developer/developer-02.json"
-    },
     {
       "at": "2026-10-20T20:47:58Z",
       "transition": "start_review",
@@ -244,6 +156,94 @@
       "actor": "system",
       "runtime": "claude",
       "session_id": "claude-202610210129-deployer-supd9750c",
+      "evidence": null
+    },
+    {
+      "at": "2026-10-21T01:50:31Z",
+      "transition": "activate_task",
+      "event": "activate_task",
+      "from": "IDLE",
+      "to": "NEW",
+      "actor": "human",
+      "runtime": null,
+      "session_id": null,
+      "evidence": null
+    },
+    {
+      "at": "2026-10-21T01:52:41Z",
+      "transition": "start_development",
+      "event": "start_development",
+      "from": "NEW",
+      "to": "DEVELOPING",
+      "actor": "developer",
+      "runtime": "other",
+      "session_id": "other-202610210151-developer-sup4cea05",
+      "evidence": null
+    },
+    {
+      "at": "2026-10-21T12:40:08Z",
+      "transition": "submit_for_review",
+      "event": "submit_for_review",
+      "from": "DEVELOPING",
+      "to": "READY_FOR_REVIEW",
+      "actor": "developer",
+      "runtime": "other",
+      "session_id": "other-202610211235-developer-sup77a45a",
+      "evidence": "evidence/H3.2-ECR-SCAN-WAIT/developer/developer-01.json"
+    },
+    {
+      "at": "2026-10-21T12:40:54Z",
+      "transition": "start_review",
+      "event": "start_review",
+      "from": "READY_FOR_REVIEW",
+      "to": "REVIEWING",
+      "actor": "reviewer",
+      "runtime": "claude",
+      "session_id": "claude-202610211240-reviewer-sup8252e8",
+      "evidence": null
+    },
+    {
+      "at": "2026-10-21T12:42:08Z",
+      "transition": "review_approve",
+      "event": "review_approve",
+      "from": "REVIEWING",
+      "to": "REVIEW_APPROVED",
+      "actor": "reviewer",
+      "runtime": "claude",
+      "session_id": "claude-202610211240-reviewer-sup8252e8",
+      "evidence": "evidence/H3.2-ECR-SCAN-WAIT/reviewer/review-01.json"
+    },
+    {
+      "at": "2026-10-21T12:42:44Z",
+      "transition": "start_merge",
+      "event": "start_merge",
+      "from": "REVIEW_APPROVED",
+      "to": "MERGING",
+      "actor": "deployer",
+      "runtime": "claude",
+      "session_id": "claude-202610211242-deployer-sup02aadf",
+      "evidence": null
+    },
+    {
+      "at": "2026-10-21T12:43:45Z",
+      "transition": "merged_no_deploy",
+      "event": "merged",
+      "from": "MERGING",
+      "to": "DONE",
+      "actor": "deployer",
+      "runtime": "claude",
+      "session_id": "claude-202610211242-deployer-sup02aadf",
+      "evidence": "evidence/H3.2-ECR-SCAN-WAIT/deployment/merge-01.json"
+    },
+    {
+      "at": "2026-10-21T12:43:46Z",
+      "transition": "close",
+      "event": "close",
+      "from": "DONE",
+      "to": "IDLE",
+      "actor": "system",
+      "runtime": "claude",
+      "session_id": "claude-202610211242-deployer-sup02aadf",
       "evidence": null
     }
   ]
