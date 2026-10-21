@@ -1427,3 +1427,30 @@ class SolicitudRepository:
                 row = cur.fetchone()
                 conn.commit()
                 return row is not None
+
+    def replace_attachment_mark(
+        self,
+        id_lead: UUID,
+        old_mark: str,
+        new_mark: str,
+    ) -> bool:
+        """Replace an exact attachment mark in ``tpi.leads.comentarios`` (AC-4).
+
+        The ``REPLACE`` is parameterized and scoped to the lead; a ``LIKE`` guard
+        makes the UPDATE a no-op (``rowcount == 0`` -> ``False``) when the exact
+        mark is not present, so a concurrent edit cannot corrupt another note.
+        """
+        query = """
+            UPDATE tpi.leads
+            SET comentarios = REPLACE(comentarios, %s, %s)
+            WHERE id_lead = %s
+              AND comentarios LIKE %s
+            RETURNING id_lead
+        """
+        params: list[Any] = [old_mark, new_mark, str(id_lead), f"%{old_mark}%"]
+        with get_db_connection(operation="replace_attachment_mark") as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, params)
+                row = cur.fetchone()
+                conn.commit()
+                return row is not None

@@ -152,6 +152,9 @@ class Settings(BaseSettings):
     attachments_enabled: bool = Field(default=False, alias="ATTACHMENTS_ENABLED")
     attachments_bucket: str | None = Field(default=None, alias="ATTACHMENTS_BUCKET")
     attachments_s3_region: str = Field(default="us-east-2", alias="ATTACHMENTS_S3_REGION")
+    attachments_allow_pdf_embedded_files: bool = Field(
+        default=True, alias="ATTACHMENTS_ALLOW_PDF_EMBEDDED_FILES"
+    )
     attachments_rate_limit_requests: int = Field(
         default=20, alias="ATTACHMENTS_RATE_LIMIT_REQUESTS"
     )

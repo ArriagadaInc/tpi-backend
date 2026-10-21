@@ -21,6 +21,7 @@ from app.attachments.audit import (
 )
 from app.attachments.marks import (
     build_attachment_mark,
+    build_deleted_attachment_mark,
     neutralize_attachment_marks,
     parse_attachment_marks,
     strip_attachment_marks,
@@ -798,6 +799,7 @@ class SolicitudService:
                 attachment.attachment_type,
                 attachment.size,
                 attachment.sha256,
+                archivos_incrustados=attachment.attachment_type == "pdfe",
             )
         return True
 
@@ -871,7 +873,14 @@ class SolicitudService:
         *,
         actor: AuthenticatedUser,
     ) -> bool:
-        """Delete an attachment (S3 object) leaving the mark, and audit (AC-7)."""
+        """Delete an attachment: S3 object first, then the exact mark (AC-4).
+
+        Only ``ceo``/``cto`` (``can_view_full_pii``) may delete. The S3 object is
+        deleted first; if that call raises, the note is not touched. On success
+        the exact active mark ``[adjunto:<tipo>:<uuid>]`` is replaced in the note
+        by ``[adjunto-eliminado:<tipo>:<uuid>]`` with a parameterized UPDATE
+        scoped to the lead, and the ``adjunto_eliminado`` audit is written.
+        """
         if not self.can_view_full_pii(actor):
             return False
         lead_id = self._normalize_uuid(id_lead, "lead")
@@ -889,7 +898,14 @@ class SolicitudService:
         size = _parse_int_metadata(stored.metadata.get("size")) if stored else None
         sha256 = stored.metadata.get("sha256") if stored else None
 
+        # 1) Borra el objeto primero; si falla, la nota no se toca (AC-4).
         self.storage.delete(key)
+
+        # 2) Reemplaza la marca exacta por la de eliminado en la nota.
+        old_mark = build_attachment_mark(matching.attachment_type, attachment_uuid)
+        new_mark = build_deleted_attachment_mark(matching.attachment_type, attachment_uuid)
+        self.repository.replace_attachment_mark(lead_id, old_mark, new_mark)
+
         self._audit(
             ACCION_ELIMINADO,
             lead_id,
@@ -900,6 +916,33 @@ class SolicitudService:
             sha256,
         )
         return True
+
+    def get_attachment_scan_status(
+        self,
+        id_lead: UUID | str,
+        attachment_uuid: UUID,
+    ) -> str:
+        """Devuelve el estado del escaneo de GuardDuty para un adjunto (AC-5).
+
+        Solo lectura de la etiqueta ``GuardDutyMalwareScanStatus`` del objeto.
+        Devuelve ``scanning`` (sin etiqueta), ``clean``, ``threat``, ``blocked``
+        o ``unavailable`` (cualquier error de lectura, incluido ``AccessDenied``
+        por falta del permiso). Nunca escribe ni borra etiquetas.
+        """
+        lead_id = self._normalize_uuid(id_lead, "lead")
+        tags = self.storage.get_tagging(self._attachment_key(lead_id, attachment_uuid))
+        if tags is None:
+            return "unavailable"
+        status = tags.get("GuardDutyMalwareScanStatus")
+        if not status:
+            return "scanning"
+        if status == "NO_THREATS_FOUND":
+            return "clean"
+        if status == "THREATS_FOUND":
+            return "threat"
+        if status in {"UNSUPPORTED", "FAILED", "ACCESS_DENIED"}:
+            return "blocked"
+        return "unavailable"
 
     @staticmethod
     def _attachment_key(lead_id: UUID, attachment_id: UUID) -> str:
@@ -958,6 +1001,7 @@ class SolicitudService:
         sha256: str | None,
         *,
         rejection_code: str | None = None,
+        archivos_incrustados: bool | None = None,
     ) -> None:
         try:
             self.attachment_audit(
@@ -969,6 +1013,7 @@ class SolicitudService:
                 size=size,
                 sha256=sha256,
                 rejection_code=rejection_code,
+                archivos_incrustados=archivos_incrustados,
             )
         except Exception:
             logger.warning("event=attachment_audit_failed accion=%s result=failed", accion)

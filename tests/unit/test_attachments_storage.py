@@ -18,6 +18,7 @@ from app.config import Settings
 class _FakeS3Client:
     def __init__(self) -> None:
         self.objects: dict[str, dict[str, Any]] = {}
+        self.tags: dict[str, dict[str, str]] = {}
         self.calls: list[tuple[str, dict[str, Any]]] = []
 
     def put_object(self, **kwargs: Any) -> dict[str, Any]:
@@ -32,6 +33,21 @@ class _FakeS3Client:
         stored = self.objects[str(kwargs["Key"])]
         body = type("Body", (), {"read": lambda self: stored["Body"]})()
         return {"Body": body, "ContentType": stored["ContentType"], "Metadata": stored["Metadata"]}
+
+    def get_object_tagging(self, **kwargs: Any) -> dict[str, Any]:
+        self.calls.append(("get_object_tagging", kwargs))
+        key = str(kwargs["Key"])
+        if key not in self.tags:
+            raise ClientError(
+                {"Error": {"Code": "NoSuchTagSet", "Message": "missing"}},
+                "GetObjectTagging",
+            )
+        return {
+            "TagSet": [
+                {"Key": tag_key, "Value": tag_value}
+                for tag_key, tag_value in self.tags[key].items()
+            ]
+        }
 
     def delete_object(self, **kwargs: Any) -> dict[str, Any]:
         self.calls.append(("delete_object", kwargs))
@@ -122,6 +138,64 @@ def test_delete_calls_delete_object() -> None:
     assert client.calls[0][0] == "delete_object"
 
 
+def test_get_tagging_reads_tags_and_never_writes() -> None:
+    client = _FakeS3Client()
+    client.tags["leads/1/2"] = {"GuardDutyMalwareScanStatus": "NO_THREATS_FOUND"}
+    storage = S3AttachmentStorage(bucket="b", client=client)
+    assert storage.get_tagging("leads/1/2") == {"GuardDutyMalwareScanStatus": "NO_THREATS_FOUND"}
+    called = [call[0] for call in client.calls]
+    assert called == ["get_object_tagging"]
+    assert "put_object_tagging" not in called
+    assert "delete_object_tagging" not in called
+
+
+def test_get_tagging_returns_none_on_access_denied() -> None:
+    class _DeniedTaggingClient:
+        def put_object(self, **kwargs: Any) -> dict[str, Any]:
+            del kwargs
+            return {}
+
+        def get_object(self, **kwargs: Any) -> dict[str, Any]:
+            del kwargs
+            return {}
+
+        def get_object_tagging(self, **kwargs: Any) -> dict[str, Any]:
+            del kwargs
+            raise ClientError(
+                {"Error": {"Code": "AccessDenied", "Message": "denied"}},
+                "GetObjectTagging",
+            )
+
+        def delete_object(self, **kwargs: Any) -> dict[str, Any]:
+            del kwargs
+            return {}
+
+    storage = S3AttachmentStorage(bucket="b", client=_DeniedTaggingClient())
+    assert storage.get_tagging("leads/1/2") is None
+
+
+def test_get_tagging_returns_none_on_network_error() -> None:
+    class _NetworkTaggingClient:
+        def put_object(self, **kwargs: Any) -> dict[str, Any]:
+            del kwargs
+            return {}
+
+        def get_object(self, **kwargs: Any) -> dict[str, Any]:
+            del kwargs
+            return {}
+
+        def get_object_tagging(self, **kwargs: Any) -> dict[str, Any]:
+            del kwargs
+            raise BotoCoreError
+
+        def delete_object(self, **kwargs: Any) -> dict[str, Any]:
+            del kwargs
+            return {}
+
+    storage = S3AttachmentStorage(bucket="b", client=_NetworkTaggingClient())
+    assert storage.get_tagging("leads/1/2") is None
+
+
 def test_disabled_storage_get_returns_none_and_put_raises() -> None:
     storage = DisabledAttachmentStorage()
     assert storage.get("x") is None
@@ -154,3 +228,15 @@ def test_settings_accepts_enabled_with_bucket() -> None:
     )
     assert settings.attachments_enabled is True
     assert settings.attachments_bucket == "bucket"
+
+
+def test_settings_allow_pdf_embedded_files_defaults_true() -> None:
+    # Decisión 9: se permiten por defecto; el ajuste permite volver al rechazo.
+    assert Settings(APP_ENV="testing").attachments_allow_pdf_embedded_files is True
+    assert (
+        Settings(
+            APP_ENV="testing",
+            ATTACHMENTS_ALLOW_PDF_EMBEDDED_FILES=False,
+        ).attachments_allow_pdf_embedded_files
+        is False
+    )

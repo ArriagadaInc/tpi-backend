@@ -5,8 +5,10 @@ from __future__ import annotations
 import logging
 import re
 import struct
+from datetime import datetime
 from typing import Any, cast
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi.testclient import TestClient
@@ -17,6 +19,7 @@ from app.auth.models import AuthenticatedUser, AuthenticationResult, UserRole
 from app.config import Settings
 from app.services.solicitud_service import SolicitudService
 from app.web.main import create_web_app
+from app.web.routes.leads import _attach_attachment_scan_statuses
 
 LEAD_ID = UUID("11111111-1111-1111-1111-111111111111")
 ADVISOR_ID = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
@@ -34,9 +37,11 @@ def _png(width: int = 1, height: int = 1) -> bytes:
 class _FakeStorage:
     def __init__(self) -> None:
         self.objects: dict[str, StoredObject] = {}
+        self.tags: dict[str, dict[str, str]] = {}
         self.put_calls: list[str] = []
         self.get_calls: list[str] = []
         self.delete_calls: list[str] = []
+        self.tagging_calls: list[str] = []
 
     def put(self, key: str, body: bytes, *, content_type: str, metadata: dict[str, str]) -> None:
         self.put_calls.append(key)
@@ -45,6 +50,10 @@ class _FakeStorage:
     def get(self, key: str) -> StoredObject | None:
         self.get_calls.append(key)
         return self.objects.get(key)
+
+    def get_tagging(self, key: str) -> dict[str, str] | None:
+        self.tagging_calls.append(key)
+        return self.tags.get(key)
 
     def delete(self, key: str) -> None:
         self.delete_calls.append(key)
@@ -78,6 +87,13 @@ class _FakeRepo:
             return False
         self.comments.append(fragment)
         self.lead["comentarios"] = f"{self.lead['comentarios']}\n\n{fragment}"
+        return True
+
+    def replace_attachment_mark(self, id_lead: UUID, old_mark: str, new_mark: str) -> bool:
+        current = str(self.lead.get("comentarios") or "")
+        if old_mark not in current:
+            return False
+        self.lead["comentarios"] = current.replace(old_mark, new_mark)
         return True
 
     def lead_active_assignment_belongs_to(self, id_lead: UUID, id_asesor: UUID) -> bool:
@@ -426,8 +442,25 @@ def test_delete_success_leaves_mark_and_audits() -> None:
     )
     assert response.status_code == 303
     assert storage.delete_calls == [f"leads/{LEAD_ID}/{ATTACH_ID}"]
-    assert "[adjunto:png:" in repo.lead["comentarios"]
+    # La marca activa se reemplaza por la de eliminado (AC-4).
+    assert "[adjunto:png:" not in repo.lead["comentarios"]
+    assert f"[adjunto-eliminado:png:{ATTACH_ID}]" in repo.lead["comentarios"]
     assert any(event["accion"] == "adjunto_eliminado" for event in audit)
+
+
+def test_deleted_attachment_renders_as_archivo_eliminado_without_links() -> None:
+    client, repo, storage, _audit = _client("ceo")
+    repo.lead["comentarios"] = (
+        "Solicitud original.\n\n"
+        "[23/08/2026 22:32] Ceo Demo\nNota\n"
+        f"[adjunto-eliminado:png:{ATTACH_ID}]"
+    )
+    body = client.get(f"/leads/{LEAD_ID}").text
+    assert "Archivo eliminado" in body
+    assert f"/adjuntos/{ATTACH_ID}" not in body
+    assert "Eliminar" not in body
+    assert storage.get_calls == []
+    assert storage.tagging_calls == []
 
 
 def test_detail_page_renders_attachment_controls() -> None:
@@ -438,10 +471,12 @@ def test_detail_page_renders_attachment_controls() -> None:
     body = client.get(f"/leads/{LEAD_ID}").text
     assert 'alt="Imagen adjunta"' in body
     assert 'loading="lazy"' in body
-    assert "adjunto eliminado" in body  # el fallback del onerror
+    # El fallback del onerror ya no dice "eliminado" (AC-5).
+    assert "Adjunto no disponible (en revision o bloqueado)" in body
     assert "Eliminar" in body
-    # La página no consulta S3 al renderizar.
+    # La página no consulta S3 al renderizar (nota antigua).
     assert storage.get_calls == []
+    assert storage.tagging_calls == []
 
 
 def test_view_by_advisor_without_access_is_404_without_s3_call() -> None:
@@ -540,3 +575,172 @@ def test_disabled_attachments_hide_file_field_and_return_404() -> None:
     assert repo.comments[-1].endswith("Seguimiento simple")
     assert storage.put_calls == []
     assert audit == []
+
+
+def _recent_note_timestamp() -> str:
+    return datetime.now(ZoneInfo("America/Santiago")).strftime("%d/%m/%Y %H:%M")
+
+
+def test_upload_reports_all_failures_together_with_position_and_no_names() -> None:
+    client, _, storage, audit = _client("ceo")
+    csrf = _csrf(client)
+    response = client.post(
+        f"/leads/{LEAD_ID}/comments",
+        data={"csrf_token": csrf, "new_comment": "Nota"},
+        files=[
+            ("files", ("ok.png", _png(), "image/png")),
+            ("files", ("evil.svg", b"<svg></svg>", "image/svg+xml")),
+            ("files", ("empty.pdf", b"", "application/pdf")),
+        ],
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    body = response.text
+    assert "Archivo 2 de 3" in body
+    assert "Archivo 3 de 3" in body
+    assert "tipo no esta permitido" in body
+    assert "archivo esta vacio" in body
+    # Todo o nada: no se sube ninguno y los nombres nunca se reflejan (AC-1).
+    assert storage.put_calls == []
+    assert "evil.svg" not in body
+    assert "empty.pdf" not in body
+    codes = [event["rejection_code"] for event in audit if event["accion"] == "adjunto_rechazado"]
+    assert codes == ["unsupported_type", "empty_file"]
+
+
+def test_upload_encrypted_pdf_shows_specific_message_and_suggestion() -> None:
+    client, _, storage, audit = _client("ceo")
+    csrf = _csrf(client)
+    pdf = b"%PDF-1.4\n1 0 obj\n<< /Encrypt >>\nendobj\n%%EOF"
+    response = client.post(
+        f"/leads/{LEAD_ID}/comments",
+        data={"csrf_token": csrf, "new_comment": "Nota"},
+        files=[("files", ("x.pdf", pdf, "application/pdf"))],
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    body = response.text
+    assert "PDF cifrado" in body
+    assert "Imprimir y Guardar como PDF" in body
+    assert storage.put_calls == []
+    codes = [event["rejection_code"] for event in audit if event["accion"] == "adjunto_rechazado"]
+    assert codes == ["pdf_encrypted"]
+
+
+def test_upload_embedded_pdf_is_accepted_with_pdfe_mark_and_label() -> None:
+    client, repo, storage, audit = _client("ceo")
+    csrf = _csrf(client)
+    pdf = b"%PDF-1.4\n1 0 obj\n<< /EmbeddedFile >>\nendobj\n%%EOF"
+    response = client.post(
+        f"/leads/{LEAD_ID}/comments",
+        data={"csrf_token": csrf, "new_comment": "Nota"},
+        files=[("files", ("x.pdf", pdf, "application/pdf"))],
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert "[adjunto:pdfe:" in repo.comments[-1]
+    # La nota (reciente) muestra la etiqueta de archivos incrustados.
+    storage.tags[storage.put_calls[0]] = {"GuardDutyMalwareScanStatus": "NO_THREATS_FOUND"}
+    body = client.get(f"/leads/{LEAD_ID}").text
+    assert "Contiene archivos incrustados: abrelo en el navegador" in body
+    assert "Ver PDF" in body
+    assert any(event["archivos_incrustados"] is True for event in audit)
+
+
+def test_view_unavailable_returns_html_404_page() -> None:
+    client, repo, storage, _audit = _client("ceo")
+    repo.lead["comentarios"] = f"Nota\n[adjunto:png:{ATTACH_ID}]"
+    response = client.get(f"/leads/{LEAD_ID}/adjuntos/{ATTACH_ID}")
+    assert response.status_code == 404
+    assert "Este adjunto no esta disponible" in response.text
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["cache-control"] == "no-store"
+    # El objeto se intenta leer y no existe; la respuesta no revela la causa.
+    assert storage.get_calls == [f"leads/{LEAD_ID}/{ATTACH_ID}"]
+
+
+@pytest.mark.parametrize(
+    ("tags", "expected_text", "expect_image"),
+    [
+        ({}, "Escaneando: actualiza la pagina en unos segundos", False),
+        ({"GuardDutyMalwareScanStatus": "NO_THREATS_FOUND"}, None, True),
+        (
+            {"GuardDutyMalwareScanStatus": "THREATS_FOUND"},
+            "Bloqueado: se detecto una amenaza",
+            False,
+        ),
+        ({"GuardDutyMalwareScanStatus": "UNSUPPORTED"}, "Bloqueado: no se pudo escanear", False),
+        ({"GuardDutyMalwareScanStatus": "FAILED"}, "Bloqueado: no se pudo escanear", False),
+        ({"GuardDutyMalwareScanStatus": "ACCESS_DENIED"}, "Bloqueado: no se pudo escanear", False),
+    ],
+)
+def test_recent_attachment_scan_status(
+    tags: dict[str, str], expected_text: str | None, expect_image: bool
+) -> None:
+    client, repo, storage, _audit = _client("ceo")
+    repo.lead["comentarios"] = (
+        f"Solicitud original.\n\n[{_recent_note_timestamp()}] Ceo Demo\nNota\n"
+        f"[adjunto:png:{ATTACH_ID}]"
+    )
+    key = f"leads/{LEAD_ID}/{ATTACH_ID}"
+    storage.tags[key] = tags
+    body = client.get(f"/leads/{LEAD_ID}").text
+    if expected_text is not None:
+        assert expected_text in body
+    assert ('alt="Imagen adjunta"' in body) is expect_image
+    if not expect_image:
+        # Sin imagen ni enlaces cuando no está disponible (AC-5).
+        assert "Ver PDF" not in body
+        assert "Descargar" not in body
+    assert storage.tagging_calls == [key]
+
+
+def test_recent_attachment_tag_error_shows_no_disponible() -> None:
+    client, repo, storage, _audit = _client("ceo")
+    repo.lead["comentarios"] = (
+        f"Solicitud original.\n\n[{_recent_note_timestamp()}] Ceo Demo\nNota\n"
+        f"[adjunto:png:{ATTACH_ID}]"
+    )
+    # Sin entrada en tags -> get_tagging devuelve None (error de lectura) (AC-5).
+    body = client.get(f"/leads/{LEAD_ID}").text
+    assert "No disponible" in body
+    assert 'alt="Imagen adjunta"' not in body
+
+
+def test_old_attachment_does_not_query_s3_for_scan() -> None:
+    client, repo, storage, _audit = _client("ceo")
+    repo.lead["comentarios"] = (
+        f"Solicitud original.\n\n[23/08/2026 22:32] Ceo Demo\nNota\n[adjunto:png:{ATTACH_ID}]"
+    )
+    body = client.get(f"/leads/{LEAD_ID}").text
+    assert 'alt="Imagen adjunta"' in body
+    assert storage.tagging_calls == []
+
+
+def test_scan_status_cap_of_20_queries() -> None:
+    class _FakeService:
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        def get_attachment_scan_status(self, lead_id: str, attachment_id: UUID) -> str:
+            self.calls.append(str(attachment_id))
+            return "clean"
+
+    items: list[dict[str, Any]] = []
+    for index in range(25):
+        items.append(
+            {
+                "kind": "note",
+                "timestamp": datetime.now(ZoneInfo("America/Santiago")),
+                "attachments": [
+                    {
+                        "attachment_type": "png",
+                        "attachment_id": UUID(f"22222222-2222-2222-2222-{index:012d}"),
+                        "scan_status": None,
+                    }
+                ],
+            }
+        )
+    service = _FakeService()
+    _attach_attachment_scan_statuses(service, str(LEAD_ID), items)
+    assert len(service.calls) == 20

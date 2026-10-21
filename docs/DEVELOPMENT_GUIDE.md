@@ -216,6 +216,9 @@ and the temporary DEV domain are not production architecture.
 - `ATTACHMENTS_BUCKET`: bucket S3 privado de los adjuntos. Obligatorio si
   `ATTACHMENTS_ENABLED=true`; sin él la app no arranca (fail-closed).
 - `ATTACHMENTS_S3_REGION`: región del bucket (por defecto `us-east-2`).
+- `ATTACHMENTS_ALLOW_PDF_EMBEDDED_FILES`: permite los PDF con archivos incrustados
+  (verdadero por defecto, decisión del humano). Con falso se rechazan con el código
+  `pdf_embedded_files`; JavaScript, `/Launch` y los cifrados se rechazan siempre.
 - `ATTACHMENTS_RATE_LIMIT_REQUESTS` y `ATTACHMENTS_RATE_LIMIT_WINDOW_SECONDS`:
   límite de tasa por usuario para la subida (por defecto 20 archivos cada 10 minutos).
 

@@ -6,9 +6,12 @@ from uuid import UUID
 
 from app.attachments.marks import (
     build_attachment_mark,
+    build_deleted_attachment_mark,
     match_full_attachment_mark,
+    match_full_deleted_attachment_mark,
     neutralize_attachment_marks,
     parse_attachment_marks,
+    parse_deleted_attachment_marks,
     strip_attachment_marks,
 )
 from app.web.presentation import parse_lead_comments
@@ -82,3 +85,60 @@ def test_original_request_marks_are_stripped() -> None:
     raw = f"Solicitud [adjunto:pdf:{PDF_ID}] original."
     parsed = parse_lead_comments(raw)
     assert parsed.original_request == "Solicitud  original."
+
+
+def test_build_deleted_attachment_mark_uses_canonical_format() -> None:
+    assert build_deleted_attachment_mark("pdf", PDF_ID) == f"[adjunto-eliminado:pdf:{PDF_ID}]"
+
+
+def test_pdfe_mark_is_a_valid_attachment_mark() -> None:
+    assert build_attachment_mark("pdfe", PDF_ID) == f"[adjunto:pdfe:{PDF_ID}]"
+    text = f"Nota [adjunto:pdfe:{PDF_ID}]"
+    marks = parse_attachment_marks(text)
+    assert [mark.attachment_id for mark in marks] == [PDF_ID]
+    assert [mark.attachment_type for mark in marks] == ["pdfe"]
+
+
+def test_parse_deleted_attachment_marks_finds_only_deleted_marks() -> None:
+    text = f"Nota [adjunto-eliminado:pdf:{PDF_ID}] y [adjunto:png:{PNG_ID}]"
+    deleted = parse_deleted_attachment_marks(text)
+    assert [mark.attachment_id for mark in deleted] == [PDF_ID]
+    assert [mark.attachment_type for mark in deleted] == ["pdf"]
+    # Las marcas activas no aparecen como eliminadas y viceversa.
+    active = parse_attachment_marks(text)
+    assert [mark.attachment_id for mark in active] == [PNG_ID]
+
+
+def test_strip_attachment_marks_removes_deleted_marks_too() -> None:
+    text = f"hola [adjunto:pdf:{PDF_ID}] [adjunto-eliminado:png:{PNG_ID}] mundo"
+    assert strip_attachment_marks(text) == "hola   mundo"
+
+
+def test_match_full_deleted_attachment_mark_only_matches_complete_line() -> None:
+    assert (
+        match_full_deleted_attachment_mark(f"[adjunto-eliminado:pdf:{PDF_ID}]").attachment_id
+        == PDF_ID
+    )
+    assert match_full_deleted_attachment_mark(f"[adjunto:pdf:{PDF_ID}]") is None
+    assert match_full_deleted_attachment_mark(f"hola [adjunto-eliminado:pdf:{PDF_ID}]") is None
+
+
+def test_neutralize_attachment_marks_breaks_deleted_prefix_too() -> None:
+    original = f"mira [adjunto-eliminado:pdf:{PDF_ID}]"
+    neutralized = neutralize_attachment_marks(original)
+    assert neutralized == f"mira [adjunto-eliminado&#58;pdf:{PDF_ID}]"
+    assert parse_deleted_attachment_marks(neutralized) == []
+
+
+def test_note_with_deleted_mark_parses_deleted_attachments() -> None:
+    raw = (
+        "Solicitud original.\n\n"
+        "[23/08/2026 22:32] Alvaro Local\n"
+        "Cliente contactado.\n"
+        f"[adjunto-eliminado:pdf:{PDF_ID}]"
+    )
+    parsed = parse_lead_comments(raw)
+    note = parsed.notes[0]
+    assert note.attachments == ()
+    assert [mark.attachment_id for mark in note.deleted_attachments] == [PDF_ID]
+    assert note.text == "Cliente contactado."

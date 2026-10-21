@@ -814,8 +814,22 @@ resguardos están documentados en [`ADJUNTOS_COMENTARIOS_DISENO.md`](ADJUNTOS_CO
 - **Validación por contenido** (`app/attachments/validation.py`). El tipo lo decide el contenido (firma PNG/JPEG o
   `%PDF-`), nunca la extensión ni el `Content-Type` declarado. Se rechazan SVG, HTML, GIF, TIFF, WebP, ejecutables y
   cualquier otro tipo. Las imágenes se validan leyendo solo el encabezado (dimensiones) sin decodificar píxeles, con
-  tope de 50 millones de píxeles. Los PDF con `/JS`, `/JavaScript`, `/Launch`, `/EmbeddedFile` o `/Encrypt` (incluidos
-  los escapes `#xx` de los nombres) se rechazan.
+  tope de 50 millones de píxeles. Los PDF con `/JS`, `/JavaScript`, `/Launch` o `/Encrypt` (incluidos los escapes `#xx`
+  de los nombres, respetando dónde termina cada nombre) se rechazan con códigos por causa: `pdf_javascript`,
+  `pdf_launch` y `pdf_encrypted`.
+- **PDF con archivos incrustados (decisión 9 del humano, 2026-10-21).** Un PDF con el nombre exacto `/EmbeddedFile` se
+  acepta (marca `pdfe`) cuando `ATTACHMENTS_ALLOW_PDF_EMBEDDED_FILES` es verdadero (por defecto); con falso se rechaza
+  con `pdf_embedded_files`. JavaScript, `/Launch` y los cifrados se rechazan siempre, aunque el PDF traiga archivos
+  incrustados. El dato `archivos_incrustados` queda en la auditoría y la nota muestra «Contiene archivos incrustados:
+  ábrelo en el navegador». Véase el riesgo aceptado más abajo.
+- **Estado de escaneo visible (solo lectura).** La página del lead lee la etiqueta `GuardDutyMalwareScanStatus` con
+  `s3:GetObjectTagging` (solo lectura; la app nunca llama a `PutObjectTagging` ni a `DeleteObjectTagging`) en los
+  adjuntos de los últimos 30 minutos, con tope de 20 consultas por página, y muestra «Escaneando», «Bloqueado: se
+  detectó una amenaza», «Bloqueado: no se pudo escanear» o «No disponible»; un error al leer la etiqueta (incluido
+  `AccessDenied` por falta del permiso) se muestra como «No disponible» sin romper la página.
+- **Borrado visible en la nota.** Al eliminar un adjunto, el servicio borra el objeto de S3 y después reemplaza su
+  marca en `tpi.leads.comentarios` por `[adjunto-eliminado:<tipo>:<uuid>]` con un UPDATE parametrizado acotado al lead;
+  si el borrado de S3 falla, la nota no se toca. La nota muestra «Archivo eliminado» sin imagen ni enlaces.
 - **Almacenamiento privado en S3** (`app/attachments/storage.py`). Bucket sin acceso público, claves aleatorias
   `leads/<id_lead>/<uuid>`, sin el nombre original, sin etiquetas de la app (solo GuardDuty etiqueta el resultado del
   escaneo) y una política que deniega leer lo que no está `NO_THREATS_FOUND`. La app nunca lista el bucket: un `403` y
@@ -824,12 +838,15 @@ resguardos están documentados en [`ADJUNTOS_COMENTARIOS_DISENO.md`](ADJUNTOS_CO
   que el detalle del lead (un asesor solo ve su cartera) y comprueban que la marca de ese `uuid` esté en la nota de ese
   lead antes de tocar S3. Cabeceras de respuesta endurecidas: `Content-Type` del tipo verificado, `nosniff`,
   `Cache-Control: private, no-store`, `Content-Disposition` con nombre generado por el servidor, `Content-Security-Policy`
-  restrictiva (`default-src 'none'`; con `sandbox` en las imágenes) y `Referrer-Policy: no-referrer`.
+  restrictiva (`default-src 'none'`; con `sandbox` en las imágenes) y `Referrer-Policy: no-referrer`. Cuando no hay
+  objeto que servir, la ruta de vista responde una página HTML sencilla y escapada (404, `nosniff`, `Cache-Control:
+  no-store`), idéntica para un lead no visible, un uuid sin marca y un objeto no disponible.
 - **CSRF y límites** en la subida: tope de 25 MiB por petición (413), 5 archivos y 10 MiB por archivo, y límite de tasa
   por usuario (`InMemoryRateLimiter`).
 - **Auditoría append-only** (`app/attachments/audit.py`). Cada subida, rechazo, vista, descarga y borrado queda en
-  `tpi.auditoria` con el sujeto, el `uuid`, el tipo, el tamaño y el SHA-256 (para los rechazos solo el código). Nunca
-  nombres de archivo ni contenido. Los logs no contienen bytes ni nombres.
+  `tpi.auditoria` con el sujeto, el `uuid`, el tipo, el tamaño y el SHA-256 (para los rechazos solo el código específico
+  por causa) y, para las subidas, el dato `archivos_incrustados`. Nunca nombres de archivo ni contenido. Los logs no
+  contienen bytes ni nombres.
 
 ### Riesgos aceptados
 
@@ -839,10 +856,15 @@ resguardos están documentados en [`ADJUNTOS_COMENTARIOS_DISENO.md`](ADJUNTOS_CO
   auditoría de cada vista/descarga y el borrado a solicitud del titular.
 - **EXIF y GPS sin re-codificar.** Las imágenes no se re-codifican en esta primera versión (decisión del humano), así que
   los metadatos EXIF y la ubicación GPS quedan visibles para quien vea el adjunto. Revisar en una segunda versión.
+- **PDF con archivos incrustados (decisión 9).** Un archivo incrustado puede ser un ejecutable, un documento con macros
+  o un HTML; para hacer daño alguien tiene que abrirlo a mano desde un lector de escritorio (los visores de los
+  navegadores no lo ejecutan solos). GuardDuty no garantiza revisar el contenido incrustado como un archivo
+  independiente, aunque el diseño falla cerrado (lo que no queda `NO_THREATS_FOUND` no se entrega). La detección de
+  `/EmbeddedFile` es la más fiable de las reglas de PDF (va en el diccionario del stream, que no se comprime). Se mitiga
+  con el dato en la auditoría, la etiqueta en la nota, el ajuste para volver al rechazo y la revisión antes de producción.
 - **Escaneo de PDF por tokens crudos.** La validación busca los tokens prohibidos (`/JS`, `/JavaScript`, `/Launch`,
-  `/EmbeddedFile`, `/Encrypt`) en los bytes crudos del PDF, así que no ve JavaScript dentro de streams comprimidos
-  (object streams con FlateDecode). GuardDuty y el visor del navegador son las capas siguientes. Revisar en una segunda
-  versión.
+  `/Encrypt`) en los nombres del PDF, así que no ve JavaScript dentro de streams comprimidos (object streams con
+  FlateDecode). GuardDuty y el visor del navegador son las capas siguientes. Revisar en una segunda versión.
 
 ---
 

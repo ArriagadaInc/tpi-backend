@@ -10,6 +10,7 @@ from app.attachments.validation import (
     MAX_ATTACHMENT_BYTES,
     MAX_IMAGE_PIXELS,
     AttachmentValidationError,
+    _pdf_names,
     validate_attachment_content,
 )
 
@@ -39,6 +40,12 @@ def _pdf(*, inject: bytes | None = None) -> bytes:
 def _code(content: bytes) -> str:
     with pytest.raises(AttachmentValidationError) as excinfo:
         validate_attachment_content(content)
+    return excinfo.value.code
+
+
+def _code_with_embedded(content: bytes) -> str:
+    with pytest.raises(AttachmentValidationError) as excinfo:
+        validate_attachment_content(content, allow_pdf_embedded_files=False)
     return excinfo.value.code
 
 
@@ -91,15 +98,89 @@ def test_jpeg_with_pixel_bomb_dimensions_is_rejected() -> None:
 
 
 @pytest.mark.parametrize(
-    "token", [b"/JS", b"/JavaScript", b"/Launch", b"/EmbeddedFile", b"/Encrypt"]
+    ("token", "code"),
+    [
+        (b"/JS", "pdf_javascript"),
+        (b"/JavaScript", "pdf_javascript"),
+        (b"/Launch", "pdf_launch"),
+        (b"/Encrypt", "pdf_encrypted"),
+    ],
 )
-def test_pdf_with_forbidden_token_is_rejected(token: bytes) -> None:
-    assert _code(_pdf(inject=token)) == "unsafe_pdf"
+def test_pdf_with_forbidden_token_is_rejected(token: bytes, code: str) -> None:
+    assert _code(_pdf(inject=token)) == code
 
 
 def test_pdf_name_escape_js_is_rejected() -> None:
     # "/J#53" decodifica a "/JS" (0x53 = 'S').
-    assert _code(_pdf(inject=b"/J#53")) == "unsafe_pdf"
+    assert _code(_pdf(inject=b"/J#53")) == "pdf_javascript"
+
+
+def test_pdf_name_escape_launch_is_rejected() -> None:
+    # "/Launc#68" decodifica a "/Launch" (0x68 = 'h').
+    assert _code(_pdf(inject=b"/Launc#68")) == "pdf_launch"
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        b"<< /JS(...) >>",
+        b"<< /JS<< >>",
+        b"<< /JS/Otro >>",
+        b"<< /JS>>",  # delimitador ">" justo después del nombre
+    ],
+)
+def test_pdf_name_boundaries_still_reject_js(body: bytes) -> None:
+    content = b"%PDF-1.4\n1 0 obj\n" + body + b"\nendobj\n%%EOF"
+    assert _code(content) == "pdf_javascript"
+
+
+def test_pdf_longer_name_is_not_confused_with_js() -> None:
+    # "/JSON" empieza igual pero es un nombre distinto: no se rechaza.
+    assert validate_attachment_content(_pdf(inject=b"/JSON")).attachment_type == "pdf"
+
+
+def test_pdf_longer_name_is_not_confused_with_embedded_file() -> None:
+    # "/EmbeddedFiles" no es "/EmbeddedFile": no se marca como pdfe.
+    assert validate_attachment_content(_pdf(inject=b"/EmbeddedFiles")).attachment_type == "pdf"
+
+
+def test_pdf_with_embedded_file_is_allowed_by_default_and_marked_pdfe() -> None:
+    result = validate_attachment_content(_pdf(inject=b"/EmbeddedFile"))
+    assert result.attachment_type == "pdfe"
+
+
+def test_pdf_with_embedded_file_rejected_when_disallowed() -> None:
+    assert _code_with_embedded(_pdf(inject=b"/EmbeddedFile")) == "pdf_embedded_files"
+
+
+def test_pdf_with_embedded_file_and_javascript_still_rejected() -> None:
+    # Aunque el PDF traiga incrustados, JavaScript se sigue rechazando (AC-3).
+    content = _pdf(inject=b"/EmbeddedFile /JS")
+    assert _code(content) == "pdf_javascript"
+
+
+def test_pdf_with_embedded_file_and_encrypt_still_rejected() -> None:
+    content = _pdf(inject=b"/EmbeddedFile /Encrypt")
+    assert _code(content) == "pdf_encrypted"
+
+
+def test_pdf_encrypted_in_trailer_is_rejected() -> None:
+    content = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<< /Encrypt >>\n%%EOF"
+    assert _code(content) == "pdf_encrypted"
+
+
+def test_pdf_encrypted_in_xref_stream_dict_is_rejected() -> None:
+    content = b"%PDF-1.4\n1 0 obj\n<< /Type /XRef /Encrypt >>\nstream\nendstream\n%%EOF"
+    assert _code(content) == "pdf_encrypted"
+
+
+def test_pdf_names_respect_end_of_data_boundary() -> None:
+    # Un nombre termina en fin de datos: "/JS" al final del archivo calza como
+    # "JS" y no se confunde con un nombre más largo.
+    assert _pdf_names(b"/JS") == ["JS"]
+    assert _pdf_names(b"/JS ") == ["JS"]
+    assert _pdf_names(b"/JSON") == ["JSON"]
+    assert _pdf_names(b"/JS/Otro") == ["JS", "Otro"]
 
 
 def test_pdf_without_eof_is_rejected() -> None:
