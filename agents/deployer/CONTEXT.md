@@ -36,6 +36,9 @@ autorizacion/PII/persistencia.
 - Mismo error de infraestructura dos veces -> STOP (POLICY seccion 4).
 - Validar TLS con cliente independiente (curl de Windows puede fallar por schannel, LL-15).
 - Orden de diagnostico: estado EB -> EB events -> CloudTrail -> logs -> resumenes (extracto v1).
+- El checkout local de `main` puede estar atrasado respecto de `origin/main`: el template del compose y el constructor del bundle se
+  toman del commit del release (`git show <release_sha>:ruta` o un worktree del SHA), nunca del arbol de trabajo. Un bundle armado
+  con el template viejo puede salir sin variables nuevas; se descarta antes de subir nada (CRM-ADJUNTOS-2-CODIGO).
 - ECR lifecycle keep-100 (desde 2026-10-19; antes keep-20) conserva las 100 imagenes mas recientes por repositorio: el riesgo de expirar imagenes del LKG baja pero no desaparece, asi que sigue vigente verificar todos sus digests antes del gate.
 
 ## Rollback condicionado (aprobado en el mismo Human Gate)

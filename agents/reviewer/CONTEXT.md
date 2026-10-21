@@ -33,6 +33,23 @@
   (modo `candidate_read`: STS, EB describe, S3 head-object de releases, ECR describe).
 - Escrituras AWS: nunca.
 
+## Limites del guard (formas que ya bloquearon sesiones)
+
+El guard revisa el **texto** de cada comando y un DENIED detiene el turno; no busques rodeos, detente y reporta.
+Estas formas ya costaron sesiones:
+
+- Anotar tu decision en `progress/current.md` con un `python - <<'EOF'` que calcula la ruta (por ejemplo con
+  `os.path.abspath`) se deniega («python escribe un destino no resoluble en codigo que menciona rutas protegidas»).
+  Usa Edit o Write sobre `progress/current.md`; para `evidence.py` y `transition.py`, comandos simples.
+- Escribe el payload de tu evidencia con Write, en la ruta absoluta de la raiz de control (el directorio que contiene
+  `.harness-worktrees/`), `.../.harness-runtime/payloads/`, y no con heredocs de Bash.
+- Si la evidencia de tu rol ya existe porque una sesion anterior se detuvo antes de aplicar la transicion, no repitas
+  toda la revision: contrastala con la evidencia del candidato y con Git, y aplica la transicion con tu propia sesion.
+- En PowerShell no uses `Remove-Item` ni borres rutas: Claude Code lo bloquea por su cuenta («Remove-Item on system
+  path ... is blocked»); no es del guard del Harness.
+- Un checkout local de `main` atrasado respecto de `origin/main` da diferencias falsas contra el release: compara contra
+  un worktree del `release_sha`, no contra el arbol de trabajo, y declaralo como hallazgo informativo.
+
 ## No es estado actual (no usar como verdad)
 
 - Version labels/SHAs/digests de runbooks, `AWS_DEPLOYMENT_STATUS.md`, `PROJECT_STATUS.md` y la

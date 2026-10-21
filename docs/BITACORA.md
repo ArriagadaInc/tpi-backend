@@ -22,6 +22,26 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-21 - Harness: lecciones de forma del guard en las vistas de los roles; el «Remove-Item on system path» no es del guard
+
+- Cambio (solo documentación de los roles): `agents/developer/PROMPT.md` y `agents/developer/CONTEXT.md`, `agents/reviewer/CONTEXT.md` y
+  `agents/deployer/CONTEXT.md` recogen las formas que bloquearon sesiones en `SEG-DESACOPLAR-STREAMLIT` y `CRM-ADJUNTOS-2-CODIGO`:
+  - `.env.example` y los demás archivos de la raíz están fuera del alcance del Developer; la configuración se documenta solo en `docs/**`.
+  - El payload de evidencia se escribe con Write en la ruta **absoluta de la raíz de control** (el directorio que contiene
+    `.harness-worktrees/`) y `evidence.py` se ejecuta desde allí; dentro del worktree la regla `payloads/**` no vale y el guard lo
+    deniega. El `PROMPT` del Developer decía solo `.harness-runtime/payloads/developer.json`, que dentro de un worktree se resuelve mal.
+  - `progress/current.md` se edita con Edit o Write: un `python` o heredoc que calcula el destino en código que menciona rutas protegidas
+    se deniega (bloqueó al Reviewer del candidato).
+  - Si la evidencia de un rol ya existe porque una sesión anterior se detuvo antes de la transición, la sesión nueva la contrasta y aplica
+    la transición, sin repetir toda la revisión (Reviewer).
+  - Un `main` local atrasado da diferencias falsas: el template y el constructor se toman del commit del release (Reviewer y Deployer).
+- Investigación del «falso positivo» reportado por el Reviewer: el mensaje «Remove-Item on system path 'C:' is blocked. This path is
+  protected from removal.» **no sale del guard del Harness**. No existe en `scripts/harness`, `harness/`, `agents/` ni en `guard.log`, y
+  aparece también en transcripciones de otros proyectos sin relación (con `C:\Program` como ruta). Es un control de seguridad integrado en
+  la herramienta PowerShell de Claude Code, que se dispara con borrados de rutas del sistema. Además `progress/decisions.md` ya prohibía
+  `rm`, `del` y `Remove-Item` en los turnos. No hay nada que corregir en el guard; se agrega la advertencia a las vistas del Developer y
+  del Reviewer. Queda descartado como pendiente.
+
 ### 2026-10-21 - CRM: permiso de solo lectura de la etiqueta de escaneo para la app (CRM-ADJUNTOS-3-AJUSTES, requisito previo)
 
 - Cambio (solo repositorio; **no se aplicó nada en AWS**): la política `tpi-backoffice-dev-adjuntos-s3` del rol de la instancia agrega un
