@@ -33,7 +33,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.config import clear_settings_cache, get_settings
-from app.database import get_db_connection
+from app.database import close_pool, get_db_connection
 
 TABLA_AFECTADA = "tpi.leads"
 DIAS_POR_DEFECTO = 30
@@ -312,6 +312,9 @@ def main(argv: list[str] | None = None) -> int:
             )
         print(f"Detalle: {exc}", file=sys.stderr)
         return 1
+    finally:
+        # Cerrar el pool al salir evita los avisos «couldn't stop thread ...» del intérprete.
+        close_pool()
 
     print(render(resultados, days))
     return 0

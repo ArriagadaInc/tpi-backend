@@ -23,7 +23,7 @@ usuarios con acceso a ese lead los vean junto a la nota.
 | 5 | Auditoría | Cada subida, vista o descarga, rechazo y borrado queda en `tpi.auditoria` (append-only). |
 | 6 | Quién los ve | **Todos los usuarios que tienen acceso al lead** (un asesor solo ve los de su cartera; quien no ve el lead recibe 404). |
 | 7 | Dónde se guardan | **Sin tabla nueva**: el archivo y sus datos viven en S3, el antivirus es GuardDuty Malware Protection for S3 y la nota guarda una marca (sección 3). |
-| 8 | Imágenes en la primera versión | **Sin re-codificación**: se valida la firma y las dimensiones leyendo solo el encabezado. EXIF y GPS se conservan (riesgo en la sección 5). |
+| 8 | Imágenes en la primera versión | **Sin re-codificación**: se valida la firma y las dimensiones leyendo solo el encabezado. EXIF y GPS se conservan (riesgo en la sección 5). Confirmado el 2026-10-22: una foto de celular subida a DEV conserva latitud y longitud; el humano mantiene esta decisión para la primera versión (opción A de `docs/ADJUNTOS_REVISION_PREPROD.md`). |
 | 9 | PDF con archivos incrustados | **Se permiten** (decisión del 2026-10-21, tarea `CRM-ADJUNTOS-3-AJUSTES`) con condiciones: JavaScript, `/Launch` y los PDF cifrados se siguen rechazando; el dato queda en la auditoría; la nota muestra una etiqueta; un ajuste permite volver al rechazo; la decisión se revisa antes de producción (`CRM-ADJUNTOS-REVISION-PREPROD`). |
 
 Supuestos míos, sin objeción del humano: los valores de los puntos 1, 2, 4 y 5 son los propuestos el 2026-10-21 y se

@@ -200,6 +200,11 @@ metadatos) como segunda versión.
 ¿Se acepta que las imágenes conserven EXIF y GPS visibles en esta primera versión, o se quiere quitar
 los metadatos al subir antes de producción?
 
+**Decisión del humano (2026-10-22): Opción A.** Tras comprobar en DEV que una foto de celular conserva latitud y longitud, se acepta que
+las imágenes conserven sus metadatos en la primera versión. La Opción B (limpiar EXIF al subir) sigue agendada como segunda versión y el
+humano puede reabrirla en cualquier momento; conviene comprobar que esté el aviso visible al subir que prevé el diseño (sección 5 de
+`docs/ADJUNTOS_COMENTARIOS_DISENO.md`).
+
 ---
 
 ## 4. Retención y borrado a solicitud del titular
@@ -373,12 +378,94 @@ navegador, o se quiere endurecer la validación antes de producción?
 
 ## Datos de uso
 
-> **Sección para pegar la salida del script de medición.** El Developer no tiene acceso a la base de
-> datos de DEV ni a AWS, así que esta sección queda vacía a propósito. El humano ejecuta el script
-> contra DEV por el túnel y pega aquí la salida (solo agregados, sin PII).
+> **Medición del 2026-10-22 contra DEV**, ejecutada por el humano con `python scripts/adjuntos_revision_preprod.py --days 30`
+> (solo agregados, sin PII). El Developer no tiene acceso a la base de DEV, por eso estos datos los aportó el humano después del
+> merge de la tarea.
+
+**Cómo leerlos.** La ventana dice 30 días, pero la función existe desde el 2026-10-21: lo medido son **las pruebas de humo de dos días
+(2 usuarios, 2 leads), no uso real**. Sirven para comprobar que el registro funciona y para fijar el orden de magnitud, no para decidir
+los puntos de fondo; hay que repetir la medición con uso real antes de producción.
 
 ```text
-(Pegar aquí la salida de: python scripts/adjuntos_revision_preprod.py --days 30)
+Conteo por accion
+  accion=adjunto_eliminado  total=8
+  accion=adjunto_rechazado  total=6
+  accion=adjunto_subido  total=7
+  accion=adjunto_visto  total=36
+
+Rechazos por codigo
+  codigo=unsafe_pdf  total=4
+  codigo=empty_file  total=2
+
+Subidas con y sin archivos incrustados
+  categoria=con_archivos_incrustados  total=1
+  categoria=sin_archivos_incrustados  total=6
+
+Subidas por tipo
+  tipo=pdf  total=3
+  tipo=png  total=3
+  tipo=pdfe  total=1
+
+Objetos y bytes subidos por mes
+  2026-10: 7 objetos, 4570415 bytes (4.36 MiB)
+
+Agregados generales
+  leads distintos con adjuntos: 2
+  usuarios distintos que subieron: 2
+```
+
+### Rechazos con su hora
+
+Consulta de solo código y hora (sin datos personales), horas locales (-03:00):
+
+| Hora | Código | Qué fue |
+|---|---|---|
+| 2026-10-21 18:42:23, 18:42:47, 18:43:16, 18:47:05 | `unsafe_pdf` | Pruebas de humo del release anterior: los PDF con archivos incrustados que el código de entonces rechazaba (según el humano, el mensaje decía solo «no válido»). |
+| 2026-10-21 21:47:30, 21:47:42 | `empty_file` | Los dos intentos de nota de solo texto que fallaban por la parte `files` vacía del navegador (defecto corregido en el PR 117, desplegado el 2026-10-22 12:34). |
+
+Desde el 21/10 a las 21:47 no hay otros rechazos hasta las pruebas dirigidas de abajo.
+
+### Pruebas dirigidas del 2026-10-22 (20:09 a 20:11), con el release `fd5778a`
+
+| Hora | Prueba | Respuesta del servidor (log de DEV, solo el código) | Fila en `tpi.auditoria` |
+|---|---|---|---|
+| 20:09:22 | PDF de ~219 KB | 303 | `adjunto_subido`, `pdf`, 224286 bytes |
+| 20:10:03 | PDF de ~100 MB | **413** (se corta por el tamaño declarado, antes de leer el cuerpo) | **ninguna** |
+| 20:10:43 | PDF de ~16 MB | 400 | `adjunto_rechazado`, `too_large` |
+| 20:11:22 | Foto JPEG del celular | 303 | `adjunto_subido`, `jpg`, 188538 bytes |
+
+### Lectura de los datos (propuesta, a confirmar por el humano)
+
+- **La auditoría de rechazos funciona con el código nuevo** (`empty_file` y `too_large` quedaron registrados) y no hay fallos de
+  escritura de la auditoría en el log disponible de DEV (`attachment_audit_failed`: 0 coincidencias desde el 2026-10-21). Que no figuren
+  `pdf_encrypted`, `unsupported_type`, `invalid_content` ni `pdf_javascript` significa que **no se han probado** con el release
+  actual, no que falten.
+- **Hueco confirmado: los rechazos previos a la validación no dejan huella.** La petición de 100 MB devolvió 413 y no dejó fila; lo
+  mismo vale para la petición sin tamaño declarado (411), el exceso de archivos detectado por el analizador (400) y el token
+  de seguridad inválido (403): ninguna de esas ramas de la ruta llama a la auditoría. Es una decisión del humano si conviene
+  auditarlos (por ejemplo con un código `request_too_large`); el costo es bajo y daría visibilidad de intentos de abuso.
+- **Punto 3 (EXIF y GPS): riesgo confirmado en la práctica.** El humano comprobó en las propiedades del archivo que la foto JPEG de
+  celular de la prueba (188 KB) **tiene latitud y longitud**. Como el servidor guarda los bytes sin modificarlos (lo fijan las pruebas de
+  `test_attachments_known_limitations.py`), cualquier usuario con acceso al lead que abra o descargue la imagen puede ver dónde se tomó
+  la foto. Aun una foto reducida por el teléfono conserva la ubicación, así que no depende de que sea el original de la cámara. Esto
+  respalda tratar la eliminación de metadatos como tarea de la segunda versión (ver la sección 3).
+- **Punto 5 (costo de GuardDuty):** 7 objetos y 4,36 MiB (≈0,6 MiB por archivo) en dos días de pruebas. Sin afirmar tarifas, aun con
+  1 USD por GB y 1 USD por mil objetos el costo medido sería menor a un centavo; la proyección real depende del volumen de notas con
+  adjuntos en producción, que esta medición no puede dar.
+- **Punto 2 (visibilidad) y volumen de la auditoría:** 36 vistas en 7 subidas (unas 5 por subida) con solo 2 usuarios. Cada vista deja
+  una fila, así que con uso real `adjunto_visto` será la acción que más crece; conviene decidir si se registra una vista por usuario
+  y adjunto por intervalo.
+- **Pendiente de aclarar: hay más eliminaciones (8) que subidas (7).** Puede ser el mismo adjunto borrado dos veces o borrados de
+  objetos subidos antes de que existiera el registro. Se resuelve con la consulta de abajo.
+
+Consulta para aclarar las eliminaciones (solo conteos):
+
+```sql
+SELECT
+  (SELECT COUNT(*) FROM tpi.auditoria WHERE accion = 'adjunto_eliminado') AS eliminaciones,
+  (SELECT COUNT(DISTINCT detalle->>'adjunto_uuid') FROM tpi.auditoria WHERE accion = 'adjunto_eliminado') AS adjuntos_eliminados_distintos,
+  (SELECT COUNT(DISTINCT detalle->>'adjunto_uuid') FROM tpi.auditoria WHERE accion = 'adjunto_eliminado'
+     AND detalle->>'adjunto_uuid' IN (SELECT detalle->>'adjunto_uuid' FROM tpi.auditoria WHERE accion = 'adjunto_subido')) AS eliminados_con_subida_registrada;
 ```
 
 ### Cómo ejecutar el script contra DEV por el túnel
