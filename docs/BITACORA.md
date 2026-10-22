@@ -22,6 +22,19 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-22 - CRM: el script de medición de adjuntos indica el puerto del túnel a DEV (5433) y explica mejor sus fallos
+
+- Qué pasó: al correr `scripts/adjuntos_revision_preprod.py` contra DEV el humano obtuvo un error de conexión. El túnel SSM a la base de DEV
+  escucha en el puerto local **5433** (el de RDS, al otro lado, es 5432) y el informe mandaba a apuntar `DATABASE_*` a DEV sin decir el puerto,
+  así que se usaba el 5432 por defecto de la aplicación.
+- Cambio: el script acepta `--port` (reemplaza `DATABASE_PORT`; no aplica con `DATABASE_URL`) y, si falla la conexión, muestra el destino sin
+  secretos (host, puerto, base y usuario) y, cuando el destino es `localhost:5432`, la pista de usar 5433. El informe
+  `docs/ADJUNTOS_REVISION_PREPROD.md` trae ahora los pasos exactos en PowerShell (la clave se pide sin mostrarla). Pruebas nuevas.
+- Segundo hallazgo al reintentar con el puerto correcto: el informe indicaba el usuario `tpi_app`, pero ese rol solo tiene `INSERT` sobre
+  `tpi.auditoria` (registro de solo agregar, `scripts/sql/001_create_tpi_app_role.sql`) y no puede leerla; la autenticación falló y, aun con la
+  clave correcta, la consulta habría fallado por permisos. Los pasos ahora usan `tpi_admin` (el script solo ejecuta `SELECT`, no escribe nada).
+- Sin cambios en la aplicación, en las consultas ni en lo que imprime el script en el caso exitoso.
+
 ### 2026-10-22 - Harness: tarea CRM-ADJUNTOS-REVISION-PREPROD cerrada (DONE)
 
 - Titulo: Preparar la revision previa a produccion de los adjuntos de notas: informe de decisiones, medicion de uso y pruebas de los limites conocidos

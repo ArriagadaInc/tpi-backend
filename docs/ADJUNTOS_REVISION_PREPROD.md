@@ -387,20 +387,39 @@ El script es de **solo lectura** (`scripts/adjuntos_revision_preprod.py`): solo 
 parametrizadas sobre `tpi.auditoria`, sin PII, sin SHA-256 y sin identificadores de leads o personas.
 Usa la conexión de la aplicación (`get_db_connection`), sin credenciales nuevas.
 
-1. Abrir el túnel a la base de DEV (el procedimiento SSM que ya usa el proyecto para diagnóstico).
-2. Con el entorno del proyecto activado (`pip install -e .`) y las variables `DATABASE_*` apuntando a
-   DEV (ver `docs/AWS_RDS_CONNECTION.md`), ejecutar:
+1. Abrir el túnel a la base de DEV (el procedimiento SSM que ya usa el proyecto para diagnóstico). **El
+   túnel escucha en el puerto local `5433`**, no en `5432`: `5432` es el puerto de RDS al otro lado del
+   túnel, y es además el valor por defecto de la aplicación, por eso hay que indicar `5433` expresamente.
+2. Con el entorno del proyecto activado (`pip install -e .`), definir las variables de conexión en la
+   misma terminal de PowerShell y ejecutar el script (la clave se pide sin mostrarla y no se guarda en
+   ningún archivo). **El usuario es `tpi_admin`, no `tpi_app`:** el rol de la aplicación solo tiene
+   `INSERT` sobre `tpi.auditoria` (es un registro de solo agregar, ver `scripts/sql/001_create_tpi_app_role.sql`),
+   así que no puede leerla; con `tpi_app` la consulta falla con «permission denied for table auditoria»
+   aunque la clave sea correcta. El script solo ejecuta `SELECT`, por lo que usar `tpi_admin` aquí no
+   escribe nada.
 
-   ```text
-   python scripts/adjuntos_revision_preprod.py --days 30
+   ```powershell
+   $env:APP_ENV = 'aws-dev'
+   $env:DATABASE_HOST = 'localhost'
+   $env:DATABASE_NAME = 'tpi'
+   $env:DATABASE_USER = 'tpi_admin'
+   $env:DATABASE_SCHEMA = 'tpi'
+   $env:DATABASE_SSLMODE = 'require'
+   $clave = Read-Host 'Clave de tpi_admin' -AsSecureString
+   $env:DATABASE_PASSWORD = [System.Net.NetworkCredential]::new('', $clave).Password
+   python scripts/adjuntos_revision_preprod.py --days 30 --port 5433
    ```
 
+   `--port 5433` reemplaza a `DATABASE_PORT`; si prefieres, define `$env:DATABASE_PORT = '5433'` y omite
+   la opción. No aplica si usas `DATABASE_URL` (el puerto va dentro de la URL). Si ves «password
+   authentication failed», la clave no corresponde a ese usuario; confirma que sea la de `tpi_admin`.
 3. La ventana es configurable (`--days 30` por defecto). La salida muestra: conteo por acción, rechazos
    por código, subidas con y sin archivos incrustados, subidas por tipo, objetos y bytes subidos por mes,
    y la cantidad de leads distintos con adjuntos y de usuarios distintos que subieron.
 
-Si la conexión falla, el script imprime un mensaje claro y termina con un código distinto de cero (no
-toca la base).
+Si la conexión falla, el script imprime un mensaje claro, el destino al que intentó conectarse (host,
+puerto, base y usuario; nunca la clave) y termina con un código distinto de cero (no toca la base). Si
+el destino es `localhost:5432`, agrega la pista de usar el puerto `5433` del túnel.
 
 ---
 
