@@ -119,6 +119,24 @@ def test_main_returns_nonzero_when_connection_fails() -> None:
     assert code == 1
 
 
+def test_pool_is_closed_on_success_and_on_failure() -> None:
+    with (
+        patch("scripts.adjuntos_revision_preprod.close_pool") as cerrar,
+        patch("scripts.adjuntos_revision_preprod.get_db_connection"),
+        patch("scripts.adjuntos_revision_preprod.run_queries", return_value={}),
+    ):
+        assert main(["--days", "30"]) == 0
+    cerrar.assert_called_once_with()
+
+    with (
+        patch("scripts.adjuntos_revision_preprod.close_pool") as cerrar,
+        patch("scripts.adjuntos_revision_preprod.get_db_connection") as gdb,
+    ):
+        gdb.side_effect = RuntimeError("db down")
+        assert main(["--days", "30"]) == 1
+    cerrar.assert_called_once_with()
+
+
 def test_main_rejects_nonpositive_days() -> None:
     assert main(["--days", "0"]) == 2
     assert main(["--days", "-5"]) == 2

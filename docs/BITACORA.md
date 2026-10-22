@@ -22,6 +22,17 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-22 - CRM: datos de uso de los adjuntos en DEV incorporados al informe previo a producción (CRM-ADJUNTOS-REVISION-PREPROD)
+
+- Qué se hizo: el humano corrió `scripts/adjuntos_revision_preprod.py` contra DEV por el túnel (puerto 5433, usuario `tpi_admin`) y se pegó su
+  salida, con la hora de los rechazos y cuatro pruebas dirigidas, en la sección «Datos de uso» de `docs/ADJUNTOS_REVISION_PREPROD.md`, con una
+  lectura de cada punto. Los datos son de las pruebas de humo de dos días (2 usuarios, 2 leads), no de uso real.
+- Hallazgos: (1) la auditoría de rechazos funciona con el código nuevo (`empty_file`, `too_large`) y no hay fallos de escritura en el log;
+  (2) los rechazos previos a la validación (413, 411, 400 del analizador, 403) no dejan fila en `tpi.auditoria`: decisión pendiente del humano;
+  (3) hay 8 eliminaciones frente a 7 subidas, por aclarar con la consulta que trae el informe; (4) el JPEG de prueba (188 KB) es pequeño para una
+  foto original: la comprobación de GPS queda por repetir con una foto de la cámara.
+- Script: ahora cierra el pool de conexiones al salir (desaparecen los avisos `couldn't stop thread ...`), con pruebas.
+
 ### 2026-10-22 - CRM: el script de medición de adjuntos indica el puerto del túnel a DEV (5433) y explica mejor sus fallos
 
 - Qué pasó: al correr `scripts/adjuntos_revision_preprod.py` contra DEV el humano obtuvo un error de conexión. El túnel SSM a la base de DEV
