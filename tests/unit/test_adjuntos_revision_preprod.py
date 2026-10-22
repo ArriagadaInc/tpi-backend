@@ -7,7 +7,11 @@ y que la salida no expone PII ni identificadores.
 
 from __future__ import annotations
 
+import os
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from scripts.adjuntos_revision_preprod import build_queries, main, render, run_queries
 
@@ -118,3 +122,82 @@ def test_main_returns_nonzero_when_connection_fails() -> None:
 def test_main_rejects_nonpositive_days() -> None:
     assert main(["--days", "0"]) == 2
     assert main(["--days", "-5"]) == 2
+
+
+def test_port_flag_replaces_database_port_and_refreshes_settings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DATABASE_PORT", "5432")
+    with (
+        patch("scripts.adjuntos_revision_preprod.clear_settings_cache") as limpiar,
+        patch("scripts.adjuntos_revision_preprod.get_db_connection"),
+        patch("scripts.adjuntos_revision_preprod.run_queries", return_value={}),
+    ):
+        code = main(["--days", "30", "--port", "5433"])
+    assert code == 0
+    assert os.environ["DATABASE_PORT"] == "5433"
+    limpiar.assert_called_once_with()
+
+
+@pytest.mark.parametrize("port", ["0", "70000", "-1"])
+def test_port_flag_rejects_out_of_range_values(port: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DATABASE_PORT", "5432")
+    with patch("scripts.adjuntos_revision_preprod.get_db_connection") as gdb:
+        code = main(["--port", port])
+    assert code == 2
+    assert os.environ["DATABASE_PORT"] == "5432"
+    gdb.assert_not_called()
+
+
+def _config(host: str, port: int) -> SimpleNamespace:
+    resumen = f"target={host}:{port}/tpi, user=tpi_app, sslmode=require"
+    return SimpleNamespace(host=host, port=port, safe_summary=lambda: resumen)
+
+
+def test_failure_shows_destination_and_tunnel_hint_without_secrets(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    ajustes = SimpleNamespace(database_config=_config("localhost", 5432))
+    with (
+        patch("scripts.adjuntos_revision_preprod.get_settings", return_value=ajustes),
+        patch("scripts.adjuntos_revision_preprod.get_db_connection") as gdb,
+    ):
+        gdb.side_effect = RuntimeError("connection refused")
+        code = main(["--days", "30"])
+    err = capsys.readouterr().err
+    assert code == 1
+    assert "Destino: target=localhost:5432/tpi" in err
+    assert "--port 5433" in err and "DATABASE_PORT=5433" in err
+    assert "connection refused" in err
+    assert "password" not in err.lower()
+
+
+def test_failure_does_not_hint_when_port_is_not_the_default_or_host_is_remote(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    for host, port in (("localhost", 5433), ("db.example.internal", 5432)):
+        ajustes = SimpleNamespace(database_config=_config(host, port))
+        with (
+            patch("scripts.adjuntos_revision_preprod.get_settings", return_value=ajustes),
+            patch("scripts.adjuntos_revision_preprod.get_db_connection") as gdb,
+        ):
+            gdb.side_effect = RuntimeError("db down")
+            assert main([]) == 1
+        err = capsys.readouterr().err
+        assert f"Destino: target={host}:{port}/tpi" in err
+        assert "Pista:" not in err
+
+
+def test_failure_reports_invalid_configuration_without_crashing(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with (
+        patch("scripts.adjuntos_revision_preprod.get_settings", side_effect=ValueError("mala")),
+        patch("scripts.adjuntos_revision_preprod.get_db_connection") as gdb,
+    ):
+        gdb.side_effect = RuntimeError("db down")
+        code = main([])
+    err = capsys.readouterr().err
+    assert code == 1
+    assert "la configuracion de la base de datos no es valida" in err
+    assert "Pista:" not in err

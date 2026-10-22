@@ -18,20 +18,28 @@ Reglas de solo lectura (AC-3):
 
 El Developer no tiene acceso a la base de datos de DEV ni a AWS: este script se
 ejecuta desde la terminal del humano contra DEV por el túnel, con el entorno del
-proyecto (``pip install -e .``) y las variables ``DATABASE_*`` apuntando a DEV.
+proyecto (``pip install -e .``) y las variables ``DATABASE_*`` apuntando a DEV. El túnel
+SSM a DEV escucha en el puerto local 5433 (no en 5432): usa ``--port 5433`` o
+``DATABASE_PORT=5433``.
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from dataclasses import dataclass
 from typing import Any
 
+from app.config import clear_settings_cache, get_settings
 from app.database import get_db_connection
 
 TABLA_AFECTADA = "tpi.leads"
 DIAS_POR_DEFECTO = 30
+# El túnel SSM a la base de DEV escucha en el puerto local 5433 (el de RDS, al otro lado, es 5432).
+PUERTO_TUNEL_DEV = 5433
+PUERTO_POSTGRES = 5432
+HOSTS_LOCALES = ("localhost", "127.0.0.1", "::1")
 
 # Acciones de adjunto que escribe app/attachments/audit.py.
 ACCIONES = (
@@ -248,7 +256,25 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         default=DIAS_POR_DEFECTO,
         help=f"Ventana de días a medir (por defecto {DIAS_POR_DEFECTO}).",
     )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=None,
+        help=(
+            "Puerto de la base de datos; reemplaza DATABASE_PORT. Con el túnel SSM a DEV "
+            f"es {PUERTO_TUNEL_DEV}. No aplica si usas DATABASE_URL (el puerto va en la URL)."
+        ),
+    )
     return parser.parse_args(argv)
+
+
+def _destino() -> tuple[str, Any]:
+    """Resumen sin secretos del destino de la conexión y su configuración (None si no es válida)."""
+    try:
+        config = get_settings().database_config
+        return config.safe_summary(), config
+    except Exception:  # una configuración inválida también se informa, sin ocultar el resto
+        return "(la configuracion de la base de datos no es valida)", None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -257,17 +283,32 @@ def main(argv: list[str] | None = None) -> int:
     if days < 1:
         print("Error: --days debe ser un entero mayor o igual a 1.", file=sys.stderr)
         return 2
+    if args.port is not None:
+        if not 1 <= args.port <= 65535:
+            print("Error: --port debe estar entre 1 y 65535.", file=sys.stderr)
+            return 2
+        os.environ["DATABASE_PORT"] = str(args.port)
+        clear_settings_cache()
 
     queries = build_queries(days)
     try:
         with get_db_connection(operation="adjuntos_revision_preprod") as conn:
             resultados = run_queries(conn, queries)
     except Exception as exc:  # el mensaje claro para el humano lo requiere
+        destino, config = _destino()
         print(
             "No se pudo medir el uso de adjuntos: la conexion a la base de datos fallo. "
             "Verifica las variables DATABASE_* y el tunel a DEV.",
             file=sys.stderr,
         )
+        print(f"Destino: {destino}", file=sys.stderr)
+        if config is not None and config.port == PUERTO_POSTGRES and config.host in HOSTS_LOCALES:
+            print(
+                f"Pista: el tunel SSM a DEV escucha en el puerto local {PUERTO_TUNEL_DEV}, "
+                f"no en {PUERTO_POSTGRES}. Usa --port {PUERTO_TUNEL_DEV} "
+                f"(o DATABASE_PORT={PUERTO_TUNEL_DEV}).",
+                file=sys.stderr,
+            )
         print(f"Detalle: {exc}", file=sys.stderr)
         return 1
 
