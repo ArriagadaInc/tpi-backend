@@ -20,7 +20,8 @@ El Developer no tiene acceso a la base de datos de DEV ni a AWS: este script se
 ejecuta desde la terminal del humano contra DEV por el túnel, con el entorno del
 proyecto (``pip install -e .``) y las variables ``DATABASE_*`` apuntando a DEV. El túnel
 SSM a DEV escucha en el puerto local 5433 (no en 5432): usa ``--port 5433`` o
-``DATABASE_PORT=5433``.
+``DATABASE_PORT=5433``. El usuario debe poder leer ``tpi.auditoria``: ``tpi_admin``
+(``tpi_app`` solo puede insertar en esa tabla).
 """
 
 from __future__ import annotations

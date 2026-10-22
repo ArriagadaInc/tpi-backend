@@ -391,23 +391,28 @@ Usa la conexión de la aplicación (`get_db_connection`), sin credenciales nueva
    túnel escucha en el puerto local `5433`**, no en `5432`: `5432` es el puerto de RDS al otro lado del
    túnel, y es además el valor por defecto de la aplicación, por eso hay que indicar `5433` expresamente.
 2. Con el entorno del proyecto activado (`pip install -e .`), definir las variables de conexión en la
-   misma terminal de PowerShell y ejecutar el script (ajusta usuario y base si los tuyos son otros; la
-   clave se pide sin mostrarla y no se guarda en ningún archivo):
+   misma terminal de PowerShell y ejecutar el script (la clave se pide sin mostrarla y no se guarda en
+   ningún archivo). **El usuario es `tpi_admin`, no `tpi_app`:** el rol de la aplicación solo tiene
+   `INSERT` sobre `tpi.auditoria` (es un registro de solo agregar, ver `scripts/sql/001_create_tpi_app_role.sql`),
+   así que no puede leerla; con `tpi_app` la consulta falla con «permission denied for table auditoria»
+   aunque la clave sea correcta. El script solo ejecuta `SELECT`, por lo que usar `tpi_admin` aquí no
+   escribe nada.
 
    ```powershell
    $env:APP_ENV = 'aws-dev'
    $env:DATABASE_HOST = 'localhost'
    $env:DATABASE_NAME = 'tpi'
-   $env:DATABASE_USER = 'tpi_app'
+   $env:DATABASE_USER = 'tpi_admin'
    $env:DATABASE_SCHEMA = 'tpi'
    $env:DATABASE_SSLMODE = 'require'
-   $clave = Read-Host 'Clave de la base' -AsSecureString
+   $clave = Read-Host 'Clave de tpi_admin' -AsSecureString
    $env:DATABASE_PASSWORD = [System.Net.NetworkCredential]::new('', $clave).Password
    python scripts/adjuntos_revision_preprod.py --days 30 --port 5433
    ```
 
    `--port 5433` reemplaza a `DATABASE_PORT`; si prefieres, define `$env:DATABASE_PORT = '5433'` y omite
-   la opción. No aplica si usas `DATABASE_URL` (el puerto va dentro de la URL).
+   la opción. No aplica si usas `DATABASE_URL` (el puerto va dentro de la URL). Si ves «password
+   authentication failed», la clave no corresponde a ese usuario; confirma que sea la de `tpi_admin`.
 3. La ventana es configurable (`--days 30` por defecto). La salida muestra: conteo por acción, rechazos
    por código, subidas con y sin archivos incrustados, subidas por tipo, objetos y bytes subidos por mes,
    y la cantidad de leads distintos con adjuntos y de usuarios distintos que subieron.

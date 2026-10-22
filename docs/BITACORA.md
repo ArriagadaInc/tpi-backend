@@ -30,6 +30,9 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Cambio: el script acepta `--port` (reemplaza `DATABASE_PORT`; no aplica con `DATABASE_URL`) y, si falla la conexión, muestra el destino sin
   secretos (host, puerto, base y usuario) y, cuando el destino es `localhost:5432`, la pista de usar 5433. El informe
   `docs/ADJUNTOS_REVISION_PREPROD.md` trae ahora los pasos exactos en PowerShell (la clave se pide sin mostrarla). Pruebas nuevas.
+- Segundo hallazgo al reintentar con el puerto correcto: el informe indicaba el usuario `tpi_app`, pero ese rol solo tiene `INSERT` sobre
+  `tpi.auditoria` (registro de solo agregar, `scripts/sql/001_create_tpi_app_role.sql`) y no puede leerla; la autenticación falló y, aun con la
+  clave correcta, la consulta habría fallado por permisos. Los pasos ahora usan `tpi_admin` (el script solo ejecuta `SELECT`, no escribe nada).
 - Sin cambios en la aplicación, en las consultas ni en lo que imprime el script en el caso exitoso.
 
 ### 2026-10-22 - Harness: tarea CRM-ADJUNTOS-REVISION-PREPROD cerrada (DONE)
