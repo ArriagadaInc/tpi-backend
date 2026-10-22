@@ -29,8 +29,9 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
   lectura de cada punto. Los datos son de las pruebas de humo de dos días (2 usuarios, 2 leads), no de uso real.
 - Hallazgos: (1) la auditoría de rechazos funciona con el código nuevo (`empty_file`, `too_large`) y no hay fallos de escritura en el log;
   (2) los rechazos previos a la validación (413, 411, 400 del analizador, 403) no dejan fila en `tpi.auditoria`: decisión pendiente del humano;
-  (3) hay 8 eliminaciones frente a 7 subidas, por aclarar con la consulta que trae el informe; (4) el JPEG de prueba (188 KB) es pequeño para una
-  foto original: la comprobación de GPS queda por repetir con una foto de la cámara.
+  (3) hay 8 eliminaciones frente a 7 subidas, por aclarar con la consulta que trae el informe; (4) el humano comprobó que la foto JPEG de celular de la
+  prueba (188 KB) tiene latitud y longitud: el riesgo de EXIF/GPS (punto 3) está confirmado en la práctica, porque el servidor guarda los bytes
+  sin modificar.
 - Script: ahora cierra el pool de conexiones al salir (desaparecen los avisos `couldn't stop thread ...`), con pruebas.
 
 ### 2026-10-22 - CRM: el script de medición de adjuntos indica el puerto del túnel a DEV (5433) y explica mejor sus fallos

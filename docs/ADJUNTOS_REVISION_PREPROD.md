@@ -439,10 +439,11 @@ Desde el 21/10 a las 21:47 no hay otros rechazos hasta las pruebas dirigidas de 
   mismo vale para la petición sin tamaño declarado (411), el exceso de archivos detectado por el analizador (400) y el token
   de seguridad inválido (403): ninguna de esas ramas de la ruta llama a la auditoría. Es una decisión del humano si conviene
   auditarlos (por ejemplo con un código `request_too_large`); el costo es bajo y daría visibilidad de intentos de abuso.
-- **Punto 3 (EXIF y GPS):** el JPEG de la prueba pesa 188 KB, pequeño para una foto original de celular; si pasó por una aplicación de
-  mensajería pudo perder ya su ubicación. La comprobación empírica (descargar el archivo desde el CRM y mirar Propiedades → Detalles →
-  GPS) debe repetirse con una foto original de la cámara. Las pruebas de `test_attachments_known_limitations.py` ya fijan que el
-  servidor no modifica los bytes del JPEG.
+- **Punto 3 (EXIF y GPS): riesgo confirmado en la práctica.** El humano comprobó en las propiedades del archivo que la foto JPEG de
+  celular de la prueba (188 KB) **tiene latitud y longitud**. Como el servidor guarda los bytes sin modificarlos (lo fijan las pruebas de
+  `test_attachments_known_limitations.py`), cualquier usuario con acceso al lead que abra o descargue la imagen puede ver dónde se tomó
+  la foto. Aun una foto reducida por el teléfono conserva la ubicación, así que no depende de que sea el original de la cámara. Esto
+  respalda tratar la eliminación de metadatos como tarea de la segunda versión (ver la sección 3).
 - **Punto 5 (costo de GuardDuty):** 7 objetos y 4,36 MiB (≈0,6 MiB por archivo) en dos días de pruebas. Sin afirmar tarifas, aun con
   1 USD por GB y 1 USD por mil objetos el costo medido sería menor a un centavo; la proyección real depende del volumen de notas con
   adjuntos en producción, que esta medición no puede dar.
