@@ -22,6 +22,20 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-22 - CRM: dirección de diseño para armonizar la interfaz, auditoría del CSS y skill de interfaz para el Developer
+
+- Pedido del humano: un CRM profesional, moderno, atractivo y minimalista; le gusta cómo se ve hoy, solo quiere armonizarlo.
+- Qué se hizo: auditoría del CSS (`scripts/ui_css_audit.py`, solo lectura, con pruebas) y recorrido visual de la lista, el detalle del lead, el
+  dashboard y el móvil en una copia local del CRM con datos ficticios. Línea base: 17 tokens, 80 colores sueltos distintos (156 usos),
+  25 tamaños de letra, 15 radios, 13 sombras, 61 espaciados, 5 cortes responsive y 39 reglas de tema oscuro por componente; `--shadow-sm` se
+  usa sin estar definido y la tipografía Inter se declara pero no se carga.
+- Entrega: `docs/UI_DESIGN_SYSTEM.md` (dirección, línea base, hallazgos, tokens, componentes canónicos, plan por tareas y decisiones abiertas) y
+  el skill `agents/developer/skills/tpi-ui-design/SKILL.md`, con un puntero en `agents/developer/CONTEXT.md`.
+- El skill NO está registrado en `harness/policies.yaml` (archivo protegido que no se toca sin sesión de mantenimiento): las tareas de
+  interfaz lo citan en sus restricciones y el CONTEXT del Developer lo señala. Registrarlo queda para la tarea de mantenimiento del Harness.
+- Decisiones abiertas del humano (sección 8 del documento): tipografía (alojar Inter o pila del sistema), peso de los títulos, sombras sin
+  brillo, botones en píldora, barra superior móvil y texto técnico del dashboard. Las tareas de interfaz se definen después de aprobarlas.
+
 ### 2026-10-22 - CRM: datos de uso de los adjuntos en DEV incorporados al informe previo a producción (CRM-ADJUNTOS-REVISION-PREPROD)
 
 - Qué se hizo: el humano corrió `scripts/adjuntos_revision_preprod.py` contra DEV por el túnel (puerto 5433, usuario `tpi_admin`) y se pegó su
