@@ -22,6 +22,29 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-22 - CRM: informe de revisión previa a producción de los adjuntos implementado (CRM-ADJUNTOS-REVISION-PREPROD)
+
+- Qué entrega (clase A, sin despliegue y sin cambio de comportamiento): el informe
+  `docs/ADJUNTOS_REVISION_PREPROD.md`, el script de solo lectura `scripts/adjuntos_revision_preprod.py` y pruebas
+  de caracterización en `tests/unit/test_attachments_known_limitations.py` y `tests/unit/test_adjuntos_revision_preprod.py`.
+- Qué contiene el informe: una tabla resumen (punto, riesgo, recomendación en una línea, quién decide) y UNA sección por
+  cada uno de los seis puntos aceptados el 2026-10-21 — (1) PDF con archivos incrustados, (2) visibilidad de los adjuntos
+  para todo usuario con acceso al lead, (3) EXIF y GPS de las imágenes, (4) retención y borrado a solicitud del titular,
+  (5) costo de GuardDuty Malware Protection for S3 y (6) validación de PDF con streams comprimidos. Cada sección trae cómo
+  funciona HOY con referencias al código (`app/attachments/`, `app/services/solicitud_service.py`, `app/web/routes/leads.py`),
+  el riesgo con un ejemplo, opciones con esfuerzo/costo/efecto, una recomendación marcada como propuesta y la pregunta exacta
+  para el humano. No afirma tarifas ni plazos legales: el punto 5 deja la fórmula del costo con variables a confirmar y el
+  punto 4 lista preguntas para el asesor legal sin dar opinión jurídica.
+- Cómo ejecutar el script de medición (solo lectura, sin PII): abrir el túnel SSM a la base de DEV, activar el entorno del
+  proyecto (`pip install -e .`) con las variables `DATABASE_*` de DEV y correr `python scripts/adjuntos_revision_preprod.py --days 30`.
+  Muestra solo agregados de `tpi.auditoria` (conteo por acción, rechazos por código, subidas con/sin archivos incrustados, subidas
+  por tipo, objetos y bytes subidos por mes, leads y usuarios distintos). La salida se pega en la sección «Datos de uso» del informe.
+- Pruebas que fijan los límites sin cambiar el comportamiento: un JPEG con EXIF/GPS se acepta y sus bytes no cambian (punto 3) y
+  un PDF cuyo JavaScript está dentro de un object stream comprimido con FlateDecode pasa la validación (punto 6). El caso de
+  `/EmbeddedFile` ya tenía prueba equivalente en `tests/unit/test_attachments_validation.py` y se cita en el informe.
+- Referencias cruzadas: `docs/ADJUNTOS_COMENTARIOS_DISENO.md` (sección 8) y `docs/SEGURIDAD.md` (sección «Adjuntos de notas»)
+  enlazan el informe.
+
 ### 2026-10-22 - CRM: revisión previa a producción de los adjuntos definida como tarea activable (CRM-ADJUNTOS-REVISION-PREPROD)
 
 - Qué es: la tarea deja de ser un resumen en el backlog y queda definida (`tasks/backlog.yaml`, clase A, sin despliegue, 6 criterios).

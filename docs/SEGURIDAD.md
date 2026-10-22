@@ -807,7 +807,9 @@ con condición de salida y fecha de vencimiento, y con su vigilancia automática
 
 La función de adjuntos permite subir imágenes (PNG y JPEG) y PDF a una nota de seguimiento del detalle de un lead. Los
 resguardos están documentados en [`ADJUNTOS_COMENTARIOS_DISENO.md`](ADJUNTOS_COMENTARIOS_DISENO.md) y se implementan en
-`app/attachments/`.
+`app/attachments/`. La revisión previa a producción de los seis puntos abiertos (archivos incrustados, visibilidad,
+EXIF/GPS, retención y borrado, costo de GuardDuty y streams comprimidos) está en
+[`ADJUNTOS_REVISION_PREPROD.md`](ADJUNTOS_REVISION_PREPROD.md).
 
 ### Qué protege
 

@@ -22,6 +22,15 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ### ✅ Agregado
 
+- **Revisión previa a producción de los adjuntos de notas** (CRM-ADJUNTOS-REVISION-PREPROD)
+  - Informe `docs/ADJUNTOS_REVISION_PREPROD.md` con los seis puntos abiertos (archivos incrustados, visibilidad, EXIF/GPS,
+    retención y borrado, costo de GuardDuty y streams comprimidos): cómo funciona hoy con referencias al código, riesgo,
+    opciones, recomendación propuesta y la pregunta para el humano. No decide nada ni cambia el comportamiento.
+  - Script de solo lectura `scripts/adjuntos_revision_preprod.py`: mide el uso real en `tpi.auditoria` con agregados (sin
+    PII, sin SHA-256 y sin identificadores) usando la conexión de la aplicación.
+  - Pruebas de caracterización que fijan los límites conocidos sin cambiarlos (`tests/unit/test_attachments_known_limitations.py`)
+    y pruebas del script (`tests/unit/test_adjuntos_revision_preprod.py`).
+
 - **Ajustes de los adjuntos: rechazos por causa, estados de escaneo y borrado visible** (CRM-ADJUNTOS-3-AJUSTES)
   - Los rechazos de subida ahora dicen el motivo concreto de cada archivo, con su posición («Archivo 2 de 3») y sin repetir su nombre ni su contenido; se validan todos los archivos y se informan todos los fallos juntos, y sigue siendo todo o nada (si falla uno no se sube ninguno). El código `unsafe_pdf` se divide por causa: `pdf_encrypted`, `pdf_javascript`, `pdf_launch` y `pdf_embedded_files`, y cada rechazo se audita con su código específico. Para PDF cifrado o con scripts el mensaje sugiere volver a guardarlo con «Imprimir y Guardar como PDF».
   - Las reglas de PDF respetan dónde termina cada nombre (espacio, delimitador de PDF o fin de datos, tras decodificar los escapes `#xx`): `/JS`, `/JavaScript`, `/Launch` y `/Encrypt` siguen rechazando, pero `/JSON` o `/EmbeddedFiles` ya no se confunden con ellos.
