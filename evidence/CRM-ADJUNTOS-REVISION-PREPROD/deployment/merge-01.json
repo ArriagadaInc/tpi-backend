@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "CRM-ADJUNTOS-REVISION-PREPROD",
+  "created_at": "2026-10-22T20:48:19Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610222047-deployer-sup278d17",
+  "pr_number": 120,
+  "reviewed_sha": "e476783ce90e38931921507a8d850dcb1265581c",
+  "reviewed_tree": "c7710afeb8c8d0ba8cff491f9efc754676daf349",
+  "release_sha": "7b96c67ce6429e9f865bc82c01f059659c237780",
+  "release_tree": "c7710afeb8c8d0ba8cff491f9efc754676daf349",
+  "main_parent_sha": "751df50424ca21faaf5b7ee340560f45405c45c6",
+  "method": "squash",
+  "match_head_commit_used": true
+}

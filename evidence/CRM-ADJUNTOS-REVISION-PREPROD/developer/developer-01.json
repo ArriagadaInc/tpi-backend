@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "CRM-ADJUNTOS-REVISION-PREPROD",
+  "created_at": "2026-10-22T20:43:50Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610222030-developer-sup80a502",
+  "head_sha": "e476783ce90e38931921507a8d850dcb1265581c",
+  "branch": "harness/CRM-ADJUNTOS-REVISION-PREPROD-preprod-review",
+  "pr_number": 120,
+  "change_class": "A",
+  "tests": {
+    "command": "Local (worktree, Python 3.13.13): python -m pytest tests/unit/test_adjuntos_revision_preprod.py tests/unit/test_attachments_known_limitations.py tests/unit/test_attachments_validation.py --no-cov -q -> 49 passed (7 del script + 2 de limites + 40 de validacion existentes). Suite unit completa local: 931 passed, 11 failed (test_executive_dashboard_render/service, por falta de PostgreSQL local: DatabaseConfigurationError, preexistentes y no relacionados con esta tarea; pasan en CI con el servicio postgres). CI PR #120 sobre e476783: job Tests (pytest tests/ --cov=app --cov-fail-under=85) PASS.",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "Informe docs/ADJUNTOS_REVISION_PREPROD.md con tabla resumen (punto, riesgo alto/medio/bajo, recomendacion en una linea, quien decide) y UNA seccion por cada uno de los seis puntos. Cada seccion tiene (a) como funciona HOY con referencias a archivos y funciones reales (app/attachments/validation.py, app/config/settings.py, app/web/routes/leads.py, app/attachments/marks.py, app/attachments/audit.py, app/services/solicitud_service.py, app/security/masking.py, app/attachments/storage.py), comprobadas leyendo el codigo; (b) riesgo concreto con peor caso y ejemplo; (c) al menos dos opciones (una es dejarlo como esta) con esfuerzo/costo/efecto; (d) recomendacion marcada como propuesta; (e) la pregunta exacta para el humano (o preguntas al asesor legal en el punto 4)."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "El informe no inventa cifras: el punto 5 (GuardDuty) deja la formula costo_mensual = objetos_escaneados x tarifa_por_objeto + GB x tarifa_por_GB con las tarifas como variables a confirmar por el humano en la pagina de precios de AWS para us-east-2 (la documentacion local dice que la tarifa por GB esta publicada y la de por objeto en us-east-2 hay que confirmarla). El punto 4 describe lo que el sistema HACE (que se guarda, donde, como se borra, que queda en auditoria y logs, que pasa con las copias) y lista preguntas para el asesor legal sin dar opinion juridica ni citar plazos de la Ley 21.719. No se afirman tarifas, plazos ni obligaciones legales que no esten en el repositorio."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "Script scripts/adjuntos_revision_preprod.py de solo lectura: solo SELECT parametrizados (ningun INSERT/UPDATE/DELETE/DDL; las pruebas test_all_queries_are_select_only_and_parameterized y test_days_is_parameterized_not_interpolated lo verifican). Lee tpi.auditoria con ventana --days (por defecto 30, configurable). Muestra solo agregados: conteo por accion (las 5 acciones de adjunto), rechazos por codigo, subidas con/sin archivos_incrustados, subidas por tipo, objetos y bytes subidos por mes, leads distintos con adjuntos y usuarios distintos que subieron. No imprime PII, textos, nombres, SHA-256 ni identificadores (test_render_shows_aggregates_only_without_pii). Usa get_db_connection (sin credenciales nuevas). Si la conexion falla, sale con mensaje claro y codigo 1 (test_main_returns_nonzero_when_connection_fails). El informe explica como ejecutarlo contra DEV por el tunel y deja vacia la seccion Datos de uso."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "Pruebas de limites construidas en memoria, sin archivos binarios ni dependencias nuevas, con nombres test_current_behavior_/test_known_limitation_ y docstring que apunta a la seccion del informe: (i) tests/unit/test_attachments_known_limitations.py::test_current_behavior_jpeg_with_exif_gps_is_accepted_and_bytes_preserved (JPEG con EXIF/GPS aceptado y bytes intactos, punto 3); (ii) test_known_limitation_javascript_inside_flate_object_stream_passes (PDF con /JavaScript dentro de un object stream FlateDecode pasa hoy, punto 6). (iii) El caso de /EmbeddedFile (aceptado con marca pdfe y rechazado con codigo pdf_embedded_files con ATTACHMENTS_ALLOW_PDF_EMBEDDED_FILES=false) ya tenia prueba equivalente en tests/unit/test_attachments_validation.py (test_pdf_with_embedded_file_is_allowed_by_default_and_marked_pdfe y test_pdf_with_embedded_file_rejected_when_disallowed) y se cita en el informe (punto 1); no se duplica. No relajan ni endurecen ninguna regla."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "Sin cambio de comportamiento ni de dependencias. El diff origin/main...HEAD solo toca CHANGELOG.md, docs/ADJUNTOS_COMENTARIOS_DISENO.md, docs/ADJUNTOS_REVISION_PREPROD.md (nuevo), docs/BITACORA.md, docs/SEGURIDAD.md, scripts/adjuntos_revision_preprod.py (nuevo), tests/unit/test_adjuntos_revision_preprod.py (nuevo) y tests/unit/test_attachments_known_limitations.py (nuevo). NO toca app/**, deployment/**, requirements ni configuracion. CI completo verde: ruff, black, mypy, bandit, pip-audit (sin excepciones nuevas), Tests con cobertura >= 85% y Docker Build PASS."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "evidence": "Referencias cruzadas: docs/ADJUNTOS_COMENTARIOS_DISENO.md (seccion 8) enlaza el informe y el script; docs/SEGURIDAD.md (seccion Adjuntos de notas) enlaza el informe; docs/BITACORA.md tiene la entrada 2026-10-22 de la tarea con que contiene el informe y como ejecutar el script. Los enlaces relativos ([ADJUNTOS_REVISION_PREPROD.md](ADJUNTOS_REVISION_PREPROD.md)) funcionan porque todos los archivos estan en docs/."
+    }
+  ],
+  "files_changed": [
+    "docs/ADJUNTOS_REVISION_PREPROD.md (nuevo: informe con tabla resumen + 6 secciones + Datos de uso + referencias)",
+    "scripts/adjuntos_revision_preprod.py (nuevo: medicion de solo lectura sobre tpi.auditoria)",
+    "tests/unit/test_adjuntos_revision_preprod.py (nuevo: SQL solo lectura, parametros, agregados y formato sin PII)",
+    "tests/unit/test_attachments_known_limitations.py (nuevo: JPEG EXIF/GPS aceptado y PDF con JS en object stream comprimido pasa)",
+    "docs/ADJUNTOS_COMENTARIOS_DISENO.md (seccion 8 enlaza el informe)",
+    "docs/SEGURIDAD.md (seccion Adjuntos de notas enlaza el informe)",
+    "docs/BITACORA.md (entrada de la tarea)",
+    "CHANGELOG.md (entrada bajo Agregado)"
+  ],
+  "assumptions": [
+    "Clase A sin despliegue: solo documentacion, un script de solo lectura y pruebas de caracterizacion. NO se toca app/**, deployment/**, IAM, el bucket ni GuardDuty.",
+    "El Developer no tiene acceso a la base de DEV ni a AWS: no se ejecuto el script contra ninguna base ni se corrieron comandos de AWS. La seccion Datos de uso queda vacia y la completa el humano.",
+    "Las pruebas de AC-4 describen el comportamiento actual y no lo cambian; cualquier mejora va al informe como opcion.",
+    "El caso de /EmbeddedFile ya tenia prueba en tests/unit/test_attachments_validation.py; se cita en el informe (punto 1) en lugar de duplicarla.",
+    "Los 11 fallos de la suite unit local (test_executive_dashboard_render/service) son por falta de PostgreSQL local (DatabaseConfigurationError), preexistentes y no relacionados con esta tarea; pasan en CI. La cobertura >= 85% se verifica en CI (job Tests verde).",
+    "Sin dependencias nuevas y sin migraciones (migrations_included=false). pip-audit sin excepciones nuevas."
+  ],
+  "migrations_included": false
+}

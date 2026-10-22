@@ -22,6 +22,28 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-22 - Harness: tarea CRM-ADJUNTOS-REVISION-PREPROD cerrada (DONE)
+
+- Titulo: Preparar la revision previa a produccion de los adjuntos de notas: informe de decisiones, medicion de uso y pruebas de los limites conocidos
+- Evidencia: `evidence/CRM-ADJUNTOS-REVISION-PREPROD/` y `tasks/completed/CRM-ADJUNTOS-REVISION-PREPROD.yaml`.
+- release_sha: `7b96c67ce6429e9f865bc82c01f059659c237780` (PR 120)
+- Clase A sin despliegue: tras la aprobacion del Reviewer el Deployer mergeo el PR y la tarea cerro sola (`merged_no_deploy`). El Reviewer
+  aprobo sin hallazgos que corregir; dejo una observacion menor (si falla la conexion, el script imprime el detalle del error, que puede
+  incluir el host o el puerto) y dos informativas (la seccion «Datos de uso» queda vacia a proposito; la opcion de quitar metadatos con
+  Pillow es futura).
+- Pendiente del humano, fuera del Harness: leer `docs/ADJUNTOS_REVISION_PREPROD.md`, correr `scripts/adjuntos_revision_preprod.py` contra DEV
+  por el tunel, pegar la salida en «Datos de uso» (con un PR) y decidir los seis puntos; lo que decida se convierte en tareas nuevas.
+
+**Lecciones de operacion.**
+
+1. *El merge de una tarea del Harness lo hace el Deployer solo, justo despues de la aprobacion del Reviewer.* No hay un punto de «mergea N»
+   del humano en una tarea sin despliegue: si el humano quiere leer un informe antes de que entre a `main`, hay que decirlo al definir la
+   tarea (por ejemplo con un criterio humano y despliegue) o entregarlo fuera del Harness. En esta tarea el riesgo era nulo (el informe
+   propone, no decide), asi que se acepto que el humano lo lea despues del merge.
+2. *Un reinicio de la sesion interactiva mata el orquestador y el dashboard* (los lanzo yo en el panel Terminal). Con la tarea activada
+   el Developer alcanzo a trabajar ~12 minutos antes del corte; al relanzar el orquestador la sesion nueva retomo desde el worktree
+   conservado y termino sin perder trabajo.
+
 ### 2026-10-22 - CRM: informe de revisión previa a producción de los adjuntos implementado (CRM-ADJUNTOS-REVISION-PREPROD)
 
 - Qué entrega (clase A, sin despliegue y sin cambio de comportamiento): el informe

@@ -1,0 +1,26 @@
+# Sesion archivada: CRM-ADJUNTOS-REVISION-PREPROD-closure
+
+- Archivada: 2026-10-22T20:48:33Z
+- Estado: IDLE
+
+# Progreso actual
+
+## Estado
+<!-- harness:projection:begin (autogenerado desde harness/state.json por transition.py; no editar a mano) -->
+- Estado del Harness: DONE (rol: system)
+- Tarea: CRM-ADJUNTOS-REVISION-PREPROD
+- Proximo paso: Sistema: transition.py close (automatico)
+- Ultima transicion: merged_no_deploy (MERGING -> DONE)
+- Actualizado: 2026-10-22T20:48:31Z
+<!-- harness:projection:end -->
+- Ultima sesion archivada: progress/sessions/2026-10-22-CRM-ADJUNTOS-REVISION-PREPROD-reviewing.md
+
+## Estado reciente
+- DECISION (CANDIDATE_REVIEW, CRM-ADJUNTOS-3-AJUSTES, sesion claude-202610220331-reviewer-supcaefef): candidate_review APPROVED sobre fd5778a (tree 83eeea9 == reviewed_tree). Verificado con lecturas propias: origin/main == release_sha, publish run 39713796328 success, digests app/caddy ACTIVE con scan HIGH/CRITICAL = 0, bundle reconstruido sha256 21a58cb2... identico, S3 checksum y AV SourceBundle coinciden, LKG (e37bb77) sano y con digests presentes en ECR, plan version-only. Evidencia: evidence/CRM-ADJUNTOS-3-AJUSTES/reviewer/candidate_review-02.json. Siguiente: candidate_approve -> Human Gate.
+- DECISION (ORQUESTADOR INTERACTIVO, 2026-10-22, para el Deployer que retoma CRM-ADJUNTOS-3-AJUSTES en DEPLOYING; la eleccion de la via la hizo el HUMANO): la sesion claude-202610221144-deployer-supaa561b hizo todo bien y quedo bloqueada por `aws_guard`: «ya hubo un intento de cutover: un release, una promocion». CAUSA (limitacion del Harness, no del release): `aws_guard._audit_records` cuenta los cutover por TAREA (`evidence/<tarea>/aws-audit.jsonl`), y esta tarea ya tuvo uno en la ronda 1 (fue al reprocesar tras VERIFY_FAILED). El guard sigue siendo definitivo: NO ejecutes `update-environment` ni busques rodeos. VIA ELEGIDA POR EL HUMANO: el cutover lo ejecuta el HUMANO en su propia terminal, con su perfil `tpi-dev`, UNA sola vez, con exactamente el plan aprobado: `aws elasticbeanstalk update-environment --environment-name tpi-backoffice-dev-green --version-label h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1 --profile tpi-dev --region us-east-2` (version-only, sin option settings). Es una excepcion humana documentada; el arreglo de fondo del guard (contar por aprobacion) queda como tarea de mantenimiento aparte. QUE HACER TU, cuando te relancen: (1) confirma por `aws_guard.py elasticbeanstalk describe-environments` (y `describe-events --max-records 20`) que el environment recibio ese update y converge a `VersionLabel == h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1`; espera la convergencia con tu sondeo habitual (cada 30 s, maximo 30 min) hasta Ready/Green/Ok; (2) verifica la cadena de identidad como en la ronda 1 (VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests de ECR del candidate-02); (3) escribe `deployment-02.json` con `update_accepted: true` solo si el evento «Environment update is starting»/«successfully deployed» de ese update aparece en `describe-events`; deja en `warnings` y en `cutover` constancia EXPLICITA de que el update lo ejecuto el humano a mano fuera de `aws_guard` por la limitacion descrita (no escribas que lo ejecutaste tu), con la hora de inicio que muestren los eventos; (4) aplica `deploy_succeeded` y sigue a VERIFYING con el smoke de HTTP y los conteos de logs. Si el environment NO muestra el update (VersionLabel sigue en e37bb77), NO lo ejecutes tu: detente y reporta. Si algo falla despues del cutover, el rollback version-only al LKG `...e37bb77-domainlocked-r1` sigue autorizado y aun no se ha usado.
+- DECISION (DEPLOYING, CRM-ADJUNTOS-3-AJUSTES, sesion claude-202610221534-deployer-sup25a0ed): el cutover version-only lo ejecuto el HUMANO a mano (fuera de aws_guard, por la limitacion del conteo por tarea); el Deployer no ejecuto update-environment. Observado: environment en h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1, Ready/Green/Ok, update 15:33:27Z-15:34:08Z; cadena de identidad VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR (ACTIVE) coincide con approval-02. Evidencia: evidence/CRM-ADJUNTOS-3-AJUSTES/deployment/deployment-02.json. Siguiente: deploy_succeeded -> VERIFYING.
+- DECISION (VERIFYING, CRM-ADJUNTOS-3-AJUSTES, sesion claude-202610221534-deployer-sup25a0ed): verificacion tecnica PASS (verification-03.json): environment fd5778a Ready/Green/Ok, identidad de runtime completa, smoke HTTP no autenticado 7/7, conteos de logs 0 en los 8 patrones desde 15:33:27Z, sin rollback. PENDIENTE HUMANO (AC-9): smoke autenticado en DEV (re-verificar primero que una nota de solo texto se guarda; PDF con archivos incrustados aceptado y con etiqueta; PDF cifrado, GIF y >10 MB rechazados con motivo y posicion; imagen con 'Escaneando'; EICAR 'Bloqueado'; borrar PDF e imagen como ceo/cto -> 'Archivo eliminado'; pagina de adjunto no disponible; codigos y 'archivos_incrustados' en tpi.auditoria). Luego el humano ejecuta: python scripts/harness/approve.py accept --decision accept --criteria AC-9. Sin aceptacion no se aplica `verified`.
+- 2026-10-22: Tarea CRM-ADJUNTOS-3-AJUSTES cerrada; resumen en tasks/completed/CRM-ADJUNTOS-3-AJUSTES.yaml
+
+## Bloqueos
+- Ninguno.
