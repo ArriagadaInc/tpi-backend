@@ -31,6 +31,8 @@ class AttachmentStorage(Protocol):
 
     def get(self, key: str) -> StoredObject | None: ...
 
+    def get_tagging(self, key: str) -> dict[str, str] | None: ...
+
     def delete(self, key: str) -> None: ...
 
 
@@ -49,6 +51,8 @@ class S3Client(Protocol):
     def put_object(self, **kwargs: Any) -> dict[str, Any]: ...
 
     def get_object(self, **kwargs: Any) -> dict[str, Any]: ...
+
+    def get_object_tagging(self, **kwargs: Any) -> dict[str, Any]: ...
 
     def delete_object(self, **kwargs: Any) -> dict[str, Any]: ...
 
@@ -99,6 +103,25 @@ class S3AttachmentStorage:
             metadata=_stringify_metadata(response.get("Metadata")),
         )
 
+    def get_tagging(self, key: str) -> dict[str, str] | None:
+        """Lee las etiquetas del objeto (solo lectura, AC-5).
+
+        Un ``ClientError`` (incluido ``AccessDenied`` por falta del permiso) o un
+        fallo de red devuelven ``None``: la página lo muestra como «No
+        disponible». El adaptador nunca llama a ``PutObjectTagging`` ni a
+        ``DeleteObjectTagging`` (las etiquetas solo las escribe GuardDuty).
+        """
+        try:
+            response = self.client.get_object_tagging(Bucket=self.bucket, Key=key)
+        except (ClientError, BotoCoreError):
+            return None
+        tag_set = response.get("TagSet") or []
+        return {
+            str(tag.get("Key")): str(tag.get("Value"))
+            for tag in tag_set
+            if isinstance(tag, dict) and tag.get("Key") is not None
+        }
+
     def delete(self, key: str) -> None:
         self.client.delete_object(Bucket=self.bucket, Key=key)
 
@@ -120,6 +143,10 @@ class DisabledAttachmentStorage:
         raise RuntimeError("Adjuntos deshabilitados")
 
     def get(self, key: str) -> StoredObject | None:
+        del key
+        return None
+
+    def get_tagging(self, key: str) -> dict[str, str] | None:
         del key
         return None
 

@@ -265,11 +265,19 @@
                 {% endif %}
               {% else %}
                 <div class="timeline-text">{{ item.text }}</div>
-                {% if item.attachments %}
+                {% if item.attachments or item.deleted_attachments %}
                   <div class="timeline-attachments">
                     {% for attachment in item.attachments %}
                       <div class="timeline-attachment">
-                        {% if attachment.attachment_type in ('png', 'jpg') %}
+                        {% if attachment.scan_status == 'scanning' %}
+                          <span class="attachment-scan-status">Escaneando: actualiza la pagina en unos segundos</span>
+                        {% elif attachment.scan_status == 'threat' %}
+                          <span class="attachment-scan-status">Bloqueado: se detecto una amenaza</span>
+                        {% elif attachment.scan_status == 'blocked' %}
+                          <span class="attachment-scan-status">Bloqueado: no se pudo escanear</span>
+                        {% elif attachment.scan_status == 'unavailable' %}
+                          <span class="attachment-scan-status">No disponible</span>
+                        {% elif attachment.attachment_type in ('png', 'jpg') %}
                           <img
                             class="timeline-attachment-img"
                             src="/leads/{{ selected_lead_id }}/adjuntos/{{ attachment.attachment_id }}"
@@ -277,7 +285,7 @@
                             loading="lazy"
                             onerror="this.hidden=true;this.nextElementSibling.hidden=false"
                           >
-                          <span class="attachment-deleted" hidden>adjunto eliminado</span>
+                          <span class="attachment-unavailable" hidden>Adjunto no disponible (en revision o bloqueado); actualiza la pagina</span>
                         {% else %}
                           <a
                             class="attachment-link"
@@ -285,6 +293,9 @@
                             target="_blank"
                             rel="noopener"
                           >Ver PDF</a>
+                          {% if attachment.attachment_type == 'pdfe' %}
+                            <span class="attachment-embedded-note">Contiene archivos incrustados: abrelo en el navegador</span>
+                          {% endif %}
                           <a
                             class="attachment-link"
                             href="/leads/{{ selected_lead_id }}/adjuntos/{{ attachment.attachment_id }}?descargar=1"
@@ -301,6 +312,11 @@
                             <button class="link-button attachment-delete-btn" type="submit">Eliminar</button>
                           </form>
                         {% endif %}
+                      </div>
+                    {% endfor %}
+                    {% for attachment in item.deleted_attachments %}
+                      <div class="timeline-attachment">
+                        <span class="attachment-deleted">Archivo eliminado</span>
                       </div>
                     {% endfor %}
                   </div>

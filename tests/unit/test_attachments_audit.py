@@ -25,6 +25,7 @@ def test_insert_append_only_with_verified_metadata() -> None:
             attachment_type="pdf",
             size=1024,
             sha256="a" * 64,
+            archivos_incrustados=False,
         )
 
     sql, params = cur.execute.call_args.args
@@ -41,6 +42,7 @@ def test_insert_append_only_with_verified_metadata() -> None:
     assert detalle["tamano"] == 1024
     assert detalle["sha256"] == "a" * 64
     assert detalle["codigo_rechazo"] is None
+    assert detalle["archivos_incrustados"] is False
 
 
 def test_rejection_detalle_carries_only_code_without_content() -> None:
@@ -52,12 +54,12 @@ def test_rejection_detalle_carries_only_code_without_content() -> None:
             id_lead="11111111-1111-1111-1111-111111111111",
             actor_subject="subject-ceo",
             attachment_id="",
-            rejection_code="unsafe_pdf",
+            rejection_code="pdf_encrypted",
         )
 
     _sql, params = cur.execute.call_args.args
     detalle = json.loads(params[5])
-    assert detalle["codigo_rechazo"] == "unsafe_pdf"
+    assert detalle["codigo_rechazo"] == "pdf_encrypted"
     assert detalle["tipo"] is None
     assert detalle["tamano"] is None
     assert detalle["sha256"] is None

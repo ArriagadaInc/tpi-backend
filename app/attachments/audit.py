@@ -32,6 +32,7 @@ def _detalle(
     size: int | None,
     sha256: str | None,
     rejection_code: str | None = None,
+    archivos_incrustados: bool | None = None,
 ) -> dict[str, Any]:
     """Construye el ``detalle`` versionado sin nombres de archivo ni contenido."""
     return {
@@ -42,6 +43,7 @@ def _detalle(
         "tamano": size,
         "sha256": sha256,
         "codigo_rechazo": rejection_code,
+        "archivos_incrustados": archivos_incrustados,
     }
 
 
@@ -55,6 +57,7 @@ def record_attachment_event(
     size: int | None = None,
     sha256: str | None = None,
     rejection_code: str | None = None,
+    archivos_incrustados: bool | None = None,
 ) -> None:
     """Inserta un evento append-only en ``tpi.auditoria`` para una acción de adjunto."""
     query = """
@@ -69,6 +72,7 @@ def record_attachment_event(
         size=size,
         sha256=sha256,
         rejection_code=rejection_code,
+        archivos_incrustados=archivos_incrustados,
     )
     with get_db_connection(operation="record_attachment_event") as conn:
         try:

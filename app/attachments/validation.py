@@ -3,8 +3,14 @@
 El tipo lo decide el contenido, nunca la extensión ni el ``Content-Type``
 declarado por el cliente. Solo se leen las dimensiones de los encabezados de las
 imágenes (sin decodificar píxeles). Un resultado válido devuelve el tipo
-verificado (``pdf``, ``png`` o ``jpg``), el tamaño y el SHA-256; un rechazo
-devuelve un código estable, sin texto del usuario ni contenido.
+verificado (``pdf``, ``pdfe``, ``png`` o ``jpg``), el tamaño y el SHA-256; un
+rechazo devuelve un código estable, sin texto del usuario ni contenido.
+
+Un PDF con archivos incrustados (nombre exacto ``/EmbeddedFile``) se acepta con
+tipo ``pdfe`` cuando ``allow_pdf_embedded_files`` es verdadero (decisión 9 del
+humano); con falso se rechaza con el código ``pdf_embedded_files``. JavaScript,
+``/Launch`` y los PDF cifrados se rechazan siempre, aunque el PDF traiga
+archivos incrustados.
 """
 
 from __future__ import annotations
@@ -22,6 +28,7 @@ PDF_EOF_SCAN_BYTES = 1024
 # Content-Type servido según el tipo verificado. Nunca el tipo declarado.
 ATTACHMENT_MIME_TYPES = {
     "pdf": "application/pdf",
+    "pdfe": "application/pdf",
     "png": "image/png",
     "jpg": "image/jpeg",
 }
@@ -30,8 +37,11 @@ _EMPTY_FILE = "empty_file"
 _TOO_LARGE = "too_large"
 _UNSUPPORTED_TYPE = "unsupported_type"
 _INVALID_CONTENT = "invalid_content"
-_UNSAFE_PDF = "unsafe_pdf"
 _TOO_MANY_PIXELS = "too_many_pixels"
+_PDF_ENCRYPTED = "pdf_encrypted"
+_PDF_JAVASCRIPT = "pdf_javascript"
+_PDF_LAUNCH = "pdf_launch"
+_PDF_EMBEDDED_FILES = "pdf_embedded_files"
 
 _PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 _PNG_IEND = b"IEND"
@@ -57,8 +67,19 @@ _JPEG_SOF_MARKERS = frozenset(
     }
 )
 
-# Nombres de PDF prohibidos por llevar partes activas o cifrado.
-_FORBIDDEN_PDF_TOKENS = ("/JS", "/JavaScript", "/Launch", "/EmbeddedFile", "/Encrypt")
+# Nombres de PDF que terminan un nombre en espacio, delimitador de PDF o fin de
+# datos. Cada uno se asocia a su código de rechazo específico (AC-1).
+_PDF_FORBIDDEN_NAMES = {
+    "JS": _PDF_JAVASCRIPT,
+    "JavaScript": _PDF_JAVASCRIPT,
+    "Launch": _PDF_LAUNCH,
+    "Encrypt": _PDF_ENCRYPTED,
+}
+_PDF_EMBEDDED_FILE_NAME = "EmbeddedFile"
+
+# Delimitadores de un nombre de PDF (especificación PDF 1.7, tabla 3.2).
+_PDF_NAME_DELIMITERS = frozenset(b"()<>[]{}/%")
+_PDF_WHITESPACE = frozenset(b"\x00\t\n\x0c\r ")
 
 
 class AttachmentValidationError(ValueError):
@@ -73,18 +94,20 @@ class AttachmentValidationError(ValueError):
 class ValidatedAttachment:
     """Adjunto verificado por contenido, listo para almacenar."""
 
-    attachment_type: str  # "pdf" | "png" | "jpg"
+    attachment_type: str  # "pdf" | "pdfe" | "png" | "jpg"
     size: int
     sha256: str
     content: bytes
 
 
-def validate_attachment_content(content: bytes) -> ValidatedAttachment:
+def validate_attachment_content(
+    content: bytes, *, allow_pdf_embedded_files: bool = True
+) -> ValidatedAttachment:
     """Valida el contenido y devuelve el adjunto verificado, o rechaza.
 
     Orden de los rechazos (AC-2): archivo vacío, más de 10 MiB, tipo no
     permitido, firma válida con estructura inválida/truncada, imagen con
-    dimensiones sobre el tope y PDF con partes activas.
+    dimensiones sobre el tope y PDF con partes activas o cifrado.
     """
     if not content:
         raise AttachmentValidationError(_EMPTY_FILE)
@@ -96,7 +119,8 @@ def validate_attachment_content(content: bytes) -> ValidatedAttachment:
         raise AttachmentValidationError(_UNSUPPORTED_TYPE)
 
     if attachment_type == "pdf":
-        _validate_pdf(content)
+        if _pdf_has_embedded_files(content, allow_embedded_files=allow_pdf_embedded_files):
+            attachment_type = "pdfe"
     elif attachment_type == "png":
         width, height = _png_dimensions(content)
         _enforce_pixel_limit(width, height)
@@ -197,39 +221,65 @@ def _jpeg_dimensions(content: bytes) -> tuple[int, int] | None:
     return None
 
 
-def _validate_pdf(content: bytes) -> None:
-    """Rechaza PDF truncado o con partes activas / cifrado (AC-2)."""
+def _pdf_has_embedded_files(content: bytes, *, allow_embedded_files: bool) -> bool:
+    """Rechaza PDF truncado o con partes activas / cifrado y devuelve si trae incrustados.
+
+    Rechaza un PDF sin ``%%EOF`` al final, y los que traen los nombres exactos
+    ``/JS``, ``/JavaScript``, ``/Launch`` o ``/Encrypt`` (con sus escapes ``#xx``
+    ya decodificados y respetando dónde termina cada nombre). ``/EmbeddedFile``
+    (nombre exacto) solo se acepta cuando ``allow_embedded_files`` es verdadero;
+    en ese caso devuelve ``True`` para marcarlo como ``pdfe``.
+    """
     if b"%%EOF" not in content[-PDF_EOF_SCAN_BYTES:]:
         raise AttachmentValidationError(_INVALID_CONTENT)
 
-    decoded = _decode_pdf_name_escapes(content)
-    for token in _FORBIDDEN_PDF_TOKENS:
-        if token in decoded:
-            raise AttachmentValidationError(_UNSAFE_PDF)
+    has_embedded_files = False
+    for name in _pdf_names(content):
+        if name in _PDF_FORBIDDEN_NAMES:
+            raise AttachmentValidationError(_PDF_FORBIDDEN_NAMES[name])
+        if name == _PDF_EMBEDDED_FILE_NAME:
+            has_embedded_files = True
+
+    if has_embedded_files and not allow_embedded_files:
+        raise AttachmentValidationError(_PDF_EMBEDDED_FILES)
+    return has_embedded_files
 
 
-def _decode_pdf_name_escapes(content: bytes) -> str:
-    """Decodifica los escapes ``#xx`` de los nombres de PDF antes de comparar.
+def _pdf_names(content: bytes) -> list[str]:
+    """Devuelve los nombres de PDF decodificados (escapes ``#xx`` ya resueltos).
 
-    Un nombre como ``/J#53`` representa ``/JS`` (0x53 = 'S'); se decodifica a
-    ``latin-1`` para conservar el byte exacto y detectar los tokens prohibidos.
+    Un nombre empieza en ``/`` y termina en un espacio, un delimitador de PDF
+    (``( ) < > [ ] { } / %``) o el fin de los datos, de modo que ``/JS``,
+    ``/JS(...)``, ``/JS<<``, ``/JS/Otro`` y ``/JS`` al final calzan como ``JS``,
+    pero ``/JSON`` o ``/EmbeddedFiles`` no se confunden con los prohibidos.
     """
-    output = bytearray()
+    names: list[str] = []
     index = 0
     while index < len(content):
-        byte = content[index]
-        if (
-            byte == 0x23  # '#'
-            and index + 2 < len(content)
-            and _is_hex(content[index + 1])
-            and _is_hex(content[index + 2])
-        ):
-            output.append(int(content[index + 1 : index + 3], 16))
-            index += 3
+        if content[index] != 0x2F:  # '/'
+            index += 1
             continue
-        output.append(byte)
+
         index += 1
-    return output.decode("latin-1")
+        name = bytearray()
+        while index < len(content):
+            byte = content[index]
+            if byte in _PDF_NAME_DELIMITERS or byte in _PDF_WHITESPACE:
+                break
+            if (
+                byte == 0x23  # '#'
+                and index + 2 < len(content)
+                and _is_hex(content[index + 1])
+                and _is_hex(content[index + 2])
+            ):
+                name.append(int(content[index + 1 : index + 3], 16))
+                index += 3
+                continue
+            name.append(byte)
+            index += 1
+        if name:
+            names.append(name.decode("latin-1"))
+    return names
 
 
 def _is_hex(byte: int) -> bool:

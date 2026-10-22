@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import secrets
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, cast
 from urllib.parse import parse_qs, urlencode, urlsplit
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
@@ -132,7 +133,7 @@ def _can_cleanup(user: AuthenticatedUser | None) -> bool:
     return is_superuser(user.role) or user.role in _CLEANUP_ROLES
 
 
-_ATTACHMENT_EXTENSIONS = {"pdf": "pdf", "png": "png", "jpg": "jpg"}
+_ATTACHMENT_EXTENSIONS = {"pdf": "pdf", "pdfe": "pdf", "png": "png", "jpg": "jpg"}
 
 
 def _attachments_enabled(request: Request) -> bool:
@@ -140,9 +141,64 @@ def _attachments_enabled(request: Request) -> bool:
     return bool(getattr(settings, "attachments_enabled", False))
 
 
+def _attachments_allow_pdf_embedded_files(request: Request) -> bool:
+    settings = getattr(request.app.state, "settings", None)
+    return bool(getattr(settings, "attachments_allow_pdf_embedded_files", True))
+
+
 def _attachment_not_found() -> PlainTextResponse:
-    """404 genérico para todas las causas de adjunto no disponible (AC-6)."""
+    """404 genérico para las causas de adjunto no disponible en el borrado."""
     return PlainTextResponse("No disponible", status_code=404)
+
+
+def _attachment_unavailable_page() -> HTMLResponse:
+    """Página amable para un adjunto no disponible (AC-6).
+
+    La misma respuesta para un lead no visible, un uuid sin marca y un objeto
+    no disponible: no revela cuál de las causas aplica.
+    """
+    return HTMLResponse(
+        "<!doctype html><html lang='es'><head><meta charset='utf-8'>"
+        "<title>Adjunto no disponible</title></head><body>"
+        "<p>Este adjunto no esta disponible: puede estar escaneandose, "
+        "bloqueado o eliminado.</p></body></html>",
+        status_code=404,
+        headers={
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+_ATTACHMENT_REJECTION_REASONS = {
+    "empty_file": "el archivo esta vacio",
+    "too_large": "supera el limite de 10 MB",
+    "unsupported_type": "el tipo no esta permitido (solo PDF, PNG y JPEG)",
+    "invalid_content": "el contenido esta danado o incompleto",
+    "too_many_pixels": "la imagen tiene dimensiones excesivas",
+    "pdf_encrypted": "PDF cifrado",
+    "pdf_javascript": "PDF con JavaScript o acciones automaticas",
+    "pdf_launch": "PDF con acciones automaticas",
+    "pdf_embedded_files": "PDF con archivos incrustados",
+}
+
+_PDF_RESAVE_SUGGESTION = "vuelve a guardarlo con «Imprimir y Guardar como PDF»"
+
+
+def _attachment_rejection_reason(code: str) -> str:
+    reason = _ATTACHMENT_REJECTION_REASONS.get(code, "no es valido")
+    if code in {"pdf_encrypted", "pdf_javascript", "pdf_launch"}:
+        return f"{reason}; {_PDF_RESAVE_SUGGESTION}"
+    return reason
+
+
+def _build_attachment_rejection_message(rejections: list[tuple[int, int, str]]) -> str:
+    """Arma el mensaje con la posición y el motivo de cada archivo rechazado (AC-1)."""
+    parts = [
+        f"Archivo {position} de {total}: {_attachment_rejection_reason(code)}"
+        for position, total, code in rejections
+    ]
+    return "No se subio ningun archivo. " + "; ".join(parts) + "."
 
 
 def _attachment_download_filename(verified_type: str) -> str:
@@ -153,7 +209,7 @@ def _attachment_download_filename(verified_type: str) -> str:
 def _attachment_content_security_policy(verified_type: str) -> str:
     # El visor de PDF integrado del navegador no funciona con sandbox (AC-6);
     # la excepción queda documentada en docs/ADJUNTOS_COMENTARIOS_DISENO.md.
-    if verified_type == "pdf":
+    if verified_type in ("pdf", "pdfe"):
         return "default-src 'none'"
     return "default-src 'none'; sandbox"
 
@@ -404,6 +460,38 @@ def _build_detail_redirect_url_from_value(lead_id: str, return_to: str | None) -
     return _build_query_url(f"/leads/{lead_id}", {"return_to": clean_return_to})
 
 
+_SCAN_STATUS_WINDOW = timedelta(minutes=30)
+_SCAN_STATUS_MAX_QUERIES = 20
+_SCAN_STATUS_TZ = ZoneInfo("America/Santiago")
+
+
+def _attach_attachment_scan_statuses(
+    service: Any, lead_id: str, timeline_items: list[dict[str, Any]]
+) -> None:
+    """Lee la etiqueta de GuardDuty de los adjuntos recientes, con tope (AC-5).
+
+    Solo los adjuntos de notas de los últimos 30 minutos (hora de la cabecera de
+    la nota, America/Santiago) consultan S3; los más antiguos conservan la imagen
+    o el enlace sin tocar S3. Nunca se superan 20 consultas por página.
+    """
+    now = datetime.now(_SCAN_STATUS_TZ)
+    queries = 0
+    for item in timeline_items:
+        if item["kind"] != "note":
+            continue
+        note_ts = item["timestamp"]
+        if now - note_ts > _SCAN_STATUS_WINDOW:
+            continue
+        for attachment in item["attachments"]:
+            if queries >= _SCAN_STATUS_MAX_QUERIES:
+                return
+            getter = getattr(service, "get_attachment_scan_status", None)
+            if getter is None:
+                return
+            attachment["scan_status"] = getter(lead_id, attachment["attachment_id"])
+            queries += 1
+
+
 def _resolve_detail_context(
     request: Request,
     lead_id: str,
@@ -434,6 +522,8 @@ def _resolve_detail_context(
         timeline_items = build_timeline_items(
             events, parsed_comments.notes, state_changes, simulations
         )
+        if _attachments_enabled(request):
+            _attach_attachment_scan_statuses(service, lead_id, timeline_items)
 
     app_settings = getattr(request.app.state, "settings", None)
     cutover = getattr(app_settings, "lead_state_history_cutover", None)
@@ -852,12 +942,16 @@ async def lead_comment_append(request: Request, lead_id: str):
             max_fields=30,
             max_part_size=MAX_ATTACHMENT_BYTES + 1,
         )
-    except MultiPartException:
+    except MultiPartException as exc:
+        if "Too many files" in str(getattr(exc, "message", "")):
+            error_message = "Superaste el maximo de 5 archivos."
+        else:
+            error_message = "Un archivo excede el limite de 10 MB."
         context, _ = _resolve_detail_context(
             request,
             lead_id,
             lead_not_found=False,
-            error_message="Demasiados archivos o un archivo excede el limite permitido.",
+            error_message=error_message,
         )
         return request.app.state.templates.TemplateResponse(
             request,
@@ -977,17 +1071,30 @@ async def lead_comment_append(request: Request, lead_id: str):
                 )
 
     attachments: list[ValidatedAttachment] = []
-    try:
-        for upload in files:
-            content = await upload.read()
-            attachments.append(validate_attachment_content(content))
-    except AttachmentValidationError as exc:
-        service.audit_attachment_rejection(lead_id, actor=user, rejection_code=exc.code)
+    rejections: list[tuple[int, int, str]] = []
+    total_files = len(files)
+    for position, upload in enumerate(files, start=1):
+        content = await upload.read()
+        try:
+            attachments.append(
+                validate_attachment_content(
+                    content,
+                    allow_pdf_embedded_files=_attachments_allow_pdf_embedded_files(request),
+                )
+            )
+        except AttachmentValidationError as exc:
+            rejections.append((position, total_files, exc.code))
+
+    # Todo o nada: si falla uno, no se sube ninguno y se informan todos los
+    # fallos juntos, cada uno con su posición y su motivo concreto (AC-1).
+    if rejections:
+        for _position, _total, code in rejections:
+            service.audit_attachment_rejection(lead_id, actor=user, rejection_code=code)
         context, _ = _resolve_detail_context(
             request,
             lead_id,
             lead_not_found=False,
-            error_message="Uno de los archivos no es valido.",
+            error_message=_build_attachment_rejection_message(rejections),
         )
         return request.app.state.templates.TemplateResponse(
             request,
@@ -1003,12 +1110,12 @@ async def lead_comment_append(request: Request, lead_id: str):
             attachments,
             actor=user,
         )
-    except AttachmentValidationError:
+    except AttachmentValidationError as exc:
         context, _ = _resolve_detail_context(
             request,
             lead_id,
             lead_not_found=False,
-            error_message="Uno de los archivos no es valido.",
+            error_message=_attachment_rejection_reason(exc.code),
         )
         return request.app.state.templates.TemplateResponse(
             request,
@@ -1057,23 +1164,23 @@ def attachment_view_or_download(request: Request, lead_id: str, attachment_uuid:
     if not _require_web_user(request):
         return RedirectResponse(url="/login", status_code=307)
     if not _attachments_enabled(request):
-        return _attachment_not_found()
+        return _attachment_unavailable_page()
 
     try:
         parsed_uuid = UUID(str(attachment_uuid).strip())
     except (ValueError, AttributeError):
-        return _attachment_not_found()
+        return _attachment_unavailable_page()
 
     user = _require_web_user(request)
     service = _resolve_service(request)
     as_download = _parse_flag(request.query_params.get("descargar"))
     stored = service.get_attachment(lead_id, parsed_uuid, actor=user, as_download=as_download)
     if stored is None:
-        return _attachment_not_found()
+        return _attachment_unavailable_page()
 
     verified_type = stored.metadata.get("verified_type")
     if verified_type not in ATTACHMENT_MIME_TYPES:
-        return _attachment_not_found()
+        return _attachment_unavailable_page()
 
     disposition_type = "attachment" if as_download else "inline"
     return Response(

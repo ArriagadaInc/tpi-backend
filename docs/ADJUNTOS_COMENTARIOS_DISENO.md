@@ -41,18 +41,20 @@ consultas interpretan con una expresión regular). No hay tabla de comentarios n
 | El archivo | Objeto S3 con clave `leads/<id_lead>/<uuid>`; el `uuid` lo genera el servidor |
 | Tipo verificado, tamaño, SHA-256, quién lo subió y cuándo | Metadatos del objeto S3 (sin el nombre original) |
 | Si pasó el antivirus | Etiqueta `GuardDutyMalwareScanStatus` que pone GuardDuty; una política del bucket **deniega `GetObject` si la etiqueta no es `NO_THREATS_FOUND`** |
-| A qué nota pertenece | Una marca que agrega el servidor al final de la nota: `[adjunto:<tipo>:<uuid>]`, con `<tipo>` = `pdf`, `png` o `jpg` |
-| Quién subió, vio, descargó o borró qué | Eventos en `tpi.auditoria` (`adjunto_subido`, `adjunto_visto`, `adjunto_descargado`, `adjunto_rechazado`, `adjunto_eliminado`; `tabla_afectada` = `tpi.leads`; `detalle` con el sujeto, el `uuid`, el tipo, el tamaño y el SHA-256; nunca nombres ni contenido) |
-| Borrado | Se borra el objeto; la marca queda en la nota y se muestra como «adjunto eliminado» |
+| A qué nota pertenece | Una marca que agrega el servidor al final de la nota: `[adjunto:<tipo>:<uuid>]`, con `<tipo>` = `pdf`, `png`, `jpg` o `pdfe` (marca de un PDF con archivos incrustados, decisión 9) |
+| Quién subió, vio, descargó o borró qué | Eventos en `tpi.auditoria` (`adjunto_subido`, `adjunto_visto`, `adjunto_descargado`, `adjunto_rechazado`, `adjunto_eliminado`; `tabla_afectada` = `tpi.leads`; `detalle` con el sujeto, el `uuid`, el tipo, el tamaño, el SHA-256 y, para las subidas, el dato `archivos_incrustados`; nunca nombres ni contenido) |
+| Borrado | Se borra el objeto y se reemplaza su marca por `[adjunto-eliminado:<tipo>:<uuid>]` en la misma nota, que se muestra como «Archivo eliminado» |
 
 Reglas de la marca:
 
 - La agrega solo el servidor; se excluye del tope de 1000 caracteres y se permiten hasta 5 por nota. La nota con adjuntos
   sigue exigiendo texto.
-- Se interpreta con una expresión regular estricta (`pdf|png|jpg` y un UUID); lo que no calza es texto normal.
+- Se interpreta con una expresión regular estricta (`pdf|png|jpg|pdfe` y un UUID); lo que no calza es texto normal.
+  La marca de eliminado es `[adjunto-eliminado:<tipo>:<uuid>]` y se interpreta por separado (no es un adjunto activo).
 - Que alguien escriba una marca a mano no da acceso a nada: la clave se arma con el lead de la ruta y el `uuid`, y la
   visibilidad del lead se comprueba primero.
-- Hay que ocultar las marcas en la vista del lead, en los resúmenes del dashboard y en la exportación a Excel.
+- Hay que ocultar las marcas (activas y de eliminado) en la vista del lead, en los resúmenes del dashboard y en la
+  exportación a Excel.
 
 El diseño de la primera versión usaba una tabla; se descartó porque obligaba a una migración de clase D, permisos, un script de
 aplicación y un antivirus propio, a cambio de datos que ya tienen hogar mejor. `tpi.auditoria` no se usa como registro de
@@ -67,9 +69,12 @@ renombrar, describir o reportar adjuntos, se migra a una tabla con los datos de 
 
 1. **Validar por contenido.** Firma del archivo (PNG, JPEG, `%PDF-`) y estructura mínima válida. El tipo que se
    guarda y se sirve es el verificado, nunca el declarado por el cliente. Se rechaza todo lo demás.
-2. **PDF sin partes activas.** Se rechazan los PDF con JavaScript, acciones de lanzamiento (`/Launch`) o cifrados
-   (`/Encrypt`). Los archivos incrustados (`/EmbeddedFile`) se rechazaban en la primera versión y se aceptan desde la
-   decisión 9, con condiciones (sección 5).
+2. **PDF sin partes activas.** Se rechazan los PDF con JavaScript (`/JS`, `/JavaScript`), acciones de lanzamiento
+   (`/Launch`) o cifrados (`/Encrypt`), con códigos por causa (`pdf_javascript`, `pdf_launch`, `pdf_encrypted`); la
+   búsqueda respeta dónde termina cada nombre (espacio, delimitador de PDF o fin de datos, tras decodificar los escapes
+   `#xx`), de modo que `/JSON` o `/EmbeddedFiles` no se confunden con los prohibidos. Los archivos incrustados
+   (`/EmbeddedFile`) se aceptan desde la decisión 9 (marca `pdfe`) salvo que `ATTACHMENTS_ALLOW_PDF_EMBEDDED_FILES` sea
+   falso, en cuyo caso se rechazan con `pdf_embedded_files`.
 3. **Imágenes: solo el encabezado.** Se leen las dimensiones sin decodificar los píxeles, con un tope de píxeles y de
    tamaño (protege de «bombas de descompresión»). No se re-codifican en la primera versión (decisión 8). Nunca se
    decodifica una imagen completa de un usuario dentro de la petición web.
@@ -128,7 +133,7 @@ Al implementar, se deja constancia en `docs/SEGURIDAD.md`.
 - Los adjuntos pertenecen al lead. La limpieza de leads de prueba en DEV borra también sus objetos (se encuentran por las marcas
   de la nota).
 - La eliminación a solicitud del titular borra el objeto y deja un evento de auditoría sin contenido; la marca de la nota
-  se muestra como «adjunto eliminado».
+  se reemplaza por `[adjunto-eliminado:<tipo>:<uuid>]` y se muestra como «Archivo eliminado».
 - Sin expiración automática en la primera versión. El plazo definitivo (y si corresponde una expiración) lo
   decide el humano con asesoría legal.
 
@@ -143,12 +148,14 @@ El paso 2 nace de clase C porque agrega variables al compose de despliegue (`dep
 tras el merge pasa por `BLOCKED_HUMAN` y el humano resuelve hacia `PREPARING_DEPLOYMENT`, como en `SEG-DESACOPLAR-STREAMLIT`.
 
 **Implementación (módulos y acciones de auditoría).** La validación por contenido vive en
-`app/attachments/validation.py`, las marcas en `app/attachments/marks.py`, el adaptador S3 inyectable en
-`app/attachments/storage.py` (patrón de `app/notifications/sns.py`) y el escritor append-only en
-`app/attachments/audit.py`. Las rutas están en `app/web/routes/leads.py` (subida en `POST /leads/{id}/comments`
-multipart, vista/descarga en `GET /leads/{id}/adjuntos/{uuid}` y borrado en `POST /leads/{id}/adjuntos/{uuid}/eliminar`)
-y la orquestación en `app/services/solicitud_service.py`. Las acciones de auditoría son `adjunto_subido`,
-`adjunto_rechazado`, `adjunto_visto`, `adjunto_descargado` y `adjunto_eliminado` (`tabla_afectada` = `tpi.leads`).
+`app/attachments/validation.py`, las marcas (activas y de eliminado) en `app/attachments/marks.py`, el adaptador S3 inyectable en
+`app/attachments/storage.py` (patrón de `app/notifications/sns.py`, con `get_tagging` de solo lectura para el estado del escaneo) y
+el escritor append-only en `app/attachments/audit.py`. Las rutas están en `app/web/routes/leads.py` (subida en
+`POST /leads/{id}/comments` multipart, vista/descarga en `GET /leads/{id}/adjuntos/{uuid}` y borrado en
+`POST /leads/{id}/adjuntos/{uuid}/eliminar`) y la orquestación en `app/services/solicitud_service.py`. Las acciones de auditoría son
+`adjunto_subido`, `adjunto_rechazado`, `adjunto_visto`, `adjunto_descargado` y `adjunto_eliminado` (`tabla_afectada` = `tpi.leads`);
+el detalle de `adjunto_subido` lleva `archivos_incrustados` y el de `adjunto_rechazado` el código por causa (`pdf_encrypted`,
+`pdf_javascript`, `pdf_launch`, `pdf_embedded_files`).
 
 ## 8. Preguntas abiertas
 

@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
+import pytest
+
 from app.attachments.storage import StoredObject
 from app.attachments.validation import ValidatedAttachment
 from app.auth.models import AuthenticatedUser
@@ -40,9 +42,12 @@ def _user(role: str = "ceo", *, advisor_id: UUID | None = None) -> Authenticated
 class _FakeStorage:
     def __init__(self) -> None:
         self.objects: dict[str, StoredObject] = {}
+        self.tags: dict[str, dict[str, str]] = {}
         self.put_calls: list[str] = []
         self.get_calls: list[str] = []
         self.delete_calls: list[str] = []
+        self.tagging_calls: list[str] = []
+        self.delete_raises: Exception | None = None
 
     def put(self, key: str, body: bytes, *, content_type: str, metadata: dict[str, str]) -> None:
         self.put_calls.append(key)
@@ -52,7 +57,13 @@ class _FakeStorage:
         self.get_calls.append(key)
         return self.objects.get(key)
 
+    def get_tagging(self, key: str) -> dict[str, str] | None:
+        self.tagging_calls.append(key)
+        return self.tags.get(key)
+
     def delete(self, key: str) -> None:
+        if self.delete_raises is not None:
+            raise self.delete_raises
         self.delete_calls.append(key)
         self.objects.pop(key, None)
 
@@ -81,6 +92,13 @@ class _FakeRepo:
     ) -> bool:
         self.comments.append((id_lead, fragment, advisor_scope))
         return self.append_result
+
+    def replace_attachment_mark(self, id_lead: UUID, old_mark: str, new_mark: str) -> bool:
+        current = str(self.lead.get("comentarios") or "")
+        if old_mark not in current:
+            return False
+        self.lead["comentarios"] = current.replace(old_mark, new_mark)
+        return True
 
     def lead_active_assignment_belongs_to(self, id_lead: UUID, id_asesor: UUID) -> bool:
         return self.owned
@@ -148,6 +166,28 @@ def test_append_with_attachments_uploads_appends_and_audits() -> None:
     assert len(audit) == 1
     assert audit[0]["accion"] == "adjunto_subido"
     assert audit[0]["attachment_type"] == "pdf"
+    assert audit[0]["archivos_incrustados"] is False
+
+
+def test_append_with_embedded_files_pdf_marks_pdfe_and_audits_flag() -> None:
+    service, repo, storage, audit = _service()
+    embedded = ValidatedAttachment(
+        attachment_type="pdfe",
+        size=len(PDF_CONTENT),
+        sha256="a" * 64,
+        content=PDF_CONTENT,
+    )
+    updated = service.append_lead_comment_with_attachments(
+        LEAD_ID,
+        "Nota con PDF incrustado",
+        [embedded],
+        actor=_user("ceo"),
+    )
+    assert updated is True
+    assert "[adjunto:pdfe:" in repo.comments[0][1]
+    assert audit[0]["accion"] == "adjunto_subido"
+    assert audit[0]["attachment_type"] == "pdfe"
+    assert audit[0]["archivos_incrustados"] is True
 
 
 def test_append_with_attachments_advisor_non_owned_makes_no_s3_call() -> None:
@@ -251,8 +291,26 @@ def test_delete_attachment_deletes_and_audits() -> None:
     assert service.delete_attachment(LEAD_ID, ATTACH_ID, actor=_user("ceo")) is True
     assert storage.delete_calls == [key]
     assert audit[0]["accion"] == "adjunto_eliminado"
-    # La marca queda en la nota.
-    assert "[adjunto:pdf:" in repo.lead["comentarios"]
+    # La marca se reemplaza por la de eliminado dentro de la nota (AC-4).
+    assert "[adjunto:pdf:" not in repo.lead["comentarios"]
+    assert f"[adjunto-eliminado:pdf:{ATTACH_ID}]" in repo.lead["comentarios"]
+
+
+def test_delete_attachment_s3_failure_does_not_touch_note() -> None:
+    service, repo, storage, audit = _service()
+    repo.lead["comentarios"] = f"Nota\n[adjunto:pdf:{ATTACH_ID}]"
+    key = f"leads/{LEAD_ID}/{ATTACH_ID}"
+    storage.objects[key] = StoredObject(
+        content=PDF_CONTENT,
+        content_type="application/pdf",
+        metadata={"verified_type": "pdf", "size": "1", "sha256": "a" * 64},
+    )
+    storage.delete_raises = RuntimeError("s3 down")
+    with pytest.raises(RuntimeError):
+        service.delete_attachment(LEAD_ID, ATTACH_ID, actor=_user("ceo"))
+    # La nota no cambia y no se audita (AC-4).
+    assert repo.lead["comentarios"] == f"Nota\n[adjunto:pdf:{ATTACH_ID}]"
+    assert audit == []
 
 
 def test_delete_attachment_requires_full_pii_role() -> None:
@@ -263,8 +321,38 @@ def test_delete_attachment_requires_full_pii_role() -> None:
     assert audit == []
 
 
+@pytest.mark.parametrize(
+    ("tags", "expected"),
+    [
+        (None, "unavailable"),
+        ({}, "scanning"),
+        ({"GuardDutyMalwareScanStatus": "NO_THREATS_FOUND"}, "clean"),
+        ({"GuardDutyMalwareScanStatus": "THREATS_FOUND"}, "threat"),
+        ({"GuardDutyMalwareScanStatus": "UNSUPPORTED"}, "blocked"),
+        ({"GuardDutyMalwareScanStatus": "FAILED"}, "blocked"),
+        ({"GuardDutyMalwareScanStatus": "ACCESS_DENIED"}, "blocked"),
+    ],
+)
+def test_get_attachment_scan_status_maps_tag(tags: dict[str, str] | None, expected: str) -> None:
+    service, _, storage, _ = _service()
+    key = f"leads/{LEAD_ID}/{ATTACH_ID}"
+    if tags is None:
+        storage.tags.pop(key, None)
+    else:
+        storage.tags[key] = tags
+    assert service.get_attachment_scan_status(LEAD_ID, ATTACH_ID) == expected
+
+
+def test_get_attachment_scan_status_reads_only_its_tag() -> None:
+    service, _, storage, _ = _service()
+    key = f"leads/{LEAD_ID}/{ATTACH_ID}"
+    storage.tags[key] = {"GuardDutyMalwareScanStatus": "NO_THREATS_FOUND", "otra": "x"}
+    assert service.get_attachment_scan_status(LEAD_ID, ATTACH_ID) == "clean"
+    assert storage.tagging_calls == [key]
+
+
 def test_audit_attachment_rejection_audits_code_only() -> None:
     service, _, _, audit = _service()
-    service.audit_attachment_rejection(LEAD_ID, actor=_user("ceo"), rejection_code="unsafe_pdf")
+    service.audit_attachment_rejection(LEAD_ID, actor=_user("ceo"), rejection_code="pdf_encrypted")
     assert audit[0]["accion"] == "adjunto_rechazado"
-    assert audit[0]["rejection_code"] == "unsafe_pdf"
+    assert audit[0]["rejection_code"] == "pdf_encrypted"

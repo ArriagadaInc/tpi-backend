@@ -7,8 +7,11 @@ privado en S3 detrás de una interfaz inyectable y auditoría append-only.
 from app.attachments.marks import (
     AttachmentMark,
     build_attachment_mark,
+    build_deleted_attachment_mark,
     match_full_attachment_mark,
+    match_full_deleted_attachment_mark,
     parse_attachment_marks,
+    parse_deleted_attachment_marks,
     strip_attachment_marks,
 )
 from app.attachments.storage import (
@@ -44,8 +47,11 @@ __all__ = [
     "ValidatedAttachment",
     "build_attachment_mark",
     "build_attachment_storage",
+    "build_deleted_attachment_mark",
     "match_full_attachment_mark",
+    "match_full_deleted_attachment_mark",
     "parse_attachment_marks",
+    "parse_deleted_attachment_marks",
     "strip_attachment_marks",
     "validate_attachment_content",
 ]

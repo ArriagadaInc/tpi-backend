@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 from app.attachments.marks import (
     AttachmentMark,
     match_full_attachment_mark,
+    match_full_deleted_attachment_mark,
     strip_attachment_marks,
 )
 
@@ -23,6 +24,7 @@ class FollowUpNote:
     author: str
     text: str
     attachments: tuple[AttachmentMark, ...] = ()
+    deleted_attachments: tuple[AttachmentMark, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,16 +74,25 @@ def _parse_follow_up_block(block: str) -> FollowUpNote | None:
 
     body_lines = lines[1:]
     # Las marcas del servidor van al final, cada una en su propia línea; se
-    # extraen solo las líneas finales que son exactamente una marca válida.
+    # extraen solo las líneas finales que son exactamente una marca válida
+    # (activa o de eliminado), conservando el orden.
     mark_lines: list[AttachmentMark] = []
+    deleted_mark_lines: list[AttachmentMark] = []
     text_end = len(body_lines)
     while text_end > 0:
         mark = match_full_attachment_mark(body_lines[text_end - 1])
-        if mark is None:
-            break
-        mark_lines.append(mark)
-        text_end -= 1
+        if mark is not None:
+            mark_lines.append(mark)
+            text_end -= 1
+            continue
+        deleted = match_full_deleted_attachment_mark(body_lines[text_end - 1])
+        if deleted is not None:
+            deleted_mark_lines.append(deleted)
+            text_end -= 1
+            continue
+        break
     mark_lines.reverse()
+    deleted_mark_lines.reverse()
 
     text = "\n".join(body_lines[:text_end]).strip()
     text = strip_attachment_marks(text)
@@ -90,6 +101,7 @@ def _parse_follow_up_block(block: str) -> FollowUpNote | None:
         author=match.group(2).strip(),
         text=text,
         attachments=tuple(mark_lines),
+        deleted_attachments=tuple(deleted_mark_lines),
     )
 
 
@@ -181,7 +193,21 @@ def build_timeline_items(
                 "display_time": note.timestamp,
                 "author": note.author,
                 "text": note.text,
-                "attachments": note.attachments,
+                "attachments": [
+                    {
+                        "attachment_type": mark.attachment_type,
+                        "attachment_id": mark.attachment_id,
+                        "scan_status": None,
+                    }
+                    for mark in note.attachments
+                ],
+                "deleted_attachments": [
+                    {
+                        "attachment_type": mark.attachment_type,
+                        "attachment_id": mark.attachment_id,
+                    }
+                    for mark in note.deleted_attachments
+                ],
             }
         )
 
