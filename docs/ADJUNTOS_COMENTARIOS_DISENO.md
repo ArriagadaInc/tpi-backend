@@ -159,6 +159,11 @@ el detalle de `adjunto_subido` lleva `archivos_incrustados` y el de `adjunto_rec
 
 ## 8. Preguntas abiertas
 
+**Revisión previa a producción.** Los seis puntos que quedaron abiertos el 2026-10-21 (archivos
+incrustados, visibilidad, EXIF/GPS, retención y borrado, costo de GuardDuty y streams comprimidos) se
+preparan para la decisión del humano en [`ADJUNTOS_REVISION_PREPROD.md`](ADJUNTOS_REVISION_PREPROD.md),
+junto con el script de solo lectura `scripts/adjuntos_revision_preprod.py` para medir el uso real.
+
 - Plazo definitivo de retención y si se agrega una expiración automática.
 - Costo real de GuardDuty Malware Protection for S3 (la tarifa por GB está publicada; la de por objeto en `us-east-2` hay que confirmarla).
   Resuelto el 2026-10-21: el plan se creó sin necesitar un detector de GuardDuty activo.
