@@ -938,7 +938,10 @@ async def lead_comment_append(request: Request, lead_id: str):
 
     try:
         form = await request.form(
-            max_files=MAX_FILES_PER_NOTE,
+            # +1: la parte `files` vacía que el navegador envía cuando no se elige
+            # archivo (filename="") también cuenta para el límite de Starlette; la
+            # descartamos después y aplicamos abajo el límite real de 5 archivos.
+            max_files=MAX_FILES_PER_NOTE + 1,
             max_fields=30,
             max_part_size=MAX_ATTACHMENT_BYTES + 1,
         )
@@ -989,11 +992,28 @@ async def lead_comment_append(request: Request, lead_id: str):
             status_code=400,
         )
 
+    # La parte `files` vacía del navegador (filename="") no es un archivo real:
+    # se descarta para que la nota siga la ruta de solo texto. Un archivo con
+    # nombre y 0 bytes sigue teniendo filename y se rechaza como empty_file.
     files = (
-        [item for item in form.getlist("files") if isinstance(item, UploadFile)]
+        [item for item in form.getlist("files") if isinstance(item, UploadFile) and item.filename]
         if attachments_enabled
         else []
     )
+
+    if len(files) > MAX_FILES_PER_NOTE:
+        context, _ = _resolve_detail_context(
+            request,
+            lead_id,
+            lead_not_found=False,
+            error_message="Superaste el maximo de 5 archivos.",
+        )
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "lead_detail.html",
+            context,
+            status_code=400,
+        )
 
     if not files:
         try:
