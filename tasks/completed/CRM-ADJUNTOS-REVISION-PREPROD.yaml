@@ -1,0 +1,126 @@
+schema_version: 1
+task:
+  id: CRM-ADJUNTOS-REVISION-PREPROD
+  title: 'Preparar la revision previa a produccion de los adjuntos de notas: informe de decisiones, medicion
+    de uso y pruebas de los limites conocidos'
+  objective: 'Dejar al humano en condiciones de decidir, con datos y sin jerga, los seis puntos que acepto
+    el 2026-10-21 para los adjuntos de notas antes de llevarlos a produccion: que el informe explique
+    cada punto con lo que el codigo hace de verdad hoy, que un script de solo lectura mida el uso real
+    en tpi.auditoria y que las pruebas fijen los limites conocidos para que un cambio futuro sea deliberado.
+    Es una tarea de preparacion: no cambia el comportamiento de la aplicacion ni decide por el humano.'
+  source:
+    type: story
+    ref: Revision comprometida en docs/ADJUNTOS_COMENTARIOS_DISENO.md (secciones 5, 6 y 8) y en el backlog;
+      definida en sesion interactiva con Claude el 2026-10-22.
+  change_class: A
+  deploy_required: false
+  requires_human_acceptance: false
+  acceptance_criteria:
+  - id: AC-1
+    verification: automated
+    description: 'Informe docs/ADJUNTOS_REVISION_PREPROD.md, en espanol claro para una persona que no
+      es especialista en seguridad. Empieza con una tabla resumen (punto, riesgo alto/medio/bajo, recomendacion
+      en una linea, quien decide) y tiene UNA seccion por cada uno de los seis puntos: (1) PDF con archivos
+      incrustados, (2) visibilidad de los adjuntos para todos los usuarios con acceso al lead, (3) EXIF
+      y GPS de las imagenes, (4) retencion y borrado a solicitud del titular, (5) costo de GuardDuty Malware
+      Protection for S3, (6) limitacion de la validacion de PDF con streams comprimidos. Cada seccion
+      contiene: (a) como funciona HOY, con referencias a archivos y funciones reales del repositorio,
+      comprobadas leyendo el codigo y no de memoria; (b) el riesgo concreto y el peor caso, con un ejemplo;
+      (c) al menos dos opciones (una es ''dejarlo como esta'') con esfuerzo, costo y efecto sobre los
+      usuarios; (d) una recomendacion marcada como propuesta; (e) la pregunta exacta que debe decidir
+      el humano.'
+  - id: AC-2
+    verification: automated
+    description: 'Honestidad de los hechos. El informe no inventa nada: tarifas de GuardDuty, plazos y
+      obligaciones de la Ley 21.719 y el comportamiento de servicios externos solo se afirman si estan
+      en el repositorio o en su documentacion local; si no, quedan como pregunta o como formula con variables,
+      diciendo quien debe confirmarlo (el humano o su asesor legal). El punto 4 describe lo que el sistema
+      HACE (que se guarda, donde, como se borra, que queda en la auditoria y en los logs, que pasa con
+      las copias) y lista las preguntas para el asesor legal, sin dar opinion juridica. El punto 5 deja
+      la formula del costo (objetos y GB por mes, tarifas a confirmar) y el uso medido por el script de
+      AC-3, sin cifras de DEV inventadas.'
+  - id: AC-3
+    verification: automated
+    description: 'Script de medicion de solo lectura scripts/adjuntos_revision_preprod.py. Lee tpi.auditoria
+      de una ventana de dias (por defecto 30, configurable) y muestra SOLO agregados: conteo por accion
+      (adjunto_subido, adjunto_rechazado, adjunto_visto, adjunto_descargado, adjunto_eliminado); rechazos
+      por codigo; subidas con y sin archivos_incrustados; subidas por tipo; objetos y bytes subidos por
+      mes (insumo del costo de GuardDuty); cantidad de leads distintos con adjuntos y de usuarios distintos
+      que subieron. Reglas: solo consultas SELECT parametrizadas (ningun INSERT, UPDATE, DELETE ni DDL);
+      no imprime PII, textos de notas, nombres, SHA-256 ni identificadores de leads o personas; usa la
+      conexion de la aplicacion (get_db_connection) sin credenciales nuevas ni escritura de claves; si
+      la conexion falla sale con un mensaje claro y codigo distinto de cero. El informe explica como ejecutarlo
+      contra DEV por el tunel y deja una seccion ''Datos de uso'' para pegar la salida. Pruebas con una
+      conexion simulada: verifican que todo el SQL es de solo lectura, los parametros, los agregados y
+      el formato de salida.'
+  - id: AC-4
+    verification: automated
+    description: 'Pruebas que fijan los limites conocidos SIN cambiar el comportamiento, construidas en
+      memoria (sin archivos binarios en el repositorio ni dependencias nuevas), con nombres que empiezan
+      por test_known_limitation_ o test_current_behavior_ y un docstring que apunta a la seccion del informe:
+      (i) un JPEG con EXIF que incluye coordenadas GPS se acepta y sus bytes no se modifican; (ii) un
+      PDF cuyo JavaScript esta dentro de un object stream comprimido con FlateDecode PASA hoy la validacion
+      (limite del punto 6); (iii) un PDF con /EmbeddedFile se acepta con la marca pdfe y, con ATTACHMENTS_ALLOW_PDF_EMBEDDED_FILES
+      en falso, se rechaza con el codigo pdf_embedded_files. Si ya existe una prueba equivalente, se cita
+      en el informe y no se duplica. Estas pruebas describen el comportamiento actual: no relajan ni endurecen
+      ninguna regla.'
+  - id: AC-5
+    verification: automated
+    description: 'Sin cambio de comportamiento ni de dependencias: el diff NO toca app/**, deployment/**,
+      requirements ni la configuracion; solo agrega o modifica docs/ADJUNTOS_REVISION_PREPROD.md, scripts/adjuntos_revision_preprod.py,
+      pruebas en tests/**, las referencias cruzadas de AC-6 y, si corresponde, CHANGELOG.md. La suite
+      completa y la cobertura minima (85%) siguen en verde y pip-audit no cambia.'
+  - id: AC-6
+    verification: automated
+    description: 'Referencias cruzadas y bitacora: docs/ADJUNTOS_COMENTARIOS_DISENO.md (seccion 8) apunta
+      al informe, docs/SEGURIDAD.md enlaza el informe desde la seccion de adjuntos de notas, y docs/BITACORA.md
+      tiene la entrada de la tarea con lo que contiene el informe y como ejecutar el script. Los enlaces
+      relativos entre documentos funcionan.'
+  constraints:
+  - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
+    desde ramas o worktrees antiguos. Si el guard registra mas de un worktree de Developer, retira el
+    viejo con scripts/harness/worktree.py remove antes de commitear.'
+  - 'change_class A sin despliegue: solo documentacion, el script de solo lectura y pruebas. NO tocar
+    app/**, deployment/**, IAM, el bucket ni GuardDuty. Las decisiones sobre los seis puntos son del humano:
+    el informe propone, no decide, y no deja parches de codigo hechos.'
+  - 'El Developer no tiene acceso a la base de datos de DEV ni a AWS: NO ejecutes el script contra ninguna
+    base ni corras comandos de AWS. Las pruebas usan una conexion simulada y el informe deja vacia la
+    seccion ''Datos de uso'' con instrucciones para que el humano la complete.'
+  - 'No cambiar las reglas de validacion ni de visibilidad: las pruebas de AC-4 describen el comportamiento
+    actual. Cualquier mejora que descubras va al informe como opcion, no al codigo.'
+  - No incluir PII, nombres de archivo, contenidos de notas ni identificadores reales en el informe, el
+    script ni las pruebas; los archivos de prueba se construyen en memoria.
+  - No inventar cifras, tarifas, plazos ni citas legales (AC-2). Si no puedes comprobar un dato, escribe
+    que falta y quien debe confirmarlo.
+  - Sin dependencias nuevas ni cambios de cobertura minima (85%).
+  - 'Lecciones del guard de las tareas anteriores: (1) .env.example no esta en tu alcance; documenta solo
+    en docs/**. (2) El payload de evidencia se escribe con Write en la ruta ABSOLUTA de la raiz de control
+    (C:\desarrollos\TPI\tpi_deep_agents\tpi-backend\.harness-runtime\payloads\developer.json), nunca dentro
+    del worktree. (3) progress/current.md se edita con Edit o Write, no con Python ni heredocs. (4) Ningun
+    comando de shell nombra paquetes o textos denegados por policies.yaml y no se crean archivos sueltos
+    en la raiz del worktree. (5) git commit va solo, sin encadenar otros comandos. Un DENIED es definitivo:
+    detenerse y reportar.'
+  dependencies: []
+  risk:
+    level: low
+    notes: 'Documentacion, un script de solo lectura y pruebas de caracterizacion; no cambia la aplicacion
+      ni se despliega. Riesgos: (a) que el informe afirme hechos que el Developer no pudo comprobar (mitigado
+      por AC-2 y porque el Reviewer contrasta las referencias al codigo); (b) que el script exponga datos
+      personales (mitigado: solo agregados, sin SHA-256 ni identificadores, y pruebas de que el SQL es
+      de solo lectura); (c) que las pruebas de limites se lean como una aprobacion del limite (mitigado
+      por sus nombres y docstrings).'
+  scope:
+    paths:
+    - docs/**
+    - scripts/adjuntos_revision_preprod.py
+    - tests/**
+    - CHANGELOG.md
+  status: closed
+closure:
+  closed_at: '2026-10-22T20:48:32Z'
+  final_state: DONE
+  evidence_dir: evidence/CRM-ADJUNTOS-REVISION-PREPROD
+  release:
+    release_sha: 7b96c67ce6429e9f865bc82c01f059659c237780
+    pr_number: 120
+  rework_rounds: 0

@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "CRM-ADJUNTOS-REVISION-PREPROD",
+  "created_at": "2026-10-22T20:46:25Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610222044-reviewer-sup330d1b",
+  "reviewed_sha": "e476783ce90e38931921507a8d850dcb1265581c",
+  "reviewed_tree": "c7710afeb8c8d0ba8cff491f9efc754676daf349",
+  "pr_number": 120,
+  "ci": {
+    "run_id": "39850384342",
+    "conclusion": "success",
+    "jobs": [
+      "Docker Build",
+      "Lint & Format",
+      "Release Tooling Validation",
+      "Security Audit",
+      "Tests"
+    ]
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "minor",
+      "file": "scripts/adjuntos_revision_preprod.py",
+      "summary": "Ante un fallo de conexion el script imprime el detalle de la excepcion en stderr; el texto de un error de conexion puede incluir host o puerto de la base. No imprime credenciales ni datos de auditoria y se ejecuta en la terminal del humano.",
+      "required_action": "Opcional: no pegar la salida de error en el informe; si se quiere, limitar el detalle al tipo de excepcion."
+    },
+    {
+      "id": "F-2",
+      "severity": "info",
+      "file": "docs/ADJUNTOS_REVISION_PREPROD.md",
+      "summary": "La seccion Datos de uso queda vacia a proposito (el Developer no tiene acceso a DEV); el humano debe ejecutar el script y pegar la salida antes de decidir los puntos 1 y 5.",
+      "required_action": "Ninguna para este merge."
+    },
+    {
+      "id": "F-3",
+      "severity": "info",
+      "file": "docs/ADJUNTOS_REVISION_PREPROD.md",
+      "summary": "El punto 3 propone la opcion de quitar metadatos con Pillow, presente como dependencia en pyproject.toml; es una opcion futura, no un cambio de esta tarea.",
+      "required_action": "Ninguna."
+    }
+  ],
+  "checks": [
+    {
+      "name": "CI verde en el SHA exacto (5 jobs, run 39850384342); head de la PR 120 igual al SHA entregado; reviewed_tree calculado con git rev-parse",
+      "result": "PASS"
+    },
+    {
+      "name": "Alcance AC-5: el diff solo toca CHANGELOG.md, 3 docs, el script y 2 archivos de pruebas nuevos; sin app/**, deployment/**, dependencias ni configuracion",
+      "result": "PASS"
+    },
+    {
+      "name": "Referencias del informe contrastadas con el codigo del SHA: claves del detalle de auditoria (codigo_rechazo, archivos_incrustados, tipo, tamano, actor_subject), columnas id_lead y fecha_hora, tabla_afectada tpi.leads, ajuste ATTACHMENTS_ALLOW_PDF_EMBEDDED_FILES con valor por defecto verdadero, delete_attachment, get_attachment_scan_status, delete_test_lead y la conexion con filas dict",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-2 honestidad: sin tarifas de GuardDuty, plazos ni citas legales inventadas; punto 4 describe el sistema y deja preguntas al asesor legal; punto 5 deja formula con variables",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-3 script: solo SELECT con parametros, dias como parametro, solo agregados, sin SHA-256 ni identificadores, codigo de salida distinto de cero ante fallo de conexion",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-4 pruebas de limites en memoria con prefijos y docstrings que apuntan al informe; el caso de archivo incrustado reutiliza pruebas existentes citadas en el informe",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-6 referencias cruzadas y bitacora presentes en los archivos del diff",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "Riesgo bajo: documentacion, script de solo lectura y pruebas de caracterizacion; no cambia la aplicacion ni se despliega.",
+    "Los niveles de riesgo del informe son valoracion del autor; las decisiones sobre los seis puntos siguen siendo del humano."
+  ]
+}
