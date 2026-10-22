@@ -1,0 +1,312 @@
+{
+  "schema_version": 1,
+  "kind": "candidate",
+  "task_id": "CRM-ADJUNTOS-3-AJUSTES",
+  "created_at": "2026-10-22T03:12:10Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610220308-deployer-sup183305",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "environment": "tpi-backoffice-dev-green",
+  "release_sha": "fd5778ac79b77e28e0add3c5c54646ca5bf4a08f",
+  "release_tree": "83eeea9e2e505c920241a531cee46e881b4e47d5",
+  "reviewed_tree": "83eeea9e2e505c920241a531cee46e881b4e47d5",
+  "release_verification": {
+    "origin_main_after_fetch": "fd5778ac79b77e28e0add3c5c54646ca5bf4a08f",
+    "release_commit_is_ancestor_of_main": true,
+    "parent": "e37bb775388ca926d54d2d89f5d032fe2d091eb8",
+    "equals_merge_02": true,
+    "equals_review_02_reviewed_tree": true,
+    "note": "deployment/ es identico entre el checkout local (c3d597e) y el release (git diff --stat vacio), asi que el template del compose y el builder del arbol de trabajo equivalen a los del release."
+  },
+  "publish_run": {
+    "run_id": 39713796328,
+    "conclusion": "success",
+    "status": "completed",
+    "head_sha": "fd5778ac79b77e28e0add3c5c54646ca5bf4a08f",
+    "attempt": 1,
+    "workflow": "Publish immutable DEV images to ECR",
+    "url": "https://github.com/ArriagadaInc/tpi-backend/actions/runs/39713796328",
+    "event": "workflow_dispatch",
+    "jobs": "6/6 completed/success",
+    "artifact": {
+      "name": "tpi-dev-ecr-fd5778ac79b77e28e0add3c5c54646ca5bf4a08f",
+      "manifest_runtime_git_sha": "fd5778ac79b77e28e0add3c5c54646ca5bf4a08f"
+    },
+    "note": "Dispatch lanzado por la sesion previa del Deployer con source_sha=release_sha. El bundle embebido en el artifact (sha256 616b1297...) no es el desplegable; el desplegable es el domain-locked construido localmente."
+  },
+  "scan_source": "ecr describe-image-scan-findings via scripts/harness/aws_guard.py: scan COMPLETE y findingSeverityCounts vacio en ambos digests.",
+  "images": {
+    "app": {
+      "repository": "tpi-dev-app",
+      "digest": "sha256:a1a6aa8328c96bd0e453847e58b96b19c7e59d599b65af8f145454cc78948b90",
+      "tag": "fd5778ac79b77e28e0add3c5c54646ca5bf4a08f",
+      "scan": {
+        "critical": 0,
+        "high": 0
+      }
+    },
+    "caddy": {
+      "repository": "tpi-dev-caddy",
+      "digest": "sha256:ebc586b1922e49589002f5a527661c0b63ba93e9febc5291c3a5001fdce5c7ec",
+      "tag": "fd5778ac79b77e28e0add3c5c54646ca5bf4a08f",
+      "scan": {
+        "critical": 0,
+        "high": 0
+      }
+    }
+  },
+  "bundle": {
+    "sha256": "21a58cb28a1dca04e758f92c6b53f885d26c5d61b1ba493fb4dad555d797d725",
+    "checksum_sha256_b64": "IaWMsoodygTnWPksa1P4hdJsXWGxukk/tNrVVdeX1yU=",
+    "artifact_type": "domain-locked",
+    "reproducible": true,
+    "size_bytes": 4917,
+    "entries": [
+      "docker-compose.yml"
+    ],
+    "path": ".harness-release/h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1.zip",
+    "builder_manifest": ".harness-release/h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1.manifest.json",
+    "runtime_git_sha": "fd5778ac79b77e28e0add3c5c54646ca5bf4a08f",
+    "reverification": "Segunda construccion independiente (check-h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1.zip) con los mismos digests del manifest del publish run: sha256 identico. El compose contiene ATTACHMENTS_ENABLED y el bucket de adjuntos literales y las imagenes por digest."
+  },
+  "s3": {
+    "bucket": "elasticbeanstalk-us-east-2-821656895812",
+    "key": "tpi-backoffice/dev-releases/h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1/21a58cb28a1dca04e758f92c6b53f885d26c5d61b1ba493fb4dad555d797d725.zip",
+    "checksum_sha256": "IaWMsoodygTnWPksa1P4hdJsXWGxukk/tNrVVdeX1yU=",
+    "checksum_type": "FULL_OBJECT",
+    "version_id": null,
+    "content_length": 4917,
+    "etag": "adda374a16d1a73870eb057812faa907",
+    "server_side_encryption": "AES256",
+    "if_none_match": "*",
+    "key_absent_before_put": true,
+    "absence_check": "describe-application-versions previo devolvio lista vacia para el label; put-object con --if-none-match * (key nueva, content-addressed) a las 03:10:57Z.",
+    "post_put_head_object": "ChecksumSHA256 IaWMsoodygTnWPksa1P4hdJsXWGxukk/tNrVVdeX1yU= (== base64 del sha256 del bundle local), ContentLength 4917, FULL_OBJECT."
+  },
+  "application_version": {
+    "label": "h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1",
+    "status": "UNPROCESSED",
+    "created_at": "2026-10-22T03:11:14Z",
+    "flags": "--no-process --no-auto-create-application",
+    "label_absent_before_create": true,
+    "source_bundle": {
+      "bucket": "elasticbeanstalk-us-east-2-821656895812",
+      "key": "tpi-backoffice/dev-releases/h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1/21a58cb28a1dca04e758f92c6b53f885d26c5d61b1ba493fb4dad555d797d725.zip"
+    },
+    "source_bundle_matches_s3": true
+  },
+  "traceability_chain": {
+    "result": "PASS",
+    "chain": "release fd5778a (tree 83eeea9 = reviewed_tree) -> publish run 39713796328 success, manifest runtime_git_sha = release -> ECR digests app a1a6aa83... / caddy ebc586b1..., scan 0/0 -> bundle sha256 21a58cb28a1dca04e758f92c6b53f885d26c5d61b1ba493fb4dad555d797d725 (reproducible, domain-locked) -> S3 key content-addressed + ChecksumSHA256 IaWMsoodygTnWPksa1P4hdJsXWGxukk/tNrVVdeX1yU= + ContentLength 4917 -> AV h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1 SourceBundle = key S3, UNPROCESSED"
+  },
+  "environment_observed": {
+    "version_label": "h3-crm-adjuntos-3-ajustes-e37bb77-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-22T00:36:15Z",
+    "platform": "64bit Amazon Linux 2023 v4.13.6 running Docker",
+    "caller_account": "821656895812",
+    "note": "Observado al inicio del preflight y tras crear la AV: VersionLabel y DateUpdated sin cambio. CodePipeline tpi-backoffice-dev-promotion: transicion inbound de Promote deshabilitada."
+  },
+  "lkg": {
+    "version_label": "h3-crm-adjuntos-3-ajustes-e37bb77-domainlocked-r1",
+    "status": "UNPROCESSED",
+    "release_sha": "e37bb775388ca926d54d2d89f5d032fe2d091eb8",
+    "images": [
+      {
+        "repository": "tpi-dev-app",
+        "digest": "sha256:7b2e89e88a1f5423b04b86222f969eff9caeba5cdadf12416ec93db025fd4f0f",
+        "present": true
+      },
+      {
+        "repository": "tpi-dev-caddy",
+        "digest": "sha256:caaa599ec0d745b8f6e1a49545962f5056afe227bd7a7d518e2ba1dee767dc4d",
+        "present": true
+      }
+    ],
+    "option_settings_required": false,
+    "source_bundle": {
+      "bucket": "elasticbeanstalk-us-east-2-821656895812",
+      "key": "tpi-backoffice/dev-releases/h3-crm-adjuntos-3-ajustes-e37bb77-domainlocked-r1/5b50fd0a6bfbb75a2572b64ae404d35699892ed660c0a4a826388ba5bea001c8.zip",
+      "checksum_sha256": "W1D9Cmv7t1olcrZK5ATTVpmJLtZgwKSoJjiLpb6gAcg=",
+      "bundle_sha256": "5b50fd0a6bfbb75a2572b64ae404d35699892ed660c0a4a826388ba5bea001c8",
+      "content_length": 4917
+    },
+    "digests_source": "evidence/CRM-ADJUNTOS-3-AJUSTES/deployment/candidate-01.json; digests re-verificados en esta sesion en ECR (describe-images, tag e37bb77), AV SourceBundle (describe-application-versions) y objeto S3 (head-object, checksum igual).",
+    "selected_by": "observacion de describe-environments en el preflight (no por timestamp ni por documento)"
+  },
+  "smoke_plan": [
+    {
+      "name": "public_https",
+      "method": "GET",
+      "url": "https://dev.tupensioninteligente.cl/",
+      "expect_status": 200
+    },
+    {
+      "name": "backoffice_login",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/login",
+      "expect_status": 200
+    },
+    {
+      "name": "api_catalogs",
+      "method": "GET",
+      "url": "https://dev.tupensioninteligente.cl/api/v1/catalogs",
+      "expect_status": 200
+    },
+    {
+      "name": "static_css",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/static/css/app.css",
+      "expect_status": 200
+    },
+    {
+      "name": "leads_requires_auth",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/leads",
+      "expect": "redirect a /login o 401/403 (auth sin cambios)"
+    },
+    {
+      "name": "adjuntos_requires_auth",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/leads/1/adjuntos/00000000-0000-4000-8000-000000000000",
+      "expect": "redirect a /login (sin sesion); sin sesion no se llega a S3"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "check": "ninguna respuesta redirige a genialabs.cl"
+    },
+    {
+      "name": "runtime_identity_chain",
+      "check": "VersionLabel = h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1 -> AV SourceBundle = key S3 del candidate -> ChecksumSHA256 IaWMsoodygTnWPksa1P4hdJsXWGxukk/tNrVVdeX1yU= -> digests app a1a6aa83... / caddy ebc586b1..."
+    },
+    {
+      "name": "log_counts",
+      "check": "aws-observability: solo conteos de indicadores de PII/variables sensibles y de errores en logs; en particular ausencia de errores de configuracion de Settings o de arranque en api y backoffice, y de AccessDenied por s3:GetObjectTagging."
+    },
+    {
+      "name": "human_AC-9",
+      "check": "Smoke humano en AWS DEV tras el cutover: nota de solo texto se guarda sin error con adjuntos activos (hallazgo de la ronda anterior); PDF con archivos incrustados aceptado con etiqueta; PDF cifrado rechazado con mensaje claro y posicion; GIF y archivo de mas de 10 MB con mensajes especificos y todos los fallos juntos; imagen con 'Escaneando' y luego visible; EICAR 'Bloqueado'; eliminar PDF e imagen como ceo o cto y ver 'Archivo eliminado' en la misma nota; pagina amable de adjunto no disponible; codigos especificos y archivos_incrustados en tpi.auditoria; sin errores en logs. Pendiente de approve.py accept."
+    }
+  ],
+  "deployment_plan": {
+    "commands": [
+      "python scripts/harness/aws_guard.py elasticbeanstalk update-environment --environment-name tpi-backoffice-dev-green --version-label h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1"
+    ],
+    "type": "version-only",
+    "option_settings_used": false,
+    "environment_properties_required": [],
+    "database_changes": "Ninguna. Sin tabla nueva ni migracion: el unico UPDATE nuevo es el reemplazo parametrizado de una marca exacta en tpi.leads.comentarios.",
+    "preconditions": [
+      "Human Gate aprobado para release_sha fd5778ac79b77e28e0add3c5c54646ca5bf4a08f y AV h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1.",
+      "Preflight inmediato antes del cutover: cuenta, region, environment Ready/Green/Ok con VersionLabel = LKG (h3-crm-adjuntos-3-ajustes-e37bb77-domainlocked-r1), sin update en curso, AV existe, digests del candidate y del LKG presentes en ECR.",
+      "El permiso de solo lectura s3:GetObjectTagging ya fue aplicado por el humano en la ronda anterior; el codigo funciona si faltara (muestra 'No disponible')."
+    ],
+    "wait": "describe-environments cada 30 s, maximo 30 min; describe-events --max-records 20; exito = VersionLabel exacta h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1 + Ready/Green/Ok."
+  },
+  "rollback_plan": {
+    "version_label": "h3-crm-adjuntos-3-ajustes-e37bb77-domainlocked-r1",
+    "commands": [
+      "python scripts/harness/aws_guard.py elasticbeanstalk update-environment --environment-name tpi-backoffice-dev-green --version-label h3-crm-adjuntos-3-ajustes-e37bb77-domainlocked-r1"
+    ],
+    "max_attempts": 1,
+    "lkg_bundle_intact": true,
+    "database": "Sin cambios de esquema; el rollback no requiere reversa de base de datos.",
+    "conditions": "Un unico rollback version-only al LKG, solo si se cumplen las 7 condiciones de harness/policies.yaml rollback_authorization. Un defecto puramente funcional no autoriza rollback."
+  },
+  "acceptance_criteria_status": [
+    {
+      "id": "AC-1..AC-8",
+      "status": "automated_pre_deploy",
+      "note": "Revision aprobada (review-02), CI verde en PR #117 y publish run 6/6 (gates incluidos)."
+    },
+    {
+      "id": "AC-9",
+      "status": "pending_human",
+      "note": "Smoke humano en AWS DEV tras el cutover (approve.py accept)."
+    }
+  ],
+  "blast_radius_and_residues": {
+    "scope": "Solo AWS DEV, environment tpi-backoffice-dev-green; cutover version-only sin option settings.",
+    "stage_residues": "Imagenes ECR tag fd5778a (app/caddy), objeto S3 content-addressed y AV UNPROCESSED nuevos; inertes hasta el cutover. El Harness no puede borrar nada.",
+    "local_artifacts": ".harness-release/ (no versionado).",
+    "runtime": "Environment sin mutar durante PREPARING_DEPLOYMENT."
+  },
+  "safety": {
+    "update_environment": false,
+    "environment_mutated": false,
+    "option_settings": false,
+    "smoke_executed": false,
+    "rds_access": false,
+    "secrets_accessed": false,
+    "code_or_dependencies_modified": false,
+    "human_decision_tooling_executed": false,
+    "aws_writes": [
+      "s3api put-object (content-addressed, --if-none-match *, checksum SHA256) x1",
+      "elasticbeanstalk create-application-version (--no-process --no-auto-create-application) x1"
+    ],
+    "github_writes": [
+      "gh pr merge via merge_reviewed_pr.py (PR 117) x1",
+      "gh workflow run publish-dev-ecr-images.yml (source_sha=release_sha) x1 (sesion previa)"
+    ],
+    "publish_rerun": false
+  },
+  "checks": [
+    {
+      "name": "init_state_role",
+      "result": "PASS"
+    },
+    {
+      "name": "release_on_origin_main_tree_equals_reviewed",
+      "result": "PASS"
+    },
+    {
+      "name": "preflight_account_region",
+      "result": "PASS"
+    },
+    {
+      "name": "preflight_env_ready_green_ok_no_update",
+      "result": "PASS"
+    },
+    {
+      "name": "lkg_av_and_digests_present",
+      "result": "PASS"
+    },
+    {
+      "name": "promote_disabled",
+      "result": "PASS"
+    },
+    {
+      "name": "publish_run_success",
+      "result": "PASS"
+    },
+    {
+      "name": "scan_high_critical_zero",
+      "result": "PASS"
+    },
+    {
+      "name": "bundle_reproducible_domain_locked",
+      "result": "PASS"
+    },
+    {
+      "name": "av_label_absent_before_create",
+      "result": "PASS"
+    },
+    {
+      "name": "s3_key_content_addressed_checksum",
+      "result": "PASS"
+    },
+    {
+      "name": "av_unprocessed_source_matches",
+      "result": "PASS"
+    },
+    {
+      "name": "environment_not_mutated",
+      "result": "PASS"
+    }
+  ]
+}

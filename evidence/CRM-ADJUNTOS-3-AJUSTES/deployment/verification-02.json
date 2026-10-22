@@ -1,0 +1,180 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "CRM-ADJUNTOS-3-AJUSTES",
+  "created_at": "2026-10-22T01:49:44Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610220148-deployer-supa429b8",
+  "verification_scope": "VERIFYING de CRM-ADJUNTOS-3-AJUSTES tras deployment-01 y verification-01 (PASS tecnico). El humano ejecuto el smoke de AC-9 en DEV y reporto un defecto funcional (hallazgo registrado en progress/current.md). Sin nuevas operaciones AWS en esta sesion; las lecturas de infraestructura de verification-01 siguen vigentes.",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "e37bb775388ca926d54d2d89f5d032fe2d091eb8",
+  "deployed_commit": "e37bb775388ca926d54d2d89f5d032fe2d091eb8",
+  "application_version": "h3-crm-adjuntos-3-ajustes-e37bb77-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "FAIL",
+  "failure_class": "functional",
+  "failure_summary": "Una nota de solo texto falla con adjuntos activos: el navegador envia una parte multipart de archivos con nombre vacio y cuerpo vacio, y la pagina responde 400 'Archivo 1 de 1: el archivo esta vacio' sin guardar la nota. Viola la restriccion de no cambiar el comportamiento de las notas de solo texto y AC-7. Defecto heredado de CRM-ADJUNTOS-2-CODIGO. No es degradacion de infraestructura: sin rollback automatico (contrato seccion 9).",
+  "final_state": {
+    "version_label": "h3-crm-adjuntos-3-ajustes-e37bb77-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-22T00:36:15Z",
+    "observed_at": "2026-10-22T00:37:30Z"
+  },
+  "events": {
+    "observed": 6,
+    "levels": {
+      "INFO": 6
+    },
+    "errors": 0,
+    "note": "Tomado de verification-01: eventos del cutover todos INFO."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "note": "Verificada en verification-01; no cambia."
+  },
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "adjuntos_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "observed": "ninguna respuesta redirige a genialabs.cl"
+    },
+    {
+      "name": "human_smoke_text_only_note",
+      "result": "FAIL",
+      "observed": "400 'el archivo esta vacio' al enviar una nota de solo texto (reportado por el humano)"
+    }
+  ],
+  "pii_log_scan": {
+    "matches": 0,
+    "raw_pattern_hits": {
+      "Authorization -REDACTED": 0,
+      "Bearer": 0,
+      "password": 0,
+      "cookie": 0,
+      "raw_payload": 0,
+      "secret": 0,
+      "token": 0,
+      "hash -ACME": 0
+    },
+    "strong_matches": 0,
+    "strong_hits": {},
+    "weak_matches": {},
+    "classification_required": false,
+    "patterns": [
+      "Authorization -REDACTED",
+      "Bearer",
+      "raw_payload",
+      "password",
+      "hash -ACME",
+      "cookie",
+      "secret",
+      "token"
+    ]
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde (PR 116)."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-7",
+      "status": "not_met",
+      "method": "automated",
+      "evidence": "Las notas de solo texto fallan en DEV con adjuntos activos (hallazgo del humano en el smoke de AC-9); las pruebas no simulaban la parte multipart vacia del navegador."
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "method": "both",
+      "evidence": "Documentacion en el PR revisado."
+    },
+    {
+      "id": "AC-9",
+      "status": "not_met",
+      "method": "human",
+      "evidence": "Smoke humano interrumpido por el defecto de notas de solo texto; sin aceptacion registrada."
+    }
+  ],
+  "rollback_executed": false,
+  "safety": {
+    "aws_writes": [],
+    "update_environment_executed": false,
+    "secrets_accessed": false,
+    "log_lines_read": false,
+    "denied_events": 0
+  }
+}

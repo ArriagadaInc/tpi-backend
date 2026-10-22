@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "CRM-ADJUNTOS-3-AJUSTES",
+  "created_at": "2026-10-22T15:39:36Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610221534-deployer-sup25a0ed",
+  "verification_scope": "VERIFYING de CRM-ADJUNTOS-3-AJUSTES tras deployment-02 (cutover ejecutado por el humano). Estado EB, identidad de runtime, smoke HTTP no autenticado y conteos de logs desde el inicio del update (15:33:27Z). Solo lecturas AWS via aws_guard. AC-9 (smoke humano) pendiente de approve.py accept.",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "fd5778ac79b77e28e0add3c5c54646ca5bf4a08f",
+  "deployed_commit": "fd5778ac79b77e28e0add3c5c54646ca5bf4a08f",
+  "application_version": "h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "PASS",
+  "failure_class": null,
+  "final_state": {
+    "version_label": "h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-22T15:34:08Z",
+    "observed_at": "2026-10-22T15:36:00Z"
+  },
+  "events": {
+    "observed": 7,
+    "levels": {
+      "INFO": 7
+    },
+    "errors": 0,
+    "note": "Eventos del update (15:33:27Z a 15:35:10Z) todos INFO; health Info->Ok."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "note": "Verificada en deployment-02; digests app/caddy ACTIVE en ECR."
+  },
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "adjuntos_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "observed": "ninguna respuesta redirige a genialabs.cl (redirects no seguidos)"
+    }
+  ],
+  "logs": {
+    "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+    "start_time_ms": 1792683207000,
+    "method": "aws_guard filter-log-events con --query length(events); no se leyeron lineas."
+  },
+  "pii_log_scan": {
+    "matches": 0,
+    "raw_pattern_hits": {
+      "Authorization -REDACTED": 0,
+      "Bearer": 0,
+      "password": 0,
+      "cookie": 0,
+      "raw_payload": 0,
+      "secret": 0,
+      "token": 0,
+      "hash -ACME": 0
+    },
+    "strong_matches": 0,
+    "strong_hits": {},
+    "weak_matches": {},
+    "classification_required": false,
+    "patterns": [
+      "Authorization -REDACTED",
+      "Bearer",
+      "raw_payload",
+      "password",
+      "hash -ACME",
+      "cookie",
+      "secret",
+      "token"
+    ]
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 aprobada con CI verde (PR 117)."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 aprobada con CI verde."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 aprobada con CI verde."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 aprobada con CI verde."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 aprobada con CI verde."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 aprobada con CI verde."
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 aprobada con CI verde; PR 117 corrige la parte multipart vacia del navegador con 7 pruebas via parser real."
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "method": "both",
+      "evidence": "Documentacion en el PR revisado."
+    },
+    {
+      "id": "AC-9",
+      "status": "pending_human",
+      "method": "human",
+      "evidence": "Smoke humano autenticado en DEV pendiente; incluye re-verificar nota de solo texto sin adjuntos."
+    }
+  ],
+  "rollback_executed": false,
+  "safety": {
+    "aws_writes": [],
+    "update_environment_executed": false,
+    "secrets_accessed": false,
+    "log_lines_read": false,
+    "denied_events": 0
+  }
+}

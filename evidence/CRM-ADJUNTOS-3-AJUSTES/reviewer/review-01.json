@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "CRM-ADJUNTOS-3-AJUSTES",
+  "created_at": "2026-10-22T00:08:16Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610220005-reviewer-sup706068",
+  "reviewed_sha": "d52de57e66e5724caa43009e2627cec57e7c69b2",
+  "reviewed_tree": "d901fe3c3a0499b5455018d7229f2b694bb1e5c7",
+  "pr_number": 116,
+  "ci": {
+    "run_id": "39696794395",
+    "conclusion": "success",
+    "jobs": [
+      "Docker Build",
+      "Lint & Format",
+      "Release Tooling Validation",
+      "Security Audit",
+      "Tests"
+    ]
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "minor",
+      "file": "app/services/solicitud_service.py",
+      "summary": "delete_attachment ignora el resultado de replace_attachment_mark: si el UPDATE no encuentra la marca (o falla la BD tras borrar en S3) la nota sigue mostrando el adjunto como no disponible y la auditoria adjunto_eliminado igual se registra. Degrada de forma segura (ya no hay objeto).",
+      "required_action": "Opcional: registrar un aviso en log cuando el reemplazo devuelve False."
+    },
+    {
+      "id": "F-2",
+      "severity": "info",
+      "file": "app/attachments/validation.py",
+      "summary": "La deteccion de nombres de PDF sigue operando sobre bytes crudos: nombres dentro de object streams comprimidos no se ven (limitacion ya aceptada y documentada en CRM-ADJUNTOS-2; no es regresion). Los escapes #xx y los limites de nombre estan cubiertos por pruebas.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F-3",
+      "severity": "info",
+      "file": "harness/state.json",
+      "summary": "El permiso s3:GetObjectTagging lo aplica el humano antes del despliegue; el codigo degrada a 'No disponible' si falta (verificado por prueba).",
+      "required_action": "Ninguna (precondicion de despliegue del humano)."
+    }
+  ],
+  "checks": [
+    {
+      "name": "CI verde en el SHA exacto (5 jobs); PR 116 mergeable y al dia con main (merge-base == origin/main c3d597e)",
+      "result": "PASS"
+    },
+    {
+      "name": "Alcance: solo app/, tests/, docs/, CHANGELOG.md; sin deployment/**, IAM, compose ni dependencias nuevas",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-1/AC-2: nombres de PDF con frontera y escapes #xx, codigos por causa, mensajes con posicion sin nombres, todos los fallos juntos, todo o nada; JS/Launch/Encrypt siguen rechazando",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-3: ajuste default verdadero, nombre exacto EmbeddedFile, marca pdfe, auditoria archivos_incrustados, Content-Type application/pdf, CSP sin sandbox solo para PDF",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-4: borrado en S3 antes de la nota; UPDATE parametrizado acotado al lead; marca de eliminado oculta en vistas y exportacion; neutralizacion de la marca imitada",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-5: get_tagging solo lectura (sin Put/DeleteObjectTagging), mapeo de estados, ventana 30 min con zona Santiago, tope 20 consultas, error -> No disponible",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-6: pagina 404 HTML identica en todas las causas con nosniff y no-store",
+      "result": "PASS"
+    },
+    {
+      "name": "Pruebas de adjuntos re-ejecutadas localmente en el SHA exacto: 128 passed",
+      "result": "PASS"
+    },
+    {
+      "name": "Autoescape Jinja en mensajes y plantilla; sin PII ni secretos en el diff",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "Se permite un tipo de contenido antes rechazado (PDF con archivos incrustados) por decision del humano; mitigado con ajuste para revertir, etiqueta en la interfaz, auditoria y rechazo vigente de JavaScript, Launch y cifrados.",
+    "AC-9 (smoke humano) pendiente tras el despliegue."
+  ]
+}

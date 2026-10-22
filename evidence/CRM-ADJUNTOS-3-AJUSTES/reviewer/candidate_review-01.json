@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "CRM-ADJUNTOS-3-AJUSTES",
+  "created_at": "2026-10-22T00:29:43Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610220026-reviewer-sup47fb27",
+  "release_sha": "e37bb775388ca926d54d2d89f5d032fe2d091eb8",
+  "reviewed_tree": "d901fe3c3a0499b5455018d7229f2b694bb1e5c7",
+  "release_tree": "d901fe3c3a0499b5455018d7229f2b694bb1e5c7",
+  "decision": "APPROVED",
+  "cause": null,
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse de e37bb77 y del reviewed_sha d52de57: ambos d901fe3"
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "origin/main tras fetch == e37bb77; ancestro confirmado; merge squash con padre c3d597e"
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "run 39698233222 conclusion success, headSha == release_sha"
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "describe-images: app 7b2e89e8 y caddy caaa599e ACTIVE con tag release_sha"
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "scan COMPLETE y findingSeverityCounts vacio en ambos digests"
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "reconstruido por el Reviewer con build_domain_locked_bundle: sha256 5b50fd0a... y 4917 bytes, identico al candidate; template y constructor sin diferencias contra el release_sha (git diff --quiet)"
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "un unico docker-compose.yml, sin build, sin genialabs.cl, 3 referencias por digest, ATTACHMENTS_ENABLED presente"
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "head-object ChecksumSHA256 W1D9Cmv7... FULL_OBJECT, ContentLength 4917"
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "AV UNPROCESSED con SourceBundle bucket/key igual al objeto S3 content-addressed"
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "commit -> digests -> bundle sha -> key S3 -> AV -> label verificados con lecturas propias"
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "describe-environments: VersionLabel h3-crm-adjuntos-2-codigo-03436de-domainlocked-r1, Ready/Green/Ok"
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "AV del LKG existe, UNPROCESSED, con SourceBundle c24f2e7e... intacto"
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "app 8caad557 y caddy 83e3c337 ACTIVE"
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "inspeccion estructural del compose: variables sensibles como referencias, literales no secretos; candidate-01 sin valores sensibles"
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "incluye rutas publicas, auth requerida, adjuntos_requires_auth, identidad runtime, conteos de logs y AC-9 humano"
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "un solo update-environment con --version-label, sin option settings"
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "inspeccion del plan frente a las politicas del Deployer en DEPLOYING; no se ejecuto dry-run"
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "note": "un comando de cutover, sin reintentos"
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "rollback al LKG nombrado, max_attempts 1, condicionado a rollback_authorization"
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": "sin IAM, DNS, secretos ni migraciones; sin tabla nueva"
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "note": "evidencia con identificadores, hashes y labels"
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS",
+      "note": "residuos de stage: imagenes ECR, objeto S3 y AV UNPROCESSED, inertes hasta el cutover"
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "note": "el plan indica que un defecto funcional no autoriza rollback"
+    }
+  ],
+  "findings": [
+    {
+      "id": "C-1",
+      "severity": "info",
+      "file": "evidence/CRM-ADJUNTOS-3-AJUSTES/deployment/candidate-01.json",
+      "summary": "El checkout local esta en c3d597e, un commit atras de origin/main; el template y el constructor se comprobaron con git diff --quiet contra el release_sha (sin diferencias) antes de reconstruir.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "C-2",
+      "severity": "info",
+      "file": "harness/policies.yaml",
+      "summary": "El permiso de solo lectura de la etiqueta de escaneo lo aplica el humano antes del despliegue y el Reviewer no lo verifica; si faltara, la app muestra No disponible sin romper la pagina.",
+      "required_action": "AC-9 humano tras el cutover; confirmar en logs la ausencia de AccessDenied por ese permiso."
+    }
+  ],
+  "risks": [
+    "PDF con archivos incrustados ahora aceptados por decision del humano; JavaScript, Launch y cifrados siguen rechazados",
+    "AC-9 requiere smoke humano en DEV tras el despliegue",
+    "Las marcas de eliminado escritas por la version nueva quedan como texto en la nota si se hace rollback"
+  ]
+}

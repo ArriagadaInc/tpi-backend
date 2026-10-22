@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "CRM-ADJUNTOS-3-AJUSTES",
+  "created_at": "2026-10-22T00:10:05Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610220008-deployer-supa4e4f0",
+  "pr_number": 116,
+  "reviewed_sha": "d52de57e66e5724caa43009e2627cec57e7c69b2",
+  "reviewed_tree": "d901fe3c3a0499b5455018d7229f2b694bb1e5c7",
+  "release_sha": "e37bb775388ca926d54d2d89f5d032fe2d091eb8",
+  "release_tree": "d901fe3c3a0499b5455018d7229f2b694bb1e5c7",
+  "main_parent_sha": "c3d597ebc8405cbd077eb845ecf3442a42cf3810",
+  "method": "squash",
+  "match_head_commit_used": true
+}

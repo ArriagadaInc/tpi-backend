@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "CRM-ADJUNTOS-3-AJUSTES",
+  "created_at": "2026-10-22T00:04:41Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610212337-developer-sup09400f",
+  "head_sha": "d52de57e66e5724caa43009e2627cec57e7c69b2",
+  "branch": "harness/CRM-ADJUNTOS-3-AJUSTES-ajustes",
+  "pr_number": 116,
+  "change_class": "A",
+  "tests": {
+    "command": "Local (worktree, Python 3.13.13): python -m pytest tests/unit/test_attachments_validation.py tests/unit/test_attachments_marks.py tests/unit/test_attachments_storage.py tests/unit/test_attachments_service.py tests/unit/test_attachments_audit.py tests/unit/test_attachments_web.py tests/security/test_adjuntos_infra_security.py tests/unit/test_adjuntos_s3_infra.py --no-cov -q -> 157 passed (incluye los casos nuevos de AC-1..AC-6). Suite unit completa: 1024 passed, 11 failed (test_executive_dashboard_render/service, por falta de PostgreSQL local: DatabaseConfigurationError, no relacionados con la tarea; pasan en CI con el servicio postgres). La cobertura >= 85% se deja al CI. CI PR #116 (Python 3.12) sobre d52de57: pytest tests/ --cov=app --cov-fail-under=85 -> PASS (job Tests).",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "app/web/routes/leads.py valida TODOS los archivos y acumula los rechazos en rejections: list[(posicion, total, codigo)]; si hay alguno, audita cada rechazo con su codigo especifico (service.audit_attachment_rejection) y muestra _build_attachment_rejection_message -> 'No se subio ningun archivo. Archivo 2 de 3: <motivo>; Archivo 3 de 3: <motivo>.'. El motivo sale de _attachment_rejection_reason (empty_file, too_large, unsupported_type, invalid_content, too_many_pixels, pdf_encrypted, pdf_javascript, pdf_launch, pdf_embedded_files) y para pdf_encrypted/pdf_javascript/pdf_launch agrega 'vuelve a guardarlo con «Imprimir y Guardar como PDF»'. Sin nombres ni contenido (el mensaje solo usa la posicion y el codigo). Los mensajes se renderizan en la plantilla con autoescape de Jinja ({{ error_message }}). El codigo unsafe_pdf se dividio por causa en app/attachments/validation.py. Tests: test_upload_reports_all_failures_together_with_position_and_no_names, test_upload_encrypted_pdf_shows_specific_message_and_suggestion; 'mas de 5 archivos' y 'mas de 10 MB' se distinguen en el handler de MultiPartException por exc.message."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "app/attachments/validation.py reemplaza la busqueda de tokens por _pdf_names(content), que lee cada nombre desde '/' hasta un espacio, un delimitador de PDF (( ) < > [ ] { } / %) o el fin de datos, decodificando los escapes #xx. _pdf_has_embedded_files mapea los nombres exactos: JS/JavaScript -> pdf_javascript, Launch -> pdf_launch, Encrypt -> pdf_encrypted (en trailer o en el diccionario del xref stream, porque se escanea todo el contenido), EmbeddedFile -> marca pdfe o rechaza pdf_embedded_files. /JSON y /EmbeddedFiles ya no se confunden. Tests: test_pdf_name_boundaries_still_reject_js (/JS(...), /JS<<, /JS/Otro, /JS>>), test_pdf_longer_name_is_not_confused_with_js (/JSON), test_pdf_longer_name_is_not_confused_with_embedded_file (/EmbeddedFiles), test_pdf_names_respect_end_of_data_boundary, test_pdf_name_escape_js_is_rejected (/J#53), test_pdf_name_escape_launch_is_rejected (/Launc#68), test_pdf_encrypted_in_trailer_is_rejected, test_pdf_encrypted_in_xref_stream_dict_is_rejected."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "(a) Settings agrega attachments_allow_pdf_embedded_files (alias ATTACHMENTS_ALLOW_PDF_EMBEDDED_FILES, default True) y validate_attachment_content recibe allow_pdf_embedded_files; con False un PDF con /EmbeddedFile rechaza con pdf_embedded_files (test_pdf_with_embedded_file_rejected_when_disallowed). (b) Con True se acepta detectando el nombre EXACTO EmbeddedFile (test_pdf_with_embedded_file_is_allowed_by_default_and_marked_pdfe) y JS/Launch/Encrypt se siguen rechazando aunque haya incrustados (test_pdf_with_embedded_file_and_javascript_still_rejected, test_pdf_with_embedded_file_and_encrypt_still_rejected). (c) audit.py agrega archivos_incrustados al detalle y el servicio lo pasa en ACCION_SUBIDO (attachment_type == 'pdfe'; test_append_with_embedded_files_pdf_marks_pdfe_and_audits_flag, test_attachments_audit archivos_incrustados). (d) marks.py acepta el tipo pdfe (marca '[adjunto:pdfe:<uuid>]'), sin romper pdf/png/jpg; la nota muestra 'Contiene archivos incrustados: abrelo en el navegador' y se sirve Content-Type application/pdf (ATTACHMENT_MIME_TYPES['pdfe']); el tipo de los metadatos coincide con la marca (verified_type='pdfe'). (e) Sin cambios en compose ni infraestructura (clase A; deployment/** intacto)."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "SolicitudService.delete_attachment borra primero el objeto de S3 (storage.delete(key)); si ese borrado lanza, la nota no se toca (test_delete_attachment_s3_failure_does_not_touch_note). Despues reemplaza la marca exacta con build_deleted_attachment_mark via repository.replace_attachment_mark (UPDATE parametrizado REPLACE(comentarios, %s, %s) WHERE id_lead=%s AND comentarios LIKE %s, acotado al lead). La nota muestra 'Archivo eliminado' en el mismo comentario, sin imagen ni enlaces (template renderiza item.deleted_attachments; test_deleted_attachment_renders_as_archivo_eliminado_without_links). Las marcas de eliminado se ocultan en la exportacion XLSX y en cualquier vista (strip_attachment_marks ahora quita tambien '[adjunto-eliminado:...]'; test_strip_attachment_marks_removes_deleted_marks_too). La limpieza de leads de prueba no reintenta borrar los eliminados porque parse_attachment_marks solo devuelve marcas activas (test_parse_deleted_attachment_marks_finds_only_deleted_marks). La auditoria adjunto_eliminado sigue igual. Los eliminados ANTES de este cambio no se reconocen y siguen mostrandose como 'no disponible' (get_attachment devuelve None al no encontrar marca activa o al no existir el objeto)."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "storage.py agrega get_tagging (solo lectura get_object_tagging; el adaptador NUNCA llama a PutObjectTagging ni DeleteObjectTagging: test_get_tagging_reads_tags_and_never_writes). SolicitudService.get_attachment_scan_status mapea la etiqueta GuardDutyMalwareScanStatus: sin etiqueta -> scanning, NO_THREATS_FOUND -> clean, THREATS_FOUND -> threat, UNSUPPORTED/FAILED/ACCESS_DENIED -> blocked, error de lectura (get_tagging None, incluido AccessDenied por falta de permiso) -> unavailable. La pagina del lead (_attach_attachment_scan_statuses) consulta solo los adjuntos de notas de los ultimos 30 minutos (hora de la cabecera, America/Santiago) con tope de 20 consultas por pagina; las notas mas antiguas no consultan S3 (test_old_attachment_does_not_query_s3_for_scan, test_scan_status_cap_of_20_queries). El onerror de las imagenes pasa a 'Adjunto no disponible (en revision o bloqueado); actualiza la pagina' (deja de decir 'eliminado'; test_detail_page_renders_attachment_controls). Tests con doble sin red: test_recent_attachment_scan_status (parametrizado) y test_recent_attachment_tag_error_shows_no_disponible."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "evidence": "GET /leads/{id}/adjuntos/{uuid} responde _attachment_unavailable_page() (HTMLResponse sencillo y escapado 'Este adjunto no esta disponible: puede estar escaneandose, bloqueado o eliminado', 404, X-Content-Type-Options: nosniff, Cache-Control: no-store) en lugar del texto plano, para las cuatro causas (adjuntos apagados, uuid invalido, objeto no disponible y tipo de metadatos no valido). La respuesta es identica para un lead no visible, un uuid sin marca y un objeto no disponible (todas pasan por get_attachment -> None -> misma pagina). Las demas cabeceras de la vista/descarga (Content-Type, CSP, Referrer-Policy, Content-Disposition) no cambian. Test: test_view_unavailable_returns_html_404_page."
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "evidence": "Siguen pasando las pruebas de seguridad de CRM-ADJUNTOS-2-CODIGO; solo se actualizaron las que dependian de los codigos/textos que cambian por AC-1 (unsafe_pdf -> pdf_encrypted/pdf_javascript/pdf_launch/pdf_embedded_files en test_attachments_validation y test_attachments_audit) y AC-4 (la marca de borrado ahora se reemplaza en test_delete_attachment_deletes_and_audits, test_delete_success_leaves_mark_and_audits) y el texto de onerror de AC-5 (test_detail_page_renders_attachment_controls). Con ATTACHMENTS_ENABLED=false el comportamiento es identico (test_disabled_attachments_hide_file_field_and_return_404, test_upload_without_content_length_works_when_attachments_disabled, test_text_only_note_still_works_when_attachments_enabled). Cobertura >= 85% (CI job Tests). ruff/black/mypy/bandit/pip-audit sin observaciones y SIN dependencias nuevas."
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "evidence": "docs/SEGURIDAD.md documenta la decision 9 (PDF con archivos incrustados) con sus condiciones y riesgo, los codigos de rechazo por causa, los estados de escaneo y el permiso s3:GetObjectTagging. docs/ADJUNTOS_COMENTARIOS_DISENO.md agrega la decision 9 (ya presente), la marca pdfe y la marca de eliminado en la seccion 3, el punto 4.2 afinado y la nota de implementacion. docs/DEVELOPMENT_GUIDE.md agrega ATTACHMENTS_ALLOW_PDF_EMBEDDED_FILES. CHANGELOG.md con la entrada del cambio. La entrada de cierre de docs/BITACORA.md la genera el cierre automatico del Harness (fuera del alcance del Developer)."
+    },
+    {
+      "id": "AC-9",
+      "status": "pending_verification",
+      "evidence": "Smoke humano en AWS DEV tras el despliegue, con el permiso s3:GetObjectTagging ya aplicado por el humano (PR aparte y deployment/aws/adjuntos_s3_infra.py apply). Requiere requires_human_acceptance: subir el PDF con archivos incrustados (se acepta y muestra la etiqueta), PDF cifrado (rechazo claro), GIF y >10 MB (mensajes especificos, fallos juntos), imagen 'Escaneando' y disponible al actualizar, EICAR 'Bloqueado', eliminar PDF e imagen como ceo/cto y ver 'Archivo eliminado', adjunto no disponible con pagina amable, revisar tpi.auditoria con codigos especificos y archivos_incrustados, sin errores en logs. El codigo degrada bien si el permiso todavia falta (AC-5 muestra 'No disponible')."
+    }
+  ],
+  "files_changed": [
+    "app/attachments/__init__.py",
+    "app/attachments/validation.py (nombres con frontera, codigos por causa, pdfe)",
+    "app/attachments/marks.py (marca pdfe y marca de eliminado)",
+    "app/attachments/storage.py (get_tagging de solo lectura)",
+    "app/attachments/audit.py (archivos_incrustados)",
+    "app/config/settings.py (ATTACHMENTS_ALLOW_PDF_EMBEDDED_FILES)",
+    "app/repositories/solicitud_repository.py (replace_attachment_mark)",
+    "app/services/solicitud_service.py (delete reemplaza marca, get_attachment_scan_status, auditoria pdfe)",
+    "app/web/presentation.py (deleted_attachments en las notas, scan_status en el timeline)",
+    "app/web/routes/leads.py (mensajes de rechazo por causa, pagina 404 HTML, estados de escaneo)",
+    "app/web/templates/lead_detail_panel.html (estados de escaneo, Archivo eliminado, etiqueta pdfe)",
+    "docs/ADJUNTOS_COMENTARIOS_DISENO.md",
+    "docs/DEVELOPMENT_GUIDE.md",
+    "docs/SEGURIDAD.md",
+    "CHANGELOG.md",
+    "tests/unit/test_attachments_validation.py",
+    "tests/unit/test_attachments_marks.py",
+    "tests/unit/test_attachments_storage.py",
+    "tests/unit/test_attachments_audit.py",
+    "tests/unit/test_attachments_service.py",
+    "tests/unit/test_attachments_web.py"
+  ],
+  "assumptions": [
+    "Clase A: solo codigo de aplicacion. NO se toca deployment/**, IAM, el bucket ni GuardDuty. El permiso de solo lectura s3:GetObjectTagging lo agrega el humano con un PR aparte y deployment/aws/adjuntos_s3_infra.py apply ANTES del despliegue; el codigo degrada bien si todavia falta (AC-5: cualquier error de lectura, incluido AccessDenied, se muestra como 'No disponible').",
+    "Decision del humano (2026-10-21, opcion B): los PDF con archivos incrustados SE PERMITEN con las condiciones de AC-3. JavaScript, /Launch y cifrados se siguen rechazando (cada cambio de reglas lleva pruebas, incluidas las de ofuscacion /J#53 y /Launc#68).",
+    "No se guarda ni muestra el nombre original de los archivos en ningun lado; los mensajes de rechazo indican la posicion ('Archivo 2 de 3') y no repiten el nombre ni el contenido.",
+    "Sin tabla nueva ni migracion: la relacion nota-adjunto sigue siendo la marca en tpi.leads.comentarios; el unico UPDATE nuevo es replace_attachment_mark (REPLACE parametrizado de la marca exacta acotado al lead). migrations_included=false.",
+    "Nada de red ni de AWS en las pruebas: el cliente S3 se inyecta y se simula (get_tagging incluido). No se ejecutaron comandos contra AWS.",
+    "Los 11 fallos de la suite unit local (test_executive_dashboard_render/service) son por falta de PostgreSQL local (DatabaseConfigurationError), preexistentes y no relacionados; pasan en CI. La cobertura >= 85% se verifica en CI (job Tests verde).",
+    "ATTACHMENTS_ALLOW_PDF_EMBEDDED_FILES no se agrega a .env.example (fuera del alcance del Developer); se documenta en docs/DEVELOPMENT_GUIDE.md.",
+    "Los estados de escaneo se muestran solo en adjuntos de notas de los ultimos 30 minutos, con tope de 20 consultas por pagina; las notas mas antiguas no consultan S3 y conservan la imagen o el enlace."
+  ],
+  "migrations_included": false
+}

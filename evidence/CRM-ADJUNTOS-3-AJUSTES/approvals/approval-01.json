@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "approval",
+  "task_id": "CRM-ADJUNTOS-3-AJUSTES",
+  "created_at": "2026-10-22T00:33:46Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "approved_commit": "e37bb775388ca926d54d2d89f5d032fe2d091eb8",
+  "app_digest": "sha256:7b2e89e88a1f5423b04b86222f969eff9caeba5cdadf12416ec93db025fd4f0f",
+  "caddy_digest": "sha256:caaa599ec0d745b8f6e1a49545962f5056afe227bd7a7d518e2ba1dee767dc4d",
+  "bundle_sha256": "5b50fd0a6bfbb75a2572b64ae404d35699892ed660c0a4a826388ba5bea001c8",
+  "s3_key": "tpi-backoffice/dev-releases/h3-crm-adjuntos-3-ajustes-e37bb77-domainlocked-r1/5b50fd0a6bfbb75a2572b64ae404d35699892ed660c0a4a826388ba5bea001c8.zip",
+  "application_version": "h3-crm-adjuntos-3-ajustes-e37bb77-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "lkg_version_label": "h3-crm-adjuntos-2-codigo-03436de-domainlocked-r1",
+  "candidate_evidence": {
+    "path": "evidence/CRM-ADJUNTOS-3-AJUSTES/deployment/candidate-01.json",
+    "sha256": "5e03a9c6cd8c1038ce8c7876d53bbf6c32a64ecef085790578f8bc6a29a7a192"
+  },
+  "rollback_authorization": {
+    "scope": "single_version_only_rollback_to_named_lkg",
+    "max_attempts": 1,
+    "lkg_version_label": "h3-crm-adjuntos-2-codigo-03436de-domainlocked-r1",
+    "conditions": [
+      "update_environment_accepted",
+      "environment_degraded_inconsistent_or_not_expected_state",
+      "lkg_application_version_usable",
+      "lkg_images_present_in_ecr",
+      "no_option_settings_required",
+      "not_purely_functional_defect",
+      "no_previous_rollback_attempt"
+    ]
+  },
+  "decision": "approved"
+}
