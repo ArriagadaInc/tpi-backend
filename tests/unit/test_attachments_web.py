@@ -351,6 +351,186 @@ def test_text_only_note_still_works_when_attachments_enabled() -> None:
     assert audit == []
 
 
+def _multipart(
+    *, boundary: str, fields: dict[str, str], file_parts: list[tuple[str, str, bytes, str]]
+) -> bytes:
+    """Cuerpo multipart/form-data real (pasa por el parser de Starlette)."""
+    chunks: list[bytes] = []
+    for name, value in fields.items():
+        chunks.append(
+            f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"\r\n\r\n{value}\r\n'.encode()
+        )
+    for name, filename, content, content_type in file_parts:
+        chunks.append(
+            (
+                f'--{boundary}\r\nContent-Disposition: form-data; name="{name}"; '
+                f'filename="{filename}"\r\nContent-Type: {content_type}\r\n\r\n'
+            ).encode()
+        )
+        chunks.append(content)
+        chunks.append(b"\r\n")
+    chunks.append(f"--{boundary}--\r\n".encode())
+    return b"".join(chunks)
+
+
+def test_text_only_note_with_empty_file_part_saves_like_text_only() -> None:
+    # Cuando no se elige archivo, el navegador envía una parte `files` con
+    # filename="" y cuerpo vacío; debe ignorarse y seguir la ruta de solo texto
+    # (mismo 303, sin S3 ni auditoría de adjuntos).
+    client, repo, storage, audit = _client("ceo")
+    csrf = _csrf(client)
+    body = _multipart(
+        boundary="b",
+        fields={"csrf_token": csrf, "new_comment": "Seguimiento simple"},
+        file_parts=[("files", "", b"", "application/octet-stream")],
+    )
+    response = client.post(
+        f"/leads/{LEAD_ID}/comments",
+        content=body,
+        headers={"Content-Type": "multipart/form-data; boundary=b"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert repo.comments[-1].endswith("Seguimiento simple")
+    assert storage.put_calls == []
+    assert audit == []
+
+
+def test_text_only_multipart_without_files_part_saves_like_text_only() -> None:
+    # La misma nota con adjuntos activos y sin ninguna parte `files` (multipart
+    # real con Content-Length) también sigue la ruta de solo texto.
+    client, repo, storage, audit = _client("ceo")
+    csrf = _csrf(client)
+    body = _multipart(
+        boundary="b",
+        fields={"csrf_token": csrf, "new_comment": "Seguimiento simple"},
+        file_parts=[],
+    )
+    response = client.post(
+        f"/leads/{LEAD_ID}/comments",
+        content=body,
+        headers={"Content-Type": "multipart/form-data; boundary=b"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert repo.comments[-1].endswith("Seguimiento simple")
+    assert storage.put_calls == []
+    assert audit == []
+
+
+def test_named_empty_file_is_rejected_as_empty_file() -> None:
+    # Un archivo con nombre y 0 bytes SÍ es un archivo real: se rechaza con
+    # empty_file (no se confunde con la parte vacía del navegador).
+    client, _, storage, audit = _client("ceo")
+    csrf = _csrf(client)
+    response = client.post(
+        f"/leads/{LEAD_ID}/comments",
+        data={"csrf_token": csrf, "new_comment": "Nota"},
+        files=[("files", ("vacio.pdf", b"", "application/pdf"))],
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    assert "archivo esta vacio" in response.text
+    assert storage.put_calls == []
+    codes = [event["rejection_code"] for event in audit if event["accion"] == "adjunto_rechazado"]
+    assert codes == ["empty_file"]
+
+
+def test_empty_part_plus_valid_file_uploads_only_valid_file() -> None:
+    # Una parte vacía junto con un archivo válido sube solo el archivo real.
+    client, repo, storage, audit = _client("ceo")
+    csrf = _csrf(client)
+    body = _multipart(
+        boundary="b",
+        fields={"csrf_token": csrf, "new_comment": "Nota con imagen"},
+        file_parts=[
+            ("files", "", b"", "application/octet-stream"),
+            ("files", "foto.png", _png(), "image/png"),
+        ],
+    )
+    response = client.post(
+        f"/leads/{LEAD_ID}/comments",
+        content=body,
+        headers={"Content-Type": "multipart/form-data; boundary=b"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert len(storage.put_calls) == 1
+    assert "[adjunto:png:" in repo.comments[-1]
+    assert any(event["accion"] == "adjunto_subido" for event in audit)
+
+
+def test_empty_part_does_not_affect_rejection_position_counter() -> None:
+    # La parte vacía no cuenta para el contador "Archivo N de M": solo hay un
+    # archivo real (el inválido), así que el mensaje dice "Archivo 1 de 1".
+    client, _, storage, audit = _client("ceo")
+    csrf = _csrf(client)
+    body = _multipart(
+        boundary="b",
+        fields={"csrf_token": csrf, "new_comment": "Nota"},
+        file_parts=[
+            ("files", "", b"", "application/octet-stream"),
+            ("files", "evil.svg", b"<svg></svg>", "image/svg+xml"),
+        ],
+    )
+    response = client.post(
+        f"/leads/{LEAD_ID}/comments",
+        content=body,
+        headers={"Content-Type": "multipart/form-data; boundary=b"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    assert "Archivo 1 de 1" in response.text
+    assert "tipo no esta permitido" in response.text
+    assert storage.put_calls == []
+    codes = [event["rejection_code"] for event in audit if event["accion"] == "adjunto_rechazado"]
+    assert codes == ["unsupported_type"]
+
+
+def test_five_files_plus_empty_part_not_counted_toward_limit() -> None:
+    # La parte vacía no cuenta para el límite de 5 archivos: 5 archivos reales
+    # + 1 parte vacía se aceptan y suben los 5 (lección del smoke de AC-9).
+    client, repo, storage, _audit = _client("ceo")
+    csrf = _csrf(client)
+    file_parts: list[tuple[str, str, bytes, str]] = [("files", "", b"", "application/octet-stream")]
+    file_parts.extend(("files", f"f{i}.png", _png(), "image/png") for i in range(5))
+    body = _multipart(
+        boundary="b",
+        fields={"csrf_token": csrf, "new_comment": "Nota con 5 archivos"},
+        file_parts=file_parts,
+    )
+    response = client.post(
+        f"/leads/{LEAD_ID}/comments",
+        content=body,
+        headers={"Content-Type": "multipart/form-data; boundary=b"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert len(storage.put_calls) == 5
+    assert len(re.findall(r"\[adjunto:png:", repo.comments[-1])) == 5
+
+
+def test_empty_file_part_with_attachments_disabled_does_not_change_behavior() -> None:
+    # AC-7: con la función apagada el comportamiento es idéntico al de hoy.
+    client, repo, storage, audit = _client("ceo", attachments_enabled=False)
+    csrf = _csrf(client)
+    body = _multipart(
+        boundary="b",
+        fields={"csrf_token": csrf, "new_comment": "Seguimiento simple"},
+        file_parts=[("files", "", b"", "application/octet-stream")],
+    )
+    response = client.post(
+        f"/leads/{LEAD_ID}/comments",
+        content=body,
+        headers={"Content-Type": "multipart/form-data; boundary=b"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert repo.comments[-1].endswith("Seguimiento simple")
+    assert storage.put_calls == []
+    assert audit == []
+
+
 def test_view_requires_session() -> None:
     service = SolicitudService(
         repository=cast(Any, _FakeRepo()),
