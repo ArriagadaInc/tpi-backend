@@ -200,6 +200,11 @@ metadatos) como segunda versión.
 ¿Se acepta que las imágenes conserven EXIF y GPS visibles en esta primera versión, o se quiere quitar
 los metadatos al subir antes de producción?
 
+**Decisión del humano (2026-10-22): Opción A.** Tras comprobar en DEV que una foto de celular conserva latitud y longitud, se acepta que
+las imágenes conserven sus metadatos en la primera versión. La Opción B (limpiar EXIF al subir) sigue agendada como segunda versión y el
+humano puede reabrirla en cualquier momento; conviene comprobar que esté el aviso visible al subir que prevé el diseño (sección 5 de
+`docs/ADJUNTOS_COMENTARIOS_DISENO.md`).
+
 ---
 
 ## 4. Retención y borrado a solicitud del titular

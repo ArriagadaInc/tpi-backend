@@ -31,7 +31,8 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
   (2) los rechazos previos a la validación (413, 411, 400 del analizador, 403) no dejan fila en `tpi.auditoria`: decisión pendiente del humano;
   (3) hay 8 eliminaciones frente a 7 subidas, por aclarar con la consulta que trae el informe; (4) el humano comprobó que la foto JPEG de celular de la
   prueba (188 KB) tiene latitud y longitud: el riesgo de EXIF/GPS (punto 3) está confirmado en la práctica, porque el servidor guarda los bytes
-  sin modificar.
+  sin modificar. **Decisión del humano (2026-10-22): opción A del punto 3**, las imágenes conservan sus metadatos en la primera versión;
+  la limpieza de EXIF sigue agendada como segunda versión (se registra también en la decisión 8 de `docs/ADJUNTOS_COMENTARIOS_DISENO.md`).
 - Script: ahora cierra el pool de conexiones al salir (desaparecen los avisos `couldn't stop thread ...`), con pruebas.
 
 ### 2026-10-22 - CRM: el script de medición de adjuntos indica el puerto del túnel a DEV (5433) y explica mejor sus fallos
