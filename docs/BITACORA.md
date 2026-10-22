@@ -22,6 +22,48 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-22 - Harness: tarea CRM-ADJUNTOS-3-AJUSTES cerrada (DONE); el arreglo de las notas de solo texto exigió un reproceso y dos excepciones del Harness
+
+- Titulo: Adjuntos de notas: mensajes de rechazo claros, estados de escaneo y borrado visibles, PDF con archivos incrustados
+- Evidencia: `evidence/CRM-ADJUNTOS-3-AJUSTES/` y `tasks/completed/CRM-ADJUNTOS-3-AJUSTES.yaml`.
+- release_sha: `fd5778ac79b77e28e0add3c5c54646ca5bf4a08f` (PR 117, sobre el release `e37bb77` del PR 116)
+- application_version: `h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1`
+- bundle_sha256: `21a58cb28a1dca04e758f92c6b53f885d26c5d61b1ba493fb4dad555d797d725`
+- lkg: `h3-crm-adjuntos-3-ajustes-e37bb77-domainlocked-r1`
+- deployment: `success` (cutover version-only, ejecutado por el humano a mano; ver abajo)
+- verification: `PASS`; el humano aceptó AC-8 y AC-9 el 2026-10-22.
+
+**Cronología.** Ronda 1: release `e37bb77` desplegado y con verificación técnica PASS (`verification-01`). En el smoke humano de AC-9 en
+DEV, una nota de solo texto devolvía 400 «Archivo 1 de 1: el archivo está vacío» y no se guardaba. El humano rechazó AC-9
+(`verification-02`, `failure-01`, clase funcional, sin rollback: el release anterior tenía el mismo defecto) y resolvió a DEVELOPING.
+Ronda 2: el PR 117 corrigió el defecto, pasó revisión y CI, y se desplegó como `fd5778a`; el smoke humano pasó (`verification-03`).
+
+**Causa del defecto (desde CRM-ADJUNTOS-2-CODIGO).** Cuando no se elige ningún archivo, el navegador igual envía una parte multipart
+`files` con `filename=""` y cuerpo vacío; Starlette la entrega como `UploadFile` de 0 bytes y `lead_comment_append` la validaba como
+archivo real (`empty_file`). Las pruebas usaban dobles y nunca simularon esa parte. El arreglo ignora las partes con `filename == ""`
+(un archivo con nombre y 0 bytes sigue rechazándose) y reaplica el tope de 5 archivos sobre los archivos reales; las pruebas nuevas pasan
+por el parser real de multipart.
+
+**Lecciones del Harness** (ninguna cambió código del Harness en esta tarea):
+
+1. *Reproceso después de un merge deja dos worktrees de Developer registrados.* El Developer creó un worktree nuevo desde `origin/main`
+   (correcto: main ya trae el squash del release), pero `guard._developer_worktree` toma el PRIMER worktree de Developer registrado en
+   `state.json`, así que negó `git commit` y `git push` del nuevo. Se resolvió con una nota que mandó al Developer a retirar el viejo con
+   `worktree.py remove --name ...`. Mejora pendiente: tomar el último registrado, o que `worktree.py create` retire el anterior.
+2. *`aws_guard` cuenta los cutover y rollbacks por tarea, no por aprobación.* Una tarea que ya desplegó una vez no puede volver a desplegar
+   tras un reproceso («ya hubo un intento de cutover: un release, una promoción»). El humano eligió la excepción documentada: ejecutó él
+   mismo, en su terminal y UNA sola vez, el `update-environment` del plan aprobado (15:33:27Z, convergió en ~41 s). El Deployer no lo ejecutó:
+   verificó el environment y los eventos, y `deployment-02.json` deja la constancia explícita (`cutover.executed_by: human`, `warnings`). El
+   rollback al LKG siguió autorizado y sin usar. Mejora pendiente: contar por aprobación (`HARNESS-GUARDS-REPROCESO-POST-DEPLOY`). Para
+   evitarlo hasta entonces, un arreglo posterior a un despliegue conviene como tarea nueva de clase A y no como reproceso de la misma.
+3. *Las pruebas de formularios deben pasar por el parser real.* Una prueba con doble de `UploadFile` no reproduce lo que envía un
+   navegador. Quedó como prueba obligatoria en las notas a los Developers.
+4. *Operación:* la sesión AWS (`aws login --profile tpi-dev --remote`) venció dos veces durante la tarea y el límite de uso de Claude
+   interrumpió una vez al Reviewer; en ambos casos el trabajo se conservó y bastó relanzar el orquestador.
+
+Pendientes que quedan en el backlog: `CRM-ADJUNTOS-REVISION-PREPROD` (revisión de seguridad antes de producción),
+`SIM-CANARIA-MENSUAL`, `SEG-LIMPIEZA-RESIDUOS-STREAMLIT` y `HARNESS-GUARDS-REPROCESO-POST-DEPLOY`.
+
 ### 2026-10-21 - Harness: lecciones de forma del guard en las vistas de los roles; el «Remove-Item on system path» no es del guard
 
 - Cambio (solo documentación de los roles): `agents/developer/PROMPT.md` y `agents/developer/CONTEXT.md`, `agents/reviewer/CONTEXT.md` y

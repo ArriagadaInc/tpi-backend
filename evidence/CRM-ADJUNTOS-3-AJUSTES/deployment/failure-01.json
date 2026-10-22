@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "kind": "failure",
+  "task_id": "CRM-ADJUNTOS-3-AJUSTES",
+  "created_at": "2026-10-22T01:50:18Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610220148-deployer-supa429b8",
+  "state": "VERIFY_FAILED",
+  "action": "verificacion funcional en DEV (smoke humano de AC-9)",
+  "resource": "tpi-backoffice-dev-green / h3-crm-adjuntos-3-ajustes-e37bb77-domainlocked-r1",
+  "principal": "ninguno: sin operaciones AWS en esta sesion",
+  "error": "Funcional: una nota de solo texto responde 400 'el archivo esta vacio' con adjuntos activos, porque el navegador envia una parte multipart de archivos vacia (nombre vacio) que el servicio valida como archivo real. Sin error de infraestructura.",
+  "failure_class": "functional",
+  "classification": "defecto de producto heredado de CRM-ADJUNTOS-2-CODIGO; environment Ready/Green/Ok, identidad de runtime verificada",
+  "recommendation": "No hacer rollback (defecto puramente funcional, contrato seccion 9; el release puede quedar en DEV). Escalar a BLOCKED_HUMAN para que el humano resuelva a DEVELOPING con el hallazgo de progress/current.md (ignorar partes con nombre vacio; pruebas por el parser real de multipart).",
+  "residues": [],
+  "access_denied": false,
+  "rollback_executed": false
+}

@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "CRM-ADJUNTOS-3-AJUSTES",
+  "created_at": "2026-10-22T02:47:45Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610220234-developer-sup58f450",
+  "head_sha": "aecdc8258f878ed98e197de3c4dd83088988cc16",
+  "branch": "harness/CRM-ADJUNTOS-3-AJUSTES-ajustes-r2",
+  "pr_number": 117,
+  "change_class": "A",
+  "tests": {
+    "command": "Local (worktree, Python 3.13.13): python -m pytest tests/unit/test_attachments_web.py --no-cov -q -> 42 passed (35 existentes + 7 nuevas del arreglo). python -m pytest tests/unit/test_attachments_web.py tests/unit/test_attachments_service.py tests/unit/test_attachments_validation.py tests/unit/test_attachments_marks.py tests/unit/test_attachments_audit.py tests/unit/test_attachments_storage.py tests/unit/test_adjuntos_s3_infra.py --no-cov -q -> 154 passed. Suite unit completa: 922 passed, 11 failed (test_executive_dashboard_render/service, por falta de PostgreSQL local: DatabaseConfigurationError, preexistentes y no relacionados; pasan en CI con el servicio postgres). CI PR #117 (Python 3.12) sobre aecdc82: job Tests (pytest tests/ --cov=app --cov-fail-under=85) PASS.",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "El reproceso ajusta el contador 'Archivo N de M' para que la parte multipart vacia del navegador (filename='') no cuente: en app/web/routes/leads.py el filtro de files descarta las partes con filename == '' antes de validar, asi que el contador cuenta solo archivos reales (test_empty_part_does_not_affect_rejection_position_counter: una parte vacia + un archivo invalido -> 'Archivo 1 de 1'). El resto de los mensajes por causa de AC-1 (unsupported_type, empty_file, pdf_encrypted, etc.) no cambia en este reproceso y sigue como en developer-01.json."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "Sin cambios en este reproceso. Las reglas de nombres de PDF (fronteras, escapes, trailer/xref stream) siguen como en developer-01.json; las pruebas de AC-2 siguen pasando (154 passed incluye test_attachments_validation.py)."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "Sin cambios en este reproceso. PDF con archivos incrustados permitidos (opcion B) con marca pdfe, auditoria archivos_incrustados, ATTACHMENTS_ALLOW_PDF_EMBEDDED_FILES y rechazo de JS/Launch/cifrados siguen como en developer-01.json."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "Sin cambios en este reproceso. Borrado visible en la nota (marca de eliminado, UPDATE parametrizado, 'Archivo eliminado', ocultado en exportacion) sigue como en developer-01.json."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "Sin cambios en este reproceso. Lectura de la etiqueta GuardDutyMalwareScanStatus (get_tagging de solo lectura, tope 20, ventana 30 min, onerror 'Adjunto no disponible (en revision o bloqueado)') sigue como en developer-01.json."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "evidence": "Sin cambios en este reproceso. Pagina HTML 404 amable de adjunto no disponible sigue como en developer-01.json."
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "evidence": "Este reproceso corrige la regresion del smoke de AC-9: una nota de SOLO TEXTO fallaba con adjuntos activos porque la parte multipart 'files' vacia del navegador (filename='', size=0) se tomaba por un archivo real y se rechazaba como empty_file. Ahora app/web/routes/leads.py filtra las partes con filename == '' (no se eligio archivo); si tras el filtro no queda ningun archivo, la nota sigue EXACTAMENTE la ruta de solo texto (mismo 303, mismo aviso 'Seguimiento agregado.', sin S3 ni limitador de tasa ni auditoria de adjuntos). Un archivo con nombre y 0 bytes SIGUE rechazandose como empty_file. El limite de 5 archivos deja de contar la parte vacia: se lee max_files=MAX_FILES_PER_NOTE+1 en Starlette y se aplica abajo el limite real de 5 (test_five_files_plus_empty_part_not_counted_toward_limit). Pruebas nuevas (a traves del parser real de multipart, sin dobles): test_text_only_note_with_empty_file_part_saves_like_text_only, test_text_only_multipart_without_files_part_saves_like_text_only, test_named_empty_file_is_rejected_as_empty_file, test_empty_part_plus_valid_file_uploads_only_valid_file, test_empty_part_does_not_affect_rejection_position_counter, test_five_files_plus_empty_part_not_counted_toward_limit, test_empty_file_part_with_attachments_disabled_does_not_change_behavior. Con ATTACHMENTS_ENABLED=false el comportamiento es identico al de hoy. Cobertura >= 85% en CI; ruff/black/mypy/bandit/pip-audit sin observaciones y SIN dependencias nuevas."
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "evidence": "Sin cambios de documentacion en este reproceso: es un arreglo acotado de codigo, sin configuracion ni decisiones nuevas. docs/SEGURIDAD.md, docs/ADJUNTOS_COMENTARIOS_DISENO.md, CHANGELOG y DEVELOPMENT_GUIDE siguen como en developer-01.json (la decision 9, la marca pdfe, la marca de eliminado, los codigos de rechazo, los estados de escaneo y s3:GetObjectTagging ya estan documentados). La entrada de cierre de docs/BITACORA.md la genera el cierre automatico del Harness."
+    },
+    {
+      "id": "AC-9",
+      "status": "pending_verification",
+      "evidence": "Smoke humano en AWS DEV tras el despliegue (con el permiso s3:GetObjectTagging ya aplicado). Ademas de los puntos de AC-9 del primer round, el humano debe confirmar que una NOTA DE SOLO TEXTO sin archivo elegido se guarda y redirige con 'Seguimiento agregado.' (sin el rechazo 'Archivo 1 de 1: el archivo esta vacio'). Requiere requires_human_acceptance."
+    }
+  ],
+  "files_changed": [
+    "app/web/routes/leads.py (lead_comment_append: ignora la parte files vacia filename='', aplica el limite real de 5 archivos)",
+    "tests/unit/test_attachments_web.py (7 pruebas nuevas con parser multipart real)"
+  ],
+  "assumptions": [
+    "Reproceso acotado al hallazgo del smoke de AC-9: solo se cambia app/web/routes/leads.py y sus pruebas; nada mas fuera del alcance.",
+    "Clase A: solo codigo de aplicacion. NO se toca deployment/**, IAM, el bucket ni GuardDuty.",
+    "El navegador envia exactamente una parte files vacia (filename='') cuando no se elige archivo; por eso max_files de Starlette se sube en 1 para absorberla y se aplica abajo el limite real de 5.",
+    "Un archivo con nombre y 0 bytes sigue siendo un archivo real y se rechaza como empty_file; no se confunde con la parte vacia del navegador.",
+    "Nada de red ni de AWS en las pruebas: el cliente S3 se inyecta y se simula. No se ejecutaron comandos contra AWS.",
+    "Los 11 fallos de la suite unit local (test_executive_dashboard_render/service) son por falta de PostgreSQL local (DatabaseConfigurationError), preexistentes y no relacionados; pasan en CI. La cobertura >= 85% se verifica en CI (job Tests verde).",
+    "Sin dependencias nuevas y sin migraciones (migrations_included=false)."
+  ],
+  "migrations_included": false
+}

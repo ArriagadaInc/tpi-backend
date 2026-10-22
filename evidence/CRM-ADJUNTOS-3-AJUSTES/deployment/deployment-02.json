@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "kind": "deployment",
+  "task_id": "CRM-ADJUNTOS-3-AJUSTES",
+  "created_at": "2026-10-22T15:37:24Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610221534-deployer-sup25a0ed",
+  "approved_commit": "fd5778ac79b77e28e0add3c5c54646ca5bf4a08f",
+  "deployed_commit": "fd5778ac79b77e28e0add3c5c54646ca5bf4a08f",
+  "application_version": "h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "update_accepted": true,
+  "result": "success",
+  "started_at": "2026-10-22T15:33:27Z",
+  "finished_at": "2026-10-22T15:34:08Z",
+  "failure_class": null,
+  "previous_version_label": "h3-crm-adjuntos-3-ajustes-e37bb77-domainlocked-r1",
+  "final_state": {
+    "version_label": "h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "observed_at": "2026-10-22T15:36:00Z"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1/21a58cb28a1dca04e758f92c6b53f885d26c5d61b1ba493fb4dad555d797d725.zip",
+    "s3_checksum_sha256_b64": "IaWMsoodygTnWPksa1P4hdJsXWGxukk/tNrVVdeX1yU=",
+    "s3_content_length": 4917,
+    "bundle_sha256": "21a58cb28a1dca04e758f92c6b53f885d26c5d61b1ba493fb4dad555d797d725",
+    "digests_equal_approval_02": true,
+    "note": "describe-environments post-cutover VersionLabel = aprobada; AV SourceBundle = key de approval-02; head-object ChecksumSHA256 = base64 del bundle_sha256 aprobado (verificado), cuyo compose fija los digests app a1a6aa83... / caddy ebc586b1... segun approval-02 y candidate-02; ambos digests ACTIVE en ECR (describe-images en esta sesion)."
+  },
+  "preflight": {
+    "at": "2026-10-22T15:35Z",
+    "result": "PASS",
+    "checks": [
+      "init PASS (DEPLOYING, rol deployer)",
+      "approval-02 para fd5778a coincide con candidate-02 (bundle, key, digests, AV, LKG)",
+      "sts account 821656895812; region us-east-2 por aws_guard",
+      "environment ya en la version aprobada, Ready/Green/Ok, AbortableOperationInProgress false, sin update en curso",
+      "AV candidata UNPROCESSED con SourceBundle = key aprobada",
+      "digests app/caddy del candidato ACTIVE en ECR"
+    ]
+  },
+  "cutover": {
+    "mechanism": "update-environment version-label only, ejecutado por el HUMANO en su terminal fuera de aws_guard",
+    "executed_by": "human",
+    "updates_applied": 1,
+    "retries": 0,
+    "option_settings": false,
+    "restart_app_server": false,
+    "rollback_executed": false,
+    "convergence": "exitosa en ~41 s (Environment update is starting 15:33:27Z, completed successfully 15:34:08Z; health Info->Ok 15:35:10Z)",
+    "note": "aws_guard bloqueo el cutover por contar un intento previo en la tarea (ronda 1); el humano ejecuto el update version-only a mano, una sola vez, segun el plan aprobado. El Deployer NO ejecuto update-environment en esta ronda."
+  },
+  "events": {
+    "levels_observed": [
+      "INFO"
+    ],
+    "errors": 0,
+    "note": "Environment update completed successfully; Ready/Green/Ok (RequestId 486ccc84 en describe-events)."
+  },
+  "warnings": [
+    "El cutover lo ejecuto el humano a mano fuera de aws_guard por la limitacion del guard (conteo de cutover por tarea); no lo ejecuto el Deployer.",
+    "AC-9 (smoke humano) sigue pendiente; conteos de logs y smoke HTTP corresponden a VERIFYING."
+  ]
+}

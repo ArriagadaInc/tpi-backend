@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "CRM-ADJUNTOS-3-AJUSTES",
+  "created_at": "2026-10-22T02:50:13Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610220248-reviewer-supf2d51c",
+  "reviewed_sha": "aecdc8258f878ed98e197de3c4dd83088988cc16",
+  "reviewed_tree": "83eeea9e2e505c920241a531cee46e881b4e47d5",
+  "pr_number": 117,
+  "ci": {
+    "run_id": "39712528372",
+    "conclusion": "success",
+    "jobs": [
+      "Docker Build",
+      "Lint & Format",
+      "Release Tooling Validation",
+      "Security Audit",
+      "Tests"
+    ]
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "info",
+      "file": "app/web/routes/leads.py",
+      "summary": "Con ATTACHMENTS_ENABLED=true una nota con mas de 5 archivos reales se rechaza por dos vias equivalentes (Starlette con 7 o mas partes, o el chequeo propio con 6), ambas con el mismo mensaje y 400. El lead se resuelve con el mismo contexto.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F-2",
+      "severity": "info",
+      "file": "harness/state.json",
+      "summary": "El reproceso es acotado: dos archivos (leads.py y su suite de pruebas), sin docs ni dependencias nuevas. El permiso s3:GetObjectTagging sigue siendo precondicion del humano antes del despliegue.",
+      "required_action": "Ninguna."
+    }
+  ],
+  "checks": [
+    {
+      "name": "CI verde en el SHA exacto (5 jobs, run 39712528372); PR 117 mergeable, merge-base igual a origin/main e37bb77, un commit sobre main",
+      "result": "PASS"
+    },
+    {
+      "name": "Alcance: solo app/web/routes/leads.py y tests/unit/test_attachments_web.py; sin deployment/**, IAM, compose ni dependencias",
+      "result": "PASS"
+    },
+    {
+      "name": "Arreglo del smoke: la parte files vacia del navegador (filename vacio) se descarta y la nota sigue la ruta de solo texto; un archivo con nombre y 0 bytes sigue rechazandose como empty_file; el limite de 5 no cuenta la parte vacia; el contador Archivo N de M no la cuenta",
+      "result": "PASS"
+    },
+    {
+      "name": "Con adjuntos desactivados el comportamiento no cambia (prueba dedicada); CSRF y validacion de nota previos al descarte sin cambios",
+      "result": "PASS"
+    },
+    {
+      "name": "Reejecucion local en el worktree del SHA: 103 pruebas de adjuntos (web, service, validation) pasan; ruff y black sin observaciones",
+      "result": "PASS"
+    },
+    {
+      "name": "Pruebas nuevas usan el parser multipart real, sin dobles del parseo",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "Riesgo bajo: el cambio solo afecta que partes multipart cuentan como archivos; no relaja ninguna regla de validacion de contenido.",
+    "AC-9 sigue pendiente del smoke humano tras el despliegue, incluida la nota de solo texto sin archivo."
+  ]
+}

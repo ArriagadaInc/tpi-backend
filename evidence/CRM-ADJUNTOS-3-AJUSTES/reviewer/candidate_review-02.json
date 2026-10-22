@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "CRM-ADJUNTOS-3-AJUSTES",
+  "created_at": "2026-10-22T03:34:52Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610220331-reviewer-supcaefef",
+  "release_sha": "fd5778ac79b77e28e0add3c5c54646ca5bf4a08f",
+  "reviewed_tree": "83eeea9e2e505c920241a531cee46e881b4e47d5",
+  "release_tree": "83eeea9e2e505c920241a531cee46e881b4e47d5",
+  "decision": "APPROVED",
+  "cause": null,
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse de fd5778a y del reviewed_sha aecdc82: ambos 83eeea9"
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "origin/main tras fetch == fd5778a; ancestro confirmado; padre del squash e37bb77 (merge-02)"
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "run 39713796328 conclusion success, headSha == release_sha"
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "describe-images: app a1a6aa83 y caddy ebc586b1 ACTIVE con tag release_sha"
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "scan COMPLETE y findingSeverityCounts vacio en ambos digests"
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "reconstruido por el Reviewer con build_domain_locked_bundle: sha256 21a58cb2... identico al candidate, 4917 bytes; template y constructor sin diferencias contra el release_sha (git diff --quiet, rc 0)"
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "un unico docker-compose.yml, sin build, sin dominio legado"
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "head-object ChecksumSHA256 IaWMsood... FULL_OBJECT, ContentLength 4917; coincide con el bundle reconstruido"
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "AV UNPROCESSED con SourceBundle bucket/key igual al objeto S3 content-addressed"
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "commit -> digests -> bundle sha -> key S3 -> AV -> label verificados con lecturas propias"
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "describe-environments: VersionLabel e37bb77 domainlocked-r1, Ready/Green/Ok, sin update en curso"
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "AV del LKG existe, UNPROCESSED, SourceBundle 5b50fd0a... intacto"
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "app 7b2e89e8 y caddy caaa599e ACTIVE"
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "inspeccion estructural del candidate: solo identificadores, hashes y labels; el bundle reconstruido usa referencias a variables sensibles y literales no secretos"
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "rutas publicas, auth requerida, adjuntos_requires_auth, identidad runtime, conteos de logs y AC-9 humano"
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "un solo update-environment con --version-label, sin option settings"
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "inspeccion del plan frente a las politicas del Deployer en DEPLOYING; no se ejecuto dry-run"
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "note": "un comando de cutover, sin reintentos"
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "rollback al LKG nombrado, max_attempts 1, condicionado a rollback_authorization"
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": "sin IAM, DNS, secretos ni migraciones"
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "note": "evidencia con identificadores, hashes y labels"
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS",
+      "note": "residuos de stage: imagenes ECR, objeto S3 y AV UNPROCESSED, inertes hasta el cutover"
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "note": "el plan indica que un defecto funcional no autoriza rollback"
+    }
+  ],
+  "findings": [
+    {
+      "id": "C-1",
+      "severity": "info",
+      "file": "evidence/CRM-ADJUNTOS-3-AJUSTES/deployment/candidate-02.json",
+      "summary": "El checkout local esta atras de origin/main; el template y el constructor se comprobaron con git diff --quiet contra el release_sha (sin diferencias) antes de reconstruir.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "C-2",
+      "severity": "info",
+      "file": "evidence/CRM-ADJUNTOS-3-AJUSTES/deployment/candidate-02.json",
+      "summary": "El LKG es el release anterior de la misma tarea (e37bb77), sano pero con el defecto de notas de solo texto que corrige este release; rollback sigue siendo version-only.",
+      "required_action": "Ninguna."
+    }
+  ],
+  "risks": [
+    "AC-9 requiere smoke humano en DEV tras el despliegue, incluida la nota de solo texto con adjuntos activos",
+    "Las marcas de eliminado escritas por la version nueva quedan como texto en la nota si se hace rollback"
+  ]
+}
