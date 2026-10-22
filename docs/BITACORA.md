@@ -22,6 +22,20 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-22 - CRM: revisión previa a producción de los adjuntos definida como tarea activable (CRM-ADJUNTOS-REVISION-PREPROD)
+
+- Qué es: la tarea deja de ser un resumen en el backlog y queda definida (`tasks/backlog.yaml`, clase A, sin despliegue, 6 criterios).
+  No decide nada por el humano: prepara la revisión de los seis puntos aceptados el 2026-10-21 (archivos incrustados en PDF,
+  visibilidad total del lead, EXIF y GPS, retención y borrado, tarifa de GuardDuty, PDF con streams comprimidos).
+- Qué entrega el Developer: `docs/ADJUNTOS_REVISION_PREPROD.md` (cómo funciona hoy cada punto con referencias al código, riesgo, opciones,
+  recomendación propuesta y la pregunta exacta para el humano), el script de solo lectura `scripts/adjuntos_revision_preprod.py` que mide el
+  uso real en `tpi.auditoria` (solo agregados, sin PII) y pruebas que fijan los límites conocidos sin cambiar el comportamiento.
+- Cómo se revisa: el humano lee el informe al mergear el PR, corre el script contra DEV por el túnel y decide cada punto; lo que decida
+  se convierte en tareas nuevas. Como no hay despliegue, la tarea cierra sola tras el merge (`merged_no_deploy`).
+- Por qué clase A y no un informe del Developer sobre datos reales: el Developer no tiene acceso a la base de DEV ni a AWS, así que el informe
+  deja la sección «Datos de uso» para pegar la salida del script, y no se aceptan cifras, tarifas ni plazos legales sin fuente (AC-2).
+- También: `HARNESS-GUARDS-REPROCESO-POST-DEPLOY` queda en ASCII como el resto del backlog.
+
 ### 2026-10-22 - Harness: tarea CRM-ADJUNTOS-3-AJUSTES cerrada (DONE); el arreglo de las notas de solo texto exigió un reproceso y dos excepciones del Harness
 
 - Titulo: Adjuntos de notas: mensajes de rechazo claros, estados de escaneo y borrado visibles, PDF con archivos incrustados
