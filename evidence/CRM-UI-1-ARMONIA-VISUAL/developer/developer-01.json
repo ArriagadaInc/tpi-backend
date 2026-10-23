@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "CRM-UI-1-ARMONIA-VISUAL",
+  "created_at": "2026-10-23T04:04:34Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610230311-developer-supc77976",
+  "head_sha": "56b54554d24e3c7989bf3c5cff8c96d621a142c3",
+  "branch": "harness/CRM-UI-1-ARMONIA-VISUAL-armonia-visual",
+  "pr_number": 126,
+  "change_class": "A",
+  "tests": {
+    "command": "Local (worktree, Python 3.13.13, sin PostgreSQL): ruff check app/ tests/ scripts/ PASS; black --check app/ tests/ scripts/ PASS (253 files); mypy app/ --ignore-missing-imports PASS (72 files); bandit -r app/ --severity-level medium --confidence-level medium PASS (No issues); pip-audit --requirement requirements/runtime.lock PASS (No known vulnerabilities); python scripts/ui_css_audit.py --json -> colores_sueltos_distintos 73, tamanos 10, radios 9, sombras 5, espaciados 47, tema_oscuro 41, important 4 (identicas a la referencia y dentro de los topes de AC-5). python -m pytest tests/unit/ --no-cov -q -> 944 passed, 12 failed: 11 de test_executive_dashboard_render/service (DatabaseConfigurationError por falta de PostgreSQL local, preexistentes y no relacionados) y 1 de test_typography_is_hosted_locally_without_external_font_requests (mimetypes de Windows sin .woff2). CI PR #126 (ubuntu, Python 3.12, postgres service) sobre 56b5455: job Tests PASS (pytest tests/ --cov=app --cov-fail-under=85) -> 2030 passed, 17 skipped, cobertura 91.56%. La integracion de la edad (test_crm_board_computes_edad_at_the_boundaries) corre y pasa en CI.",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "app/web/static/css/app.css y las 5 plantillas (base.html, leads.html, leads_board.html, executive_dashboard.html, lead_detail_panel.html) son IDENTICAS a docs/ui/referencia/ui1/ en la misma ruta relativa. Verificado con 'git diff --no-index --ignore-cr-at-eol <referencia> <destino>' sin diferencias para los 6 archivos. Ninguna otra plantilla ni otro CSS cambia (git diff --cached --stat: solo esas 5 plantillas y app.css en app/web/)."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "docs/ui/referencia/ui1/fonts/ copiados a app/web/static/fonts/ (PlusJakartaSans-latin.woff2 y OFL.txt) con SHA-256 identicos (woff2 153fc85b..., OFL 05831cfb...). El @font-face usa font-display: swap y url('/static/fonts/PlusJakartaSans-latin.woff2'). Test test_typography_is_hosted_locally_without_external_font_requests verifica: sin fonts.googleapis.com ni fonts.gstatic.com en base.html y app.css, font-display swap, la ruta /static/fonts/... responde 200 con font/woff2 y contenido wOF2. En CI (ubuntu, /etc/mime.types) el content-type es font/woff2; en entornos sin base MIME (Windows/Alpine) puede ser application/octet-stream (ver assumptions), sin afectar la carga del navegador."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "Se aplico ui1/edad_en_listado.diff a _CRM_BOARD_SELECT (CASE WHEN fecha_nacimiento IS NULL THEN NULL ELSE date_part('year', age(CURRENT_DATE, fecha_nacimiento))::int END AS edad), unico cambio de codigo Python. leads_board.html muestra la columna Edad ('64 anos' o '-') en lugar de RUT. Pruebas: (a) test_crm_board_computes_edad_at_the_boundaries (integracion, corre en CI con postgres) cubre cumpleanos hoy (64), manana (63) y sin fecha (NULL) derivando CURRENT_DATE de la BD; (b) test_board_listing_shows_edad_instead_of_rut_or_birthdate (unit) verifica que la fecha de nacimiento no aparece en el HTML del listado; (c) el RUT no aparece en la tabla del listado pero la busqueda por RUT sigue encontrando el lead (search=rut en la integracion y test_h3_3_1/test_h3_3_5); (d) enmascarado de RUT/correo/telefono sin cambio (test_h3_3_1 re-apunta el asterisco al detalle); (e) exportacion XLSX conserva sus columnas permitidas sin 'edad' (test_allowlist_drops_extra_row_keys con edad=64 y 'Edad' not in headers)."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "(a) el aviso de la migracion 008 ya no se renderiza en el detalle (lead_detail_panel.html sin timeline-coverage-note; test_web_app actualizado a 'migracion 008' not in detail); la funcion state_history_cutover_notice y sus pruebas (test_h3_3_4_timeline_presentation.py) se conservan. (b) la bajada de la lista (leads.html) y la bajada tecnica del dashboard (executive_dashboard.html) ya no aparecen; la otra nota del dashboard se mantiene. (c) el boton de tema es un icono sol/luna con aria-label='Cambiar entre tema claro y oscuro', title='Cambiar tema' y aria-pressed (theme.js sin cambios; test_h3_3_7_theme.py actualizado a icon-sun/icon-moon). (d) cerrar sesion y exportar XLSX son iconos con aria-label y title; test_h3_3_6_export_service/test actualizado para el nombre accesible 'Exportar XLSX'. (e) el chip de ambiente solo esta en la barra superior (web_env_label retirado de leads.html y executive_dashboard.html)."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "python scripts/ui_css_audit.py --json sobre el CSS entregado: tamanos_de_letra_distintos 10 (<=10), radios_distintos 9 (<=9), sombras_distintas 5 (<=5), espaciados_distintos 47 (<=47), colores_sueltos_distintos 73 (<=73), reglas_de_tema_oscuro_por_componente 41 (<=41), important 4 (<=4). Igual que la referencia y ninguna metrica empeora respecto de la linea base de docs/UI_DESIGN_SYSTEM.md (que fija exactamente esos topes). Salida antes/despues documentada en la seccion 2.1 de docs/UI_DESIGN_SYSTEM.md."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "evidence": "Sin cambio de comportamiento: rutas, permisos, enmascarado, CSRF, HTMX y mensajes de negocio no cambian; el unico cambio de codigo es la edad. Las plantillas conservan el escape automatico de Jinja y no agregan scripts ni estilos en linea nuevos. ruff, black, mypy, bandit y pip-audit PASS sin excepciones; cobertura 91.56% (>=85%) en CI. Suite completa CI verde (2030 passed, 17 skipped)."
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "evidence": "docs/UI_DESIGN_SYSTEM.md actualizado: estado aprobado, tipografia Plus Jakarta Sans alojada, radios por rol, tonos de chip, iconos (decisiones 1-9 resueltas) y lo que queda para la consolidacion del CSS (seccion 2.1 con las metricas). CHANGELOG.md con la entrada de la tarea. README sin cambios (no aplica: cambio de presentacion sin configuracion nueva). La entrada de cierre de docs/BITACORA.md la genera el cierre automatico del Harness (scripts/harness/closure.py)."
+    },
+    {
+      "id": "AC-8",
+      "status": "pending_verification",
+      "evidence": "Smoke visual del humano en AWS DEV tras el despliegue (login, lista con filtros/tabla/chips/columna Edad/iconos, detalle, dashboard ejecutivo, tema claro y oscuro, escritorio y movil, tipografia cargando desde el propio sitio). Requiere requires_human_acceptance. El Developer no puede afirmar que algo 'se ve bien'."
+    }
+  ],
+  "files_changed": [
+    "app/web/static/css/app.css (identico a docs/ui/referencia/ui1/)",
+    "app/web/templates/base.html (identico a la referencia: iconos sol/luna y salida)",
+    "app/web/templates/leads.html (identico: sin bajada, exportar con icono)",
+    "app/web/templates/leads_board.html (identico: columna Edad en lugar de RUT)",
+    "app/web/templates/executive_dashboard.html (identico: sin bajada tecnica ni chip repetido)",
+    "app/web/templates/lead_detail_panel.html (identico: sin aviso migracion 008)",
+    "app/web/static/fonts/PlusJakartaSans-latin.woff2 (nuevo, desde la referencia)",
+    "app/web/static/fonts/OFL.txt (nuevo, licencia SIL OFL)",
+    "app/repositories/solicitud_repository.py (unico codigo: edad en _CRM_BOARD_SELECT)",
+    "tests/integration/test_crm_lite_board.py (edad en los bordes)",
+    "tests/unit/test_web_app.py (edad en listado, tipografia local, sin aviso 008)",
+    "tests/unit/test_h3_3_1_rbac_pii_assignment.py (listado sin RUT, asterisco en detalle)",
+    "tests/unit/test_h3_3_5_advisor_web.py (listado sin RUT)",
+    "tests/unit/test_h3_3_6_export_service.py (exportacion sin edad)",
+    "tests/unit/test_h3_3_7_theme.py (tema por icono, alcance ARMONIA)",
+    "docs/UI_DESIGN_SYSTEM.md (decisiones y metricas de la referencia)",
+    "CHANGELOG.md (entrada de la tarea)"
+  ],
+  "assumptions": [
+    "Clase A: sin migracion ni cambio de esquema; NO se toca deployment/**, IAM, bucket ni GuardDuty. El unico cambio de codigo Python es la edad (ui1/edad_en_listado.diff), como exige la restriccion de la tarea.",
+    "La referencia docs/ui/referencia/ui1/ es la fuente exacta: se copio tal cual (app.css, 5 plantillas y fuentes), sin reinterpretar ni 'mejorar'. No se borra docs/ui/referencia/ (se retira al cerrar CRM-UI-1 y CRM-ESTADOS-1).",
+    "Sin dependencias nuevas, sin CDN ni fuentes externas: la tipografia se sirve desde /static/fonts/. El tipo de contenido font/woff2 lo resuelve el mimetypes del sistema: en CI (ubuntu) y en el destino Linux devuelve font/woff2; en entornos sin base MIME (Windows local, o una imagen Alpine sin /etc/mime.types) puede devolver application/octet-stream sin afectar la carga del navegador (el navegador valida los bytes wOF2). Fuera del alcance del cambio (solo la edad es codigo Python) y a evaluar por el Reviewer/humano.",
+    "Los 11 fallos de la suite unit local (test_executive_dashboard_render/service) son por falta de PostgreSQL local (DatabaseConfigurationError), preexistentes y no relacionados con esta tarea; pasan en CI con el servicio postgres.",
+    "El fallo local de test_typography_is_hosted_locally_without_external_font_requests es por mimetypes de Windows (sin .woff2); en CI (ubuntu, /etc/mime.types) pasa. No se debilita la prueba porque AC-2 exige el content-type font/woff2.",
+    "El Developer no ve la pagina renderizada: no afirma que algo 'se ve bien'; la verificacion visual es de Claude (capturas) y del humano (AC-8).",
+    "Sin dependencias nuevas y sin migraciones (migrations_included=false)."
+  ],
+  "migrations_included": false
+}

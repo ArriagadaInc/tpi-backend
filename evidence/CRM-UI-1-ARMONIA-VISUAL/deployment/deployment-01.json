@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "kind": "deployment",
+  "task_id": "CRM-UI-1-ARMONIA-VISUAL",
+  "created_at": "2026-10-23T15:42:07Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610231539-deployer-supa36a7b",
+  "approved_commit": "db51f95e2e2db85922e4cb9bb7c1e6c6c9144c28",
+  "deployed_commit": "db51f95e2e2db85922e4cb9bb7c1e6c6c9144c28",
+  "application_version": "h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "update_accepted": true,
+  "result": "success",
+  "started_at": "2026-10-23T15:37:16Z",
+  "finished_at": "2026-10-23T15:37:58Z",
+  "failure_class": null,
+  "previous_version_label": "h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1",
+  "final_state": {
+    "version_label": "h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "observed_at": "2026-10-23T15:40:30Z"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1/6b9b08ea16af3c1a386777fea6d9e6fa4b4207216a712c158167f2634118e6c3.zip",
+    "s3_checksum_sha256_b64": "a5sI6havPBo4Z3f+ptnm+ktCByFqcSwVgWfyY0EY5sM=",
+    "s3_content_length": 4917,
+    "bundle_sha256": "6b9b08ea16af3c1a386777fea6d9e6fa4b4207216a712c158167f2634118e6c3",
+    "digests_equal_approval_01": true,
+    "note": "Observado en esta sesion tras el cutover: describe-environments VersionLabel = aprobada, Ready/Green/Ok; describe-application-versions SourceBundle = key de approval-01; head-object ChecksumSHA256 = base64 del bundle_sha256 aprobado; el ZIP local .harness-release/<label>.zip tiene el mismo sha256 y su manifest fija app c4915328... / caddy 7495bb18... (runtime_git_sha db51f95), ambos ACTIVE en ECR."
+  },
+  "preflight": {
+    "at": "2026-10-23T15:36Z",
+    "result": "PASS",
+    "checks": [
+      "Ejecutado por la sesion previa claude-202610231534-deployer-sup04fa51 (aws-audit.jsonl 15:35:56Z-15:36:58Z, todas exit 0): describe-environments, AV candidata y AV del LKG, digests ECR del candidato y del LKG, head-object del bundle",
+      "approval-01 para db51f95 coincide con candidate-01 (bundle, key, digests, AV, LKG)",
+      "Antes del cutover el environment estaba en el LKG h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1 (evento EB 15:37:41Z)"
+    ]
+  },
+  "cutover": {
+    "mechanism": "aws_guard update-environment version-label only",
+    "executed_by": "deployer (sesion claude-202610231534-deployer-sup04fa51)",
+    "updates_applied": 1,
+    "retries": 0,
+    "option_settings": false,
+    "restart_app_server": false,
+    "rollback_executed": false,
+    "convergence": "exitosa en ~42 s (start 15:37:16Z, completed 15:37:58Z; health Ok 15:39:41Z)"
+  },
+  "events": {
+    "levels_observed": [
+      "INFO"
+    ],
+    "errors": 0,
+    "note": "Environment update is starting -> Instance deployment completed successfully -> Environment update completed successfully -> health Info -> Ok."
+  },
+  "warnings": [
+    "El cutover lo ejecuto la sesion sup04fa51, que termino sin registrar el despliegue; esta sesion (supa36a7b) NO repitio update-environment: solo verifico con lecturas y registra la evidencia.",
+    "AC-8 (smoke visual humano) sigue pendiente; conteos de logs y smoke HTTP corresponden a VERIFYING."
+  ]
+}

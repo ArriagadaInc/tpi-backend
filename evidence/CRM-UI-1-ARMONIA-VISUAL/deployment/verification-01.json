@@ -1,0 +1,183 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "CRM-UI-1-ARMONIA-VISUAL",
+  "created_at": "2026-10-23T15:45:28Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610231539-deployer-supa36a7b",
+  "verification_scope": "VERIFYING de CRM-UI-1-ARMONIA-VISUAL tras deployment-01: estado EB, eventos, identidad de runtime, smoke HTTP no autenticado (incluye CSS y tipografia alojada) y conteos de logs desde el inicio del cutover. Solo lecturas AWS via aws_guard. AC-8 (smoke visual humano) queda pendiente de approve.py accept.",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "db51f95e2e2db85922e4cb9bb7c1e6c6c9144c28",
+  "deployed_commit": "db51f95e2e2db85922e4cb9bb7c1e6c6c9144c28",
+  "application_version": "h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "PASS",
+  "failure_class": null,
+  "final_state": {
+    "version_label": "h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-23T15:37:58Z",
+    "observed_at": "2026-10-23T15:40:30Z"
+  },
+  "events": {
+    "observed": 7,
+    "levels": {
+      "INFO": 7
+    },
+    "errors": 0,
+    "note": "Eventos del cutover (15:37:16Z-15:39:41Z) todos INFO; sin abortos, rollback ni degradacion."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "note": "Verificada en esta sesion (ver deployment-01): AV UNPROCESSED con key aprobada; ChecksumSHA256 a5sI6hav... = bundle 6b9b08ea...; digests app c4915328... / caddy 7495bb18... ACTIVE."
+  },
+  "smoke_client": "python urllib (cliente independiente), TLS por defecto, sin seguir redirects (.harness-release/smoke_ui1.py)",
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "observed": "200; el HTML no referencia fonts.googleapis.com ni fonts.gstatic.com"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "observed": "200 text/css; contiene /static/fonts/PlusJakartaSans y no referencia fonts.googleapis.com"
+    },
+    {
+      "name": "static_font",
+      "result": "PASS",
+      "observed": "200, 27348 bytes, Content-Type application/octet-stream (ver warnings)"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "dashboard_requires_auth",
+      "result": "PASS",
+      "observed": "403 anonimo (fail closed por diseno, require_executive_access)"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "observed": "ninguna respuesta redirige a dominios legacy"
+    }
+  ],
+  "logs": {
+    "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+    "window_start": "2026-10-23T15:37:16Z",
+    "method": "aws_guard logs filter-log-events con --query length(events); solo conteos; no se leyeron lineas; patrones exactos de harness/policies.yaml. Conteo adicional del patron Traceback: 0."
+  },
+  "pii_log_scan": {
+    "matches": 0,
+    "raw_pattern_hits": {
+      "Authorization -REDACTED": 0,
+      "Bearer": 0,
+      "password": 0,
+      "cookie": 0,
+      "raw_payload": 0,
+      "secret": 0,
+      "token": 0,
+      "hash -ACME": 0
+    },
+    "strong_matches": 0,
+    "strong_hits": {},
+    "weak_matches": {},
+    "classification_required": false,
+    "patterns": [
+      "Authorization -REDACTED",
+      "Bearer",
+      "raw_payload",
+      "password",
+      "hash -ACME",
+      "cookie",
+      "secret",
+      "token"
+    ]
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde sobre 56b5455; release tree 930619c7 == reviewed."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde (prueba de la app exige font/woff2). En DEV el CSS y el login no piden Google Fonts y la fuente responde 200 desde /static/fonts/, pero con Content-Type application/octet-stream (observacion para el humano, ver warnings)."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada; publish run 39974187904 6/6 (gates)."
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-8",
+      "status": "pending_human",
+      "method": "human",
+      "evidence": "Smoke visual del humano en AWS DEV comparando con la vista previa local aprobada: login, lista de leads (filtros, tabla, chips, columna Edad, iconos de exportar, tema y salida), detalle del lead, dashboard ejecutivo, tema claro y oscuro, escritorio y celular, tipografia nueva cargando desde el propio sitio. Smoke HTTP y conteos de logs PASS antes del smoke humano."
+    }
+  ],
+  "warnings": [
+    "En el runtime DEV /static/fonts/PlusJakartaSans-latin.woff2 responde 200 con Content-Type application/octet-stream, no font/woff2 como exige la prueba de AC-2 en CI (StaticFiles adivina el tipo con mimetypes, que depende de la tabla del sistema; el contenedor no lo resuelve igual que el runner). Los navegadores suelen cargar fuentes igual; el humano lo confirma en AC-8 (DevTools > Network). No es defecto de autorizacion, PII ni persistencia: sin rollback (contrato seccion 9). Si el humano lo considera relevante, corresponde una tarea de seguimiento.",
+    "El cutover lo ejecuto la sesion sup04fa51; esta sesion no hizo escrituras AWS."
+  ],
+  "rollback_executed": false,
+  "safety": {
+    "aws_writes": [],
+    "update_environment_executed": false,
+    "secrets_accessed": false,
+    "log_lines_read": false,
+    "denied_events": 0
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "approval",
+  "task_id": "CRM-UI-1-ARMONIA-VISUAL",
+  "created_at": "2026-10-23T15:24:12Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "approved_commit": "db51f95e2e2db85922e4cb9bb7c1e6c6c9144c28",
+  "app_digest": "sha256:c4915328f9ec5a7c0fb6bca9f37f29bb81c709da7ff83912578d733722778c1d",
+  "caddy_digest": "sha256:7495bb18f5702dd23b59793a0e286e68b7822b1f4faab112628a2472426dc7a6",
+  "bundle_sha256": "6b9b08ea16af3c1a386777fea6d9e6fa4b4207216a712c158167f2634118e6c3",
+  "s3_key": "tpi-backoffice/dev-releases/h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1/6b9b08ea16af3c1a386777fea6d9e6fa4b4207216a712c158167f2634118e6c3.zip",
+  "application_version": "h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "lkg_version_label": "h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1",
+  "candidate_evidence": {
+    "path": "evidence/CRM-UI-1-ARMONIA-VISUAL/deployment/candidate-01.json",
+    "sha256": "572793ae360d747f728c1c67a36d64f03fb316129f1923cfcaa7ae23f7bbbdaa"
+  },
+  "rollback_authorization": {
+    "scope": "single_version_only_rollback_to_named_lkg",
+    "max_attempts": 1,
+    "lkg_version_label": "h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1",
+    "conditions": [
+      "update_environment_accepted",
+      "environment_degraded_inconsistent_or_not_expected_state",
+      "lkg_application_version_usable",
+      "lkg_images_present_in_ecr",
+      "no_option_settings_required",
+      "not_purely_functional_defect",
+      "no_previous_rollback_attempt"
+    ]
+  },
+  "decision": "approved"
+}

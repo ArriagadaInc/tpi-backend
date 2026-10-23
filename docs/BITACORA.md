@@ -22,6 +22,41 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-23 - Harness: tarea CRM-UI-1-ARMONIA-VISUAL cerrada (DONE); el publish exigió corregir el runner (PR 127) y tres relanzamientos del orquestador
+
+- Titulo: CRM: armonia visual aprobada (tokens y componentes, iconos, tipografia alojada, edad en el listado y textos retirados)
+- Evidencia: `evidence/CRM-UI-1-ARMONIA-VISUAL/` y `tasks/completed/CRM-UI-1-ARMONIA-VISUAL.yaml`.
+- release_sha: `db51f95e2e2db85922e4cb9bb7c1e6c6c9144c28` (PR 126); el workflow de publish se corrigió aparte en el PR 127 (`a415233`)
+- application_version: `h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1`
+- bundle_sha256: `6b9b08ea16af3c1a386777fea6d9e6fa4b4207216a712c158167f2634118e6c3`
+- lkg: `h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1`
+- deployment: `success` (cutover version-only, uno solo, 2026-10-23 15:37Z)
+- verification: `PASS`; el humano aceptó AC-8 el 2026-10-23 («smoke visual OK en DEV»).
+
+**Cronología.** El Developer (DeepSeek) dejó todo el trabajo hecho en el primer turno y quedó bloqueado solo en `git commit` por forma (una variable
+de shell ocultaba la ruta del worktree al guard); con la nota de ruta literal entregó el PR 126 (3 commits, CI verde, archivos idénticos a la referencia
+`docs/ui/referencia/ui1/`), el Reviewer lo aprobó y el Deployer lo mergeó como `db51f95`. El publish a ECR falló dos veces en el gate de escaneo
+(runs 39953213366 y 39961897074) por la causa que recoge la entrada anterior (runner `ubuntu-26.04` sube un índice OCI que ECR no escanea); el
+PR 127 fijó `ubuntu-24.04` y el run 39974187904 pasó 6 de 6 con escaneo COMPLETE y 0 HIGH/CRITICAL. Después: candidato aprobado por el Reviewer, gate
+humano, despliegue, verificación técnica PASS (identidad de runtime 4/4, smoke HTTP 8/8, logs sin errores) y aceptación humana.
+
+**Lecciones del Harness y de la operación** (ninguna cambió código del Harness):
+
+1. *Un Deployer que espera con una tarea en segundo plano o con un `sleep` suelto termina su turno* y el supervisor se detiene con «worker exited
+   without workflow progress». Pasó dos veces: tras despachar el publish y tras ejecutar el `update-environment` (el cutover ya estaba hecho y el
+   registro faltaba). Se resolvió con notas en `progress/current.md` (no repetir el cutover, esperar con bucles de sondeo en primer plano) y
+   relanzando el orquestador. Mejora pendiente: instruirlo en el CONTEXT del Deployer y que el supervisor distinga «esperando un workflow externo».
+2. *Una decisión humana tomada en otra terminal (`resolve`, `gate`) no despierta al orquestador*: sigue en su aviso hasta que el humano lo responde
+   en su propia ventana. Ocurrió tres veces y parecía una detención del Harness.
+3. *Un escaneo de ECR que «no termina» puede ser permanente*: antes de borrar y relanzar hay que mirar `imageManifestMediaType` y probar
+   `start-image-scan` (ver entrada anterior y el runbook).
+4. *Observación abierta*: en DEV la fuente `PlusJakartaSans-latin.woff2` llega como `application/octet-stream` (Alpine, y Python no conoce `.woff2`); no impide
+   la carga y el humano aceptó el smoke. La prueba de AC-2 exige `font/woff2` y depende del host de CI; tarea chica si llegara a molestar.
+5. *Disco*: C: bajó a 6,1 GB libres durante la tarea (el orquestador se detiene bajo 5 GB); antes se purgó la caché de pip (3,3 GB).
+
+**Siguiente paso:** activar `CRM-ESTADOS-1-CATALOGO` (12 estados) y después `CRM-PERFILES-1-RBAC` (Runner, Coordinador, Socio); tras desplegar los estados,
+resetear los leads sintéticos de DEV con un script que corre el humano.
+
 ### 2026-10-23 - Release: el publish a ECR falló dos veces porque el runner nuevo sube un índice OCI que ECR no escanea (CRM-UI-1-ARMONIA-VISUAL)
 
 - Contexto: el release `db51f95` (PR #126, armonía visual) pasó todos los gates del workflow de publicación, pero el escaneo de ECR nunca se inició: `ScanNotFoundException` en ambas imágenes y el gate venció a los 20 minutos (runs 39953213366 y 39961897074). Se borraron las dos imágenes y se relanzó con el mismo SHA según el runbook; falló igual y el Deployer se detuvo en `BLOCKED_HUMAN` (mismo error de infraestructura dos veces).

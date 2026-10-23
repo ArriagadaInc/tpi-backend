@@ -1,0 +1,27 @@
+# Sesion archivada: CRM-UI-1-ARMONIA-VISUAL-candidate-review
+
+- Archivada: 2026-10-23T15:22:03Z
+- Estado: CANDIDATE_REVIEW
+
+# Progreso actual
+
+## Estado
+<!-- harness:projection:begin (autogenerado desde harness/state.json por transition.py; no editar a mano) -->
+- Estado del Harness: CANDIDATE_REVIEW (rol: reviewer)
+- Tarea: CRM-UI-1-ARMONIA-VISUAL
+- Proximo paso: Reviewer: verificar cadena de identidad, scans, bundle reproducible, LKG; candidate_approve o candidate_reject
+- Ultima transicion: candidate_ready (PREPARING_DEPLOYMENT -> CANDIDATE_REVIEW)
+- Actualizado: 2026-10-23T15:16:24Z
+<!-- harness:projection:end -->
+- Ultima sesion archivada: progress/sessions/2026-10-23-CRM-UI-1-ARMONIA-VISUAL-preparing-candidate.md
+
+## Estado reciente
+- DECISION (REVIEWING, CRM-UI-1-ARMONIA-VISUAL, sesion claude-202610230405-reviewer-supcb4381): APPROVED sobre 56b5455 (tree 930619c7, PR #126, CI run 39897555067 verde en el SHA exacto). AC-1/AC-2 verificados (6 archivos identicos a ui1 y SHA-256 de fuentes iguales), AC-3 identico al diff de la edad, AC-5 metricas 10/9/5/47/73/41/4. Hallazgos menores: F-1 la fuente se servira en DEV (Alpine) como application/octet-stream porque Python no conoce .woff2 (la prueba de AC-2 depende del host de CI; sin impacto funcional esperado, comprobar en AC-8); F-2 test_h3_3_6_export_web.py no se actualizo, aunque su assert sigue cubriendo el nombre accesible. Evidencia: evidence/CRM-UI-1-ARMONIA-VISUAL/reviewer/review-01.json. Siguiente: Deployer start_merge.
+- DECISION (MERGING, CRM-UI-1-ARMONIA-VISUAL, sesion claude-202610230425-deployer-sup4b7109): PR #126 mergeado con merge_reviewed_pr.py (squash, match-head-commit 56b5455). release_sha db51f95e (padre 84e50be); release_tree 930619c7 == reviewed_tree. Evidencia: evidence/CRM-UI-1-ARMONIA-VISUAL/deployment/merge-01.json. Siguiente: merged -> PREPARING_DEPLOYMENT (deploy_required, clase A).
+- DECISION (PREPARING_DEPLOYMENT, CRM-UI-1-ARMONIA-VISUAL, sesion claude-202610231222-deployer-supe643ef): sesion AWS renovada; preflight PASS (cuenta 821656895812/us-east-2; tpi-backoffice-dev-green Ready/Green/Ok con LKG h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1, AV/S3/digests del LKG intactos; Promote deshabilitado; db51f95 en origin/main, tree 930619c7 == reviewed). Publish run 39953213366: gates verdes e imagenes publicadas (app 02284140..., caddy cb8137ec...), pero el gate de escaneo ECR vencio a los 20 min; describe-image-scan-findings da ScanNotFoundException en ambos digests (el escaneo nunca se inicio). Sin bundle, sin S3, sin AV, environment sin mutar. Evidencia: evidence/CRM-UI-1-ARMONIA-VISUAL/deployment/failure-01.json. Transicion preparation_failed -> BLOCKED_HUMAN.
+- DECISION (PREPARING_DEPLOYMENT, CRM-UI-1-ARMONIA-VISUAL, sesion claude-202610231328-deployer-supcd0adb): tras resolution-01 (imagenes db51f95 borradas, confirmado con ImageNotFoundException) preflight PASS (821656895812/us-east-2; tpi-backoffice-dev-green Ready/Green/Ok con LKG h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1, AV/S3/digests intactos; Promote deshabilitado; db51f95 en origin/main, tree 930619c7 == reviewed). Publish relanzado una vez (run 39961897074): gates verdes e imagenes publicadas (app 87e15c90..., caddy 3d499eae...), pero el gate de escaneo vencio otra vez a los 20 min y describe-image-scan-findings da ScanNotFoundException en ambos digests. Mismo error de infraestructura dos veces -> STOP sin reintento. Sin bundle, sin S3, sin AV, environment sin mutar. Evidencia: evidence/CRM-UI-1-ARMONIA-VISUAL/deployment/failure-02.json. Transicion preparation_failed -> BLOCKED_HUMAN.
+- DECISION (PREPARING_DEPLOYMENT, CRM-UI-1-ARMONIA-VISUAL, sesion claude-202610231503-deployer-supdcbebf): tras resolution-02 NO se despacho otro publish; se espero en primer plano el run 39974187904 (source_sha db51f95, workflow desde a415233): 6/6 success. Imagenes app c4915328... y caddy 7495bb18... con manifest Docker v2 (no indice OCI) y escaneo COMPLETE 0 HIGH/CRITICAL. Preflight PASS (821656895812/us-east-2; tpi-backoffice-dev-green Ready/Green/Ok, LKG h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1 con AV/S3/digests intactos; Promote deshabilitado; db51f95 ancestro de origin/main, tree 930619c7 == reviewed). Bundle domain-locked reproducible sha256 6b9b08ea..., S3 content-addressed (ChecksumSHA256 a5sI6hav...) y AV h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1 UNPROCESSED; environment sin mutar. Evidencia: evidence/CRM-UI-1-ARMONIA-VISUAL/deployment/candidate-01.json. Siguiente: candidate_ready -> CANDIDATE_REVIEW (Reviewer).
+- DECISION (CANDIDATE_REVIEW, CRM-UI-1-ARMONIA-VISUAL, sesion claude-202610231516-reviewer-sup6da0f3): APPROVED, cause null. release db51f95 en origin/main, tree 930619c7 == reviewed; publish 39974187904 success (headSha a415233, checkout/tag por source_sha; manifest runtime_git_sha = db51f95); digests app c4915328 / caddy 7495bb18 ACTIVE, Docker v2, scan COMPLETE 0/0; bundle reconstruido sha256 6b9b08ea identico (template/constructor iguales al release); S3 ChecksumSHA256 y AV UNPROCESSED coinciden; LKG h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1 observado Ready/Green/Ok con AV, S3 y digests presentes; plan version-only y rollback condicionado conformes. Hallazgos solo info (CR-1..CR-3). Evidencia: evidence/CRM-UI-1-ARMONIA-VISUAL/reviewer/candidate_review-01.json. Siguiente: candidate_approve -> WAITING_HUMAN_APPROVAL.
+
+## Bloqueos
+- Ninguno.

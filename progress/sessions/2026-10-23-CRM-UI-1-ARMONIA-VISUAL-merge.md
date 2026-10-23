@@ -1,0 +1,27 @@
+# Sesion archivada: CRM-UI-1-ARMONIA-VISUAL-merge
+
+- Archivada: 2026-10-23T04:27:41Z
+- Estado: MERGING
+
+# Progreso actual
+
+## Estado
+<!-- harness:projection:begin (autogenerado desde harness/state.json por transition.py; no editar a mano) -->
+- Estado del Harness: MERGING (rol: deployer)
+- Tarea: CRM-UI-1-ARMONIA-VISUAL
+- Proximo paso: Deployer: gh pr merge --squash --match-head-commit <reviewed_sha>, registrar merge y transition.py merged
+- Ultima transicion: start_merge (REVIEW_APPROVED -> MERGING)
+- Actualizado: 2026-10-23T04:26:40Z
+<!-- harness:projection:end -->
+- Ultima sesion archivada: progress/sessions/2026-10-23-CRM-UI-1-ARMONIA-VISUAL-review.md
+
+## Estado reciente
+- 2026-10-22: Tarea CRM-ADJUNTOS-3-AJUSTES cerrada; resumen en tasks/completed/CRM-ADJUNTOS-3-AJUSTES.yaml
+- 2026-10-22: Tarea CRM-ADJUNTOS-REVISION-PREPROD cerrada; resumen en tasks/completed/CRM-ADJUNTOS-REVISION-PREPROD.yaml
+- DECISION (ORQUESTADOR INTERACTIVO, 2026-10-23, para el Developer que retoma CRM-UI-1-ARMONIA-VISUAL tras un GUARD DENIED de forma): tu turno anterior (other-202610230125-developer-supd379a4) hizo TODO el trabajo y quedo bloqueado SOLO en `git commit`. Estado conservado en tu worktree `.harness-worktrees/CRM-UI-1-ARMONIA-VISUAL-developer-84e50be` (unico Developer registrado): 17 archivos con cambios en el area de preparacion (staged): app.css, las 5 plantillas, `app/web/static/fonts/` (2 archivos), `solicitud_repository.py` (edad), CHANGELOG, docs/UI_DESIGN_SYSTEM.md y 5 archivos de pruebas. El orquestador ya comprobo que app.css, las 5 plantillas y las 2 fuentes son IDENTICOS a docs/ui/referencia/ui1/ (AC-1 y AC-2 en lo que respecta a copia). CAUSA DEL DENIED: el comando era `WT=.harness-worktrees/CRM-UI-1-ARMONIA-VISUAL-developer-84e50be && git -C "$WT" commit ...`: el guard solo reconoce un worktree si la RUTA LITERAL aparece en `git -C <ruta>` o en `cd <ruta>`; una variable de shell (`$WT`) la oculta, y ademas el commit iba encadenado detras de `cd ... &&` y de la asignacion. QUE HACER, EN ESTE ORDEN: (1) comprueba que el area de preparacion sigue intacta con `git -C .harness-worktrees/CRM-UI-1-ARMONIA-VISUAL-developer-84e50be status --short` (ruta literal, sin variables); (2) vuelve a correr las pruebas y las comprobaciones de la tarea (suite, ruff, black, mypy, `python scripts/ui_css_audit.py --json`) y guarda la salida para la evidencia; (3) haz el commit con UNA SOLA orden, con la ruta literal y sin encadenar nada: `git -C .harness-worktrees/CRM-UI-1-ARMONIA-VISUAL-developer-84e50be commit -m "<mensaje de una linea>"` (usa `-m` varias veces si necesitas un cuerpo; sin variables ni `&&`); (4) publica la rama y abre el PR con `git -C <ruta literal> push ...` y `gh pr create`, registra la evidencia (payload en la ruta ABSOLUTA de la raiz de control, con Write) y aplica la transicion `submit_for_review`. REGLA PARA TODO COMANDO GUARDADO (commit y push): la ruta del worktree va LITERAL; nunca `$VAR`, nunca `$(...)`. Si el guard vuelve a negar algo, detente y reporta: no busques rodeos.
+- DECISION (DEVELOPING, CRM-UI-1-ARMONIA-VISUAL, sesion other-202610230311-developer-supc77976): retome el worktree con los 17 archivos staged; verifique AC-1/AC-2 (app.css, 5 plantillas y 2 fuentes IDENTICOS a docs/ui/referencia/ui1/, SHA-256 de fuentes iguales); gates locales ruff/black/mypy/bandit/pip-audit PASS y ui_css_audit --json con metricas identicas a la referencia (73/10/9/5/47/41/4). Commit en 3 commits (979f84a, 59e8398, 56b5455) con ruta literal, rama harness/CRM-UI-1-ARMONIA-VISUAL-armonia-visual publicada y PR #126 abierto. CI verde en 56b5455 (Tests 2030 passed, 17 skipped, cobertura 91.56%). Corregi el test de integracion de la edad tras dos fallos de CI (row_factory dict -> clave de columna; busqueda por RUT en lugar de pagina 1). Evidencia: evidence/CRM-UI-1-ARMONIA-VISUAL/developer/developer-01.json. Siguiente: submit_for_review -> Reviewer (rol distinto, otra sesion).
+- DECISION (REVIEWING, CRM-UI-1-ARMONIA-VISUAL, sesion claude-202610230405-reviewer-supcb4381): APPROVED sobre 56b5455 (tree 930619c7, PR #126, CI run 39897555067 verde en el SHA exacto). AC-1/AC-2 verificados (6 archivos identicos a ui1 y SHA-256 de fuentes iguales), AC-3 identico al diff de la edad, AC-5 metricas 10/9/5/47/73/41/4. Hallazgos menores: F-1 la fuente se servira en DEV (Alpine) como application/octet-stream porque Python no conoce .woff2 (la prueba de AC-2 depende del host de CI; sin impacto funcional esperado, comprobar en AC-8); F-2 test_h3_3_6_export_web.py no se actualizo, aunque su assert sigue cubriendo el nombre accesible. Evidencia: evidence/CRM-UI-1-ARMONIA-VISUAL/reviewer/review-01.json. Siguiente: Deployer start_merge.
+- DECISION (MERGING, CRM-UI-1-ARMONIA-VISUAL, sesion claude-202610230425-deployer-sup4b7109): PR #126 mergeado con merge_reviewed_pr.py (squash, match-head-commit 56b5455). release_sha db51f95e (padre 84e50be); release_tree 930619c7 == reviewed_tree. Evidencia: evidence/CRM-UI-1-ARMONIA-VISUAL/deployment/merge-01.json. Siguiente: merged -> PREPARING_DEPLOYMENT (deploy_required, clase A).
+
+## Bloqueos
+- Ninguno.

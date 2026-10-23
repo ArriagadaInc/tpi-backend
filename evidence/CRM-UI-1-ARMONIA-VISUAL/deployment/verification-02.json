@@ -1,0 +1,183 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "CRM-UI-1-ARMONIA-VISUAL",
+  "created_at": "2026-10-23T15:55:44Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610231551-deployer-sup741b9c",
+  "verification_scope": "Cierre de VERIFYING de CRM-UI-1-ARMONIA-VISUAL: verificacion tecnica de verification-01 revalidada en esta sesion (estado EB, eventos, smoke HTTP no autenticado, conteos de logs desde el inicio del cutover hasta despues del smoke humano) mas la aceptacion humana de AC-8 registrada por approve.py (acceptance-01). Solo lecturas AWS via aws_guard; sin escrituras.",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "db51f95e2e2db85922e4cb9bb7c1e6c6c9144c28",
+  "deployed_commit": "db51f95e2e2db85922e4cb9bb7c1e6c6c9144c28",
+  "application_version": "h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "PASS",
+  "failure_class": null,
+  "final_state": {
+    "version_label": "h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-23T15:37:58Z",
+    "observed_at": "2026-10-23T15:55:00Z"
+  },
+  "events": {
+    "observed": 20,
+    "levels": {
+      "INFO": 20
+    },
+    "errors": 0,
+    "note": "Sin eventos nuevos despues de 15:39:41Z (health Ok); los 20 mas recientes son INFO, sin abortos, rollback ni degradacion."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "note": "VersionLabel observada en esta sesion = etiqueta aprobada y DateUpdated sin cambios desde el cutover (15:37:58Z); el resto de la cadena se verifico en deployment-01 y verification-01 y no hubo updates posteriores."
+  },
+  "smoke_client": "python urllib (cliente independiente), TLS por defecto, sin seguir redirects (.harness-release/smoke_ui1.py)",
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "observed": "200; el HTML no referencia fonts.googleapis.com"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "observed": "200 text/css; @font-face local y sin fonts.googleapis.com"
+    },
+    {
+      "name": "static_font",
+      "result": "PASS",
+      "observed": "200, 27348 bytes, Content-Type application/octet-stream (ver warnings)"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "dashboard_requires_auth",
+      "result": "PASS",
+      "observed": "403 anonimo (fail closed por diseno)"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "observed": "ninguna respuesta redirige a dominios legacy"
+    }
+  ],
+  "logs": {
+    "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+    "window_start": "2026-10-23T15:37:16Z",
+    "method": "aws_guard logs filter-log-events con --query length(events); solo conteos; no se leyeron lineas; patrones exactos de harness/policies.yaml; ventana hasta esta sesion (incluye el smoke visual humano). Conteo adicional del patron Traceback: 0."
+  },
+  "pii_log_scan": {
+    "matches": 0,
+    "raw_pattern_hits": {
+      "Authorization -REDACTED": 0,
+      "Bearer": 0,
+      "password": 0,
+      "cookie": 0,
+      "raw_payload": 0,
+      "secret": 0,
+      "token": 0,
+      "hash -ACME": 0
+    },
+    "strong_matches": 0,
+    "strong_hits": {},
+    "weak_matches": {},
+    "classification_required": false,
+    "patterns": [
+      "Authorization -REDACTED",
+      "Bearer",
+      "raw_payload",
+      "password",
+      "hash -ACME",
+      "cookie",
+      "secret",
+      "token"
+    ]
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde sobre 56b5455; release tree 930619c7 == reviewed."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde. En DEV el CSS y el login no piden Google Fonts y la fuente responde 200 desde /static/fonts/ (Content-Type application/octet-stream, ver warnings); el humano acepto AC-8 incluyendo la carga de la tipografia."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada; publish run 39974187904 6/6 (gates)."
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "method": "human",
+      "evidence": "Aceptado por el humano en evidence/CRM-UI-1-ARMONIA-VISUAL/approvals/acceptance-01.json (2026-10-23T15:51:04Z, approve.py, nota: smoke visual OK en DEV)."
+    }
+  ],
+  "warnings": [
+    "En el runtime DEV /static/fonts/PlusJakartaSans-latin.woff2 sigue respondiendo con Content-Type application/octet-stream (en CI la prueba de AC-2 obtiene font/woff2). El humano acepto el smoke visual; si quiere alinear el tipo de contenido en el contenedor, corresponde una tarea de seguimiento.",
+    "Esta sesion no hizo escrituras AWS; el cutover lo ejecuto la sesion sup04fa51."
+  ],
+  "rollback_executed": false,
+  "safety": {
+    "aws_writes": [],
+    "update_environment_executed": false,
+    "secrets_accessed": false,
+    "log_lines_read": false,
+    "denied_events": 0
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "CRM-UI-1-ARMONIA-VISUAL",
+  "created_at": "2026-10-23T04:27:29Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610230425-deployer-sup4b7109",
+  "pr_number": 126,
+  "reviewed_sha": "56b54554d24e3c7989bf3c5cff8c96d621a142c3",
+  "reviewed_tree": "930619c7bae2647730dd6995fa32e83c3090d2f9",
+  "release_sha": "db51f95e2e2db85922e4cb9bb7c1e6c6c9144c28",
+  "release_tree": "930619c7bae2647730dd6995fa32e83c3090d2f9",
+  "main_parent_sha": "84e50be1a686a00fd879e2c6b806d18102c0d44f",
+  "method": "squash",
+  "match_head_commit_used": true
+}
