@@ -265,8 +265,8 @@ def test_crm_board_computes_edad_at_the_boundaries(service):
 
     with get_db_connection(operation="test_edad_today") as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT CURRENT_DATE")
-            today = cur.fetchone()[0]
+            cur.execute("SELECT CURRENT_DATE AS today")
+            today = cur.fetchone()["today"]
 
     def years_ago(base: date, years: int) -> date:
         try:
