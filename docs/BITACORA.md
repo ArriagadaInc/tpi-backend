@@ -34,10 +34,25 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
   `CRM-AGENDAMIENTO` (clase D, posterior a producción).
 - Cómo se usa la referencia: el Developer no reinterpreta el diseño, lo copia; el Reviewer comprueba que los archivos son idénticos a la referencia
   (ignorando fines de línea) y la verificación visual la hacen Claude (capturas con la vista previa local) y el humano (smoke en DEV).
-- Pendiente antes de activar: la tipografía Plus Jakarta Sans alojada (archivo `woff2` y licencia en `docs/ui/referencia/ui1/fonts/`) y el
-  merge del PR del sistema de diseño (`scripts/ui_css_audit.py` y el skill de interfaz).
+- La tipografía Plus Jakarta Sans alojada (`woff2` del subconjunto latino, 27 KB, y su licencia SIL OFL) quedó en
+  `docs/ui/referencia/ui1/fonts/`, descargada de `fonts.gstatic.com` y del repositorio público `google/fonts` con autorización del humano. El PR del
+  sistema de diseño (`scripts/ui_css_audit.py` y el skill de interfaz) ya está en `main`.
 - Después de desplegar los estados, el humano reinicia los datos de DEV (borrar los leads sintéticos y sembrar nuevos) con un script que entrega
   Claude; la auditoría es de solo agregar y referencia a los leads, así que lo ejecuta el humano con `tpi_admin`, como las migraciones.
+
+### 2026-10-22 - CRM: dirección de diseño para armonizar la interfaz, auditoría del CSS y skill de interfaz para el Developer
+
+- Pedido del humano: un CRM profesional, moderno, atractivo y minimalista; le gusta cómo se ve hoy, solo quiere armonizarlo.
+- Qué se hizo: auditoría del CSS (`scripts/ui_css_audit.py`, solo lectura, con pruebas) y recorrido visual de la lista, el detalle del lead, el
+  dashboard y el móvil en una copia local del CRM con datos ficticios. Línea base: 17 tokens, 80 colores sueltos distintos (156 usos),
+  25 tamaños de letra, 15 radios, 13 sombras, 61 espaciados, 5 cortes responsive y 39 reglas de tema oscuro por componente; `--shadow-sm` se
+  usa sin estar definido y la tipografía Inter se declara pero no se carga.
+- Entrega: `docs/UI_DESIGN_SYSTEM.md` (dirección, línea base, hallazgos, tokens, componentes canónicos, plan por tareas y decisiones abiertas) y
+  el skill `agents/developer/skills/tpi-ui-design/SKILL.md`, con un puntero en `agents/developer/CONTEXT.md`.
+- El skill NO está registrado en `harness/policies.yaml` (archivo protegido que no se toca sin sesión de mantenimiento): las tareas de
+  interfaz lo citan en sus restricciones y el CONTEXT del Developer lo señala. Registrarlo queda para la tarea de mantenimiento del Harness.
+- Decisiones abiertas del humano (sección 8 del documento): tipografía (alojar Inter o pila del sistema), peso de los títulos, sombras sin
+  brillo, botones en píldora, barra superior móvil y texto técnico del dashboard. Las tareas de interfaz se definen después de aprobarlas.
 
 ### 2026-10-22 - CRM: datos de uso de los adjuntos en DEV incorporados al informe previo a producción (CRM-ADJUNTOS-REVISION-PREPROD)
 
