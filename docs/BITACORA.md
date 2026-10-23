@@ -22,6 +22,15 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-23 - Release: el publish a ECR falló dos veces porque el runner nuevo sube un índice OCI que ECR no escanea (CRM-UI-1-ARMONIA-VISUAL)
+
+- Contexto: el release `db51f95` (PR #126, armonía visual) pasó todos los gates del workflow de publicación, pero el escaneo de ECR nunca se inició: `ScanNotFoundException` en ambas imágenes y el gate venció a los 20 minutos (runs 39953213366 y 39961897074). Se borraron las dos imágenes y se relanzó con el mismo SHA según el runbook; falló igual y el Deployer se detuvo en `BLOCKED_HUMAN` (mismo error de infraestructura dos veces).
+- Diagnóstico: `aws ecr start-image-scan` respondió `UnsupportedImageTypeException` («application/vnd.oci.image.index.v1+json cannot be scanned»). El publish del 2026-10-22 (`fd5778a`, escaneo COMPLETE en 2 minutos) corrió en `ubuntu-24.04` y subió un manifiesto Docker v2; el del 2026-10-23 corrió en `ubuntu-26.04` (al que pasó `ubuntu-latest`) y subió un índice OCI con una imagen de atestación. La diferencia observada entre ambos es el runner; la versión de Docker no se comprobó. No es un problema del código del CRM ni de la configuración del registro (escaneo BASIC, `scanOnPush` activo).
+- Cambio: `publish-dev-ecr-images.yml` fija todos sus jobs en `ubuntu-24.04`; dos pruebas nuevas en `tests/security/test_ecr_scan_wait_workflow.py` (runner fijado y causa documentada); sección nueva en `docs/DEV_EB_DEPLOYMENT_RUNBOOK.md` con síntoma, causa y comprobación del `imageManifestMediaType`; entrada en el CHANGELOG.
+- Lecciones: (a) el gate fallaba cerrado como debe, pero «no terminó en el plazo» ocultaba una causa permanente; `start-image-scan` la distingue en un segundo, antes de borrar y relanzar. (b) Un runner flotante (`ubuntu-latest`) cambió el formato de lo publicado sin tocar el repo: los pasos de release van con la imagen del runner fijada. (c) El workflow se toma de `main`, así que corregirlo allí vale para el release ya mergeado.
+- Pendiente: confirmar con el próximo publish que el tipo de manifiesto vuelve a ser Docker v2 (si siguiera siendo un índice, agregar `--provenance=false --sbom=false` a los `docker build`).
+- Siguiente paso: tras mergear este PR, el humano borra las dos imágenes `db51f95` (índices sin escaneo) y resuelve CRM-UI-1 a `PREPARING_DEPLOYMENT`; el Deployer relanza el publish con el mismo SHA.
+
 ### 2026-10-22 - CRM: producción mínima definida (interfaz, 12 estados y tres perfiles) y referencia visual aprobada
 
 - Contexto: el humano aprobó la armonía visual tras iterar en una copia local con datos ficticios, y decidió los estados y perfiles a partir del PDF

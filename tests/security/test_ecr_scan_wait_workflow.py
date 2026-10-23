@@ -72,3 +72,18 @@ def test_la_recuperacion_esta_documentada() -> None:
         text = doc.read_text(encoding="utf-8").lower()
         assert "relanzar el workflow con el mismo sha" in text, doc.name
         assert "borrar las dos imagenes" in text, doc.name
+
+
+def test_todos_los_jobs_fijan_ubuntu_24_04() -> None:
+    data = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    runners = {name: job.get("runs-on") for name, job in data["jobs"].items()}
+
+    assert runners, "el workflow no declara jobs"
+    assert set(runners.values()) == {"ubuntu-24.04"}, runners
+
+
+def test_la_causa_del_indice_oci_esta_documentada() -> None:
+    for doc in (RUNBOOK, CHANGELOG, BITACORA):
+        text = doc.read_text(encoding="utf-8")
+        assert "UnsupportedImageTypeException" in text, doc.name
+        assert "ubuntu-24.04" in text, doc.name
