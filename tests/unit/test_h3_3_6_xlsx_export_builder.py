@@ -41,7 +41,7 @@ def _base_row(**overrides: Any) -> dict[str, Any]:
         "afp": "Habitat",
         "saldo_afp": 5120000,
         "comentarios": "Comentario inicial",
-        "estado_lead": "contactado",
+        "estado_lead": "en_seguimiento",
         "created_at": datetime(2026, 9, 1, 10, 30),
         "id_asesor": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
         "asesor_nombre": "Asesor Uno",

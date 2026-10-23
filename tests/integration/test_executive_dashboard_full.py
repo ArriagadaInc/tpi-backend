@@ -100,7 +100,7 @@ def test_per_advisor_metrics_use_the_shared_definitions() -> None:
                 ),
             )
             _assign(cur, fresh, asesor, fresh_ingreso + timedelta(days=2))
-            _state_change(cur, fresh, "nuevo", "contactado", fresh_ingreso + timedelta(days=3))
+            _state_change(cur, fresh, "nuevo", "en_seguimiento", fresh_ingreso + timedelta(days=3))
             lead_ids.append(fresh)
             conn.commit()
     try:
@@ -361,7 +361,7 @@ def _seed_volume(marker: str, leads: int, advisors: int) -> tuple[list[str], lis
         with conn.cursor() as cur:
             for index in range(advisors):
                 asesor_ids.append(_make_asesor(cur, f"Asesor Volumen {index} {uuid4().hex[:6]}"))
-            estados = ("nuevo", "contactado", "citado", "cerrado", "perdido")
+            estados = ("nuevo", "en_seguimiento", "reunion_agendada", "cerrado", "perdido")
             for index in range(leads):
                 fecha = now - timedelta(days=index % 60)
                 comentarios = None
@@ -382,7 +382,7 @@ def _seed_volume(marker: str, leads: int, advisors: int) -> tuple[list[str], lis
                 if index % 3 != 0:
                     _assign(cur, lead, asesor_ids[index % advisors], fecha + timedelta(hours=6))
                 if index % 4 == 0:
-                    _state_change(cur, lead, "nuevo", "contactado", fecha + timedelta(days=1))
+                    _state_change(cur, lead, "nuevo", "en_seguimiento", fecha + timedelta(days=1))
             conn.commit()
     return lead_ids, asesor_ids
 

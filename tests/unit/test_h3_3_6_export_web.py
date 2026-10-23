@@ -35,7 +35,7 @@ def _row() -> dict[str, Any]:
         "afp": "Habitat",
         "saldo_afp": 1000000,
         "comentarios": "Solicitud original.",
-        "estado_lead": "contactado",
+        "estado_lead": "en_seguimiento",
         "created_at": datetime(2026, 9, 1, 10, 0, tzinfo=UTC),
         "id_asesor": None,
         "asesor_nombre": None,
@@ -65,7 +65,7 @@ class _Repo:
 
     def get_crm_estado_lead_options(self) -> list[str]:
         self.calls.append("get_crm_estado_lead_options")
-        return ["nuevo", "contactado", "cerrado"]
+        return ["nuevo", "en_seguimiento", "cerrado"]
 
     def count_crm_solicitudes(self, **kwargs: Any) -> int:
         self.calls.append("count_crm_solicitudes")
@@ -150,7 +150,7 @@ def test_non_superuser_rejected_before_any_repository_access() -> None:
         repo = _Repo()
         client = _client(role, repo)
         repo.calls.clear()
-        response = client.get("/leads/export.xlsx?search=juan&estado_lead=contactado")
+        response = client.get("/leads/export.xlsx?search=juan&estado_lead=en_seguimiento")
         assert response.status_code == 403, role
         assert repo.calls == [], role
         assert "spreadsheetml" not in response.headers.get("content-type", ""), role

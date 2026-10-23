@@ -219,14 +219,14 @@ def test_advisor_mutations_ownership_and_rollback(world: _AdvisorWorld) -> None:
     # Own lead: status update succeeds and writes audit.
     assert (
         SolicitudRepository.update_lead_status(
-            lead_own, "contactado", actor=actor, advisor_scope=world.a1
+            lead_own, "en_seguimiento", actor=actor, advisor_scope=world.a1
         )
         is True
     )
     with get_db_connection(operation="h3_3_5_assert_own_status") as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT estado_lead FROM tpi.leads WHERE id_lead = %s", (str(lead_own),))
-            assert cur.fetchone()["estado_lead"] == "contactado"
+            assert cur.fetchone()["estado_lead"] == "en_seguimiento"
 
     # Own lead: comment append succeeds (F1 regression).
     assert (
@@ -244,7 +244,7 @@ def test_advisor_mutations_ownership_and_rollback(world: _AdvisorWorld) -> None:
     before = _audit_count(lead_other)
     assert (
         SolicitudRepository.update_lead_status(
-            lead_other, "contactado", actor=actor, advisor_scope=world.a1
+            lead_other, "en_seguimiento", actor=actor, advisor_scope=world.a1
         )
         is False
     )
@@ -257,7 +257,7 @@ def test_advisor_mutations_ownership_and_rollback(world: _AdvisorWorld) -> None:
     # Unassigned lead: no write.
     assert (
         SolicitudRepository.update_lead_status(
-            lead_unassigned, "contactado", actor=actor, advisor_scope=world.a1
+            lead_unassigned, "en_seguimiento", actor=actor, advisor_scope=world.a1
         )
         is False
     )

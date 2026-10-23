@@ -115,7 +115,7 @@ class _FakeRepository:
             "cobertura_completa": True,
             "excluidos_pre_cutover": 1,
             "denominador": 4,
-            "steps": [{"origen": "nuevo", "destino": "contactado", "n": 2}],
+            "steps": [{"origen": "nuevo", "destino": "en_seguimiento", "n": 2}],
             "bases": {"nuevo": 4},
         }
 
@@ -193,7 +193,7 @@ def test_funnel_rate_includes_base() -> None:
     dashboard = service.build_executive_dashboard(DashboardFilters.from_raw())
     step = dashboard.period_activity.funnel.steps[0]
     assert step.origen == "nuevo"
-    assert step.destino == "contactado"
+    assert step.destino == "en_seguimiento"
     assert step.n == 2
     assert step.base == 4
     assert step.rate == 0.5

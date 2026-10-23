@@ -22,6 +22,25 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-23 - CRM-ESTADOS-1-CATALOGO: catalogo de 12 estados del lead segun el protocolo de Runners (desarrollo)
+
+- Contexto: se reemplaza el vocabulario de `estado_lead` por el protocolo de trabajo de los Runners (octubre 2026). Es solo el catalogo: los datos
+  estructurados (intento, reunion, no contactar) y la automatizacion de los 14 dias son tareas posteriores.
+- Cambio: `app/models/crm_states.py` expone los 12 estados (nuevo, asignado, sin_contacto, en_seguimiento, reunion_agendada, reunion_realizada,
+  ficha_generada, cerrado, no_interesado, datos_erroneos, no_contactado, perdido) con etiquetas con tilde (Reunion, Datos erroneos) y tonos; el alias
+  `pendiente` sigue mapeando a `nuevo`. Los estados anteriores (prospecto, contactado, citado, en_tramite, expediente, no_califica, duplicado, dormido)
+  dejan de existir en el contrato; un valor desconocido guardado en la base se muestra tal cual, sin error.
+- Reglas: `asignado` sigue exclusivo de `assign_lead` (servicio y repositorio lo rechazan en el cambio generico y el selector no lo ofrece).
+  `CARTERA_INACTIVA_ESTADOS` pasa a (cerrado, perdido, no_interesado, datos_erroneos, no_contactado); `ficha_generada` sigue activo hasta cerrarse.
+  El texto del dashboard que explica la cartera activa nombra esos estados. Sin migracion: el estado es texto sin restriccion en la base.
+- Interfaz: filtros, chips y barra de estado usan el contrato nuevo; el CSS elimina las reglas de chip de los estados retirados (los tonos de los
+  nuevos ya venian de CRM-UI-1). La exportacion XLSX muestra las etiquetas nuevas. Sin transiciones restringidas salvo `asignado`.
+- Pruebas: se actualizan las suites que mencionaban los estados anteriores (contrato, web, dashboard, exportacion, historial, asignacion, integracion)
+  preservando lo que protegen, y se agregan pruebas del contrato nuevo (12 estados, etiquetas, tonos, alias), de los estados inactivos y del valor
+  desconocido.
+- Documentacion: `docs/database/03_BUSINESS_RULES.md` y `docs/H3_3_CRM_LITE_WEB_UX.md`.
+- Sin migracion ni mapeo de estados viejos a nuevos: los leads de DEV son sinteticos y el humano los reinicia tras el despliegue (AC-7).
+
 ### 2026-10-23 - Harness: tarea CRM-UI-1-ARMONIA-VISUAL cerrada (DONE); el publish exigió corregir el runner (PR 127) y tres relanzamientos del orquestador
 
 - Titulo: CRM: armonia visual aprobada (tokens y componentes, iconos, tipografia alojada, edad en el listado y textos retirados)

@@ -37,7 +37,7 @@ def _state_change(fecha_hora: datetime | None, *, actor: str = "user-002") -> di
         "id_lead": "22222222-2222-2222-2222-222222222222",
         "fecha_hora": fecha_hora,
         "actor_subject": actor,
-        "estado_anterior": "contactado",
+        "estado_anterior": "en_seguimiento",
         "estado_nuevo": "cerrado",
     }
 
@@ -70,7 +70,7 @@ def test_state_change_item_exposes_actor_and_delta() -> None:
     item = items[0]
     assert item["kind"] == "state_change"
     assert item["actor"] == "user-002"
-    assert item["estado_anterior"] == "contactado"
+    assert item["estado_anterior"] == "en_seguimiento"
     assert item["estado_nuevo"] == "cerrado"
 
 

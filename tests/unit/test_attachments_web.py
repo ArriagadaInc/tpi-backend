@@ -103,10 +103,10 @@ class _FakeRepo:
         return {"id_asesor": str(id_asesor), "rol": "asesor", "estado_disponibilidad": "activo"}
 
     def get_crm_estado_lead_options(self) -> list[str]:
-        return ["nuevo", "contactado", "cerrado"]
+        return ["nuevo", "en_seguimiento", "cerrado"]
 
     def get_crm_estado_lead_options_for_update(self) -> list[str]:
-        return ["nuevo", "contactado", "cerrado"]
+        return ["nuevo", "en_seguimiento", "cerrado"]
 
     def get_active_afp(self) -> list[dict[str, Any]]:
         return []

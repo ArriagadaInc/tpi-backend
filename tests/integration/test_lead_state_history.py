@@ -95,7 +95,7 @@ def test_effective_change_records_actor_timestamp_states_and_single_event() -> N
     lead_id, _ = _new_lead(estado="nuevo")
     try:
         updated = SolicitudRepository.update_lead_status(
-            UUID(lead_id), "contactado", actor=_actor("actor-001")
+            UUID(lead_id), "en_seguimiento", actor=_actor("actor-001")
         )
         assert updated is True
 
@@ -104,19 +104,19 @@ def test_effective_change_records_actor_timestamp_states_and_single_event() -> N
         event = events[0]
         assert event["actor_subject"] == "actor-001"
         assert event["estado_anterior"] == "nuevo"
-        assert event["estado_nuevo"] == "contactado"
+        assert event["estado_nuevo"] == "en_seguimiento"
         assert event["fecha_hora"] is not None
 
         with get_db_connection(operation="integration.state_history.verify") as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT estado_lead FROM tpi.leads WHERE id_lead = %s", (lead_id,))
-                assert cur.fetchone()["estado_lead"] == "contactado"
+                assert cur.fetchone()["estado_lead"] == "en_seguimiento"
     finally:
         _cleanup_lead(lead_id)
 
 
 def test_noop_does_not_update_nor_duplicate_audit() -> None:
-    lead_id, _ = _new_lead(estado="contactado")
+    lead_id, _ = _new_lead(estado="en_seguimiento")
     try:
         with get_db_connection(operation="integration.state_history.before") as conn:
             with conn.cursor() as cur:
@@ -124,7 +124,7 @@ def test_noop_does_not_update_nor_duplicate_audit() -> None:
                 updated_at_before = cur.fetchone()["updated_at"]
 
         updated = SolicitudRepository.update_lead_status(
-            UUID(lead_id), "contactado", actor=_actor("actor-001")
+            UUID(lead_id), "en_seguimiento", actor=_actor("actor-001")
         )
         assert updated is True
         assert _state_change_events(lead_id) == []
@@ -136,7 +136,7 @@ def test_noop_does_not_update_nor_duplicate_audit() -> None:
                     (lead_id,),
                 )
                 row = cur.fetchone()
-                assert row["estado_lead"] == "contactado"
+                assert row["estado_lead"] == "en_seguimiento"
                 assert row["updated_at"] == updated_at_before
     finally:
         _cleanup_lead(lead_id)
@@ -163,7 +163,7 @@ def test_audit_failure_rolls_back_state() -> None:
 
         with pytest.raises(DatabaseAppError):
             SolicitudRepository.update_lead_status(
-                UUID(lead_id), "contactado", actor=_actor("actor-001")
+                UUID(lead_id), "en_seguimiento", actor=_actor("actor-001")
             )
 
         with get_db_connection(operation="integration.state_history.verify_rollback") as conn:
@@ -192,7 +192,7 @@ def test_concurrent_updates_serialize_without_lost_update_or_duplicate_events() 
             )
 
         with ThreadPoolExecutor(max_workers=2) as executor:
-            results = list(executor.map(_attempt, ("contactado", "citado")))
+            results = list(executor.map(_attempt, ("en_seguimiento", "reunion_agendada")))
 
         assert results == [True, True]
 
@@ -203,8 +203,8 @@ def test_concurrent_updates_serialize_without_lost_update_or_duplicate_events() 
         others = [e for e in events if e is not starts[0]]
         assert len(others) == 1
         assert others[0]["estado_anterior"] == starts[0]["estado_nuevo"]
-        assert others[0]["estado_nuevo"] in {"contactado", "citado"}
-        assert starts[0]["estado_nuevo"] in {"contactado", "citado"}
+        assert others[0]["estado_nuevo"] in {"en_seguimiento", "reunion_agendada"}
+        assert starts[0]["estado_nuevo"] in {"en_seguimiento", "reunion_agendada"}
 
         with get_db_connection(operation="integration.state_history.concurrent_verify") as conn:
             with conn.cursor() as cur:
@@ -229,6 +229,6 @@ def test_update_rejects_asignado_state_at_repository_level() -> None:
 def test_update_returns_false_for_missing_lead() -> None:
     missing = uuid4()
     assert (
-        SolicitudRepository.update_lead_status(missing, "contactado", actor=_actor("actor-001"))
+        SolicitudRepository.update_lead_status(missing, "en_seguimiento", actor=_actor("actor-001"))
         is False
     )

@@ -60,7 +60,7 @@ def world() -> _World:
             w.persona_id = cur.fetchone()["id_persona"]
             cur.execute(
                 "INSERT INTO tpi.leads (id_persona, fecha_ingreso, genero_id, estado_lead, created_at) "
-                "VALUES (%s, now(), %s, 'contactado', now()) RETURNING id_lead",
+                "VALUES (%s, now(), %s, 'en_seguimiento', now()) RETURNING id_lead",
                 (str(w.persona_id), str(genero_id) if genero_id else None),
             )
             w.lead_id = cur.fetchone()["id_lead"]

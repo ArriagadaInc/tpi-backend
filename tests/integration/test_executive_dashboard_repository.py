@@ -407,7 +407,7 @@ def test_estancamiento_counts_only_no_recent_movement() -> None:
             _assign(cur, lead_ids[-1], asesor_ids[-1], _now() - timedelta(days=1))
             # Recent state change -> not stuck.
             lead_ids.append(_make_lead(cur, marker=marker, rut="12121212-4", fecha_ingreso=old))
-            _state_change(cur, lead_ids[-1], "nuevo", "contactado", _now() - timedelta(days=2))
+            _state_change(cur, lead_ids[-1], "nuevo", "en_seguimiento", _now() - timedelta(days=2))
             conn.commit()
     try:
         assert _REPO.get_estancados(_filters(marker)) == 1
@@ -611,7 +611,7 @@ def test_tiempo_primera_gestion_excludes_assignment() -> None:
                     comentarios=f"[{_note_header(ingreso + timedelta(days=1))}] Autor\nnota",
                 )
             )
-            _state_change(cur, lead_ids[-1], "nuevo", "contactado", ingreso + timedelta(days=3))
+            _state_change(cur, lead_ids[-1], "nuevo", "en_seguimiento", ingreso + timedelta(days=3))
             _assign(cur, lead_ids[-1], asesor_ids[-1], ingreso + timedelta(hours=1))
             # No note, no state change -> no first management.
             lead_ids.append(_make_lead(cur, marker=marker, rut="15151515-2", fecha_ingreso=ingreso))
@@ -636,9 +636,9 @@ def test_funnel_excludes_pre_cutover_leads() -> None:
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             lead_ids.append(_make_lead(cur, marker=marker, rut="16161616-1", fecha_ingreso=pre))
-            _state_change(cur, lead_ids[-1], "nuevo", "contactado", pre + timedelta(days=1))
+            _state_change(cur, lead_ids[-1], "nuevo", "en_seguimiento", pre + timedelta(days=1))
             lead_ids.append(_make_lead(cur, marker=marker, rut="16161616-2", fecha_ingreso=post))
-            _state_change(cur, lead_ids[-1], "nuevo", "contactado", post + timedelta(days=1))
+            _state_change(cur, lead_ids[-1], "nuevo", "en_seguimiento", post + timedelta(days=1))
             conn.commit()
     try:
         funnel = _REPO.get_funnel(
@@ -647,7 +647,7 @@ def test_funnel_excludes_pre_cutover_leads() -> None:
         assert funnel["cobertura_completa"] is True
         assert funnel["excluidos_pre_cutover"] == 1
         assert funnel["denominador"] == 1
-        assert funnel["steps"] == [{"origen": "nuevo", "destino": "contactado", "n": 1}]
+        assert funnel["steps"] == [{"origen": "nuevo", "destino": "en_seguimiento", "n": 1}]
         assert funnel["bases"] == {"nuevo": 1}
     finally:
         with get_db_connection() as conn:
@@ -671,7 +671,7 @@ def test_funnel_period_fully_before_cutover_yields_no_rates() -> None:
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             lead_ids.append(_make_lead(cur, marker=marker, rut="18181818-1", fecha_ingreso=ingreso))
-            _state_change(cur, lead_ids[-1], "nuevo", "contactado", ingreso + timedelta(days=1))
+            _state_change(cur, lead_ids[-1], "nuevo", "en_seguimiento", ingreso + timedelta(days=1))
             conn.commit()
     try:
         funnel = _REPO.get_funnel(
@@ -696,7 +696,7 @@ def test_funnel_period_fully_after_cutover_computes_rates() -> None:
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             lead_ids.append(_make_lead(cur, marker=marker, rut="18181818-2", fecha_ingreso=ingreso))
-            _state_change(cur, lead_ids[-1], "nuevo", "contactado", ingreso + timedelta(days=1))
+            _state_change(cur, lead_ids[-1], "nuevo", "en_seguimiento", ingreso + timedelta(days=1))
             conn.commit()
     try:
         funnel = _REPO.get_funnel(
@@ -704,7 +704,7 @@ def test_funnel_period_fully_after_cutover_computes_rates() -> None:
         )
         assert funnel["excluidos_pre_cutover"] == 0
         assert funnel["denominador"] == 1
-        assert funnel["steps"] == [{"origen": "nuevo", "destino": "contactado", "n": 1}]
+        assert funnel["steps"] == [{"origen": "nuevo", "destino": "en_seguimiento", "n": 1}]
         assert funnel["bases"] == {"nuevo": 1}
     finally:
         with get_db_connection() as conn:
@@ -757,15 +757,15 @@ def test_funnel_repeated_transition_is_counted_once() -> None:
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             lead_ids.append(_make_lead(cur, marker=marker, rut="18181818-4", fecha_ingreso=ingreso))
-            _state_change(cur, lead_ids[-1], "nuevo", "contactado", ingreso + timedelta(days=1))
-            _state_change(cur, lead_ids[-1], "nuevo", "contactado", ingreso + timedelta(days=2))
+            _state_change(cur, lead_ids[-1], "nuevo", "en_seguimiento", ingreso + timedelta(days=1))
+            _state_change(cur, lead_ids[-1], "nuevo", "en_seguimiento", ingreso + timedelta(days=2))
             conn.commit()
     try:
         funnel = _REPO.get_funnel(
             _filters(marker, fecha_desde="2026-09-11", fecha_hasta="2026-09-30"), cutover=cutover
         )
         # COUNT(DISTINCT id_lead) collapses the duplicated transition to one.
-        assert funnel["steps"] == [{"origen": "nuevo", "destino": "contactado", "n": 1}]
+        assert funnel["steps"] == [{"origen": "nuevo", "destino": "en_seguimiento", "n": 1}]
         assert funnel["bases"] == {"nuevo": 1}
     finally:
         with get_db_connection() as conn:
@@ -782,16 +782,16 @@ def test_funnel_return_to_previous_state_keeps_both_transitions() -> None:
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             lead_ids.append(_make_lead(cur, marker=marker, rut="18181818-5", fecha_ingreso=ingreso))
-            _state_change(cur, lead_ids[-1], "nuevo", "contactado", ingreso + timedelta(days=1))
-            _state_change(cur, lead_ids[-1], "contactado", "nuevo", ingreso + timedelta(days=2))
+            _state_change(cur, lead_ids[-1], "nuevo", "en_seguimiento", ingreso + timedelta(days=1))
+            _state_change(cur, lead_ids[-1], "en_seguimiento", "nuevo", ingreso + timedelta(days=2))
             conn.commit()
     try:
         funnel = _REPO.get_funnel(
             _filters(marker, fecha_desde="2026-09-11", fecha_hasta="2026-09-30"), cutover=cutover
         )
         steps = {f"{s['origen']}->{s['destino']}": s["n"] for s in funnel["steps"]}
-        assert steps == {"nuevo->contactado": 1, "contactado->nuevo": 1}
-        assert funnel["bases"] == {"nuevo": 1, "contactado": 1}
+        assert steps == {"nuevo->en_seguimiento": 1, "en_seguimiento->nuevo": 1}
+        assert funnel["bases"] == {"nuevo": 1, "en_seguimiento": 1}
     finally:
         with get_db_connection() as conn:
             with conn.cursor() as cur:

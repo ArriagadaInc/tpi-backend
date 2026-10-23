@@ -213,7 +213,9 @@ def _funnel(**overrides) -> Funnel:
         "cobertura_completa": True,
         "excluidos_pre_cutover": 0,
         "denominador": 214,
-        "steps": [FunnelStep("nuevo", "contactado", "Nuevo", "Contactado", 162, 214, 0.757)],
+        "steps": [
+            FunnelStep("nuevo", "en_seguimiento", "Nuevo", "En seguimiento", 162, 214, 0.757)
+        ],
         "periodo_activo": True,
     }
     base.update(overrides)

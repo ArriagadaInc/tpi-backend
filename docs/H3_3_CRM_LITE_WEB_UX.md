@@ -101,28 +101,24 @@ Componentes transversales:
 
 ## 6. Contrato de Estados CRM
 
-Estados canónicos:
+Estados canónicos (protocolo de trabajo de los Runners, octubre 2026):
 
-- `nuevo`
-- `prospecto`
-- `asignado`
-- `contactado`
-- `citado`
-- `en_tramite`
-- `expediente`
+- `nuevo` (sin asignar)
+- `asignado` (solo por la operación de asignación)
+- `sin_contacto`
+- `en_seguimiento`
+- `reunion_agendada`
+- `reunion_realizada`
 - `ficha_generada`
 - `cerrado`
+- `no_interesado`
+- `datos_erroneos`
+- `no_contactado`
 - `perdido`
-- `no_califica`
-- `duplicado`
-- `dormido`
 
 Compatibilidad legacy:
 
 - `pendiente` → `nuevo`
-- `Citado` → `citado`
-- `En trámite` / `en_tramite` → `en_tramite`
-- `Cerrado` → `cerrado`
 
 Valores ambiguos no normalizados automáticamente:
 

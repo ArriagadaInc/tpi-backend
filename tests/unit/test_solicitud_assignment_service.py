@@ -114,17 +114,17 @@ def test_generic_update_propagates_authenticated_actor() -> None:
     assert (
         service.update_lead_status(
             "11111111-1111-1111-1111-111111111111",
-            "contactado",
+            "en_seguimiento",
             actor=_actor("executive"),
         )
         is True
     )
-    assert repo.status_calls == [(UUID("11111111-1111-1111-1111-111111111111"), "contactado")]
+    assert repo.status_calls == [(UUID("11111111-1111-1111-1111-111111111111"), "en_seguimiento")]
 
     with pytest.raises(TypeError, match="AuthenticatedUser"):
         service.update_lead_status(
             "11111111-1111-1111-1111-111111111111",
-            "contactado",
+            "en_seguimiento",
             actor=cast(Any, None),
         )
 

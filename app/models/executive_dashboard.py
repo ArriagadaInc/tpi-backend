@@ -43,7 +43,13 @@ _GRANULARITY_SQL_FIELD: dict[str, str] = {
 ANTIGUEDAD_BUCKETS: tuple[str, ...] = ("0-2", "3-7", "8-15", "16-30", "+30")
 
 # Estados excluidos de la cartera activa (definición humana literal).
-CARTERA_INACTIVA_ESTADOS: tuple[str, ...] = ("cerrado", "perdido", "no_califica", "duplicado")
+CARTERA_INACTIVA_ESTADOS: tuple[str, ...] = (
+    "cerrado",
+    "perdido",
+    "no_interesado",
+    "datos_erroneos",
+    "no_contactado",
+)
 
 SNAPSHOT_SCOPE = "current_snapshot"
 PERIOD_SCOPE = "period_activity"

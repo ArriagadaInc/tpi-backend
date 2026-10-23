@@ -69,7 +69,7 @@ def world() -> _World:
             w.advisor_id = cur.fetchone()["id_asesor"]
             for i in range(12):
                 rut = f"5{1000000 + i:07d}-{i % 10}"
-                estado = "contactado" if i % 2 == 0 else "nuevo"
+                estado = "en_seguimiento" if i % 2 == 0 else "nuevo"
                 lead, persona = _insert_lead(cur, rut, f"Export Lead {w.suffix} {i:02d}", estado)
                 w.lead_ids.append(lead)
                 w.persona_ids.append(persona)
@@ -149,13 +149,13 @@ def test_export_ignores_pagination_and_contains_all_rows(world: _World) -> None:
 def test_export_respects_combined_filters(world: _World) -> None:
     response = _client("ceo").get(
         "/leads/export.xlsx",
-        params={"search": world.suffix, "estado_lead": "contactado"},
+        params={"search": world.suffix, "estado_lead": "en_seguimiento"},
     )
     assert response.status_code == 200
     rows = _data_rows(response.content)
     assert len(rows) == 6
     # Column 11 (index 10) is "Estado" in the allowlist.
-    assert all(row[10] == "contactado" for row in rows)
+    assert all(row[10] == "en_seguimiento" for row in rows)
 
 
 def test_export_writes_audit_event_without_pii(world: _World) -> None:

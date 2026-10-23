@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from app.auth.models import AuthenticatedUser, AuthenticationResult
 from app.database.connection import get_db_connection
 from app.database.healthcheck import full_health_check
+from app.models.crm_states import crm_state_label
 from app.models.solicitud import (
     ConsentimientosData,
     PersonaData,
@@ -195,7 +196,7 @@ def test_web_status_update_and_comment_append_persist(
         assert status_response.status_code == 303
 
         refreshed = web_client.get(f"/leads/{response.id_lead}")
-        assert target_state.replace("_", " ").title() in refreshed.text
+        assert crm_state_label(target_state) in refreshed.text
 
         csrf = _extract_csrf(refreshed.text)
         comment_response = web_client.post(
@@ -367,7 +368,7 @@ def test_web_readonly_users_cannot_mutate_leads(
 
         denied_status = readonly_client.post(
             f"/leads/{response.id_lead}/status",
-            data={"estado_lead": "contactado"},
+            data={"estado_lead": "en_seguimiento"},
             follow_redirects=False,
         )
         assert denied_status.status_code == 403

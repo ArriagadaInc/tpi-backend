@@ -47,7 +47,7 @@ def _row() -> dict[str, Any]:
         "afp": "Habitat",
         "saldo_afp": 1000000,
         "comentarios": "Solicitud original.",
-        "estado_lead": "contactado",
+        "estado_lead": "en_seguimiento",
         "created_at": datetime(2026, 9, 1, 10, 0, tzinfo=UTC),
         "id_asesor": None,
         "asesor_nombre": None,
@@ -62,7 +62,7 @@ class _Repo:
         return dict(self.row) if self.row is not None else None
 
     def get_crm_estado_lead_options(self) -> list[str]:
-        return ["nuevo", "contactado", "cerrado", "asignado"]
+        return ["nuevo", "en_seguimiento", "cerrado", "asignado"]
 
     def get_lead_assignment_events(self, id_lead: Any) -> list[dict[str, Any]]:
         return []

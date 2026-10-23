@@ -34,7 +34,7 @@ _LEAD = {
     "estado_civil": "Soltero",
     "afp": "Habitat",
     "saldo_afp": 1000000,
-    "estado_lead": "contactado",
+    "estado_lead": "en_seguimiento",
     "comentarios": "Solicitud original.",
     "created_at": datetime(2026, 9, 1, 10, 0, tzinfo=UTC),
 }
@@ -73,7 +73,7 @@ class _Repo:
         return [{"id": "afp-1", "nombre": "Habitat"}]
 
     def get_crm_estado_lead_options(self) -> list[str]:
-        return ["nuevo", "contactado", "cerrado"]
+        return ["nuevo", "en_seguimiento", "cerrado"]
 
     def get_asesores_disponibles_para_asignacion(self) -> list[dict[str, Any]]:
         return []
