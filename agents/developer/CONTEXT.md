@@ -77,6 +77,7 @@ bloqueos son de forma, detienen la sesion y son definitivos: no busques rodeos; 
 | Deuda H3.3.1 | `docs/BITACORA.md` entrada 2026-09-12; issue #50 |
 | Clasificacion de cambios A-E | `docs/cicd/TPI_Contrato_CICD_AWS_v2.md` seccion 2 |
 | DoD | `docs/ENGINEERING_STANDARDS.md` (cobertura rige 85%) |
+| Cambios de interfaz (CSS, plantillas, aspecto) | `docs/UI_DESIGN_SYSTEM.md` y `agents/developer/skills/tpi-ui-design/SKILL.md`: leerlos antes de tocar `app/web/static/` o `app/web/templates/` |
 
 ## No es estado actual
 
