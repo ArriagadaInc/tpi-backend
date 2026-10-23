@@ -33,7 +33,7 @@ def _lead(lead_id: UUID = LEAD_ID) -> dict[str, Any]:
         "fecha_nacimiento": datetime(1990, 1, 1),
         "afp": "Habitat",
         "saldo_afp": 1000000,
-        "estado_lead": "contactado",
+        "estado_lead": "en_seguimiento",
         "comentarios": "Solicitud original.",
         "created_at": datetime(2026, 9, 1, 10, 0, tzinfo=UTC),
     }
@@ -96,7 +96,7 @@ class _AdvisorRepository:
         return True
 
     def get_crm_estado_lead_options(self) -> list[str]:
-        return ["nuevo", "contactado", "cerrado"]
+        return ["nuevo", "en_seguimiento", "cerrado"]
 
 
 def _service(repo: _AdvisorRepository | None = None) -> tuple[SolicitudService, _AdvisorRepository]:

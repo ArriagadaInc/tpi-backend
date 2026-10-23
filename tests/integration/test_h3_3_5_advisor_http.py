@@ -161,11 +161,11 @@ def test_advisor_status_comment_own_allowed(world: _World) -> None:
 
     status = client.post(
         f"/leads/{world.lead_own}/status",
-        data={"csrf_token": csrf, "estado_lead": "contactado"},
+        data={"csrf_token": csrf, "estado_lead": "en_seguimiento"},
         follow_redirects=False,
     )
     assert status.status_code == 303
-    assert _lead_state(world.lead_own) == "contactado"
+    assert _lead_state(world.lead_own) == "en_seguimiento"
 
     comment = client.post(
         f"/leads/{world.lead_own}/comments",
@@ -182,7 +182,7 @@ def test_advisor_status_comment_foreign_and_unassigned_404(world: _World) -> Non
         csrf = _csrf(client, world.lead_own)  # any valid token
         status = client.post(
             f"/leads/{lead_id}/status",
-            data={"csrf_token": csrf, "estado_lead": "contactado"},
+            data={"csrf_token": csrf, "estado_lead": "en_seguimiento"},
             follow_redirects=False,
         )
         assert status.status_code == 404

@@ -367,7 +367,7 @@ def test_web_readonly_users_cannot_mutate_leads(
 
         denied_status = readonly_client.post(
             f"/leads/{response.id_lead}/status",
-            data={"estado_lead": "contactado"},
+            data={"estado_lead": "en_seguimiento"},
             follow_redirects=False,
         )
         assert denied_status.status_code == 403

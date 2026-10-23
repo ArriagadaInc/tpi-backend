@@ -95,7 +95,7 @@ def _full_dashboard(
         estancados=58,
         casos_por_estado=[
             _estado("cerrado", "Cerrado", 600),
-            _estado("contactado", "Contactado", 280),
+            _estado("en_seguimiento", "En seguimiento", 280),
             _estado("estado_legacy_desconocido", "estado_legacy_desconocido", 12),
         ],
         antiguedad=[_edad("0-2", 210), _edad("+30", 81)],
@@ -105,7 +105,7 @@ def _full_dashboard(
             AsesorRow(None, "Sin asesor", 37, 37, 6, 0, None, 0, None),
         ],
         casos_por_estado_y_asesor=[
-            EstadoAsesorCell(ADVISOR_ID, ADVISOR_NAME, "contactado", "Contactado", 96)
+            EstadoAsesorCell(ADVISOR_ID, ADVISOR_NAME, "en_seguimiento", "En seguimiento", 96)
         ],
         distribucion_afp=[_cat("Habitat", 512)],
         distribucion_origen=[_cat("formulario_web", 760)],
@@ -127,7 +127,11 @@ def _full_dashboard(
                 cobertura_completa=True,
                 excluidos_pre_cutover=0,
                 denominador=214,
-                steps=[FunnelStep("nuevo", "contactado", "Nuevo", "Contactado", 162, 214, 0.757)],
+                steps=[
+                    FunnelStep(
+                        "nuevo", "en_seguimiento", "Nuevo", "En seguimiento", 162, 214, 0.757
+                    )
+                ],
                 periodo_activo=True,
             )
         ),
@@ -350,7 +354,7 @@ def test_percentages_always_show_n_and_the_denominator() -> None:
 
 def test_state_bars_use_a_reproducible_order_and_escape_unknown_values() -> None:
     body = _page()
-    assert body.index("Cerrado") < body.index("Contactado")
+    assert body.index("Cerrado") < body.index("En seguimiento")
     assert "estado_legacy_desconocido" in body
 
 
@@ -410,7 +414,7 @@ def test_timeseries_without_observations_shows_the_empty_state() -> None:
 def test_funnel_renders_rates_with_n_and_base_when_coverage_is_complete() -> None:
     body = _page()
     assert "Funnel y tasas observables" in body
-    assert "Nuevo → Contactado" in body
+    assert "Nuevo → En seguimiento" in body
     assert "162 · 75,7% (162/214)" in body
 
 
@@ -437,7 +441,7 @@ def test_funnel_is_unavailable_when_coverage_is_partial() -> None:
         cobertura_completa=True,
         excluidos_pre_cutover=412,
         denominador=214,
-        steps=[FunnelStep("nuevo", "contactado", "Nuevo", "Contactado", 162, 214, 0.757)],
+        steps=[FunnelStep("nuevo", "en_seguimiento", "Nuevo", "En seguimiento", 162, 214, 0.757)],
         periodo_activo=True,
     )
     body = _page(service=_StubService(lambda: _full_dashboard(funnel=funnel)))

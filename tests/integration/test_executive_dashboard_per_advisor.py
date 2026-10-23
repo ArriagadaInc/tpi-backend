@@ -4,8 +4,8 @@ These tests assert exact values for the three per-advisor aggregations cited by
 ``docs/H3_3_4_REQUIREMENTS_MATRIX.md`` under REQ-B-12/REQ-B-13/REQ-B-14 and AC-12:
 
 - ``get_cartera_por_asesor``: total and active portfolio per advisor, with the
-  exact active-portfolio exclusion (``cerrado``/``perdido``/``no_califica``/
-  ``duplicado``), the "Sin asesor" bucket, and fan-out safety.
+  exact active-portfolio exclusion (``cerrado``/``perdido``/``no_interesado``/
+  ``datos_erroneos``/``no_contactado``), the "Sin asesor" bucket, and fan-out safety.
 - ``get_casos_por_estado_y_asesor``: the state x advisor matrix with exact cell
   counts, unassigned leads, and fan-out safety.
 - ``get_metricas_operacionales_por_asesor``: stuck count, time-to-assignment and
@@ -73,16 +73,29 @@ def test_cartera_por_asesor_exact_total_active_and_sin_asesor() -> None:
             a2 = _make_asesor(cur, f"Asesor Cartera B {uuid4().hex[:6]}")
             asesor_ids.extend([a1, a2])
 
-            # a1: one active + one unknown (both active) + the four inactive states.
+            # a1: two active + one unknown (both active) + the five inactive states.
             lead_ids.append(
                 _make_lead(cur, marker=marker, rut=_rut("a"), estado="nuevo", fecha_ingreso=now)
             )
             _assign(cur, lead_ids[-1], a1, now)
-            for estado in ("cerrado", "perdido", "no_califica", "duplicado"):
+            for estado in (
+                "cerrado",
+                "perdido",
+                "no_interesado",
+                "datos_erroneos",
+                "no_contactado",
+            ):
                 lead_ids.append(
                     _make_lead(cur, marker=marker, rut=_rut("b"), estado=estado, fecha_ingreso=now)
                 )
                 _assign(cur, lead_ids[-1], a1, now)
+            # ficha_generada sigue activo hasta cerrarse.
+            lead_ids.append(
+                _make_lead(
+                    cur, marker=marker, rut=_rut("c"), estado="ficha_generada", fecha_ingreso=now
+                )
+            )
+            _assign(cur, lead_ids[-1], a1, now)
             lead_ids.append(
                 _make_lead(
                     cur, marker=marker, rut=_rut("c"), estado="estado_raro", fecha_ingreso=now
@@ -93,7 +106,7 @@ def test_cartera_por_asesor_exact_total_active_and_sin_asesor() -> None:
             # a2: one active lead.
             lead_ids.append(
                 _make_lead(
-                    cur, marker=marker, rut=_rut("d"), estado="contactado", fecha_ingreso=now
+                    cur, marker=marker, rut=_rut("d"), estado="en_seguimiento", fecha_ingreso=now
                 )
             )
             _assign(cur, lead_ids[-1], a2, now)
@@ -106,8 +119,10 @@ def test_cartera_por_asesor_exact_total_active_and_sin_asesor() -> None:
     try:
         rows = _REPO.get_cartera_por_asesor(_filters(marker))
         by_id = _by_asesor(rows)
-        assert by_id[a1]["cartera_total"] == 6  # 1 nuevo + 4 inactivos + 1 desconocido
-        assert by_id[a1]["cartera_activa"] == 2  # solo "nuevo" y "estado_raro"
+        assert (
+            by_id[a1]["cartera_total"] == 8
+        )  # nuevo + ficha_generada + 5 inactivos + 1 desconocido
+        assert by_id[a1]["cartera_activa"] == 3  # nuevo + ficha_generada + estado_raro
         assert by_id[a1]["nombre"] is not None
         assert by_id[a2]["cartera_total"] == 1
         assert by_id[a2]["cartera_activa"] == 1
@@ -188,7 +203,7 @@ def test_casos_por_estado_y_asesor_exact_matrix_counts() -> None:
             _assign(cur, lead_ids[-1], a1, now)
             lead_ids.append(
                 _make_lead(
-                    cur, marker=marker, rut=_rut("m"), estado="contactado", fecha_ingreso=now
+                    cur, marker=marker, rut=_rut("m"), estado="en_seguimiento", fecha_ingreso=now
                 )
             )
             _assign(cur, lead_ids[-1], a1, now)
@@ -242,7 +257,7 @@ def test_casos_por_estado_y_asesor_exact_matrix_counts() -> None:
             for r in rows
         }
         assert cells[(a1, "nuevo")] == 2
-        assert cells[(a1, "contactado")] == 1
+        assert cells[(a1, "en_seguimiento")] == 1
         assert cells[(a1, "cerrado")] == 1
         assert cells[(a1, "estado_desconocido_xyz")] == 1  # unknown state preserved
         assert cells[(a2, "nuevo")] == 1
@@ -308,7 +323,7 @@ def test_metricas_operacionales_por_asesor_stuck_assignment_and_first_management
                 ),
             )
             _assign(cur, fresh, a2, ingreso + timedelta(days=2))
-            _state_change(cur, fresh, "nuevo", "contactado", now - timedelta(days=1))
+            _state_change(cur, fresh, "nuevo", "en_seguimiento", now - timedelta(days=1))
             lead_ids.append(fresh)
 
             # Unassigned stale lead.

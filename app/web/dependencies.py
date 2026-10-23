@@ -82,7 +82,7 @@ MOCK_BOARD_ROWS: list[dict[str, Any]] = [
         "telefono": "+56 9 8765 4321",
         "afp": "Cuprum",
         "saldo_afp": 2243000,
-        "estado_lead": "contactado",
+        "estado_lead": "en_seguimiento",
         "comentarios": "Seguimiento comercial en curso.",
         "created_at": datetime(2026, 8, 21, 11, 20),
     },

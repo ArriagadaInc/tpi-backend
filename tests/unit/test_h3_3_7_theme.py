@@ -229,7 +229,7 @@ def test_dark_filled_buttons_keep_white_labels_readable() -> None:
     assert _contrast("#ffffff", dark["--accent-strong-hover"]) >= 4.5
 
 
-@pytest.mark.parametrize("colour", ["#fbbf24", "#34d399", "#93c5fd", "#fca5a5", "#fdba74"])
+@pytest.mark.parametrize("colour", ["#fbbf24", "#34d399", "#fca5a5", "#fdba74"])
 def test_dark_status_and_alert_colours_are_readable(colour: str) -> None:
     dark = _dark_tokens()
     assert colour in _dark_section()

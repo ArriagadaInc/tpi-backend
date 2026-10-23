@@ -119,34 +119,32 @@ class _FakeWebService:
     def get_crm_estado_lead_options(self):
         return [
             "nuevo",
-            "prospecto",
             "asignado",
-            "contactado",
-            "citado",
-            "en_tramite",
-            "expediente",
+            "sin_contacto",
+            "en_seguimiento",
+            "reunion_agendada",
+            "reunion_realizada",
             "ficha_generada",
             "cerrado",
+            "no_interesado",
+            "datos_erroneos",
+            "no_contactado",
             "perdido",
-            "no_califica",
-            "duplicado",
-            "dormido",
         ]
 
     def get_crm_estado_lead_options_for_update(self):
         return [
             "nuevo",
-            "prospecto",
-            "contactado",
-            "citado",
-            "en_tramite",
-            "expediente",
+            "sin_contacto",
+            "en_seguimiento",
+            "reunion_agendada",
+            "reunion_realizada",
             "ficha_generada",
             "cerrado",
+            "no_interesado",
+            "datos_erroneos",
+            "no_contactado",
             "perdido",
-            "no_califica",
-            "duplicado",
-            "dormido",
         ]
 
     def get_catalogo_afp(self):
@@ -194,17 +192,16 @@ class _FakeWebService:
             return False
         allowed = {
             "nuevo",
-            "prospecto",
-            "contactado",
-            "citado",
-            "en_tramite",
-            "expediente",
+            "sin_contacto",
+            "en_seguimiento",
+            "reunion_agendada",
+            "reunion_realizada",
             "ficha_generada",
             "cerrado",
+            "no_interesado",
+            "datos_erroneos",
+            "no_contactado",
             "perdido",
-            "no_califica",
-            "duplicado",
-            "dormido",
         }
         if estado_lead not in allowed:
             raise ValueError("Estado de lead invalido")
@@ -447,7 +444,7 @@ def test_ceo_and_cto_can_execute_superuser_actions() -> None:
 
         status = client.post(
             "/leads/11111111-1111-1111-1111-111111111111/status",
-            data={"csrf_token": csrf, "estado_lead": "contactado"},
+            data={"csrf_token": csrf, "estado_lead": "en_seguimiento"},
             follow_redirects=False,
         )
         assert status.status_code == 303
@@ -711,7 +708,7 @@ def test_web_status_update_and_comment_append_are_protected_and_incremental() ->
 
     status_response = client.post(
         "/leads/11111111-1111-1111-1111-111111111111/status",
-        data={"csrf_token": csrf, "estado_lead": "contactado", "return_to": "/leads?page=2"},
+        data={"csrf_token": csrf, "estado_lead": "en_seguimiento", "return_to": "/leads?page=2"},
         follow_redirects=False,
     )
     assert status_response.status_code == 303
@@ -719,7 +716,7 @@ def test_web_status_update_and_comment_append_are_protected_and_incremental() ->
         "/leads/11111111-1111-1111-1111-111111111111?return_to="
         in status_response.headers["location"]
     )
-    assert service.status_updates[-1][1] == "contactado"
+    assert service.status_updates[-1][1] == "en_seguimiento"
 
     refreshed = client.get("/leads/11111111-1111-1111-1111-111111111111")
     csrf = _extract_csrf(refreshed.text)
@@ -736,7 +733,7 @@ def test_web_status_update_and_comment_append_are_protected_and_incremental() ->
     assert service.comment_appends[-1][1] == "Seguimiento agregado desde test"
 
     final_detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
-    assert "Contactado" in final_detail.text
+    assert "En seguimiento" in final_detail.text
     assert "Seguimiento agregado desde test" in final_detail.text
     assert "Lead de prueba" in final_detail.text
     assert "Solicitud Original" in final_detail.text
@@ -811,7 +808,7 @@ def test_web_status_update_rejects_invalid_csrf_and_readonly_role() -> None:
 
     denied = readonly_client.post(
         "/leads/11111111-1111-1111-1111-111111111111/status",
-        data={"csrf_token": "bad", "estado_lead": "contactado"},
+        data={"csrf_token": "bad", "estado_lead": "en_seguimiento"},
         follow_redirects=False,
     )
     assert denied.status_code == 403
@@ -1151,7 +1148,7 @@ def test_detail_timeline_renders_state_change_with_badge_and_no_edit_delete() ->
             {
                 "fecha_hora": datetime(2026, 9, 5, 12, 0, tzinfo=UTC),
                 "actor_subject": "user-001",
-                "estado_anterior": "contactado",
+                "estado_anterior": "en_seguimiento",
                 "estado_nuevo": "cerrado",
             }
         ]
@@ -1163,7 +1160,7 @@ def test_detail_timeline_renders_state_change_with_badge_and_no_edit_delete() ->
     assert detail.status_code == 200
     assert "Automático" in detail.text
     assert "user-001" in detail.text
-    assert "Cambio de estado: contactado → cerrado" in detail.text
+    assert "Cambio de estado: en_seguimiento → cerrado" in detail.text
     # CRM-UI-1: el aviso de la migración 008 ya no se muestra en el detalle del lead.
     assert "migracion 008" not in detail.text
     # System events are read-only: no edit/delete controls are rendered.

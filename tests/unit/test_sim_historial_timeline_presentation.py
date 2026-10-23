@@ -104,7 +104,7 @@ def test_simulation_ranks_between_event_and_state_change_on_tie() -> None:
     state_change = {
         "fecha_hora": moment,
         "actor_subject": "user-002",
-        "estado_anterior": "contactado",
+        "estado_anterior": "en_seguimiento",
         "estado_nuevo": "cerrado",
     }
     items = build_timeline_items([event], [], [state_change], [_simulation(moment)])

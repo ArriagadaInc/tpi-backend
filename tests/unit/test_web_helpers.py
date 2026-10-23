@@ -68,7 +68,7 @@ def test_mock_web_service_filters_sorts_and_updates_rows() -> None:
         page=1,
         page_size=5,
         search="Maria",
-        estado_lead="contactado",
+        estado_lead="en_seguimiento",
         afp_id="00000000-0000-0000-0000-000000000002",
         date_from=date(2026, 1, 1),
         date_to=date(2026, 12, 31),
@@ -92,7 +92,7 @@ def test_mock_web_service_filters_sorts_and_updates_rows() -> None:
     lead_id = "11111111-1111-1111-1111-111111111111"
     assert service.get_solicitud_detalle(lead_id) is not None
     assert service.get_solicitud_detalle_masked(lead_id) is not None
-    assert service.update_lead_status(lead_id, "contactado") is True
+    assert service.update_lead_status(lead_id, "en_seguimiento") is True
     assert service.update_lead_status(lead_id, "cerrado") is True
     assert service.get_solicitud_detalle(lead_id)["estado_lead"] == "cerrado"
     actor = AuthenticatedUser("subject-1", "tester", "Alvaro Local", "tester")

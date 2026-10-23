@@ -43,7 +43,7 @@ def _row(**overrides: Any) -> dict[str, Any]:
         "afp": "Habitat",
         "saldo_afp": 1000000,
         "comentarios": "Solicitud original.",
-        "estado_lead": "contactado",
+        "estado_lead": "en_seguimiento",
         "created_at": datetime(2026, 9, 1, 10, 0, tzinfo=UTC),
         "id_asesor": str(ASESOR_ID),
         "asesor_nombre": "Asesor Uno",
@@ -125,7 +125,7 @@ def test_filters_forwarded_to_repository() -> None:
     service.export_leads_xlsx(
         _user("ceo"),
         search="Juan",
-        estado_lead="contactado",
+        estado_lead="en_seguimiento",
         afp_id=AFP_ID,
         date_from=date(2026, 1, 1),
         date_to=date(2026, 12, 31),
@@ -140,7 +140,7 @@ def test_filters_forwarded_to_repository() -> None:
 
     count_args = repo.count_calls[0]
     assert count_args["search"] == "Juan"
-    assert count_args["estado_lead"] == "contactado"
+    assert count_args["estado_lead"] == "en_seguimiento"
     assert count_args["afp_id"] == AFP_ID
     assert isinstance(count_args["date_from"], datetime)
     assert isinstance(count_args["date_to"], datetime)

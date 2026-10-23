@@ -9,32 +9,30 @@ Fuente: AWS DEV + scripts versionados + `init_test_database.py`
 
 ### `estado_lead`
 
-Observado en AWS DEV:
+Contrato canonico vigente (protocolo de trabajo de los Runners, octubre 2026):
 
-- `nuevo`
-- `pendiente`
-- `asignado`
-- `contactado`
+- `nuevo` (sin asignar)
+- `asignado` (solo por la operacion de asignacion)
+- `sin_contacto`
+- `en_seguimiento`
+- `reunion_agendada`
+- `reunion_realizada`
 - `ficha_generada`
-- `no_califica`
-- `perdido`
-
-El contrato canonico del repositorio ademas incluye:
-
-- `prospecto`
-- `citado`
-- `en_tramite`
-- `expediente`
 - `cerrado`
-- `duplicado`
-- `dormido`
+- `no_interesado`
+- `datos_erroneos`
+- `no_contactado`
+- `perdido`
 
 Interpretacion:
 
-- PostgreSQL almacena el campo como `VARCHAR`.
-- La aplicacion gobierna el vocabulario.
+- PostgreSQL almacena el campo como `VARCHAR`; el estado es texto sin restriccion.
+- La aplicacion gobierna el vocabulario (`app/models/crm_states.py`).
 - No existe catalogo de estados ni ENUM en el esquema fisico validado.
 - `pendiente` se trata como alias legacy de `nuevo`.
+- `asignado` solo se produce por `assign_lead`; no se ofrece en el selector generico.
+- No hay transiciones restringidas en esta version: cualquier estado puede pasar
+  a cualquier otro, salvo `asignado` (reservado a la asignacion).
 
 ### `estado_asignacion`
 

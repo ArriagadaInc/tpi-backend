@@ -191,7 +191,7 @@ def test_view_exposes_only_state_change_columns_and_filters_events() -> None:
                     detalle={
                         "actor_subject": "user-001",
                         "estado_anterior": "nuevo",
-                        "estado_nuevo": "contactado",
+                        "estado_nuevo": "en_seguimiento",
                     },
                 )
                 _insert_audit_row(
@@ -231,7 +231,7 @@ def test_view_exposes_only_state_change_columns_and_filters_events() -> None:
         }
         assert row["actor_subject"] == "user-001"
         assert row["estado_anterior"] == "nuevo"
-        assert row["estado_nuevo"] == "contactado"
+        assert row["estado_nuevo"] == "en_seguimiento"
     finally:
         _cleanup_lead(lead_id)
 
