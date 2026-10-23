@@ -93,6 +93,12 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ### 🔄 Cambiado
 
+- **Armonía visual del CRM aplicada desde la referencia aprobada** (CRM-UI-1-ARMONIA-VISUAL)
+  - Se reproduce en `app/web/` la referencia aprobada por el humano (`docs/ui/referencia/ui1/`): un solo estilo de botones, campos, tarjetas y chips de estado; iconos de sol/luna (tema), cerrar sesión y exportar XLSX; logo más grande; y los textos que el humano pidió retirar (la bajada de la lista de leads, la bajada técnica del dashboard y el aviso de la migración 008 del detalle del lead).
+  - Tipografía **Plus Jakarta Sans alojada en el propio sitio** (`app/web/static/fonts/PlusJakartaSans-latin.woff2` + `OFL.txt`), con `@font-face { font-display: swap; }` y sin pedidos a `fonts.googleapis.com` ni `fonts.gstatic.com`.
+  - El listado de leads muestra la columna **Edad** (años cumplidos, calculada en la consulta) en lugar del RUT; la búsqueda por RUT sigue funcionando y el detalle conserva el RUT completo para quien puede verlo. El enmascarado de RUT, correo y teléfono no cambia.
+  - El botón de tema es un icono accesible con `aria-label`, `title` y `aria-pressed`; el chip de ambiente solo aparece en la barra superior. Sin cambios de rutas, permisos, HTMX, CSRF ni consultas (salvo la edad); la exportación XLSX conserva exactamente sus columnas permitidas.
+
 - **Publish a ECR: esperar el escaneo hasta 20 minutos y fallar con mensajes claros** (H3.2-ECR-SCAN-WAIT)
   - El paso de escaneo de `publish-dev-ecr-images.yml` espera hasta `SCAN_TIMEOUT_MINUTES=20` minutos (sondeo cada `SCAN_POLL_SECONDS=15` s) a que ambas imagenes (`tpi-dev-app` y `tpi-dev-caddy`) tengan el escaneo `COMPLETE`, con gate fail-closed: `CRITICAL=0` y `HIGH=0` en ambas imagenes; `IN_PROGRESS` nunca cuenta como exito y los tags siguen siendo inmutables.
   - Los fallos se distinguen con mensajes propios: (a) el escaneo no termino en el plazo, aclarando que NO hay hallazgos verificados, con los digests y el procedimiento de recuperacion; (b) termino en `FAILED` o `UNSUPPORTED_IMAGE`; (c) hay hallazgos HIGH/CRITICAL, con el detalle como hasta ahora.

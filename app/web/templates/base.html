@@ -31,9 +31,9 @@
       </div>
       <div class="topbar-user">
         {# aria-pressed is kept in sync by theme.js; the server always renders light. #}
-        <button type="button" class="link-button theme-toggle" data-theme-toggle aria-pressed="false">
-          <span class="theme-toggle-icon" aria-hidden="true"></span>
-          <span class="theme-toggle-label">Tema oscuro</span>
+        <button type="button" class="icon-button theme-toggle" data-theme-toggle aria-pressed="false" aria-label="Cambiar entre tema claro y oscuro" title="Cambiar tema">
+          <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
         </button>
         {% if selected_user %}
           <div class="user-meta">
@@ -45,7 +45,7 @@
           {% if public_site_url %}
             <a class="link-button" href="{{ public_site_url }}" target="_blank" rel="noopener noreferrer">Home</a>
           {% endif %}
-          <a class="link-button" href="/logout">Cerrar sesión</a>
+          <a class="icon-button" href="/logout" aria-label="Cerrar sesión" title="Cerrar sesión"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></a>
         {% else %}
           <span class="topbar-muted">Acceso local</span>
         {% endif %}

@@ -901,6 +901,40 @@ def test_web_board_empty_states_are_distinct() -> None:
     assert "No encontramos leads con estos filtros" in with_filters.text
 
 
+def test_board_listing_shows_edad_instead_of_rut_or_birthdate() -> None:
+    service = _FakeWebService(
+        rows=[
+            {
+                "id_lead": "11111111-1111-1111-1111-111111111111",
+                "nombre_completo": "Juan Perez",
+                "rut": "12.345.678-5",
+                "telefono": "+56 9 1234 5678",
+                "afp": "Habitat",
+                "saldo_afp": 1234567,
+                "estado_lead": "nuevo",
+                "comentarios": "Lead de prueba",
+                "created_at": datetime(2026, 8, 21, 9, 45, tzinfo=UTC),
+                "email": "juan@example.com",
+                "fecha_nacimiento": date(1961, 1, 1),
+                "edad": 64,
+            }
+        ]
+    )
+    client = _build_client(service, auth_provider=_FakeAuthProvider(authenticated_role="ceo"))
+    _login(client)
+
+    response = client.get("/leads")
+    assert response.status_code == 200
+    body = response.text
+    # La tabla del listado muestra la columna Edad con el valor calculado...
+    assert "Edad" in body
+    assert "64 años" in body
+    # ...y no el RUT ni la fecha de nacimiento en el listado.
+    assert "12.345.678-5" not in body
+    assert "1961-01-01" not in body
+    assert "01/01/1961" not in body
+
+
 def test_templates_and_static_assets_exist() -> None:
     for relative in (
         Path("app/web/templates/base.html"),
@@ -926,6 +960,24 @@ def test_static_assets_can_be_served() -> None:
     script = client.get("/static/js/app.js")
     assert script.status_code == 200
     assert "javascript" in script.headers["content-type"].lower()
+
+
+def test_typography_is_hosted_locally_without_external_font_requests() -> None:
+    css = Path("app/web/static/css/app.css").read_text(encoding="utf-8")
+    base = Path("app/web/templates/base.html").read_text(encoding="utf-8")
+    for source in (css, base):
+        assert "fonts.googleapis.com" not in source
+        assert "fonts.gstatic.com" not in source
+    assert "font-display: swap" in css
+    assert 'url("/static/fonts/PlusJakartaSans-latin.woff2")' in css
+    assert Path("app/web/static/fonts/PlusJakartaSans-latin.woff2").exists()
+    assert Path("app/web/static/fonts/OFL.txt").exists()
+
+    client = _build_client()
+    response = client.get("/static/fonts/PlusJakartaSans-latin.woff2")
+    assert response.status_code == 200
+    assert "font/woff2" in response.headers["content-type"].lower()
+    assert response.content[:4] == b"wOF2"
 
 
 def test_board_html_uses_relative_static_asset_urls() -> None:
@@ -1112,7 +1164,8 @@ def test_detail_timeline_renders_state_change_with_badge_and_no_edit_delete() ->
     assert "Automático" in detail.text
     assert "user-001" in detail.text
     assert "Cambio de estado: contactado → cerrado" in detail.text
-    assert "migracion 008" in detail.text
+    # CRM-UI-1: el aviso de la migración 008 ya no se muestra en el detalle del lead.
+    assert "migracion 008" not in detail.text
     # System events are read-only: no edit/delete controls are rendered.
     assert "Editar" not in detail.text
     assert "Eliminar" not in detail.text

@@ -265,10 +265,10 @@ def test_ac1_ac2_ac3_web_html_rendering() -> None:
     resp_board_res = client_adv.get("/leads")
     assert resp_board_res.status_code == 200
     html_board_res = resp_board_res.text
+    # CRM-UI-1: el listado ya no muestra RUT, correo ni teléfono (columna Edad).
     assert "12345678-5" not in html_board_res
     assert "juan.perez@example.com" not in html_board_res
     assert "+56912345678" not in html_board_res
-    assert "*" in html_board_res
 
     resp_detail_res = client_adv.get(f"/leads/{repo.lead_id}")
     assert resp_detail_res.status_code == 200
@@ -276,13 +276,15 @@ def test_ac1_ac2_ac3_web_html_rendering() -> None:
     assert "12345678-5" not in html_detail_res
     assert "juan.perez@example.com" not in html_detail_res
     assert "+56912345678" not in html_detail_res
+    assert "*" in html_detail_res
 
     # 2. Privileged CEO web rendering
     client_ceo = _client_for_role("ceo", service)
     resp_board_ceo = client_ceo.get("/leads")
     assert resp_board_ceo.status_code == 200
     html_board_ceo = resp_board_ceo.text
-    assert "12345678-5" in html_board_ceo
+    # CRM-UI-1: el RUT ya no aparece en la tabla del listado (ni para CEO/CTO).
+    assert "12345678-5" not in html_board_ceo
 
     resp_detail_ceo = client_ceo.get(f"/leads/{repo.lead_id}")
     assert resp_detail_ceo.status_code == 200
@@ -344,13 +346,14 @@ def test_ac2_pii_masked_even_with_web_mask_pii_false() -> None:
 
 
 def test_ac1_ceo_sees_full_pii_with_web_mask_pii_false() -> None:
-    """CEO still sees full PII when WEB_MASK_PII=False (no regression)."""
+    """CEO still sees full PII in the detail when WEB_MASK_PII=False (no regression)."""
     service, repo = _build_stub_service()
     client = _client_for_role("ceo", service, web_mask_pii=False)
 
     resp_board = client.get("/leads")
     assert resp_board.status_code == 200
-    assert "12345678-5" in resp_board.text
+    # CRM-UI-1: el listado muestra Edad en lugar de RUT.
+    assert "12345678-5" not in resp_board.text
 
     resp_detail = client.get(f"/leads/{repo.lead_id}")
     assert resp_detail.status_code == 200

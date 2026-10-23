@@ -88,7 +88,14 @@ def _dark_section() -> str:
     css = _css()
     marker = "Tema claro / oscuro (H3.3.7)"
     assert marker in css
-    return css[css.index(marker) :]
+    section = css[css.index(marker) :]
+    # CRM-UI-1: la capa ARMONIA v1 agrega estilos globales (no del tema oscuro)
+    # después de la sección oscura H3.3.7; el chequeo de alcance oscuro solo
+    # cubre hasta esa marca para no confundir componentes con reglas de tema.
+    armony_marker = "ARMONIA v1"
+    if armony_marker in section:
+        section = section[: section.index(armony_marker)]
+    return section
 
 
 def _luminance(hex_colour: str) -> float:
@@ -134,7 +141,11 @@ def test_every_page_renders_light_by_default_and_the_theme_toggle() -> None:
         toggle = _toggle(html)
         assert 'type="button"' in toggle, name
         assert 'aria-pressed="false"' in toggle, name
-        assert "Tema oscuro" in toggle, name
+        # CRM-UI-1: el control de tema es un icono (sol/luna) accesible.
+        assert 'aria-label="Cambiar entre tema claro y oscuro"' in toggle, name
+        assert 'title="Cambiar tema"' in toggle, name
+        assert "icon-sun" in toggle, name
+        assert "icon-moon" in toggle, name
 
 
 def test_toggle_lives_in_the_topbar_and_outside_any_form() -> None:
