@@ -327,12 +327,14 @@ def test_crm_board_computes_edad_at_the_boundaries(service):
                 )
             conn.commit()
 
-        board = service.get_crm_bandeja(page=1, page_size=20, masked=False)
-        by_lead = {row["id_lead"]: row for row in board["solicitudes"]}
+        def edad_de(rut: str):
+            result = service.get_crm_bandeja(page=1, page_size=10, masked=False, search=rut)
+            assert result["total"] == 1, f"esperaba 1 lead para {rut}, hay {result['total']}"
+            return result["solicitudes"][0]["edad"]
 
-        assert by_lead[ids[0]]["edad"] == 64
-        assert by_lead[ids[1]]["edad"] == 63
-        assert by_lead[ids[2]]["edad"] is None
+        assert edad_de("20990001-1") == 64
+        assert edad_de("20990002-2") == 63
+        assert edad_de("20990003-3") is None
     finally:
         with get_db_connection(operation="test_edad_cleanup") as conn:
             with conn.cursor() as cur:
