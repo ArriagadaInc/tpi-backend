@@ -1,0 +1,376 @@
+{% if selected_lead %}
+  <div class="detail-page">
+    <div class="nav-back-row">
+      <a class="secondary btn-back" href="{{ return_to_url or '/leads' }}">← Volver a Leads</a>
+    </div>
+
+    <section class="lead-hero-card card">
+      <div class="lead-identity">
+        <div class="title-row">
+          <h2 class="lead-name">{{ selected_lead.nombre_completo }}</h2>
+          <span class="badge-status badge-{{ selected_lead.estado_lead|replace('_', '-') }}">
+            <span class="badge-status-dot"></span>
+            {{ selected_lead.estado_lead|crm_state_label }}
+          </span>
+        </div>
+        <div class="lead-meta">
+          <span class="meta-item">
+            <span>RUT:</span>
+            <strong>{{ selected_lead.rut }}</strong>
+          </span>
+          <span class="meta-divider">·</span>
+          <span class="meta-item">
+            <span>Ejecutivo:</span>
+            <strong>{{ selected_lead.asesor_nombre or selected_lead.id_asesor or 'Sin asignar' }}</strong>
+          </span>
+          <span class="meta-divider">·</span>
+          <span class="meta-item">
+            <span>Solicitud recibida:</span>
+            <strong>
+              {{ selected_lead.created_at.strftime('%d/%m/%Y %H:%M') if selected_lead.created_at else 'N/A' }}
+            </strong>
+          </span>
+        </div>
+      </div>
+    </section>
+
+    {% include "simulador_panel.html" %}
+
+    {% if can_write %}
+      <section class="state-control-bar card" aria-label="Cambio de estado">
+        <div class="state-info">
+          <span class="state-label">Estado actual</span>
+          <strong>{{ selected_lead.estado_lead|crm_state_label }}</strong>
+        </div>
+        <form class="state-action-group" method="post" action="/leads/{{ selected_lead_id }}/status">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="return_to" value="{{ return_to_url or '/leads' }}">
+          <label class="sr-only" for="estado_lead">Cambiar estado</label>
+          <select id="estado_lead" name="estado_lead" class="select-compact">
+            {% for estado in lead_status_options %}
+              <option value="{{ estado }}" {% if selected_lead_state_canonical == estado %}selected{% endif %}>
+                {{ estado|crm_state_label }}
+              </option>
+            {% endfor %}
+          </select>
+          <button class="btn-save-state" type="submit">Guardar estado</button>
+        </form>
+      </section>
+    {% endif %}
+
+    <section class="detail-grid-v2">
+      <article class="info-card-v2">
+        <h3>Contacto</h3>
+        <dl>
+          <div>
+            <dt>Correo electrónico</dt>
+            <dd>{{ selected_lead.email }}</dd>
+          </div>
+          <div>
+            <dt>Teléfono</dt>
+            <dd>{{ selected_lead.telefono }}</dd>
+          </div>
+        </dl>
+      </article>
+
+      <article class="info-card-v2">
+        <h3>Información Personal</h3>
+        <dl>
+          <div>
+            <dt>Nombre completo</dt>
+            <dd>{{ selected_lead.nombre_completo }}</dd>
+          </div>
+          <div>
+            <dt>RUT</dt>
+            <dd>{{ selected_lead.rut }}</dd>
+          </div>
+          {% if selected_lead.fecha_nacimiento %}
+            <div>
+              <dt>Fecha de nacimiento</dt>
+              <dd>{{ selected_lead.fecha_nacimiento.strftime('%d/%m/%Y') }}</dd>
+            </div>
+          {% endif %}
+          {% if selected_lead.genero %}
+            <div>
+              <dt>Género</dt>
+              <dd>{{ selected_lead.genero }}</dd>
+            </div>
+          {% endif %}
+          {% if selected_lead.estado_civil %}
+            <div>
+              <dt>Estado civil</dt>
+              <dd>{{ selected_lead.estado_civil }}</dd>
+            </div>
+          {% endif %}
+        </dl>
+      </article>
+
+      <article class="info-card-v2">
+        <h3>Información Previsional</h3>
+        <dl>
+          <div>
+            <dt>AFP Actual</dt>
+            <dd>{{ selected_lead.afp }}</dd>
+          </div>
+          <div>
+            <dt>Saldo Previsional</dt>
+            <dd>{{ selected_lead.saldo_afp|format_currency_clp }}</dd>
+          </div>
+        </dl>
+      </article>
+    </section>
+
+    {% if can_assign %}
+      <section class="state-control-bar card" aria-label="Asignación de lead">
+        <div class="state-info">
+          <span class="state-label">Asignación actual</span>
+          <strong>{{ selected_lead.asesor_nombre or selected_lead.id_asesor or 'Sin asignar' }}</strong>
+        </div>
+        <form class="state-action-group" method="post" action="/leads/{{ selected_lead_id }}/assign">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="return_to" value="{{ return_to_url or '/leads' }}">
+          <label class="sr-only" for="id_asesor">Asignar ejecutivo</label>
+          <select id="id_asesor" name="id_asesor" class="select-compact">
+            <option value="">Selecciona un ejecutivo</option>
+            {% for asesor in assignment_asesores %}
+              <option value="{{ asesor.id_asesor }}">{{ asesor.nombre }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn-save-state" type="submit">Asignar</button>
+        </form>
+      </section>
+    {% endif %}
+
+    <section class="story-card">
+      <div class="story-card-head">
+        <div>
+          <p class="section-kicker">Mensaje del cliente</p>
+          <h3>Solicitud Original</h3>
+        </div>
+      </div>
+
+      <div class="original-request-box">{%- if comment_view.original_request -%}{{ comment_view.original_request }}{%- else -%}<span class="empty-inline">Sin solicitud disponible.</span>{%- endif -%}</div>
+    </section>
+
+    <section class="story-card">
+      <div class="story-card-head">
+        <div>
+          <p class="section-kicker">Seguimiento</p>
+          <h3>Seguimiento y Notas Internas</h3>
+        </div>
+      </div>
+
+      {% if timeline_items %}
+        <div class="timeline-list">
+          {% for item in timeline_items %}
+            <article class="timeline-item">
+              <div class="timeline-meta">
+                <span>{{ item.display_time }}</span>
+                <span>·</span>
+                {% if item.kind == 'event' or item.kind == 'state_change' or item.kind == 'simulation' %}
+                  <span class="timeline-badge-auto">Automático</span>
+                  <span class="timeline-author">{{ item.actor }}</span>
+                {% else %}
+                  <span class="timeline-author">{{ item.author }}</span>
+                {% endif %}
+              </div>
+              {% if item.kind == 'event' %}
+                <div class="timeline-text">{{ item.asesor_nombre or 'Ejecutivo sin asignar' }}: {{ item.estado_anterior or '—' }} → {{ item.estado_nuevo or '—' }}</div>
+              {% elif item.kind == 'state_change' %}
+                <div class="timeline-text">Cambio de estado: {{ item.estado_anterior or '—' }} → {{ item.estado_nuevo or '—' }}</div>
+              {% elif item.kind == 'simulation' %}
+                {% if item.es_legacy %}
+                <div class="timeline-text">Simulación generada · {{ item.tipo_escenario or '—' }} · Modelo {{ item.version_modelo or '—' }} · Código {{ item.codigo_verificacion or '—' }}</div>
+                <div class="timeline-simulation-note">Registro anterior al guardado de entradas: solo se conservan escenario, version y codigo</div>
+                {% else %}
+                <div class="timeline-text">Simulación generada · {{ item.tipo_escenario or '—' }} · Pensión {{ item.pension_uf if item.pension_uf is not none else '—' }} UF · Código {{ item.codigo_verificacion or '—' }}</div>
+                <details class="timeline-simulation-detail">
+                  <summary>Ver detalle de la simulación</summary>
+                  <div class="simulation-detail-body">
+                    <h4>Entradas</h4>
+                    <dl class="simulation-detail-grid">
+                      <div><dt>Fecha de simulación</dt><dd>{{ item.entradas.fecha_simulacion }}</dd></div>
+                      <div><dt>Saldo cuenta AFP (UF)</dt><dd>{{ item.entradas.saldo_uf }}</dd></div>
+                      <div><dt>Tasa de venta (%)</dt><dd>{{ item.entradas.tasa_venta_pct }}</dd></div>
+                      {% if item.entradas.valor_uf %}
+                        <div><dt>Valor UF ($)</dt><dd>{{ item.entradas.valor_uf }}</dd></div>
+                      {% endif %}
+                      <div><dt>Meses garantizados</dt><dd>{{ item.entradas.meses_garantizados }}</dd></div>
+                      <div><dt>Meses aumento temporal</dt><dd>{{ item.entradas.meses_aumento_temporal }}</dd></div>
+                      <div><dt>% aumento temporal</dt><dd>{{ item.entradas.pct_aumento_temporal }}</dd></div>
+                      <div><dt>Años diferidos</dt><dd>{{ item.entradas.anios_diferidos }}</dd></div>
+                      <div><dt>Relación RVD/RT (%)</dt><dd>{{ item.entradas.porcentaje_rvd }}</dd></div>
+                    </dl>
+
+                    <h4>Causante</h4>
+                    <dl class="simulation-detail-grid">
+                      <div><dt>Sexo</dt><dd>{{ item.entradas.causante.sexo }}</dd></div>
+                      <div><dt>Fecha de nacimiento</dt><dd>{{ item.entradas.causante.fecha_nacimiento }}</dd></div>
+                    </dl>
+
+                    <h4>Beneficiarios</h4>
+                    {% if item.entradas.beneficiarios %}
+                      <table class="board-table simulation-detail-table">
+                        <thead>
+                          <tr>
+                            <th>Parentesco</th>
+                            <th>Sexo</th>
+                            <th>Fecha nacimiento</th>
+                            <th>Invalidez</th>
+                            <th>Relación</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for b in item.entradas.beneficiarios %}
+                            <tr>
+                              <td>{{ b.parentesco }}</td>
+                              <td>{{ b.sexo }}</td>
+                              <td>{{ b.fecha_nacimiento }}</td>
+                              <td>{{ b.invalidez or '—' }}</td>
+                              <td>{{ 'común' if b.comun is true else ('no común' if b.comun is false else '—') }}</td>
+                            </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    {% else %}
+                      <p class="empty-inline">Sin beneficiarios.</p>
+                    {% endif %}
+
+                    <h4>Resultado</h4>
+                    <dl class="simulation-detail-grid">
+                      <div><dt>Pensión mensual (UF)</dt><dd>{{ item.pension_uf if item.pension_uf is not none else '—' }}</dd></div>
+                      {% if item.renta_temporal_uf is not none %}
+                        <div><dt>Renta temporal (UF)</dt><dd>{{ item.renta_temporal_uf }}</dd></div>
+                      {% endif %}
+                      <div><dt>Meses diferidos</dt><dd>{{ item.meses_diferidos }}</dd></div>
+                    </dl>
+                  </div>
+                </details>
+                {% endif %}
+              {% else %}
+                <div class="timeline-text">{{ item.text }}</div>
+                {% if item.attachments or item.deleted_attachments %}
+                  <div class="timeline-attachments">
+                    {% for attachment in item.attachments %}
+                      <div class="timeline-attachment">
+                        {% if attachment.scan_status == 'scanning' %}
+                          <span class="attachment-scan-status">Escaneando: actualiza la pagina en unos segundos</span>
+                        {% elif attachment.scan_status == 'threat' %}
+                          <span class="attachment-scan-status">Bloqueado: se detecto una amenaza</span>
+                        {% elif attachment.scan_status == 'blocked' %}
+                          <span class="attachment-scan-status">Bloqueado: no se pudo escanear</span>
+                        {% elif attachment.scan_status == 'unavailable' %}
+                          <span class="attachment-scan-status">No disponible</span>
+                        {% elif attachment.attachment_type in ('png', 'jpg') %}
+                          <img
+                            class="timeline-attachment-img"
+                            src="/leads/{{ selected_lead_id }}/adjuntos/{{ attachment.attachment_id }}"
+                            alt="Imagen adjunta"
+                            loading="lazy"
+                            onerror="this.hidden=true;this.nextElementSibling.hidden=false"
+                          >
+                          <span class="attachment-unavailable" hidden>Adjunto no disponible (en revision o bloqueado); actualiza la pagina</span>
+                        {% else %}
+                          <a
+                            class="attachment-link"
+                            href="/leads/{{ selected_lead_id }}/adjuntos/{{ attachment.attachment_id }}"
+                            target="_blank"
+                            rel="noopener"
+                          >Ver PDF</a>
+                          {% if attachment.attachment_type == 'pdfe' %}
+                            <span class="attachment-embedded-note">Contiene archivos incrustados: abrelo en el navegador</span>
+                          {% endif %}
+                          <a
+                            class="attachment-link"
+                            href="/leads/{{ selected_lead_id }}/adjuntos/{{ attachment.attachment_id }}?descargar=1"
+                          >Descargar</a>
+                        {% endif %}
+                        {% if can_delete_attachments %}
+                          <form
+                            class="attachment-delete"
+                            method="post"
+                            action="/leads/{{ selected_lead_id }}/adjuntos/{{ attachment.attachment_id }}/eliminar"
+                          >
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <input type="hidden" name="return_to" value="{{ return_to_url or '/leads' }}">
+                            <button class="link-button attachment-delete-btn" type="submit">Eliminar</button>
+                          </form>
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                    {% for attachment in item.deleted_attachments %}
+                      <div class="timeline-attachment">
+                        <span class="attachment-deleted">Archivo eliminado</span>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              {% endif %}
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-followup">Aún no existen notas de seguimiento, asignaciones, cambios de estado ni simulaciones.</div>
+      {% endif %}
+
+      {% if can_write %}
+        <form class="note-form" method="post" action="/leads/{{ selected_lead_id }}/comments" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="return_to" value="{{ return_to_url or '/leads' }}">
+          <label for="new_comment" class="note-label">Agregar nueva nota de seguimiento</label>
+          <textarea
+            id="new_comment"
+            name="new_comment"
+            rows="4"
+            maxlength="1000"
+            placeholder="Escribe una nueva nota de seguimiento..."
+          ></textarea>
+          {% if attachments_enabled %}
+            <label class="note-label" for="note-files">Adjuntar archivos (PNG, JPEG o PDF; máximo 10 MiB cada uno, 5 por nota)</label>
+            <input
+              id="note-files"
+              name="files"
+              type="file"
+              multiple
+              accept=".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf"
+            >
+            <p class="attachment-warning">No subas documentos de identidad completos salvo que sea necesario.</p>
+          {% endif %}
+          <div class="note-actions">
+            <button class="primary note-submit" type="submit">+ Agregar nota</button>
+          </div>
+        </form>
+      {% endif %}
+    </section>
+
+    {% if web_cleanup_enabled and can_cleanup %}
+      <section class="dev-tools-card card">
+        <div>
+          <p class="section-kicker">Herramientas de desarrollo</p>
+          <h3>Este lead es un registro ficticio utilizado para pruebas.</h3>
+        </div>
+        <button class="danger" type="button" data-open-delete-modal>Eliminar lead de prueba</button>
+      </section>
+    {% endif %}
+  </div>
+
+  {% if web_cleanup_enabled and can_cleanup %}
+    <div class="modal" id="delete-modal" hidden>
+      <div class="modal-card modal-card-dev">
+        <p class="section-kicker">Confirmación DEV</p>
+        <h3>¿Eliminar lead de prueba?</h3>
+        <p>
+          Esta acción eliminará permanentemente a <strong>{{ selected_lead.nombre_completo }}</strong>
+          de la base local de demostración.
+        </p>
+        <div class="modal-actions">
+          <button class="secondary" type="button" data-close-delete-modal>Cancelar</button>
+          <form method="post" action="/leads/{{ selected_lead.id_lead }}/cleanup">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="danger" type="submit">Eliminar Lead</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+{% endif %}

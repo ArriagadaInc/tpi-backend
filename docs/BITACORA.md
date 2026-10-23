@@ -22,6 +22,24 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-22 - CRM: producción mínima definida (interfaz, 12 estados y tres perfiles) y referencia visual aprobada
+
+- Contexto: el humano aprobó la armonía visual tras iterar en una copia local con datos ficticios, y decidió los estados y perfiles a partir del PDF
+  «Protocolo de trabajo para Runners». Decisiones: 12 estados (Nuevo = sin asignar; Asignado = solo al asignar a un ejecutivo); perfiles
+  Runner (= `advisor`), Coordinador (rol nuevo, solo su cartera, puede asesorar) y Socio (= CEO/CTO); solo los socios asignan leads; los
+  runners pueden subir y ver adjuntos; producción mínima primero y después el módulo de agendamiento para los tres perfiles.
+- Qué se agrega: la referencia exacta de la interfaz en `docs/ui/referencia/` (CSS, plantillas, consulta de la edad y contrato de estados) y tres
+  tareas activables en `tasks/backlog.yaml`: `CRM-UI-1-ARMONIA-VISUAL`, `CRM-ESTADOS-1-CATALOGO` y `CRM-PERFILES-1-RBAC` (clase A, con aceptación
+  humana; en ese orden). Quedan resumidas `CRM-NO-CONTACTAR-1` (clase D, con fecha límite: la Ley 21.719 rige desde el 2026-12-01) y
+  `CRM-AGENDAMIENTO` (clase D, posterior a producción).
+- Cómo se usa la referencia: el Developer no reinterpreta el diseño, lo copia; el Reviewer comprueba que los archivos son idénticos a la referencia
+  (ignorando fines de línea) y la verificación visual la hacen Claude (capturas con la vista previa local) y el humano (smoke en DEV).
+- La tipografía Plus Jakarta Sans alojada (`woff2` del subconjunto latino, 27 KB, y su licencia SIL OFL) quedó en
+  `docs/ui/referencia/ui1/fonts/`, descargada de `fonts.gstatic.com` y del repositorio público `google/fonts` con autorización del humano. El PR del
+  sistema de diseño (`scripts/ui_css_audit.py` y el skill de interfaz) ya está en `main`.
+- Después de desplegar los estados, el humano reinicia los datos de DEV (borrar los leads sintéticos y sembrar nuevos) con un script que entrega
+  Claude; la auditoría es de solo agregar y referencia a los leads, así que lo ejecuta el humano con `tpi_admin`, como las migraciones.
+
 ### 2026-10-22 - CRM: dirección de diseño para armonizar la interfaz, auditoría del CSS y skill de interfaz para el Developer
 
 - Pedido del humano: un CRM profesional, moderno, atractivo y minimalista; le gusta cómo se ve hoy, solo quiere armonizarlo.
