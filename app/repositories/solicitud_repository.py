@@ -78,7 +78,11 @@ class SolicitudRepository:
                 l.estado_lead,
                 l.created_at,
                 ass.id_asesor,
-                ass.asesor_nombre
+                ass.asesor_nombre,
+                CASE
+                    WHEN p.fecha_nacimiento IS NULL THEN NULL
+                    ELSE date_part('year', age(CURRENT_DATE, p.fecha_nacimiento))::int
+                END AS edad
     """
 
     _CRM_BOARD_FROM = """

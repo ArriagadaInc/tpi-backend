@@ -1,8 +1,11 @@
 # Sistema de diseño del CRM: armonizar sin rediseñar
 
-Estado: **propuesta del 2026-10-22, a aprobar por el humano** (decisiones abiertas en la sección 8). Este documento fija la dirección
-visual del backoffice (`app/web/`), la línea base medida del CSS actual y las reglas que siguen las tareas de interfaz. Lo usa el
-skill `agents/developer/skills/tpi-ui-design/SKILL.md`.
+Estado: **aprobado por el humano el 2026-10-22** (referencia visual exacta en `docs/ui/referencia/ui1/`). La tarea
+`CRM-UI-1-ARMONIA-VISUAL` reprodujo esa referencia en `app/web/`: tokens y componentes canónicos, iconos (sol/luna, salida,
+exportar), tipografía **Plus Jakarta Sans alojada en el propio sitio** y la columna **Edad** en el listado de leads. Queda para la
+tarea posterior la consolidación completa del CSS hacia tokens (sección 2 y métricas de la sección 2.1). Este documento fija la
+dirección visual del backoffice y las reglas que siguen las tareas de interfaz. Lo usa el skill
+`agents/developer/skills/tpi-ui-design/SKILL.md`.
 
 ## 1. Dirección
 
@@ -34,6 +37,13 @@ Defectos concretos que ya se ven en el código: `--shadow-sm` se usa dos veces y
 la tipografía **Inter está declarada pero nunca se carga** (cada dispositivo muestra otra cosa: Segoe UI, San Francisco, Arial);
 htmx se carga desde `unpkg.com` sin atributo de integridad (SRI) y el backoffice no define una política de seguridad de
 contenidos (CSP) (asunto de seguridad, aparte de esta serie).
+
+### 2.1 Estado tras `CRM-UI-1-ARMONIA-VISUAL` (medido con `python scripts/ui_css_audit.py --json`, 2026-10-23)
+
+La referencia aprobada ya aplica las escalas y los componentes canónicos sin reescribir todo el CSS a tokens. Métricas entregadas:
+tamaños de letra distintos **10**, radios **9**, sombras **5**, espaciados **47**, colores sueltos distintos **73**, reglas de tema
+oscuro por componente **41**, `!important` **4**. Queda para la tarea posterior de consolidación: bajar los colores sueltos
+(73 → ≤ 5) y las reglas de tema oscuro por componente (41 → ≤ 5), y unificar el resto de la hoja, sin cambiar el aspecto aprobado.
 
 ## 3. Hallazgos visuales (vista previa local con datos ficticios)
 
@@ -106,16 +116,20 @@ Cortes responsive (no admiten variables): **640, 900 y 1200 px**. Ancho de pági
 Cada tarea declara su meta medible con `python scripts/ui_css_audit.py --json` (antes y después) y se prueba por capturas en la
 vista previa local; el humano acepta con su smoke visual en DEV.
 
-## 8. Decisiones abiertas del humano
+## 8. Decisiones del humano (resueltas el 2026-10-22)
 
-1. **Tipografía.** (a) Alojar Inter en el propio sitio (archivo `woff2` en `static/fonts`, servido como el resto de lo estático): aspecto
-   igual en todos los dispositivos, unos 100 KB. (b) Usar la pila del sistema y dejar de declarar Inter: más liviano, aspecto distinto por dispositivo.
-   *Propuesta: (a).*
-2. **Peso de los títulos**: 800 a 700. *Propuesta: sí.*
-3. **Sombras sin brillo turquesa** en botones y tarjetas. *Propuesta: sí.*
-4. **Botones en píldora**: se mantienen (es parte de lo que gusta). *Propuesta: mantener.*
-5. **Barra superior en móvil**: una fila con menú. *Propuesta: sí.*
-6. **Texto técnico del dashboard** a lenguaje de negocio (las frases las propone el Developer y las aprueba el humano).
+1. **Tipografía**: **Plus Jakarta Sans alojada en el propio sitio** (`app/web/static/fonts/PlusJakartaSans-latin.woff2`, licencia SIL
+   OFL 1.1 en `OFL.txt`), con `@font-face { font-display: swap; }` y sin pedidos a `fonts.googleapis.com` ni `fonts.gstatic.com`. No se
+   usa Inter ni la pila del sistema.
+2. **Peso de los títulos**: 800 a 700. *Aplicado.*
+3. **Sombras sin brillo turquesa** en botones y tarjetas. *Aplicado.*
+4. **Botones en píldora**: se mantienen (es parte de lo que gusta). *Mantenido.*
+5. **Barra superior en móvil**: una fila compacta con menú. *Aplicado.*
+6. **Texto técnico del dashboard** a lenguaje de negocio. *Aplicado.*
+7. **Iconos** (sol/luna del tema, cerrar sesión, exportar XLSX): botones de icono accesibles con `aria-label` y `title`. *Aplicado.*
+8. **Tonos de chip**: un tono por estado (neutro, aviso, turquesa, información, pizarra, éxito, peligro). *Aplicado.*
+9. **Edad en el listado**: la tabla de leads muestra **Edad** en lugar de RUT; la búsqueda por RUT sigue funcionando y el detalle
+   conserva el RUT completo para quien puede verlo.
 
 ## 9. Cómo se verifica
 

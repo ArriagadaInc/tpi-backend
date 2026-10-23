@@ -149,13 +149,7 @@
         </div>
       </div>
 
-      <div class="original-request-box">
-        {% if comment_view.original_request %}
-          {{ comment_view.original_request }}
-        {% else %}
-          <span class="empty-inline">Sin solicitud disponible.</span>
-        {% endif %}
-      </div>
+      <div class="original-request-box">{%- if comment_view.original_request -%}{{ comment_view.original_request }}{%- else -%}<span class="empty-inline">Sin solicitud disponible.</span>{%- endif -%}</div>
     </section>
 
     <section class="story-card">
@@ -165,8 +159,6 @@
           <h3>Seguimiento y Notas Internas</h3>
         </div>
       </div>
-
-      <div class="timeline-coverage-note">{{ state_history_cutover_notice }}</div>
 
       {% if timeline_items %}
         <div class="timeline-list">
@@ -183,23 +175,15 @@
                 {% endif %}
               </div>
               {% if item.kind == 'event' %}
-                <div class="timeline-text">
-                  {{ item.asesor_nombre or 'Ejecutivo sin asignar' }}: {{ item.estado_anterior or '—' }} → {{ item.estado_nuevo or '—' }}
-                </div>
+                <div class="timeline-text">{{ item.asesor_nombre or 'Ejecutivo sin asignar' }}: {{ item.estado_anterior or '—' }} → {{ item.estado_nuevo or '—' }}</div>
               {% elif item.kind == 'state_change' %}
-                <div class="timeline-text">
-                  Cambio de estado: {{ item.estado_anterior or '—' }} → {{ item.estado_nuevo or '—' }}
-                </div>
+                <div class="timeline-text">Cambio de estado: {{ item.estado_anterior or '—' }} → {{ item.estado_nuevo or '—' }}</div>
               {% elif item.kind == 'simulation' %}
                 {% if item.es_legacy %}
-                <div class="timeline-text">
-                  Simulación generada · {{ item.tipo_escenario or '—' }} · Modelo {{ item.version_modelo or '—' }} · Código {{ item.codigo_verificacion or '—' }}
-                </div>
+                <div class="timeline-text">Simulación generada · {{ item.tipo_escenario or '—' }} · Modelo {{ item.version_modelo or '—' }} · Código {{ item.codigo_verificacion or '—' }}</div>
                 <div class="timeline-simulation-note">Registro anterior al guardado de entradas: solo se conservan escenario, version y codigo</div>
                 {% else %}
-                <div class="timeline-text">
-                  Simulación generada · {{ item.tipo_escenario or '—' }} · Pensión {{ item.pension_uf if item.pension_uf is not none else '—' }} UF · Código {{ item.codigo_verificacion or '—' }}
-                </div>
+                <div class="timeline-text">Simulación generada · {{ item.tipo_escenario or '—' }} · Pensión {{ item.pension_uf if item.pension_uf is not none else '—' }} UF · Código {{ item.codigo_verificacion or '—' }}</div>
                 <details class="timeline-simulation-detail">
                   <summary>Ver detalle de la simulación</summary>
                   <div class="simulation-detail-body">

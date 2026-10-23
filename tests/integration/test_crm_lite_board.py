@@ -254,6 +254,94 @@ def test_crm_board_date_filters_use_santiago_day_boundary(service):
             conn.commit()
 
 
+def test_crm_board_computes_edad_at_the_boundaries(service):
+    """CRM-UI-1 AC-3(a): la edad sale en años cumplidos en los bordes.
+
+    Cumpleaños hoy -> edad exacta; cumpleaños mañana -> un año menos; sin fecha
+    de nacimiento -> NULL. Las fechas se derivan del ``CURRENT_DATE`` de la propia
+    base de datos, de modo que el caso de borde no depende de la zona horaria.
+    """
+    from app.database.connection import get_db_connection
+
+    with get_db_connection(operation="test_edad_today") as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT CURRENT_DATE")
+            today = cur.fetchone()[0]
+
+    def years_ago(base: date, years: int) -> date:
+        try:
+            return base.replace(year=base.year - years)
+        except ValueError:
+            # 29 de febrero -> 28 de febrero del año objetivo.
+            return base.replace(year=base.year - years, day=28)
+
+    birthday_today = years_ago(today, 64)
+    birthday_tomorrow = birthday_today + timedelta(days=1)
+
+    afp_id = UUID(str(service.get_catalogo_afp()[0]["id"]))
+    genero_id = UUID(str(service.get_catalogo_genero()[0]["id"]))
+    estado_civil_id = UUID(str(service.get_catalogo_estado_civil()[0]["id"]))
+
+    def registrar(rut: str, nacimiento: date) -> str:
+        request = RegistrarSolicitudRequest(
+            persona=PersonaData(
+                rut=rut,
+                nombre_completo=f"CRM Edad {rut}",
+                email=f"edad.{rut}@example.com",
+                telefono="+56911112222",
+                fecha_nacimiento=nacimiento,
+            ),
+            solicitud=SolicitudData(
+                genero_id=genero_id,
+                estado_civil_id=estado_civil_id,
+                afp_id=afp_id,
+                saldo_afp=Decimal("2500000"),
+                comentarios="Borde de edad",
+            ),
+            consentimientos=ConsentimientosData(
+                acepta_terminos=True,
+                acepta_politica_privacidad=True,
+                finalidad_contacto=True,
+            ),
+        )
+        return str(service.registrar_solicitud(request).id_lead)
+
+    ids: list[str] = []
+    try:
+        ids.append(registrar("20990001-1", birthday_today))
+        ids.append(registrar("20990002-2", birthday_tomorrow))
+        ids.append(registrar("20990003-3", date(1990, 1, 1)))
+
+        # El tercer lead queda sin fecha de nacimiento (legacy).
+        with get_db_connection(operation="test_edad_null_birthdate") as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE tpi.personas p
+                       SET fecha_nacimiento = NULL
+                     WHERE p.id_persona = (
+                           SELECT l.id_persona FROM tpi.leads l WHERE l.id_lead = %s
+                       )
+                    """,
+                    (ids[2],),
+                )
+            conn.commit()
+
+        board = service.get_crm_bandeja(page=1, page_size=20, masked=False)
+        by_lead = {row["id_lead"]: row for row in board["solicitudes"]}
+
+        assert by_lead[ids[0]]["edad"] == 64
+        assert by_lead[ids[1]]["edad"] == 63
+        assert by_lead[ids[2]]["edad"] is None
+    finally:
+        with get_db_connection(operation="test_edad_cleanup") as conn:
+            with conn.cursor() as cur:
+                for id_lead in ids:
+                    cur.execute("DELETE FROM tpi.consentimientos WHERE id_lead = %s", (id_lead,))
+                    cur.execute("DELETE FROM tpi.leads WHERE id_lead = %s", (id_lead,))
+            conn.commit()
+
+
 def test_crm_estado_options_are_present_and_non_empty(service):
     afp_id = UUID(str(service.get_catalogo_afp()[0]["id"]))
     genero_id = UUID(str(service.get_catalogo_genero()[0]["id"]))

@@ -175,6 +175,7 @@ def test_allowlist_drops_extra_row_keys() -> None:
         raw_payload={"rut": "12.345.678-5", "secret": "SHOULD_NOT_LEAK"},
         id_persona="persona-uuid",
         password_hash="HASH_SHOULD_NOT_LEAK",
+        edad=64,
     )
     repo = _ExportRepository([polluted])
     service, _ = _service(repo)
@@ -186,5 +187,7 @@ def test_allowlist_drops_extra_row_keys() -> None:
         for cell in row:
             assert "SHOULD_NOT_LEAK" not in str(cell)
             assert "HASH_SHOULD_NOT_LEAK" not in str(cell)
-    # Only the 14 allowlist headers exist.
+    # Only the 14 allowlist headers exist; la edad (del listado) no se exporta.
     assert sheet.max_column == 14
+    headers = next(sheet.iter_rows(values_only=True))
+    assert "Edad" not in headers

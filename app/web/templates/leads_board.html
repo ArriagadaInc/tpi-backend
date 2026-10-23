@@ -9,7 +9,7 @@
         <tr>
           <th>Fecha</th>
           <th>Nombre</th>
-          <th>RUT</th>
+          <th>Edad</th>
           <th>AFP</th>
           <th>Estado</th>
           <th>Saldo</th>
@@ -23,7 +23,7 @@
             <td>
               <a class="lead-link" href="/leads/{{ lead.id_lead }}">{{ lead.nombre_completo }}</a>
             </td>
-            <td class="mono">{{ lead.rut }}</td>
+            <td>{{ lead.edad ~ ' años' if lead.edad is not none else '—' }}</td>
             <td>{{ lead.afp }}</td>
             <td>
               <span class="status-badge {{ lead.estado_lead|replace('_', '-') }}">

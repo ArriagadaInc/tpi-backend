@@ -148,7 +148,9 @@ def test_valid_advisor_board_is_scoped_and_unmasked() -> None:
     client = _client(ADVISOR_ID, repo)
     body = client.get("/leads").text
     assert "Juan Perez" in body
-    assert "12.345.678-5" in body  # own lead full RUT
+    # CRM-UI-1: el listado muestra Edad en lugar de RUT; el RUT completo del lead
+    # propio se sigue viendo en el detalle (test_valid_advisor_own_detail_returns_full_pii).
+    assert "12.345.678-5" not in body
     assert repo.board_calls[0]["portfolio_asesor_id"] == ADVISOR_ID
 
 
