@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "kind": "failure",
+  "task_id": "CRM-UI-1-ARMONIA-VISUAL",
+  "created_at": "2026-10-23T14:04:15Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610231328-deployer-supcd0adb",
+  "state": "PREPARING_DEPLOYMENT",
+  "action": "Relanzamiento autorizado por la resolucion humana resolution-01 del publish de imagenes inmutables a ECR (gh workflow run publish-dev-ecr-images.yml -f source_sha=db51f95e2e2db85922e4cb9bb7c1e6c6c9144c28), run 39961897074",
+  "resource": "ECR tpi-dev-app sha256:87e15c905654fce50f21a6ab38d8b3989803744cd9d4c41b3d23a0800d5cb4d7 y tpi-dev-caddy sha256:3d499eae02c66814f518f7d214ae29c1ac67edfc7f7226690056f57a9b256b09 (tag db51f95e2e2db85922e4cb9bb7c1e6c6c9144c28)",
+  "principal": "workflow de GitHub via OIDC (publish); lecturas del Deployer con el perfil tpi-dev via scripts/harness/aws_guard.py, cuenta 821656895812",
+  "error": "El paso 'Wait for ECR scans and fail closed on findings' fallo a las 14:02:43Z tras 20 minutos (inicio 13:41:51Z): 'El escaneo de ECR no termino en el plazo de 20 minutos para tpi-dev-app (digest sha256:87e15c90...): NO hay hallazgos verificados'. Jobs de gates (Authorize, Security Audit, Docker Build, Lint & Format, Tests) en verde y las dos imagenes publicadas; bundle y artefacto omitidos (skipped). Lectura posterior con describe-image-scan-findings: ScanNotFoundException en AMBOS digests nuevos (el escaneo nunca se inicio).",
+  "failure_class": "infrastructure",
+  "repeated_failure": true,
+  "classification": "SEGUNDA ocurrencia del mismo error de infraestructura (failure-01: run 39953213366). Segun la politica (mismo error de infraestructura dos veces -> STOP) no se reintenta. No es AccessDenied ni hallazgo HIGH/CRITICAL. El borrado previo de imagenes y el relanzamiento con el mismo SHA NO resolvieron el problema: scan-on-push no se dispara en tpi-dev-app ni en tpi-dev-caddy, lo que apunta a la configuracion de escaneo del registro o de los repositorios (fuera del Harness). Preflight de esta sesion PASS: identidad 821656895812/us-east-2; tpi-backoffice-dev-green Ready/Green/Ok, sin operacion en curso, VersionLabel h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1 (LKG por observacion); AV del LKG UNPROCESSED con SourceBundle = key S3 y ChecksumSHA256 IaWMsoodygTnWPksa1P4hdJsXWGxukk/tNrVVdeX1yU= intacto; digests del LKG (app a1a6aa83..., caddy ebc586b1...) ACTIVE en ECR; Promote de CodePipeline deshabilitado; imagenes anteriores del tag db51f95 (02284140..., cb8137ec...) confirmadas borradas (ImageNotFoundException); db51f95 ancestro de origin/main con tree 930619c7 == reviewed_tree.",
+  "recommendation": "Decision humana fuera del Harness: revisar la configuracion de escaneo de ECR (tipo de escaneo del registro basico/mejorado, reglas de scan-on-push y filtros de repositorio que cubran tpi-dev-app y tpi-dev-caddy; si es escaneo mejorado, estado de Amazon Inspector en la cuenta/region). Una vez corregida y comprobada (por ejemplo con un escaneo que efectivamente se inicie), borrar las dos imagenes del tag db51f95e2e2db85922e4cb9bb7c1e6c6c9144c28 (tags inmutables) o lanzar el escaneo manual de los digests actuales, y devolver la tarea a PREPARING_DEPLOYMENT. El Deployer no relanzo el workflow una segunda vez ni intento ningun otro camino.",
+  "residues": [
+    "Imagenes ECR tpi-dev-app sha256:87e15c90... y tpi-dev-caddy sha256:3d499eae... con tag db51f95e2e2db85922e4cb9bb7c1e6c6c9144c28 (sin escaneo; inertes, no referenciadas por ninguna AV)"
+  ],
+  "access_denied": false,
+  "rollback_executed": false,
+  "environment_mutated": false,
+  "aws_writes": [],
+  "github_writes": [
+    "gh workflow run publish-dev-ecr-images.yml (source_sha=release_sha) x1"
+  ],
+  "label_planned": "h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1 (no creado)",
+  "previous_failure": "evidence/CRM-UI-1-ARMONIA-VISUAL/deployment/failure-01.json",
+  "publish_run": {
+    "run_id": 39961897074,
+    "conclusion": "failure",
+    "url": "https://github.com/ArriagadaInc/tpi-backend/actions/runs/39961897074"
+  }
+}

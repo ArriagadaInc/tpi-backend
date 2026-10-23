@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "kind": "acceptance",
+  "task_id": "CRM-UI-1-ARMONIA-VISUAL",
+  "created_at": "2026-10-23T15:51:04Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "decision": "accepted",
+  "criteria": [
+    {
+      "id": "AC-8",
+      "status": "accepted"
+    }
+  ],
+  "notes": "smoke visual OK en DEV"
+}

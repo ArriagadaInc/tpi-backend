@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "CRM-UI-1-ARMONIA-VISUAL",
+  "created_at": "2026-10-23T04:25:15Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610230405-reviewer-supcb4381",
+  "reviewed_sha": "56b54554d24e3c7989bf3c5cff8c96d621a142c3",
+  "reviewed_tree": "930619c7bae2647730dd6995fa32e83c3090d2f9",
+  "pr_number": 126,
+  "ci": {
+    "run_id": "39897555067",
+    "conclusion": "success",
+    "head_sha": "56b54554d24e3c7989bf3c5cff8c96d621a142c3",
+    "jobs": [
+      "Docker Build",
+      "Lint & Format",
+      "Release Tooling Validation",
+      "Security Audit",
+      "Tests"
+    ]
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "minor",
+      "file": "tests/unit/test_web_app.py",
+      "summary": "test_typography_is_hosted_locally_without_external_font_requests exige content-type font/woff2, que depende de la base MIME del host (/etc/mime.types). Pasa en CI (ubuntu). La imagen de runtime es python:3.12.14-alpine3.24 sin paquete de tipos MIME y el mimetypes de Python no conoce .woff2 (comprobado: MimeTypes().guess_type('a.woff2') == None), asi que Starlette serviria la fuente en DEV como application/octet-stream. El navegador la carga igual (nosniff solo aplica a scripts y estilos), por lo que no hay impacto funcional esperado, pero la prueba verifica el host y no la aplicacion. Registrar el tipo en la app exige codigo Python fuera del alcance permitido por la tarea (solo la edad). El Developer lo declaro en assumptions.",
+      "required_action": "Ninguna para este merge. En la verificacion en DEV (AC-8) comprobar que la fuente carga desde /static/fonts/; el humano decide si abre una tarea para registrar font/woff2 en la app (o en Caddy) y desacoplar la prueba del host."
+    },
+    {
+      "id": "F-2",
+      "severity": "minor",
+      "file": "tests/unit/test_h3_3_6_export_web.py",
+      "summary": "AC-4(d) pedia actualizar test_h3_3_6_export_web.py para comprobar el nombre accesible 'Exportar XLSX'; el archivo no cambio. La comprobacion existente ('Exportar XLSX' in body / not in body) sigue cubriendo el nombre accesible porque tras el cambio ese texto solo aparece en aria-label y title del boton de icono (leads.html). La evidencia del Developer cita 'test_h3_3_6_export_service/test actualizado para el nombre accesible', lo que es impreciso: el cambio en export_service es el de la edad.",
+      "required_action": "Ninguna para este merge; opcional en una tarea futura afirmar explicitamente aria-label=\"Exportar XLSX\"."
+    },
+    {
+      "id": "F-3",
+      "severity": "info",
+      "file": "app/web/static/css/app.css",
+      "summary": "La capa ARMONIA v1 (copiada tal cual de la referencia) redefine --accent-strong y --accent-strong-hover en un :root posterior al bloque [data-theme=\"dark\"]; con igual especificidad gana el ultimo, de modo que en tema oscuro los botones rellenos usan #0f766e/#115e59. El contraste con texto blanco sigue >= 4.5 (aprox. 5.5 y 7.6). test_dark_filled_buttons_keep_white_labels_readable lee solo el primer bloque oscuro, no el valor efectivo. Es parte de la referencia aprobada (AC-1 exige copia identica).",
+      "required_action": "Ninguna; considerarlo en la tarea posterior de consolidacion del CSS."
+    },
+    {
+      "id": "F-4",
+      "severity": "info",
+      "file": "tests/unit/test_h3_3_7_theme.py",
+      "summary": "_dark_section ahora corta en la marca 'ARMONIA v1'. Ajuste justificado: la capa nueva contiene :root y componentes globales que no son reglas de tema; las comprobaciones de la seccion oscura H3.3.7 (alcance, colores de estado, superficies) siguen intactas sobre esa seccion. No se considera debilitamiento.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F-5",
+      "severity": "info",
+      "file": "docs/BITACORA.md",
+      "summary": "AC-7: la entrada de BITACORA no esta en el PR; el Developer indica que la genera el cierre automatico (scripts/harness/closure.py::_append_bitacora agrega la entrada al cerrar la tarea), comportamiento verificado en el codigo.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F-6",
+      "severity": "info",
+      "file": "tests/unit",
+      "summary": "Localmente (Windows, Python 3.13) la suite unit da 12 fallos de entorno, iguales a los del Developer: 11 de executive_dashboard por falta de PostgreSQL y el de content-type woff2 (F-1). Ademas, una variable de entorno APP_ENV heredada en la shell del revisor provoca redirecciones 307 en las pruebas web incluso en main; sin ella, 944 passed. La fuente de verdad es CI (2030 passed, 17 skipped, cobertura 91.56%).",
+      "required_action": "Ninguna."
+    }
+  ],
+  "checks": [
+    {
+      "name": "CI verde en el SHA exacto: run 39897555067 (pull_request) headSha 56b5455, 5 jobs PASS; head de la PR 126 == SHA entregado; PR MERGEABLE y origin/main (84e50be) es ancestro del SHA; reviewed_tree con git rev-parse",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-1: git diff --no-index --ignore-cr-at-eol entre docs/ui/referencia/ui1/ y app.css + base/leads/leads_board/executive_dashboard/lead_detail_panel sin diferencias (6/6); bajo app/web solo cambian esos 6 archivos y las 2 fuentes",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-2: SHA-256 de PlusJakartaSans-latin.woff2 (153fc85b...) y OFL.txt (05831cfb...) iguales a la referencia; sin fonts.googleapis.com ni fonts.gstatic.com; font-display: swap; prueba de app con 200 y wOF2 (content-type depende del host, ver F-1)",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-3: solicitud_repository.py identico al diff ui1/edad_en_listado.diff (unico cambio Python); _CRM_BOARD_SELECT no proyecta fecha_nacimiento; prueba de integracion de bordes (hoy 64, manana 63, NULL) con CURRENT_DATE de la BD y busqueda por RUT; prueba unit sin RUT ni fecha en el listado; exportacion sigue con 14 columnas sin Edad",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-4: aviso 008 retirado del detalle (state_history_cutover_notice y test_h3_3_4 conservados); bajadas retiradas; tema como icono con aria-label/title/aria-pressed (theme.js sin cambios); salida y exportar como iconos con aria-label y title; chip de ambiente solo en base.html (topbar)",
+      "result": "PASS"
+    },
+    {
+      "name": "Pruebas ajustadas sin debilitar: asserts de RUT en listado invertidos por requisito (AC-3c), el asterisco de enmascarado se comprueba ahora en el detalle para el rol restringido, PII completa de CEO/asesor sigue verificada en el detalle",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-5: ui_css_audit --json en el SHA: tamanos 10, radios 9, sombras 5, espaciados 47, colores sueltos 73 (main 80), tema oscuro 41, important 4; estilos en linea en plantillas 2 (igual que main)",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-6: sin cambios en rutas, auth, services, permisos, deployment/**, dependencias ni migraciones; plantillas sin |safe ni scripts/estilos en linea nuevos; cobertura 91.56% en CI",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-7: docs/UI_DESIGN_SYSTEM.md con decisiones (tipografia alojada, radios por rol, tonos de chip, iconos) y pendiente de consolidacion; CHANGELOG con entrada; BITACORA via cierre automatico",
+      "result": "PASS"
+    },
+    {
+      "name": "Suite unit local en worktree del SHA: 944 passed, 12 fallos de entorno (ver F-6)",
+      "result": "PASS"
+    },
+    {
+      "name": "Clase A: sin migracion, sin deployment/**, IAM ni infraestructura; alcance de archivos dentro de scope.paths",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "La fuente se servira en DEV como application/octet-stream (F-1); impacto funcional esperado nulo, verificar en AC-8.",
+    "AC-8 (smoke visual humano en DEV, claro/oscuro, escritorio/movil) queda pendiente tras el despliegue."
+  ]
+}

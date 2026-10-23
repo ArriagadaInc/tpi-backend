@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "CRM-UI-1-ARMONIA-VISUAL",
+  "created_at": "2026-10-23T15:21:51Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610231516-reviewer-sup6da0f3",
+  "release_sha": "db51f95e2e2db85922e4cb9bb7c1e6c6c9144c28",
+  "reviewed_tree": "930619c7bae2647730dd6995fa32e83c3090d2f9",
+  "release_tree": "930619c7bae2647730dd6995fa32e83c3090d2f9",
+  "decision": "APPROVED",
+  "cause": null,
+  "candidate_evidence": "evidence/CRM-UI-1-ARMONIA-VISUAL/deployment/candidate-01.json",
+  "application_version": "h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1",
+  "lkg_version_label": "h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1",
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse db51f95^{tree} = 930619c7, igual al reviewed_tree de review-01 (reviewed_sha 56b5455) y de merge-01"
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "tras git fetch, db51f95 es ancestro de origin/main (a415233); padre 84e50be; unico commit posterior es PR 127 (workflow de publish, CHANGELOG, docs y una prueba de seguridad; sin cambios en deployment/ ni app/)"
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "run 39974187904 workflow_dispatch completed/success 6/6 jobs. headSha del run es a415233 (definicion del workflow en main), pero todos los jobs hacen checkout de inputs.source_sha y etiquetan con el; el manifest del artifact descargado tiene runtime_git_sha = db51f95 y los mismos digests del candidate"
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "describe-images: app c4915328 y caddy 7495bb18 ACTIVE, tag = release_sha, manifest Docker v2 (no indice OCI); referenciados por digest sha256; inmutabilidad del repositorio no reconsultada (describe-repositories fuera de las plantillas de la skill), se apoya en el contrato y en la unicidad del tag"
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "describe-image-scan-findings: COMPLETE, findings vacios y findingSeverityCounts vacio en ambos digests"
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "reconstruido por el Reviewer con build_domain_locked_bundle y los digests del manifest: sha256 6b9b08ea16af3c1a386777fea6d9e6fa4b4207216a712c158167f2634118e6c3, 4917 bytes, identico al candidate; template y constructor sin diferencias contra el release_sha (git diff --quiet, exit 0)"
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "un unico docker-compose.yml, sin build, sin genialabs.cl, 3 referencias por digest, solo dominios dev.tupensioninteligente.cl y backoffice.dev.tupensioninteligente.cl"
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "head-object: ChecksumSHA256 a5sI6havPBo4Z3f+ptnm+ktCByFqcSwVgWfyY0EY5sM= (base64 del sha256 reconstruido) FULL_OBJECT, ContentLength 4917, key content-addressed"
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "AV h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1 UNPROCESSED con SourceBundle bucket/key igual al objeto S3"
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "reviewed_tree 930619c7 -> release db51f95 -> publish 39974187904 (runtime_git_sha db51f95) -> digests app c4915328 / caddy 7495bb18 -> bundle 6b9b08ea -> key S3 -> AV -> label, verificado con lecturas propias"
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "describe-environments: tpi-backoffice-dev-green VersionLabel h3-crm-adjuntos-3-ajustes-fd5778a-domainlocked-r1, Ready/Green/Ok, sin operacion abortable, DateUpdated 2026-10-22T15:34:08Z (sin mutacion)"
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "AV del LKG existe, UNPROCESSED, SourceBundle 21a58cb2...zip; head-object ChecksumSHA256 IaWMsood... = base64 del bundle_sha256 de CRM-ADJUNTOS-3-AJUSTES candidate-02"
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "app a1a6aa83 y caddy ebc586b1 ACTIVE con tag fd5778a"
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "inspeccion estructural del compose reconstruido sin imprimir valores: api sin literales; backoffice y caddy solo literales no secretos (bucket de adjuntos, flag, URL publica, upstreams, direcciones de sitio, hosted zone); variables sensibles como referencias; candidate-01 y esta evidencia solo con identificadores, hashes y labels"
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "rutas publicas, login, catalogs, CSS, fuente alojada (registrar Content-Type, F-1), sin fuentes externas, auth requerida en /leads, sin dominio legado, identidad runtime, conteos de logs y AC-8 humano"
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "un solo update-environment con --environment-name y --version-label, sin option settings, template, platform ni tier"
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "inspeccion del plan frente a policies.yaml (DEPLOYING deployer: cutover = @read + elasticbeanstalk update-environment; ningun flag de global_deny_flags); no se ejecuto dry-run"
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "note": "un comando de cutover, sin reintentos; espera por describe-environments"
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "rollback version-only al LKG nombrado, max_attempts 1, condicionado a las 7 condiciones de rollback_authorization"
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": "sin IAM, DNS, secretos ni migraciones; la edad se calcula en una consulta de solo lectura"
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "note": "evidencia con identificadores, hashes y labels; sin valores sensibles"
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS",
+      "note": "residuos de stage: imagenes ECR db51f95, objeto S3 y AV UNPROCESSED, inertes hasta el cutover; environment sin mutar"
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "note": "el plan indica que un defecto puramente funcional o visual no autoriza rollback"
+    }
+  ],
+  "findings": [
+    {
+      "id": "CR-1",
+      "severity": "info",
+      "file": ".github/workflows/publish-dev-ecr-images.yml",
+      "summary": "El publish run 39974187904 tiene headSha a415233 (main con PR 127) y no el release_sha; la procedencia se demuestra por el input source_sha (checkout y tags) y el manifest con runtime_git_sha = db51f95.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "CR-2",
+      "severity": "info",
+      "file": null,
+      "summary": "El checkout local esta en 84e50be, atrasado respecto de origin/main; las comparaciones se hicieron contra el release_sha (git diff --quiet sobre template y constructor) y no contra el arbol de trabajo.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "CR-3",
+      "severity": "info",
+      "file": "app/web/static/fonts/PlusJakartaSans-latin.woff2",
+      "summary": "Se mantiene F-1 de review-01: el Content-Type de la fuente en DEV puede ser application/octet-stream; el smoke plan lo registra.",
+      "required_action": "Contrastar en verificacion y AC-8."
+    }
+  ],
+  "risks": [
+    "ECR lifecycle keep-100 podria expirar imagenes del LKG a futuro; hoy presentes.",
+    "AC-8 requiere smoke visual humano tras el cutover."
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "resolution",
+  "task_id": "CRM-UI-1-ARMONIA-VISUAL",
+  "created_at": "2026-10-23T13:23:45Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "from_state": "BLOCKED_HUMAN",
+  "to_state": "PREPARING_DEPLOYMENT",
+  "reason": "imagenes del release db51f95 borradas en ECR (escaneo no se inicio); relanzar publish con el mismo SHA"
+}
