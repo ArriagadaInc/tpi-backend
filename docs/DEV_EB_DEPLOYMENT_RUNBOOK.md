@@ -301,3 +301,24 @@ Procedimiento de recuperacion (lo ejecuta el humano; los tags son inmutables):
    inmutables, por lo que solo el humano puede borrarlas; sin borrarlas, relanzar el
    workflow no vuelve a escanearlas (el tag ya existe y ECR no reescanea por push).
 3. Relanzar el workflow con el mismo SHA (`workflow_dispatch` con el `source_sha` original).
+
+### El escaneo nunca empieza: la imagen publicada es un indice OCI
+
+Sintoma: `describe-image-scan-findings` responde `ScanNotFoundException` para el digest y
+`aws ecr start-image-scan` responde `UnsupportedImageTypeException` («An artifact with media type
+'application/vnd.oci.image.index.v1+json' cannot be scanned»). El gate del workflow vence a los 20
+minutos con el mensaje «no termino en el plazo».
+
+Causa (2026-10-23): `ubuntu-latest` paso a `ubuntu-26.04`; ahi `docker build` + `docker push` suben a
+ECR un indice OCI con un manifiesto de atestacion, y ECR no escanea indices. En `ubuntu-24.04` se sube
+un manifiesto Docker v2 (`application/vnd.docker.distribution.manifest.v2+json`), que si se escanea.
+
+Solucion: el workflow fija todos sus jobs en `ubuntu-24.04` y una prueba
+(`tests/security/test_ecr_scan_wait_workflow.py`) lo vigila. Comprobacion tras publicar:
+`aws ecr describe-images --repository-name <repo> --image-ids imageTag=<sha> --query 'imageDetails[0].imageManifestMediaType' --output text`
+debe mostrar `application/vnd.docker.distribution.manifest.v2+json`, no un `...index...`.
+
+Si un publish ya subio indices, borrar las dos imagenes del release (procedimiento anterior) y
+relanzar el workflow con el mismo SHA una vez corregido (el workflow se toma de `main`). Los
+manifiestos hijos sin tag que deja el indice son inertes. Si con `ubuntu-24.04` siguiera apareciendo
+un indice, agregar `--provenance=false --sbom=false` a los `docker build` del paso de publicacion.

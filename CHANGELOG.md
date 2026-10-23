@@ -8,6 +8,12 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ## [Unreleased]
 
+### 🐛 Corregido
+
+- **Publish de imágenes a ECR fijado en `ubuntu-24.04`** (incidente del release `db51f95`, 2026-10-23)
+  - `ubuntu-latest` pasó a `ubuntu-26.04`, donde `docker build` + `docker push` suben a ECR un índice OCI con un manifiesto de atestación. ECR no puede escanear un índice (`UnsupportedImageTypeException`), así que el gate de escaneo vencía sin resultado y el publish fallaba cerrado.
+  - `publish-dev-ecr-images.yml` fija todos sus jobs en `ubuntu-24.04`, con una prueba que lo vigila; el runbook documenta el síntoma, la causa y la comprobación del tipo de manifiesto. Para recuperar un publish ya hecho: borrar las dos imagenes del release y relanzar el workflow con el mismo SHA.
+
 ### ♻️ Retirado
 
 - **Retirada de Streamlit del runtime y Pillow 13** (SEG-DESACOPLAR-STREAMLIT)
