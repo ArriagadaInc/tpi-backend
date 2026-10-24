@@ -1,14 +1,21 @@
 """Reinicio de los datos de DEV (AC-7 de CRM-ESTADOS-1-CATALOGO). Herramienta del HUMANO, nunca del Harness.
 
 Borra TODOS los leads sinteticos de DEV (con sus personas, consentimientos, asignaciones, auditoria
-de leads y los adjuntos del bucket) y siembra leads nuevos repartidos en los 12 estados del
-catalogo, para probar filtros, cambio de estado, asignacion, conteos del dashboard y chips.
+de leads, tablas del pipeline y los adjuntos del bucket) y siembra 100 leads nuevos repartidos en los
+12 estados del catalogo, para probar filtros, cambio de estado, asignacion, conteos del dashboard y chips.
+
+Cada lead se siembra COMPLETO, como lo deja la ingesta real del pipeline: persona (con sexo y estado
+civil), lead (con las claves de los catalogos de genero, estado civil y AFP, saldo, prioridad, origen,
+comentario inicial del formulario y su carga original), consentimiento (con IP y navegador), atribucion
+de campana (UTM), evento de importacion y fila de ingesta. Hombres de 62 a 68 anios (centro 65) y
+mujeres de 57 a 63 (centro 60), con nombres segun el sexo.
 
 Seguridad:
   * Por defecto NO escribe nada (modo simulacion): muestra el destino, lo que borraria y lo que sembraria.
   * Con --ejecutar pide escribir la frase exacta REINICIAR DEV antes de tocar nada.
   * Solo corre por el tunel local a DEV (host local), con el usuario tpi_admin y la base `tpi`.
   * Si otra tabla referencia leads o personas, se detiene (no borra a ciegas).
+  * Si falta un valor de los catalogos (genero, estado civil, AFP), se detiene antes de borrar.
   * Todo lo de la base va en UNA transaccion: si algo falla (incluido el borrado en S3), se revierte.
   * Los leads sembrados son ficticios: fuente_actual = 'seed_dev', correos @example.test.
 
@@ -28,6 +35,7 @@ import random
 import subprocess
 import sys
 import tempfile
+import unicodedata
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -49,23 +57,29 @@ BASE_DEV = "tpi"
 
 # Estados del catalogo (docs/ui/referencia/estados/crm_states.py) y cuantos leads sembrar en cada uno.
 REPARTO: tuple[tuple[str, int], ...] = (
-    ("nuevo", 10),
-    ("asignado", 6),
-    ("sin_contacto", 4),
-    ("en_seguimiento", 5),
-    ("reunion_agendada", 3),
-    ("reunion_realizada", 2),
-    ("ficha_generada", 2),
-    ("cerrado", 2),
-    ("no_interesado", 2),
-    ("datos_erroneos", 2),
-    ("no_contactado", 2),
-    ("perdido", 2),
+    ("nuevo", 24),
+    ("asignado", 14),
+    ("sin_contacto", 10),
+    ("en_seguimiento", 12),
+    ("reunion_agendada", 8),
+    ("reunion_realizada", 5),
+    ("ficha_generada", 5),
+    ("cerrado", 5),
+    ("no_interesado", 5),
+    ("datos_erroneos", 4),
+    ("no_contactado", 4),
+    ("perdido", 4),
 )
 # Estados que cuentan como cartera inactiva en el dashboard: no se siembran como estancados.
 INACTIVOS = ("cerrado", "perdido")
 # Cuantos leads activos (con asignacion) se siembran sin movimiento hace mas de 5 dias.
-ESTANCADOS = 8
+ESTANCADOS = 20
+
+# Edad de jubilacion en Chile: hombres 65 y mujeres 60. Los leads se siembran cerca de esa edad
+# (centro y desviacion maxima en anios).
+EDAD_CENTRO = {"M": 65, "F": 60}
+EDAD_DESVIO = 3
+SEXO_CODIGO = {"F": "FEMENINO", "M": "MASCULINO"}
 
 # Tablas que se sabe que referencian leads o personas (el script las limpia en este orden).
 # Las cinco ultimas vienen del pipeline de datos (tpi-data-pipeline/setup_db.py, docs/BASE_DE_DATOS_TPI.md):
@@ -84,41 +98,80 @@ DEPENDIENTES_CONOCIDOS = {
     "tpi.ingesta_google_sheets",
 }
 
-NOMBRES = (
-    "Camila",
-    "Matias",
-    "Valentina",
-    "Benjamin",
-    "Javiera",
-    "Sebastian",
-    "Constanza",
-    "Nicolas",
-    "Fernanda",
-    "Cristobal",
-    "Daniela",
-    "Ignacio",
-    "Antonia",
-    "Joaquin",
-    "Catalina",
-    "Tomas",
-    "Paula",
-    "Felipe",
-    "Macarena",
-    "Diego",
-    "Carolina",
-    "Rodrigo",
-    "Francisca",
-    "Andres",
+# Catalogos que usan los leads (tpi-data-pipeline/catalogs.py) y los codigos que deben existir.
+CATALOGOS = {
+    "genero": "catalogo_genero",
+    "estado_civil": "catalogo_estado_civil",
+    "afp": "catalogo_afp",
+}
+CODIGOS_REQUERIDOS = {
+    "genero": {"FEMENINO", "MASCULINO"},
+    "estado_civil": {"SOLTERO", "CASADO", "DIVORCIADO", "VIUDO"},
+    "afp": {"HABITAT", "CAPITAL", "CUPRUM", "MODELO", "PLANVITAL", "PROVIDA", "UNO"},
+}
+
+NOMBRES_F = (
+    "María",
+    "Rosa",
+    "Ana",
+    "Patricia",
+    "Carmen",
+    "Gloria",
+    "Marta",
+    "Sandra",
+    "Verónica",
+    "Claudia",
+    "Marcela",
+    "Ximena",
+    "Soledad",
+    "Cecilia",
+    "Lorena",
+    "Gabriela",
+    "Elena",
+    "Teresa",
+    "Isabel",
+    "Luisa",
+    "Inés",
+    "Nancy",
+    "Silvia",
+    "Alicia",
+)
+NOMBRES_M = (
+    "Juan",
+    "José",
+    "Luis",
+    "Carlos",
+    "Jorge",
+    "Manuel",
+    "Pedro",
+    "Héctor",
+    "Raúl",
+    "Sergio",
+    "Hugo",
+    "Eduardo",
+    "Ricardo",
+    "Mario",
+    "Óscar",
+    "Víctor",
+    "Patricio",
+    "Guillermo",
+    "Alberto",
+    "Fernando",
+    "Rolando",
+    "Gonzalo",
+    "Miguel",
+    "Francisco",
 )
 APELLIDOS = (
     "Soto",
-    "Munoz",
+    "Muñoz",
     "Rojas",
-    "Diaz",
-    "Perez",
+    "Díaz",
+    "Pérez",
+    "González",
     "Silva",
     "Contreras",
-    "Lopez",
+    "López",
     "Morales",
     "Araya",
     "Fuentes",
@@ -126,16 +179,68 @@ APELLIDOS = (
     "Valenzuela",
     "Tapia",
     "Reyes",
-    "Gutierrez",
+    "Gutiérrez",
     "Castillo",
     "Vargas",
+    "Sepúlveda",
+    "Torres",
+    "Ramírez",
+    "Herrera",
+    "Figueroa",
+    "Carrasco",
+    "Cortés",
+    "Navarro",
+    "Pizarro",
+    "Vera",
+    "Núñez",
 )
-AFPS = ("Capital", "Cuprum", "Habitat", "Modelo", "PlanVital", "ProVida", "Uno")
+# Estado civil: codigo del catalogo -> (texto para hombre, texto para mujer, peso).
+ESTADOS_CIVILES = {
+    "CASADO": ("Casado", "Casada", 45),
+    "SOLTERO": ("Soltero", "Soltera", 20),
+    "DIVORCIADO": ("Divorciado", "Divorciada", 20),
+    "VIUDO": ("Viudo", "Viuda", 15),
+}
+AFPS = ("HABITAT", "CAPITAL", "CUPRUM", "MODELO", "PLANVITAL", "PROVIDA", "UNO")
 PRIORIDADES = ("alta", "media", "baja")
+PESOS_PRIORIDAD = (25, 45, 30)
+COMENTARIOS_INICIALES = (
+    "Quiero saber cuánto podría pensionarme.",
+    "Estoy cerca de jubilar y quiero revisar mis opciones.",
+    "Me interesa comparar renta vitalicia y retiro programado.",
+    "Necesito orientación sobre mi AFP y mi saldo.",
+    "Quisiera saber si me conviene esperar un tiempo más para pensionarme.",
+    "Me recomendaron este servicio y quiero una asesoría.",
+    "Tengo dudas sobre la reforma de pensiones y cómo me afecta.",
+    "Quiero conocer cuánto recibiría mi familia si yo falto.",
+)
+# (utm_source, utm_medium, utm_campaign)
+CAMPANAS = (
+    ("google", "cpc", "retiro_programado_2026"),
+    ("google", "cpc", "renta_vitalicia_2026"),
+    ("facebook", "paid_social", "simulador_pension"),
+    ("instagram", "paid_social", "reforma_pensiones"),
+    ("newsletter", "email", "guia_jubilacion"),
+    ("organico", "web", "seo_pension"),
+)
+UTM_TERMS = ("jubilacion anticipada", "pension minima", "renta vitalicia", "retiro programado")
+UTM_CONTENTS = ("banner_a", "banner_b", "video_30s", "carrusel")
+USER_AGENTS = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0 Safari/537.36",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 "
+    "(KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (Linux; Android 14; SM-A546B) AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0 Mobile Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
+    "(KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+)
+# Rangos de IP reservados para documentacion (RFC 5737): nunca son de nadie real.
+PREFIJOS_IP = ("192.0.2", "198.51.100", "203.0.113")
 NOTAS = (
-    "Se llamo al numero registrado, sin respuesta.",
-    "Contesto, pidio que lo llamemos en la tarde.",
-    "Quedo de enviar su ultima cartola de la AFP.",
+    "Se llamó al número registrado, sin respuesta.",
+    "Contestó, pidió que lo llamemos en la tarde.",
+    "Quedó de enviar su última cartola de la AFP.",
     "Interesado en revisar opciones; se agenda llamada.",
     "Confirma que el saldo informado es correcto.",
 )
@@ -154,20 +259,43 @@ def dv_rut(numero: int) -> str:
     return {11: "0", 10: "K"}.get(resto, str(resto))
 
 
+def edad_en(nacimiento: date, hoy: date) -> int:
+    """Edad cumplida (anios calendario) de `nacimiento` al dia `hoy`."""
+    return hoy.year - nacimiento.year - ((hoy.month, hoy.day) < (nacimiento.month, nacimiento.day))
+
+
+def _hace_anios(hoy: date, anios: int) -> date:
+    try:
+        return hoy.replace(year=hoy.year - anios)
+    except ValueError:  # 29 de febrero
+        return hoy.replace(year=hoy.year - anios, day=28)
+
+
+def _sin_tildes(texto: str) -> str:
+    base = unicodedata.normalize("NFKD", texto)
+    return "".join(c for c in base if not unicodedata.combining(c)).lower()
+
+
 def plan_de_leads(rng: random.Random, ahora: datetime) -> list[dict[str, Any]]:
     """Lista determinista (por semilla) de los leads a sembrar, sin tocar la base."""
+    total = sum(cantidad for _, cantidad in REPARTO)
+    sexos = ["F", "M"] * (total // 2 + 1)
+    rng.shuffle(sexos)
     activos = [(e, i) for e, n in REPARTO if e != "nuevo" and e not in INACTIVOS for i in range(n)]
     estancados = set(rng.sample(activos, min(ESTANCADOS, len(activos))))
     ruts: set[int] = set()
     leads: list[dict[str, Any]] = []
     for estado, cantidad in REPARTO:
         for indice in range(cantidad):
+            sexo = sexos[len(leads)]
+            # Los RUT de personas nacidas hacia 1957-1969 rondan los 5,5 a 12,5 millones.
             while True:
-                numero = rng.randint(10_000_000, 24_999_999)
+                numero = rng.randint(5_500_000, 12_500_000)
                 if numero not in ruts:
                     ruts.add(numero)
                     break
-            nombre = f"{rng.choice(NOMBRES)} {rng.choice(APELLIDOS)} {rng.choice(APELLIDOS)}"
+            nombre_pila = rng.choice(NOMBRES_F if sexo == "F" else NOMBRES_M)
+            apellido1, apellido2 = rng.choice(APELLIDOS), rng.choice(APELLIDOS)
             if (estado, indice) in estancados:
                 dias_ingreso = rng.randint(9, 20)
             elif estado in INACTIVOS:
@@ -176,21 +304,49 @@ def plan_de_leads(rng: random.Random, ahora: datetime) -> list[dict[str, Any]]:
                 dias_ingreso = rng.randint(0, 4)
             ingreso = ahora - timedelta(days=dias_ingreso, hours=rng.randint(0, 20))
             asignacion = ingreso + timedelta(hours=rng.randint(1, 6))
-            nacimiento = date(1960, 1, 1) + timedelta(days=rng.randint(0, 33 * 365))
+            centro = EDAD_CENTRO[sexo]
+            edad = round(rng.triangular(centro - EDAD_DESVIO, centro + EDAD_DESVIO, centro))
+            nacimiento = _hace_anios(ahora.date(), edad) - timedelta(days=rng.randint(0, 364))
+            civil = rng.choices(
+                list(ESTADOS_CIVILES), weights=[v[2] for v in ESTADOS_CIVILES.values()]
+            )[0]
+            civil_texto = ESTADOS_CIVILES[civil][1 if sexo == "F" else 0]
+            campana, termino, contenido = (
+                rng.choice(CAMPANAS),
+                rng.choice(UTM_TERMS),
+                rng.choice(UTM_CONTENTS),
+            )
+            comentario = rng.choice(COMENTARIOS_INICIALES)
+            notas = _notas(rng, estado, asignacion, ahora)
             leads.append(
                 {
                     "estado": estado,
+                    "sexo": sexo,
                     "rut": f"{numero}-{dv_rut(numero)}",
-                    "nombre": nombre,
-                    "email": f"lead{numero}@example.test",
+                    "nombre_pila": nombre_pila,
+                    "nombre": f"{nombre_pila} {apellido1} {apellido2}",
+                    "email": f"{_sin_tildes(nombre_pila)}.{_sin_tildes(apellido1)}{numero}@example.test",
                     "telefono": f"+569555{rng.randint(10_000, 99_999)}",
                     "nacimiento": nacimiento,
+                    "estado_civil": civil,
+                    "estado_civil_texto": civil_texto,
                     "afp": rng.choice(AFPS),
-                    "saldo": rng.randint(2_000_000, 60_000_000),
-                    "prioridad": rng.choice(PRIORIDADES),
+                    "saldo": rng.randint(20_000, 160_000) * 1000,
+                    "prioridad": rng.choices(PRIORIDADES, weights=PESOS_PRIORIDAD)[0],
                     "ingreso": ingreso,
                     "asignacion": asignacion,
-                    "notas": _notas(rng, estado, asignacion, ahora),
+                    "comentario_inicial": comentario,
+                    "comentarios": comentario if notas is None else f"{comentario}\n\n{notas}",
+                    "utm": {
+                        "utm_source": campana[0],
+                        "utm_medium": campana[1],
+                        "utm_campaign": campana[2],
+                        "utm_term": termino,
+                        "utm_content": contenido,
+                    },
+                    "ip": f"{rng.choice(PREFIJOS_IP)}.{rng.randint(1, 254)}",
+                    "user_agent": rng.choice(USER_AGENTS),
+                    "fila": len(leads) + 2,
                 }
             )
     return leads
@@ -209,6 +365,18 @@ def _notas(rng: random.Random, estado: str, desde: datetime, hasta: datetime) ->
         local = (momento - timedelta(hours=3)).strftime("%d/%m/%Y %H:%M")
         partes.append(f"[{local}] Equipo DEV\n{rng.choice(NOTAS)}")
     return "\n\n".join(partes)
+
+
+def resumen_del_plan(leads: list[dict[str, Any]], hoy: date) -> list[str]:
+    """Lineas de la simulacion: sexo, edades y estado civil de lo que se sembraria."""
+    lineas = []
+    for sexo, etiqueta in (("M", "Hombres"), ("F", "Mujeres")):
+        edades = [edad_en(lead["nacimiento"], hoy) for lead in leads if lead["sexo"] == sexo]
+        lineas.append(
+            f"  {etiqueta}: {len(edades)} (edad {min(edades)} a {max(edades)}, "
+            f"promedio {sum(edades) / len(edades):.1f})"
+        )
+    return lineas
 
 
 # --------------------------------------------------------------------------------------
@@ -269,6 +437,23 @@ def borrar_objetos(claves: list[str], profile: str, region: str) -> int:
 # --------------------------------------------------------------------------------------
 # Base de datos
 # --------------------------------------------------------------------------------------
+ACCION_FK = {"a": "NO ACTION", "r": "RESTRICT", "c": "CASCADE", "n": "SET NULL", "d": "SET DEFAULT"}
+
+SQL_FKS = """
+    SELECT cl.relnamespace::regnamespace::text || '.' || cl.relname AS tabla,
+           rf.relnamespace::regnamespace::text || '.' || rf.relname AS referencia,
+           (SELECT string_agg(a.attname, ',' ORDER BY k.ord)
+              FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord)
+              JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum) AS columnas,
+           c.confdeltype::text AS al_borrar
+    FROM pg_constraint c
+    JOIN pg_class cl ON cl.oid = c.conrelid
+    JOIN pg_class rf ON rf.oid = c.confrelid
+    WHERE c.contype = 'f' AND cl.relnamespace = 'tpi'::regnamespace
+    ORDER BY 1, 3
+"""
+
+
 def cierre_dependientes(cur: Any) -> tuple[set[str], list[Any]]:
     """Tablas que dependen (directa o indirectamente) de leads/personas, y todas las FK del esquema."""
     cur.execute(SQL_FKS)
@@ -290,23 +475,6 @@ def dependientes_inesperados(cur: Any) -> list[str]:
     return sorted(dependen - DEPENDIENTES_CONOCIDOS)
 
 
-ACCION_FK = {"a": "NO ACTION", "r": "RESTRICT", "c": "CASCADE", "n": "SET NULL", "d": "SET DEFAULT"}
-
-SQL_FKS = """
-    SELECT cl.relnamespace::regnamespace::text || '.' || cl.relname AS tabla,
-           rf.relnamespace::regnamespace::text || '.' || rf.relname AS referencia,
-           (SELECT string_agg(a.attname, ',' ORDER BY k.ord)
-              FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord)
-              JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum) AS columnas,
-           c.confdeltype::text AS al_borrar
-    FROM pg_constraint c
-    JOIN pg_class cl ON cl.oid = c.conrelid
-    JOIN pg_class rf ON rf.oid = c.confrelid
-    WHERE c.contype = 'f' AND cl.relnamespace = 'tpi'::regnamespace
-    ORDER BY 1, 3
-"""
-
-
 def inspeccionar(cur: Any) -> None:
     """Solo lectura: tablas que dependen (directa o indirectamente) de leads/personas."""
     dependen, fks = cierre_dependientes(cur)
@@ -323,6 +491,30 @@ def inspeccionar(cur: Any) -> None:
             if fk["tabla"] == tabla and fk["referencia"] in dependen:
                 regla = ACCION_FK.get(fk["al_borrar"], fk["al_borrar"])
                 print(f"      {fk['columnas']} -> {fk['referencia']}  (al borrar: {regla})")
+
+
+class CatalogoIncompletoError(RuntimeError):
+    """Falta un valor de los catalogos que los leads sembrados necesitan."""
+
+
+def cargar_catalogos(cur: Any) -> dict[str, dict[str, tuple[Any, str]]]:
+    """Catalogos activos: {clave: {codigo: (id, nombre)}}. Falla si falta algun codigo requerido."""
+    catalogos: dict[str, dict[str, tuple[Any, str]]] = {}
+    faltan: list[str] = []
+    for clave, tabla in CATALOGOS.items():
+        cur.execute(
+            sql.SQL("SELECT id, codigo, nombre FROM {} WHERE activo").format(
+                sql.Identifier("tpi", tabla)
+            )
+        )
+        catalogos[clave] = {f["codigo"]: (f["id"], f["nombre"]) for f in cur.fetchall()}
+        for codigo in sorted(CODIGOS_REQUERIDOS[clave] - set(catalogos[clave])):
+            faltan.append(f"{tabla}.{codigo}")
+    if faltan:
+        raise CatalogoIncompletoError(
+            "faltan valores activos en los catalogos: " + ", ".join(faltan) + ". No se toco nada."
+        )
+    return catalogos
 
 
 def contar(cur: Any) -> dict[str, int]:
@@ -378,33 +570,79 @@ def borrar_todo(cur: Any) -> None:
         cur.execute(sentencia)
 
 
-def sembrar(cur: Any, leads: list[dict[str, Any]], asesores: list[str], rng: random.Random) -> None:
+def formulario_de(lead: dict[str, Any], genero: str, afp: str) -> dict[str, str]:
+    """Fila original del formulario (con las columnas de la hoja de Google Sheets)."""
+    return {
+        "NOMBRE": lead["nombre"],
+        "RUT": lead["rut"],
+        "EMAIL": lead["email"],
+        "TELEFONO": lead["telefono"],
+        "FECHA NACIMIENTO": lead["nacimiento"].isoformat(),
+        "GENERO": genero,
+        "ESTADO CIVIL": lead["estado_civil_texto"],
+        "AFP": afp,
+        "SALDO AFP": str(lead["saldo"]),
+        "COMENTARIOS": lead["comentario_inicial"],
+        "CONSENTIMIENTO": "Si",
+        "UTM SOURCE": lead["utm"]["utm_source"],
+        "UTM MEDIUM": lead["utm"]["utm_medium"],
+        "UTM CAMPAIGN": lead["utm"]["utm_campaign"],
+        "UTM TERM": lead["utm"]["utm_term"],
+        "UTM CONTENT": lead["utm"]["utm_content"],
+    }
+
+
+def sembrar(
+    cur: Any,
+    leads: list[dict[str, Any]],
+    asesores: list[str],
+    catalogos: dict[str, dict[str, tuple[Any, str]]],
+    rng: random.Random,
+) -> None:
     for lead in leads:
+        genero_id, genero_nombre = catalogos["genero"][SEXO_CODIGO[lead["sexo"]]]
+        civil_id, _ = catalogos["estado_civil"][lead["estado_civil"]]
+        afp_id, afp_nombre = catalogos["afp"][lead["afp"]]
+        formulario = formulario_de(lead, genero_nombre, afp_nombre)
         cur.execute(
             """
-            INSERT INTO tpi.personas (rut, nombre_completo, email, telefono, fecha_nacimiento)
-            VALUES (%s, %s, %s, %s, %s) RETURNING id_persona
+            INSERT INTO tpi.personas
+                (rut, nombre_completo, email, telefono, fecha_nacimiento, genero, estado_civil)
+            VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id_persona
             """,
-            (lead["rut"], lead["nombre"], lead["email"], lead["telefono"], lead["nacimiento"]),
+            (
+                lead["rut"],
+                lead["nombre"],
+                lead["email"],
+                lead["telefono"],
+                lead["nacimiento"],
+                genero_nombre,
+                lead["estado_civil_texto"],
+            ),
         )
         id_persona = cur.fetchone()["id_persona"]
         cur.execute(
             """
             INSERT INTO tpi.leads
-                (id_persona, fecha_ingreso, afp_actual, saldo_afp, comentarios, estado_lead,
-                 prioridad, origen_lead, fuente_actual, raw_payload, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, 'formulario_web', 'seed_dev', %s, %s, %s)
+                (id_persona, fecha_ingreso, afp_actual, afp_id, genero_id, estado_civil_id,
+                 saldo_afp, comentarios, estado_lead, prioridad, origen_lead, fuente_actual,
+                 raw_payload, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'formulario_web', 'seed_dev',
+                    %s, %s, %s)
             RETURNING id_lead
             """,
             (
                 id_persona,
                 lead["ingreso"],
-                lead["afp"],
+                afp_nombre,
+                afp_id,
+                genero_id,
+                civil_id,
                 lead["saldo"],
-                lead["notas"],
+                lead["comentarios"],
                 lead["estado"],
                 lead["prioridad"],
-                json.dumps({"seed": "dev"}),
+                json.dumps({"seed": "dev", "formulario": formulario}, ensure_ascii=False),
                 lead["ingreso"],
                 lead["ingreso"],
             ),
@@ -412,12 +650,68 @@ def sembrar(cur: Any, leads: list[dict[str, Any]], asesores: list[str], rng: ran
         id_lead = cur.fetchone()["id_lead"]
         cur.execute(
             """
+            INSERT INTO tpi.ingesta_google_sheets
+                (fila_origen, sheet_origen, payload_original, estado_procesamiento,
+                 errores_validacion, id_lead_generado, fecha_ingesta)
+            VALUES (%s, 'seed_dev', %s, 'procesado', '[]'::jsonb, %s, %s)
+            RETURNING id_ingesta
+            """,
+            (
+                lead["fila"],
+                json.dumps(formulario, ensure_ascii=False),
+                id_lead,
+                lead["ingreso"],
+            ),
+        )
+        id_ingesta = cur.fetchone()["id_ingesta"]
+        cur.execute(
+            """
             INSERT INTO tpi.consentimientos
                 (id_persona, id_lead, acepta_terminos, acepta_politica_privacidad,
-                 fecha_aceptacion, version_terminos, version_politica, finalidad_contacto)
-            VALUES (%s, %s, TRUE, TRUE, %s, 'seed-dev', 'seed-dev', TRUE)
+                 fecha_aceptacion, version_terminos, version_politica, ip_origen, user_agent,
+                 finalidad_contacto)
+            VALUES (%s, %s, TRUE, TRUE, %s, 'v1.0', 'v1.0', %s, %s, TRUE)
             """,
-            (id_persona, id_lead, lead["ingreso"]),
+            (id_persona, id_lead, lead["ingreso"], lead["ip"], lead["user_agent"]),
+        )
+        cur.execute(
+            """
+            INSERT INTO tpi.campanas_atribucion
+                (id_lead, utm_source, utm_medium, utm_campaign, utm_term, utm_content)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (
+                id_lead,
+                lead["utm"]["utm_source"],
+                lead["utm"]["utm_medium"],
+                lead["utm"]["utm_campaign"],
+                lead["utm"]["utm_term"],
+                lead["utm"]["utm_content"],
+            ),
+        )
+        cur.execute(
+            """
+            INSERT INTO tpi.eventos_lead
+                (id_lead, tipo_evento, descripcion, fecha_evento, usuario_responsable, metadata)
+            VALUES (%s, 'lead_importado_sheets', 'Lead sintetico sembrado en DEV (seed_dev).',
+                    %s, 'seed_dev', %s)
+            """,
+            (
+                id_lead,
+                lead["ingreso"],
+                json.dumps(
+                    {
+                        "id_ingesta": str(id_ingesta),
+                        "fila_origen": lead["fila"],
+                        "sheet_origen": "seed_dev",
+                        "catalogos": {
+                            "genero_id": str(genero_id),
+                            "estado_civil_id": str(civil_id),
+                            "afp_id": str(afp_id),
+                        },
+                    }
+                ),
+            ),
         )
         if lead["estado"] == "nuevo":
             continue
@@ -454,9 +748,24 @@ def sembrar(cur: Any, leads: list[dict[str, Any]], asesores: list[str], rng: ran
         )
 
 
-def resumen_final(cur: Any) -> list[tuple[str, int]]:
+def resumen_final(cur: Any) -> tuple[list[tuple[str, int]], list[tuple[str, int, int, int, int]]]:
+    """Leads por estado y, por sexo, cantidad y edades (minima, maxima y promedio)."""
     cur.execute("SELECT estado_lead, count(*) AS n FROM tpi.leads GROUP BY 1 ORDER BY 2 DESC, 1")
-    return [(f["estado_lead"], int(f["n"])) for f in cur.fetchall()]
+    estados = [(f["estado_lead"], int(f["n"])) for f in cur.fetchall()]
+    cur.execute("""
+        SELECT genero, count(*) AS n, min(edad)::int AS minimo, max(edad)::int AS maximo,
+               round(avg(edad))::int AS promedio
+        FROM (
+            SELECT p.genero, date_part('year', age(CURRENT_DATE, p.fecha_nacimiento)) AS edad
+            FROM tpi.leads l JOIN tpi.personas p ON p.id_persona = l.id_persona
+        ) t
+        GROUP BY genero ORDER BY genero
+        """)
+    sexos = [
+        (f["genero"], int(f["n"]), int(f["minimo"]), int(f["maximo"]), int(f["promedio"]))
+        for f in cur.fetchall()
+    ]
+    return estados, sexos
 
 
 # --------------------------------------------------------------------------------------
@@ -523,6 +832,11 @@ def main(argv: list[str] | None = None) -> int:
                 if not asesores:
                     print("DETENIDO: no hay asesores activos en tpi.asesores.", file=sys.stderr)
                     return 2
+                try:
+                    catalogos = cargar_catalogos(cur)
+                except CatalogoIncompletoError as exc:
+                    print(f"DETENIDO: {exc}", file=sys.stderr)
+                    return 2
                 antes = contar(cur)
                 print("\nLo que se BORRARA:")
                 for nombre, n in antes.items():
@@ -532,11 +846,13 @@ def main(argv: list[str] | None = None) -> int:
                     f"{'(omitido: --sin-s3)' if args.sin_s3 else len(claves)}"
                 )
                 print(
-                    f"\nLo que se SEMBRARA: {len(leads)} leads ficticios en "
+                    f"\nLo que se SEMBRARA: {len(leads)} leads ficticios completos en "
                     f"{len(REPARTO)} estados; asesores activos disponibles: {len(asesores)}"
                 )
                 for estado, n in REPARTO:
                     print(f"  {estado}: {n}")
+                for linea in resumen_del_plan(leads, ahora.date()):
+                    print(linea)
                 if not args.ejecutar:
                     print("\nSimulacion: no se escribio nada. Agrega --ejecutar para aplicar.")
                     return 0
@@ -544,15 +860,18 @@ def main(argv: list[str] | None = None) -> int:
                     print("La frase no coincide. No se toco nada.", file=sys.stderr)
                     return 2
                 borrar_todo(cur)
-                sembrar(cur, leads, asesores, rng)
-                resultado = resumen_final(cur)
+                sembrar(cur, leads, asesores, catalogos, rng)
+                estados, sexos = resumen_final(cur)
             if claves:
                 borrados = borrar_objetos(claves, args.profile, args.region)
                 print(f"S3: {borrados} objetos borrados.")
             conn.commit()
         print("\nListo. Leads sembrados por estado:")
-        for estado, n in resultado:
+        for estado, n in estados:
             print(f"  {estado}: {n}")
+        print("Por sexo (edad minima / maxima / promedio):")
+        for genero, n, minimo, maximo, promedio in sexos:
+            print(f"  {genero}: {n} ({minimo} / {maximo} / {promedio})")
         return 0
     except Exception as exc:
         print(

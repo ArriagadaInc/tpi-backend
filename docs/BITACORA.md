@@ -32,7 +32,10 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
   orden para insertar y borrar. Nuevo `docs/database/08_DEV_DATA_INVENTORY.md` con la procedencia de los datos, el inventario del 2026-10-24
   (85 leads, 83 personas, 82 consentimientos, 34 asignaciones, 146 eventos de auditoría, 69 filas en atribución, eventos e ingesta, 7 adjuntos),
   la ubicación de los adjuntos en S3, consultas útiles y el procedimiento de reinicio. El script quedó en `scripts/dev_reset_leads.py` con
-  pruebas (`tests/unit/test_dev_reset_leads.py`).
+  pruebas (`tests/unit/test_dev_reset_leads.py`). La siembra se rehízo tras la primera revisión del humano: la versión
+  inicial (42 leads) dejaba sin llenar el género, el estado civil y la AFP de los catálogos (que son los que lee la app) y usaba nombres sin
+  relación con el sexo; ahora siembra 100 leads completos (50 hombres de 62 a 68 años y 50 mujeres de 57 a 63, edad de jubilación en Chile) con todos
+  los campos que deja la ingesta real.
 - Verificación: el script se ensayó contra una base PostgreSQL local con el mismo esquema (siembra, reinicio repetido, filas dependientes en
   las cinco tablas, tabla desconocida directa e indirecta, rechazos por usuario, host y base); el borrado en S3 se probó con `aws` simulado y
   la lectura de S3 contra el bucket real en modo solo lectura.

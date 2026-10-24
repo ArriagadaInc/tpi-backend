@@ -127,13 +127,33 @@ y solo contra DEV. Nacio como parte del criterio AC-7 de `CRM-ESTADOS-1-CATALOGO
 | ---- | ------ |
 | `--inspeccionar` | Solo lectura: lista las tablas que dependen de `leads`/`personas` (directa o indirectamente), con filas y regla de borrado de cada FK. |
 | (sin opciones) | Simulacion: muestra el destino, lo que borraria (conteos y objetos S3) y lo que sembraria. No escribe nada. |
-| `--ejecutar` | Pide escribir la frase exacta `REINICIAR DEV`; borra todo lo anterior y siembra 42 leads ficticios. |
+| `--ejecutar` | Pide escribir la frase exacta `REINICIAR DEV`; borra todo lo anterior y siembra 100 leads ficticios completos. |
 | `--sin-s3` | No toca el bucket (para ensayos en una base local). |
 
-Siembra 42 leads: 10 `nuevo`, 6 `asignado`, 5 `en_seguimiento`, 4 `sin_contacto`, 3 `reunion_agendada` y 2 de cada uno de los otros 7
-estados del catalogo. Los 32 que no son `nuevo` reciben una asignacion activa (con su evento `asignacion_lead` en `auditoria`) a los
-asesores activos; 8 leads activos quedan sin movimiento hace mas de 5 dias para probar "estancados"; los avanzados llevan 1 a 3 notas con
-el encabezado que escribe la app. Los datos son reproducibles con `--semilla`.
+Siembra **100 leads**: 24 `nuevo`, 14 `asignado`, 12 `en_seguimiento`, 10 `sin_contacto`, 8 `reunion_agendada`, 5 de cada uno de
+`reunion_realizada`, `ficha_generada`, `cerrado` y `no_interesado`, y 4 de cada uno de `datos_erroneos`, `no_contactado` y `perdido`. Los 76
+que no son `nuevo` reciben una asignacion activa (con su evento `asignacion_lead` en `auditoria`) a los asesores activos; 20 leads activos
+quedan sin movimiento hace mas de 5 dias para probar "estancados"; los avanzados llevan 1 a 3 notas con el encabezado que escribe la app.
+Los datos son reproducibles con `--semilla`.
+
+**Perfil de los leads (edad de jubilacion en Chile):** 50 hombres de 62 a 68 anios (centro 65) y 50 mujeres de 57 a 63 (centro 60), con
+nombre de pila segun el sexo, estado civil concordante en genero (Casado/Casada...), RUT valido con digito verificador y correo
+`@example.test`.
+
+### Campos que se siembran (un lead completo, como lo deja la ingesta)
+
+| Tabla | Campos |
+| ----- | ------ |
+| `personas` | `rut`, `nombre_completo`, `email`, `telefono`, `fecha_nacimiento`, `genero` y `estado_civil` (texto) |
+| `leads` | `fecha_ingreso`, `afp_actual` + `afp_id`, `genero_id`, `estado_civil_id` (claves de los catalogos, que son las que muestra la app), `saldo_afp`, `comentarios` (consulta inicial del formulario + notas), `estado_lead`, `prioridad`, `origen_lead` (`formulario_web`), `fuente_actual` (`seed_dev`), `raw_payload` (fila original del formulario) |
+| `consentimientos` | terminos y politica aceptados, `fecha_aceptacion`, versiones (`v1.0`), `ip_origen` (rangos de documentacion RFC 5737), `user_agent`, `finalidad_contacto` |
+| `campanas_atribucion` | `utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content` |
+| `eventos_lead` | evento `lead_importado_sheets` con los ids de catalogo en `metadata` |
+| `ingesta_google_sheets` | fila de origen `seed_dev`, carga original, estado `procesado`, lead generado |
+| `asignaciones` y `auditoria` | solo para los leads que no son `nuevo` |
+
+Antes de borrar nada, el script exige que los catalogos tengan los valores que necesita (`FEMENINO`, `MASCULINO`; `SOLTERO`, `CASADO`,
+`DIVORCIADO`, `VIUDO`; las siete AFP): si falta alguno se detiene y no toca la base.
 
 ### Que conserva
 
@@ -173,6 +193,9 @@ proyecto apuntando a la base local el script se niega por el usuario y la base. 
 
 ### Simulacion del 2026-10-24 (evidencia previa al primer reinicio)
 
+Lo que se **borraria** es lo que midio la simulacion de ese dia. La siembra de entonces era de 42 leads y no llenaba el sexo, el estado
+civil ni la AFP en los catalogos; se reemplazo por la version de 100 leads completos descrita arriba antes de ejecutarla.
+
 ```text
 Lo que se BORRARA:
   leads: 85                              eventos_lead: 69
@@ -183,7 +206,7 @@ Lo que se BORRARA:
   api_idempotency: 2
   campanas_atribucion: 69
   citas: 0
-Lo que se SEMBRARA: 42 leads ficticios en 12 estados; asesores activos disponibles: 4
+Lo que se SEMBRARA (version inicial, reemplazada): 42 leads ficticios en 12 estados; asesores activos disponibles: 4
 ```
 
 ### Estado

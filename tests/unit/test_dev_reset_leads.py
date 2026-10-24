@@ -1,8 +1,9 @@
 """Pruebas de las partes puras y de las barreras de seguridad de ``scripts/dev_reset_leads.py``.
 
 El script es una herramienta del humano contra DEV; aqui no se toca ninguna base ni AWS: se prueba
-la generacion de datos ficticios, el orden de borrado, la deteccion de tablas desconocidas, el
-borrado por lotes en S3 (con ``aws`` simulado) y que el script se niegue a correr fuera de DEV.
+la generacion de datos ficticios (completos, con sexo, edades y catalogos coherentes), el orden de
+borrado, la deteccion de tablas desconocidas, la carga de catalogos, el borrado por lotes en S3
+(con ``aws`` simulado) y que el script se niegue a correr fuera de DEV.
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from app.validators.rut import validate_rut
 from scripts import dev_reset_leads as mod
 
 AHORA = datetime(2026, 10, 24, 15, 0, tzinfo=UTC)
+HOY = AHORA.date()
 
 
 def _plan(semilla: int = 20261023) -> list[dict[str, Any]]:
@@ -38,11 +40,11 @@ def test_dv_rut_calcula_el_digito_verificador(numero: int, dv: str) -> None:
     assert validate_rut(f"{numero}-{dv}")
 
 
-def test_el_plan_reparte_los_leads_en_los_12_estados() -> None:
+def test_el_plan_reparte_100_leads_en_los_12_estados() -> None:
     plan = _plan()
 
     assert Counter(lead["estado"] for lead in plan) == dict(mod.REPARTO)
-    assert len(plan) == sum(cantidad for _, cantidad in mod.REPARTO) == 42
+    assert len(plan) == sum(cantidad for _, cantidad in mod.REPARTO) == 100
     assert len(mod.REPARTO) == 12
 
 
@@ -56,8 +58,70 @@ def test_los_datos_ficticios_son_validos_y_unicos() -> None:
 
     assert all(validate_rut(lead["rut"]) for lead in plan)
     assert len({lead["rut"] for lead in plan}) == len(plan)
+    assert len({lead["email"] for lead in plan}) == len(plan)
     assert all(lead["email"].endswith("@example.test") for lead in plan)
-    assert all(lead["telefono"].startswith("+569555") for lead in plan)
+    assert all(re.fullmatch(r"\+569555\d{5}", lead["telefono"]) for lead in plan)
+    assert all(lead["email"].isascii() for lead in plan)
+
+
+def test_hombres_y_mujeres_estan_equilibrados() -> None:
+    sexos = Counter(lead["sexo"] for lead in _plan())
+
+    assert sexos == {"F": 50, "M": 50}
+
+
+def test_las_edades_rondan_los_65_en_hombres_y_los_60_en_mujeres() -> None:
+    plan = _plan()
+    edades = {"M": [], "F": []}  # type: dict[str, list[int]]
+    for lead in plan:
+        edades[lead["sexo"]].append(mod.edad_en(lead["nacimiento"], HOY))
+
+    assert all(62 <= e <= 68 for e in edades["M"])
+    assert all(57 <= e <= 63 for e in edades["F"])
+    assert abs(sum(edades["M"]) / len(edades["M"]) - 65) < 1.0
+    assert abs(sum(edades["F"]) / len(edades["F"]) - 60) < 1.0
+
+
+def test_el_nombre_de_pila_corresponde_al_sexo_y_el_estado_civil_concuerda() -> None:
+    plan = _plan()
+
+    for lead in plan:
+        pila = lead["nombre_pila"]
+        assert pila in (mod.NOMBRES_F if lead["sexo"] == "F" else mod.NOMBRES_M)
+        assert lead["nombre"].startswith(pila + " ")
+        masculino, femenino, _ = mod.ESTADOS_CIVILES[lead["estado_civil"]]
+        assert lead["estado_civil_texto"] == (femenino if lead["sexo"] == "F" else masculino)
+
+
+def test_cada_lead_trae_todos_los_campos_completos() -> None:
+    plan = _plan()
+    opcionales = {"notas"}
+
+    for lead in plan:
+        for clave, valor in lead.items():
+            assert valor not in (None, "", {}), (clave, lead["rut"])
+        assert lead["estado_civil"] in mod.CODIGOS_REQUERIDOS["estado_civil"]
+        assert lead["afp"] in mod.CODIGOS_REQUERIDOS["afp"]
+        assert lead["prioridad"] in mod.PRIORIDADES
+        assert lead["saldo"] >= 20_000_000
+        assert set(lead["utm"]) == {
+            "utm_source",
+            "utm_medium",
+            "utm_campaign",
+            "utm_term",
+            "utm_content",
+        }
+        assert re.fullmatch(r"(192\.0\.2|198\.51\.100|203\.0\.113)\.\d{1,3}", lead["ip"])
+        assert lead["comentarios"].startswith(lead["comentario_inicial"])
+    assert opcionales  # las notas de seguimiento van dentro de "comentarios"
+
+
+def test_los_catalogos_requeridos_cubren_todo_lo_que_el_plan_usa() -> None:
+    plan = _plan()
+
+    assert {lead["afp"] for lead in plan} <= mod.CODIGOS_REQUERIDOS["afp"]
+    assert {lead["estado_civil"] for lead in plan} <= mod.CODIGOS_REQUERIDOS["estado_civil"]
+    assert set(mod.SEXO_CODIGO.values()) == mod.CODIGOS_REQUERIDOS["genero"]
 
 
 def test_los_estancados_son_los_esperados_y_el_resto_es_reciente() -> None:
@@ -79,12 +143,21 @@ def test_las_notas_usan_el_encabezado_que_lee_la_app() -> None:
     plan = _plan()
 
     for lead in plan:
+        encabezados = re.findall(NOTE_TS_PATTERN, lead["comentarios"])
         if lead["estado"] in ("nuevo", "asignado"):
-            assert lead["notas"] is None
+            assert encabezados == []
+            assert lead["comentarios"] == lead["comentario_inicial"]
             continue
-        encabezados = re.findall(NOTE_TS_PATTERN, lead["notas"])
         assert 1 <= len(encabezados) <= 3
-        assert lead["notas"].count("Equipo DEV\n") == len(encabezados)
+        assert lead["comentarios"].count("Equipo DEV\n") == len(encabezados)
+
+
+def test_el_resumen_del_plan_informa_sexo_y_edades() -> None:
+    lineas = mod.resumen_del_plan(_plan(), HOY)
+
+    assert len(lineas) == 2
+    assert lineas[0].startswith("  Hombres: 50 (edad ")
+    assert lineas[1].startswith("  Mujeres: 50 (edad ")
 
 
 class _CursorFalso:
@@ -94,8 +167,8 @@ class _CursorFalso:
         self.sentencias: list[str] = []
         self._filas = filas or []
 
-    def execute(self, consulta: str, params: Any = None) -> None:
-        self.sentencias.append(consulta)
+    def execute(self, consulta: Any, params: Any = None) -> None:
+        self.sentencias.append(consulta if isinstance(consulta, str) else "SQL")
 
     def fetchall(self) -> list[dict[str, Any]]:
         return self._filas
@@ -136,6 +209,47 @@ def test_una_tabla_dependiente_desconocida_detiene_el_script() -> None:
 
     assert mod.dependientes_inesperados(_CursorFalso(fks)) == ["tpi.detalle_cita"]
     assert mod.dependientes_inesperados(_CursorFalso(fks[:1])) == []
+
+
+class _CursorCatalogos:
+    """Devuelve las filas del catalogo cuyo nombre aparece en la consulta que se le pasa."""
+
+    def __init__(self, catalogos: dict[str, list[dict[str, Any]]]) -> None:
+        self._catalogos = catalogos
+        self._actual: list[dict[str, Any]] = []
+
+    def execute(self, consulta: Any, params: Any = None) -> None:
+        texto = consulta.as_string(None) if hasattr(consulta, "as_string") else str(consulta)
+        self._actual = next((f for n, f in self._catalogos.items() if n in texto), [])
+
+    def fetchall(self) -> list[dict[str, Any]]:
+        return self._actual
+
+
+def _catalogos_completos() -> dict[str, list[dict[str, Any]]]:
+    def filas(codigos: set[str]) -> list[dict[str, Any]]:
+        return [{"id": f"id-{c}", "codigo": c, "nombre": c.title()} for c in sorted(codigos)]
+
+    return {
+        "catalogo_genero": filas(mod.CODIGOS_REQUERIDOS["genero"]),
+        "catalogo_estado_civil": filas(mod.CODIGOS_REQUERIDOS["estado_civil"]),
+        "catalogo_afp": filas(mod.CODIGOS_REQUERIDOS["afp"]),
+    }
+
+
+def test_cargar_catalogos_devuelve_id_y_nombre_por_codigo() -> None:
+    catalogos = mod.cargar_catalogos(_CursorCatalogos(_catalogos_completos()))
+
+    assert catalogos["genero"]["FEMENINO"] == ("id-FEMENINO", "Femenino")
+    assert set(catalogos["afp"]) == mod.CODIGOS_REQUERIDOS["afp"]
+
+
+def test_cargar_catalogos_se_detiene_si_falta_un_valor() -> None:
+    datos = _catalogos_completos()
+    datos["catalogo_afp"] = [f for f in datos["catalogo_afp"] if f["codigo"] != "UNO"]
+
+    with pytest.raises(mod.CatalogoIncompletoError, match="catalogo_afp.UNO"):
+        mod.cargar_catalogos(_CursorCatalogos(datos))
 
 
 def test_borrar_objetos_manda_lotes_de_mil_con_el_archivo_en_formato_cli(
