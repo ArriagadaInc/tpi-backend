@@ -39,6 +39,7 @@ local reference artifact and is intentionally not versioned here.
 | Review roles, SSL, and access control | [05_SECURITY_ACCESS.md](05_SECURITY_ACCESS.md) |
 | Run validation, apply migration, or rollback | [06_OPERATIONS_RUNBOOK.md](06_OPERATIONS_RUNBOOK.md) |
 | Understand test reproduction and integrity gates | [07_TESTING_AND_INTEGRITY.md](07_TESTING_AND_INTEGRITY.md) |
+| Know what data DEV holds, the FK order to delete or insert, or reset DEV data | [08_DEV_DATA_INVENTORY.md](08_DEV_DATA_INVENTORY.md) |
 
 ## Environments
 

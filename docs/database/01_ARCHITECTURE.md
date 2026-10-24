@@ -78,6 +78,20 @@ flowchart TD
 - references the person and optionally the lead
 - is part of the onboarding/registration flow, not the assignment relation
 
+### Operational tables from the data pipeline
+
+The sibling project `tpi-data-pipeline` (`setup_db.py`, `docs/BASE_DE_DATOS_TPI.md`) also creates five operational tables that hang from
+`tpi.leads`. The backoffice does not read or write them today:
+
+- `tpi.campanas_atribucion`: UTM attribution, one row per lead.
+- `tpi.eventos_lead`: pipeline events for a lead.
+- `tpi.citas`: appointments between a lead and an advisor.
+- `tpi.fichas_diagnosticas`: diagnostic sheets of a lead.
+- `tpi.ingesta_google_sheets`: one row per Google Sheets row ingested, with the lead it generated (nullable).
+
+Columns and the relations map are in [02_PHYSICAL_SCHEMA.md](02_PHYSICAL_SCHEMA.md); the DEV data inventory, FK delete order and the DEV
+data reset procedure are in [08_DEV_DATA_INVENTORY.md](08_DEV_DATA_INVENTORY.md).
+
 ### Catalog tables
 
 - `tpi.catalogo_afp`

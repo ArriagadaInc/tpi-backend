@@ -22,6 +22,28 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-24 - Base de datos: inventario de DEV, relaciones del pipeline documentadas y herramienta de reinicio de datos
+
+- Contexto: para el criterio AC-7 de `CRM-ESTADOS-1-CATALOGO` el humano debía reiniciar los datos de DEV. El script de reinicio se negó a
+  correr por tablas que la documentación del backoffice no conocía (`campanas_atribucion`, `citas`, `eventos_lead`, `fichas_diagnosticas`,
+  `ingesta_google_sheets`): las crea el proyecto hermano `tpi-data-pipeline`, no este repositorio.
+- Qué se hizo: se documentó el esquema real de esas cinco tablas (DDL del pipeline, con las claves foráneas verificadas en DEV con
+  `--inspeccionar`), un mapa de relaciones con las reglas de borrado (todas `NO ACTION`, salvo `api_idempotency.lead_id` que es `SET NULL`) y el
+  orden para insertar y borrar. Nuevo `docs/database/08_DEV_DATA_INVENTORY.md` con la procedencia de los datos, el inventario del 2026-10-24
+  (85 leads, 83 personas, 82 consentimientos, 34 asignaciones, 146 eventos de auditoría, 69 filas en atribución, eventos e ingesta, 7 adjuntos),
+  la ubicación de los adjuntos en S3, consultas útiles y el procedimiento de reinicio. El script quedó en `scripts/dev_reset_leads.py` con
+  pruebas (`tests/unit/test_dev_reset_leads.py`).
+- Verificación: el script se ensayó contra una base PostgreSQL local con el mismo esquema (siembra, reinicio repetido, filas dependientes en
+  las cinco tablas, tabla desconocida directa e indirecta, rechazos por usuario, host y base); el borrado en S3 se probó con `aws` simulado y
+  la lectura de S3 contra el bucket real en modo solo lectura.
+- Lecciones: (a) la base de DEV tiene tablas de otro proyecto; antes de borrar datos hay que inspeccionar las dependencias, no suponerlas;
+  el script ahora lo hace solo y se detiene ante cualquier dependiente desconocido, incluso indirecto. (b) `Path.as_uri()` no sirve para el
+  argumento `file://` del AWS CLI en Windows. (c) El túnel SSM a DEV debe estar abierto en su propia terminal; sin él la conexión muestra
+  `connection timeout expired`.
+- Pendiente: el humano ejecuta el primer reinicio de DEV y se actualiza la sección «Estado» de `08_DEV_DATA_INVENTORY.md`. Los privilegios de
+  `tpi_app` sobre las cinco tablas del pipeline no están verificados. Una inspección completa del catálogo de DEV (columnas, índices,
+  vistas 007-009 y privilegios) sigue sin hacerse.
+
 ### 2026-10-23 - CRM-ESTADOS-1-CATALOGO: catalogo de 12 estados del lead segun el protocolo de Runners (desarrollo)
 
 - Contexto: se reemplaza el vocabulario de `estado_lead` por el protocolo de trabajo de los Runners (octubre 2026). Es solo el catalogo: los datos
