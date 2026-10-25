@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "kind": "deployment",
+  "task_id": "CRM-ESTADOS-1-CATALOGO",
+  "created_at": "2026-10-23T20:08:49Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610232001-deployer-supe0fe7e",
+  "approved_commit": "bfa4edee00abb786d83b42ccaa01614a9985080d",
+  "deployed_commit": "bfa4edee00abb786d83b42ccaa01614a9985080d",
+  "application_version": "h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "update_accepted": true,
+  "result": "success",
+  "started_at": "2026-10-23T20:05:47Z",
+  "finished_at": "2026-10-23T20:06:35Z",
+  "failure_class": null,
+  "previous_version_label": "h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1",
+  "final_state": {
+    "version_label": "h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "observed_at": "2026-10-23T20:08:15Z"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1/2c4c5905c70d5784ecf7879a1715afd9f235ea327afa7beb2b5826ce3837ae8a.zip",
+    "s3_checksum_sha256_b64": "LExZBccNV4Ts94eaFxWv2fI16jJ6+nvrK1gmzjg3roo=",
+    "s3_content_length": 4917,
+    "bundle_sha256": "2c4c5905c70d5784ecf7879a1715afd9f235ea327afa7beb2b5826ce3837ae8a",
+    "app_digest": "sha256:f3f5b79f6e2e3fa6ffa6d4fa834ee852b330c45324edc5e1d458fe54615ea07d",
+    "caddy_digest": "sha256:420931647023a929506760e67bd743c2a03b9df75e482f2bd5cc9edffbde7837",
+    "digests_equal_approval_01": true,
+    "note": "Observado en esta sesion tras el cutover: describe-environments VersionLabel = aprobada, Ready/Green/Ok; describe-application-versions SourceBundle = key de approval-01; head-object ChecksumSHA256 = base64 del bundle_sha256 aprobado; el ZIP local .harness-release/<label>.zip tiene sha256 2c4c5905... y su manifest fija app f3f5b79f... / caddy 42093164... (runtime_git_sha bfa4ede), ambos ACTIVE en ECR (Docker v2)."
+  },
+  "preflight": {
+    "at": "2026-10-23T20:04Z",
+    "result": "PASS",
+    "checks": [
+      "sts get-caller-identity: cuenta 821656895812",
+      "describe-environments: tpi-backoffice-dev-green Ready/Green/Ok, VersionLabel = LKG h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1, AbortableOperationInProgress false, DateUpdated 15:37:58Z",
+      "AV candidata existe (UNPROCESSED, SourceBundle = key de approval-01); AV del LKG existe (UNPROCESSED)",
+      "ECR: digests del candidato (app f3f5b79f..., caddy 42093164...) y del LKG (app c4915328..., caddy 7495bb18...) ACTIVE",
+      "head-object del bundle candidato: ChecksumSHA256 LExZBccNV4Ts94eaFxWv2fI16jJ6+nvrK1gmzjg3roo=, 4917 bytes",
+      "CodePipeline tpi-backoffice-dev-promotion: transicion inbound de Promote deshabilitada",
+      "approval-01 para bfa4ede coincide con candidate-01 (bundle, key, digests, AV, LKG)"
+    ]
+  },
+  "cutover": {
+    "mechanism": "aws_guard update-environment version-label only",
+    "executed_by": "deployer (sesion claude-202610232001-deployer-supe0fe7e)",
+    "updates_applied": 1,
+    "retries": 0,
+    "option_settings": false,
+    "restart_app_server": false,
+    "rollback_executed": false,
+    "convergence": "exitosa en ~48 s (start 20:05:47Z, completed 20:06:35Z; Ready/Green/Ok observado 20:08:15Z)"
+  },
+  "events": {
+    "levels_observed": [
+      "INFO"
+    ],
+    "errors": 0,
+    "note": "Environment update is starting -> Deploying new version to instance(s) -> Instance deployment completed successfully -> New application version was deployed -> Environment update completed successfully; health Ok -> Info durante el update y Ok al observar."
+  },
+  "warnings": [
+    "AC-7 (reinicio de datos de DEV y comprobacion humana) sigue pendiente; conteos de logs y smoke HTTP corresponden a VERIFYING.",
+    "Hasta el reinicio humano de datos, los leads de DEV con estados retirados se muestran con su valor crudo."
+  ]
+}

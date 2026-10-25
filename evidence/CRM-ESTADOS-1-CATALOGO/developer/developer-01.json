@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "CRM-ESTADOS-1-CATALOGO",
+  "created_at": "2026-10-23T17:37:03Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610231705-developer-supb9e7fb",
+  "head_sha": "938b3bf02198c0fb62385ec6a41c90af9aeef05b",
+  "branch": "harness/CRM-ESTADOS-1-CATALOGO-catalogo-estados",
+  "pr_number": 129,
+  "change_class": "A",
+  "tests": {
+    "command": "Local (worktree, sin PostgreSQL): python -m black --check app tests scripts deployment PASS (260 files); python -m ruff check app tests scripts deployment PASS; python -m mypy app --ignore-missing-imports PASS (72 files); python -m bandit -r app --severity-level medium --confidence-level medium -q PASS (sin hallazgos). python -m pytest tests/unit --no-cov -q -> 946 passed, 12 failed: 11 de test_executive_dashboard_render/service (DatabaseConfigurationError por falta de PostgreSQL local, preexistentes y no relacionados con la tarea) y 1 de test_typography_is_hosted_locally_without_external_font_requests (mimetypes de Windows sin .woff2; ver assumptions). CI PR #129 (ubuntu, Python 3.12, servicio postgres) sobre 938b3bf: job Tests PASS (pytest tests/ --cov=app --cov-fail-under=85) -> 2035 passed, 17 skipped. La suite de integracion (dashboard, historial, asignacion, exportacion, cartera activa con cada estado inactivo) corre y pasa en CI con PostgreSQL.",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "app/models/crm_states.py queda con los 12 estados (nuevo, asignado, sin_contacto, en_seguimiento, reunion_agendada, reunion_realizada, ficha_generada, cerrado, no_interesado, datos_erroneos, no_contactado, perdido), etiquetas con tilde (Reunion agendada/realizada, Datos erroneos), tonos y alias (pendiente -> nuevo), identico a docs/ui/referencia/estados/crm_states.py. Los estados anteriores (prospecto, contactado, citado, en_tramite, expediente, no_califica, duplicado, dormido) dejan de existir en el contrato. Un valor desconocido se muestra tal cual: crm_state_label('estado_desconocido_xyz') == 'estado_desconocido_xyz' y normalize_crm_state_for_display devuelve None (test_unknown_saved_state_is_preserved_without_error, test_crm_state_display_is_fail_closed_for_ambiguous_values)."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "'asignado' sigue exclusivo de la asignacion: assign_lead sigue escribiendo estado_lead='asignado' y registra el evento de historial (app/repositories/solicitud_repository.py:1344,1373 sin cambios de flujo). El cambio generico lo rechaza en servicio (update_lead_status -> ValueError 'El estado asignado solo puede establecerse mediante una asignacion valida') y en repositorio (normalized_estado == 'asignado' -> ValueError defensivo). El selector del detalle no lo ofrece (get_crm_estado_lead_options_for_update excluye 'asignado'). Pruebas: test_generic_update_rejects_asignado_state, test_web_status_update_rejects_direct_transition_to_asignado, assert 'asignado' not in get_crm_estado_lead_options_for_update() y value='asignado' not in detail.text; las de asignacion e historial actualizadas sin debilitarse."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "CARTERA_INACTIVA_ESTADOS = (cerrado, perdido, no_interesado, datos_erroneos, no_contactado); ficha_generada no esta en la lista (sigue activo). El texto del dashboard (executive_dashboard.html) nombra 'cerrado, perdido, no interesado, datos erroneos y no contactado'. 'sin asignar' sigue saliendo de tpi.asignaciones (sin_asignar_predicate, sin cambios). Pruebas de repositorio con BD: test_cartera_por_asesor_exact_total_active_and_sin_asesor crea un lead por cada estado inactivo mas ficha_generada/nuevo/desconocido y verifica cartera_total 8 / cartera_activa 3 (nuevo + ficha_generada + desconocido)."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "El filtro de estado del listado y dashboard, los chips y la barra de estado usan el contrato nuevo: crm_state_label se registra como filtro Jinja (app/web/main.py) y los templates lo usan (leads.html, leads_board.html, lead_detail_panel.html); el filtro de listado expande via crm_state_filter_terms. El CSS elimina las reglas de chip de los estados retirados (prospecto, contactado, citado, en-tramite, expediente, duplicado, dormido, en-evaluacion, no-califica, pendiente) en claro y oscuro; los tonos de los estados nuevos ya venian de CRM-UI-1 (status-badge.sin-contacto, .en-seguimiento, .reunion-agendada, etc.). La exportacion XLSX usa las etiquetas nuevas (crm_state_label en el builder). Sin transiciones restringidas salvo 'asignado' (reservado)."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "Se actualizaron ~30 archivos de pruebas que mencionaban los estados anteriores (test_crm_states, test_web_app, test_solicitud_assignment_service, test_executive_dashboard_*, test_h3_3_5_*, test_h3_3_6_*, test_lead_state_history, test_web_crm_lite, test_sim_*, test_attachments_web, test_web_helpers, test_h3_3_7_theme) preservando lo que cada una protege. Se agregaron pruebas del contrato nuevo (12 estados, etiquetas con tilde, tonos, alias pendiente, filtros) en test_crm_states.py, de los estados inactivos (test_executive_dashboard_per_advisor) y del valor desconocido (test_unknown_saved_state_is_preserved_without_error). Suite completa en CI verde (2035 passed, 17 skipped)."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "evidence": "Sin migracion: el estado es texto sin restriccion en la base (VARCHAR, sin ENUM) y no se agrega ninguna (migrations_included=false; no se tocaron scripts/sql/ ni deployment/**). Documentacion actualizada: docs/database/03_BUSINESS_RULES.md (contrato canonico, 'nuevo' sin asignar, 'asignado' solo por asignacion, sin transiciones restringidas), docs/H3_3_CRM_LITE_WEB_UX.md (seccion 6 con los 12 estados y compatibilidad legacy pendiente->nuevo) y docs/BITACORA.md (entrada de desarrollo; la de cierre la genera el cierre automatico). ruff, black, mypy y bandit en verde; cobertura >= 85% verificada por el CI del PR."
+    },
+    {
+      "id": "AC-7",
+      "status": "pending_verification",
+      "evidence": "Tras el despliegue el humano reinicia los datos de DEV con el script que entrega Claude y comprueba en DEV: filtrar por cada estado, cambiar de estado, asignar un lead de 'Nuevo' a un ejecutivo y ver 'Asignado', los conteos del dashboard (cartera activa, sin asignar, estancados) y los chips en claro y oscuro. Requiere requires_human_acceptance. El Developer no puede afirmar que algo 'se ve bien'."
+    }
+  ],
+  "files_changed": [
+    "app/models/crm_states.py (contrato de 12 estados, identico a la referencia)",
+    "app/models/executive_dashboard.py (CARTERA_INACTIVA_ESTADOS)",
+    "app/web/dependencies.py (estado del mock)",
+    "app/web/static/css/app.css (reglas de chip de estados retirados eliminadas)",
+    "app/web/templates/executive_dashboard.html (texto de cartera activa)",
+    "docs/database/03_BUSINESS_RULES.md (contrato canonico)",
+    "docs/H3_3_CRM_LITE_WEB_UX.md (seccion 6)",
+    "docs/BITACORA.md (entrada de desarrollo)",
+    "tests/unit/test_crm_states.py (contrato nuevo, alias, valor desconocido)",
+    "tests/unit/test_web_app.py, test_web_helpers.py, test_attachments_web.py",
+    "tests/unit/test_solicitud_assignment_service.py (asignado exclusivo)",
+    "tests/unit/test_executive_dashboard_presentation.py, test_executive_dashboard_render.py, test_executive_dashboard_service.py",
+    "tests/unit/test_h3_3_4_timeline_presentation.py, test_h3_3_5_advisor_service.py, test_h3_3_5_advisor_web.py",
+    "tests/unit/test_h3_3_6_export_service.py, test_h3_3_6_export_web.py, test_h3_3_6_xlsx_export_builder.py",
+    "tests/unit/test_h3_3_7_theme.py, test_sim_historial_timeline_presentation.py, test_sim_rv_web.py, test_sim_wizard.py",
+    "tests/integration/test_executive_dashboard_full.py, test_executive_dashboard_per_advisor.py, test_executive_dashboard_repository.py",
+    "tests/integration/test_lead_state_history.py, test_audit_state_view.py, test_web_crm_lite.py",
+    "tests/integration/test_h3_3_5_advisor_http.py, test_h3_3_5_advisor_portfolio.py, test_h3_3_6_export_full.py, test_sim_rv_web.py"
+  ],
+  "assumptions": [
+    "Clase A: sin migracion ni cambio de esquema; NO se toca deployment/**, IAM, bucket ni GuardDuty. El estado es texto sin restriccion en la base y los leads de DEV son sinteticos (el humano los reinicia tras el despliegue).",
+    "El contrato es docs/ui/referencia/estados/crm_states.py: se copio tal cual a app/models/crm_states.py, sin reinterpretar. El alias 'pendiente' sigue mapeando a 'nuevo'.",
+    "Sin transiciones restringidas salvo 'asignado': no se agregan reglas de transicion ni de permiso por estado (son tareas posteriores).",
+    "Los 11 fallos locales de test_executive_dashboard_render/service son por falta de PostgreSQL local (DatabaseConfigurationError), preexistentes y no relacionados; pasan en CI con el servicio postgres.",
+    "El fallo local de test_typography_is_hosted_locally_without_external_font_requests es por mimetypes de Windows (sin .woff2); en CI (ubuntu) el content-type es font/woff2 y pasa. No se debilita la prueba.",
+    "El tono de los chips (info/success/warning/error de crm_state_tone) es el contrato; la paleta CSS de los chips nuevos (tone-info/success/warning/slate/danger) ya venia de CRM-UI-1 y no se modifica (la armonia visual es de CRM-UI-1).",
+    "Sin dependencias nuevas y sin migraciones (migrations_included=false)."
+  ],
+  "migrations_included": false
+}

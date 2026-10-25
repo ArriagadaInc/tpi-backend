@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "CRM-ESTADOS-1-CATALOGO",
+  "created_at": "2026-10-25T00:08:50Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610250000-deployer-sup281149",
+  "verification_scope": "Cierre de VERIFYING de CRM-ESTADOS-1-CATALOGO tras la aceptacion humana de AC-7 (acceptance-01, 2026-10-24T23:49:22Z): revalidacion del estado EB, eventos, smoke HTTP no autenticado y conteos de logs desde el inicio del cutover hasta esta sesion (incluye el reinicio de datos y el smoke humano). Solo lecturas AWS via aws_guard; sin escrituras.",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "bfa4edee00abb786d83b42ccaa01614a9985080d",
+  "deployed_commit": "bfa4edee00abb786d83b42ccaa01614a9985080d",
+  "application_version": "h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "FAIL",
+  "failure_class": "functional",
+  "failure_summary": "El conteo de logs del contenedor de la app desde el cutover registra 1 coincidencia del indicador fuerte 'secret' (harness/policies.yaml observability.log_indicators.strong). Los indicadores fuertes bloquean verified y nunca se degradan. El Deployer no lee lineas de log, asi que no puede confirmar si es un secreto real o un falso positivo. Por conteos por ventana, el evento ocurrio entre 2026-10-23T21:00Z y 2026-10-23T22:00Z (0 coincidencias desde 22:00Z hasta esta sesion). verification-01 (ventana hasta ~20:14Z) tenia 0. Runtime sano e identidad intacta: no es degradacion de infraestructura, no aplica rollback.",
+  "final_state": {
+    "version_label": "h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-23T20:06:35Z",
+    "observed_at": "2026-10-24T23:55:00Z"
+  },
+  "events": {
+    "observed": 20,
+    "levels": {
+      "INFO": 20
+    },
+    "errors": 0,
+    "note": "Sin eventos nuevos despues de 2026-10-23T20:07:34Z (health Info -> Ok); los 20 mas recientes son INFO, sin abortos, rollback ni degradacion."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "note": "VersionLabel observada en esta sesion = etiqueta aprobada y DateUpdated sin cambios desde el cutover (20:06:35Z); el resto de la cadena se verifico en deployment-01 y verification-01 y no hubo updates posteriores."
+  },
+  "smoke_client": "python urllib (cliente independiente), TLS por defecto, sin seguir redirects (.harness-release/smoke_estados1.py)",
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "observed": "200 text/css; reglas de chip de los 12 estados nuevos: todas; de los retirados: ninguna (AC-4)"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "dashboard_requires_auth",
+      "result": "PASS",
+      "observed": "403 anonimo (fail closed por diseno)"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "observed": "ninguna respuesta redirige a dominios legacy"
+    }
+  ],
+  "logs": {
+    "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+    "window_start": "2026-10-23T20:05:47Z",
+    "method": "aws_guard logs filter-log-events con --query length(events); solo conteos; no se leyeron lineas; patrones exactos de harness/policies.yaml; ventana hasta esta sesion. Conteo adicional de Traceback: 0. Control de vida: patron GET = 657 eventos en la ventana.",
+    "secret_window_counts": {
+      "since_2026-10-23T20:05:47Z": 1,
+      "since_2026-10-23T20:15:00Z": 1,
+      "since_2026-10-23T21:00:00Z": 1,
+      "since_2026-10-23T22:00:00Z": 0,
+      "since_2026-10-23T23:00:00Z": 0,
+      "since_2026-10-24T00:00:00Z": 0
+    }
+  },
+  "pii_log_scan": {
+    "matches": 1,
+    "raw_pattern_hits": {
+      "Authorization -REDACTED": 0,
+      "Bearer": 0,
+      "password": 0,
+      "cookie": 0,
+      "raw_payload": 0,
+      "secret": 1,
+      "token": 0,
+      "hash -ACME": 0
+    },
+    "strong_matches": 1,
+    "strong_hits": {
+      "secret": 1
+    },
+    "weak_matches": {},
+    "classification_required": false,
+    "patterns": [
+      "Authorization -REDACTED",
+      "Bearer",
+      "raw_payload",
+      "password",
+      "hash -ACME",
+      "cookie",
+      "secret",
+      "token"
+    ]
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde; release tree ac75c70f == reviewed_tree."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde; en DEV app.css trae las reglas de chip de los 12 estados y ninguna de los retirados."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada; publish run 40008580405 6/6 (gates); sin migracion."
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "method": "human",
+      "evidence": "Aceptado por el humano en evidence/CRM-ESTADOS-1-CATALOGO/approvals/acceptance-01.json (2026-10-24T23:49:22Z, approve.py, nota: reinicio de datos y pruebas de estados OK en DEV)."
+    }
+  ],
+  "warnings": [
+    "Indicador fuerte 'secret' = 1 en la ventana 2026-10-23T21:00Z-22:00Z del log de la app. Requiere que el humano inspeccione esa linea (el Deployer no lee logs) y decida: falso positivo (p. ej. la palabra en un mensaje sin valor) o exposicion real (rotar y corregir en una tarea aparte).",
+    "AC-1..AC-7 cumplidos y smoke 7/7 PASS: el unico motivo del FAIL es el indicador fuerte en logs.",
+    "Esta sesion no hizo escrituras AWS."
+  ],
+  "rollback_executed": false,
+  "safety": {
+    "aws_writes": [],
+    "update_environment_executed": false,
+    "secrets_accessed": false,
+    "log_lines_read": false,
+    "denied_events": 0
+  }
+}

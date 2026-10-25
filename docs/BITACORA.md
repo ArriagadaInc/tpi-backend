@@ -22,6 +22,56 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-25 - Harness: tarea CRM-ESTADOS-1-CATALOGO cerrada a mano (el Harness la registra como CANCELLED); desplegada y aceptada, bloqueada por una falsa alarma del escaneo de logs
+
+- Titulo: CRM: nuevo catalogo de 12 estados del lead segun el protocolo de runners
+- Evidencia: `evidence/CRM-ESTADOS-1-CATALOGO/` y `tasks/completed/CRM-ESTADOS-1-CATALOGO.yaml`.
+- release_sha: `bfa4edee00abb786d83b42ccaa01614a9985080d` (PR 129)
+- application_version: `h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1`
+- bundle_sha256: `2c4c5905c70d5784ecf7879a1715afd9f235ea327afa7beb2b5826ce3837ae8a`
+- lkg: `h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1`
+- deployment: `success` (un solo `update-environment` version-only, 2026-10-23 20:05Z, sin rollback)
+- verification: `FAIL` por una falsa alarma ya clasificada (ver abajo); el humano aceptó AC-7 el 2026-10-24 (23:49Z).
+
+**Resultado.** El release con los 12 estados está en DEV y los criterios AC-1 a AC-7 quedaron cumplidos o aceptados. El Harness no
+pudo marcarla `DONE`: la verificación automática quedó en `FAIL` y el humano cerró la tarea con `resolve --to IDLE` (opción B), que el
+Harness registra como `CANCELLED` aunque el despliegue está vigente.
+
+**Qué bloqueó la verificación.** El conteo de logs desde el despliegue dio 1 coincidencia del indicador fuerte `secret`
+(`harness/policies.yaml`, `observability.log_indicators.strong`), entre 2026-10-23 21:00Z y 22:00Z. Se inspeccionó la línea en solo lectura,
+con los valores largos enmascarados: es un registro de acceso de Caddy de un robot de internet (IP `34.52.229.253`) que pidió
+`GET /secrets.json` y recibió **404 con tamaño 0**. El mismo origen hizo unas 117 peticiones de barrido (`/.env`, `/.docker/config.json`,
+`/.claude/settings.json`...), todas 404. La palabra está en la dirección pedida, no en un valor filtrado: falsa alarma, sin exposición.
+
+**Por qué no se resolvió dentro del Harness.** Los indicadores fuertes bloquean `verified` y nunca se degradan; la ventana de conteo empieza
+en el inicio del despliegue, así que `resolve --to VERIFYING` habría vuelto a contar la misma línea. Además se repetirá en cada despliegue:
+cualquier robot que pida `/secrets.json` o `/token` activa la regla (las verificaciones anteriores pasaron porque no hubo tal tráfico).
+
+**Decisión del humano.** Opción B: cerrar a mano ahora y tratar la regla como tarea aparte (`HARNESS-LOGS-FALSOS-POSITIVOS-CADDY`, P1, en
+el backlog). La opción A (excluir de los patrones fuertes las líneas de acceso de Caddy) se descartó por ahora por sus contras: se pierde
+la detección de un valor sensible puesto en la URL (hoy la app no lo hace y Caddy ya oculta `Authorization` y `Cookie`), debilita una regla
+pensada como rígida, el patrón de exclusión de CloudWatch hay que validarlo contra los logs reales y no cubre otros usos legítimos de esas
+palabras en los logs de la app. Cambia `harness/policies.yaml`, archivo protegido: exige una sesión de mantenimiento lanzada por el humano.
+
+**Lecciones de la operación de la tarea** (ninguna cambió código del Harness):
+
+1. *El Developer (runtime `other`) necesita el Python del entorno virtual de `harness-deepagents`.* Con `python` suelto sale con código 1 en
+   0,3 segundos (`ModuleNotFoundError`); Reviewer y Deployer (Claude) no lo notan. Siempre dar la ruta completa del intérprete.
+2. *El tope de 300 llamadas de herramienta por turno* (`harness-deepagents/models.yaml`) cortó un turno del Developer justo antes del commit;
+   la nota para el siguiente turno (no rehacer, pocas llamadas, gates una vez) lo resolvió.
+3. *Un script de Python no puede escribir rutas protegidas del Harness:* el Reviewer quiso corregir su payload con `python -c` y el guard lo
+   negó; el payload se reescribe completo con la herramienta Write.
+4. *Sin `ANTHROPIC_API_KEY` en la terminal del orquestador, `claude -p` cae al inicio de sesión del plan* y falla con «OAuth session
+   expired and could not be refreshed» en menos de 5 segundos. La clave se pone en esa terminal antes de lanzar el orquestador.
+5. *Las decisiones humanas tomadas en otra terminal (`resolve`, `gate`, `accept`) no despiertan al orquestador:* hay que responder su aviso
+   en su propia ventana. Y un Deployer que espera en segundo plano termina su turno y el supervisor se detiene.
+6. *La base de DEV tiene tablas del pipeline de datos* (`campanas_atribucion`, `eventos_lead`, `citas`, `fichas_diagnosticas`,
+   `ingesta_google_sheets`) que este repositorio no conocía; quedaron documentadas en `docs/database/` (PR 130) junto con la herramienta
+   `scripts/dev_reset_leads.py`, que reinicia los datos de DEV y siembra 100 leads completos.
+
+**Siguiente paso:** definir y ejecutar `HARNESS-LOGS-FALSOS-POSITIVOS-CADDY` antes de desplegar nada más; después activar
+`CRM-PERFILES-1-RBAC` (Runner, Coordinador, Socio).
+
 ### 2026-10-24 - Base de datos: inventario de DEV, relaciones del pipeline documentadas y herramienta de reinicio de datos
 
 - Contexto: para el criterio AC-7 de `CRM-ESTADOS-1-CATALOGO` el humano debía reiniciar los datos de DEV. El script de reinicio se negó a

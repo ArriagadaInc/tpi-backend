@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "CRM-ESTADOS-1-CATALOGO",
+  "created_at": "2026-10-23T19:00:35Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610231858-reviewer-supe11a92",
+  "reviewed_sha": "938b3bf02198c0fb62385ec6a41c90af9aeef05b",
+  "reviewed_tree": "ac75c70fe358b82197088ff268f5ee74e2287b64",
+  "pr_number": 129,
+  "ci": {
+    "run_id": "39995255642",
+    "conclusion": "success",
+    "head_sha": "938b3bf02198c0fb62385ec6a41c90af9aeef05b",
+    "jobs": [
+      "Docker Build",
+      "Lint & Format",
+      "Release Tooling Validation",
+      "Security Audit",
+      "Tests"
+    ]
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "minor",
+      "file": "app/web/static/css/app.css",
+      "summary": "Se elimino .status-badge.pendiente (claro y oscuro). 'pendiente' es un alias que sigue mapeando a 'nuevo'; los chips derivan la clase del valor crudo, asi que un lead legado con 'pendiente' mostraria la etiqueta 'Nuevo' con el estilo base del chip. Sin impacto en DEV: leads sinteticos que el humano reinicia (AC-7) y el contrato escribe 'nuevo'.",
+      "required_action": "Ninguna para este merge; si aparecieran valores legados, una tarea posterior puede derivar la clase del estado normalizado."
+    },
+    {
+      "id": "F-2",
+      "severity": "minor",
+      "file": "tests/unit/test_crm_states.py",
+      "summary": "AC-5 pide una prueba de que un valor desconocido no rompe la pantalla; la prueba nueva (test_unknown_saved_state_is_preserved_without_error) es de funciones del contrato. La cobertura de pantalla existe en el dashboard (barras de estado escapan valores desconocidos, preexistente) y en la integracion por asesor con estado desconocido; listado y detalle usan crm_state_label, que devuelve el valor tal cual.",
+      "required_action": "Ninguna para este merge; opcional agregar una prueba web del listado/detalle con un estado desconocido."
+    },
+    {
+      "id": "F-3",
+      "severity": "info",
+      "file": "scripts/benchmark_executive_dashboard.py",
+      "summary": "El script de benchmark sigue sembrando estados retirados (contactado, citado). Fuera de scope.paths y no es runtime; con el contrato nuevo esos valores se muestran tal cual.",
+      "required_action": "Ninguna; opcional actualizarlo en una tarea futura."
+    },
+    {
+      "id": "F-4",
+      "severity": "info",
+      "file": "app/models/crm_states.py",
+      "summary": "CRM_STATE_TONES (p. ej. reunion_agendada=success, datos_erroneos=warning) no coincide uno a uno con la paleta CSS de CRM-UI-1; ambos vienen tal cual de sus referencias aprobadas (git diff --no-index contra docs/ui/referencia/estados/crm_states.py vacio). Los chips usan las clases CSS.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F-5",
+      "severity": "info",
+      "file": "tests/",
+      "summary": "La revision de esta sesion se apoya en el CI verde del SHA exacto (Tests con PostgreSQL y cobertura >= 85%) y en inspeccion del diff; la ejecucion local en Windows sin PostgreSQL da fallos de entorno conocidos (declarados por el Developer y por la sesion de revision anterior), no regresiones.",
+      "required_action": "Ninguna."
+    }
+  ],
+  "checks": [
+    {
+      "name": "ci_green_exact_sha: run 39995255642 (pull_request) success sobre headSha 938b3bf; jobs Docker Build, Lint & Format, Release Tooling Validation, Security Audit, Tests en success",
+      "result": "PASS"
+    },
+    {
+      "name": "PR 129 OPEN, MERGEABLE, base main, head 938b3bf == head_sha de developer-01; merge-base == origin/main 7d934a3 (PR al dia con main); reviewed_tree = git rev-parse 938b3bf^{tree} = ac75c70f",
+      "result": "PASS"
+    },
+    {
+      "name": "scope_no_unrelated_changes: 36 archivos, todos bajo app/models, app/web, tests y docs (scope.paths); sin deployment/**, scripts/sql, migraciones ni dependencias nuevas; clase A no mezclada",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-1 functional_compliance: app/models/crm_states.py identico a docs/ui/referencia/estados/crm_states.py (diff vacio); 12 estados con etiquetas con tilde; alias pendiente->nuevo; sin referencias residuales a estados retirados en app/ (grep)",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-2: servicio (solicitud_service.py:603) y repositorio (solicitud_repository.py:1170) rechazan 'asignado' en el cambio generico; el selector lo excluye (solicitud_service.py:581); flujo de asignacion sin cambios",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-3: CARTERA_INACTIVA_ESTADOS = (cerrado, perdido, no_interesado, datos_erroneos, no_contactado); ficha_generada activo; texto del KPI actualizado; integracion por asesor cubre cada estado inactivo, ficha_generada, nuevo y desconocido",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-4: reglas CSS de estados retirados eliminadas en claro y oscuro; los 12 estados tienen regla status-badge y badge-status (verificado por grep); sin reglas de transicion nuevas",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-5 tests_validate_behavior_not_coverage: suites actualizadas por renombre mecanico sin eliminar comprobaciones (unico test retirado renombrado a twelve); pruebas nuevas de etiquetas, tonos y valor desconocido",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-6 documentation: sin migracion; docs/database/03_BUSINESS_RULES.md, docs/H3_3_CRM_LITE_WEB_UX.md y docs/BITACORA.md actualizados; cobertura >= 85% en CI",
+      "result": "PASS"
+    },
+    {
+      "name": "layering y maintainability: cambios limitados a constantes del contrato y del dashboard, plantilla y CSS; sin abstracciones nuevas",
+      "result": "PASS"
+    },
+    {
+      "name": "Seguridad/PII: sin cambios en RBAC, CSRF, masking, rutas ni logging; estado renderizado con autoescape de Jinja; sin secretos en el diff",
+      "result": "PASS"
+    },
+    {
+      "name": "db_migration: no aplica (sin SQL ni cambios de esquema; estado es texto sin restriccion)",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "AC-7 (humano) pendiente tras el despliegue: reinicio de datos de DEV y comprobacion de filtros, cambio de estado, asignacion, conteos y chips",
+    "Rollback version-only al release anterior: los estados nuevos guardados se mostrarian tal cual"
+  ]
+}

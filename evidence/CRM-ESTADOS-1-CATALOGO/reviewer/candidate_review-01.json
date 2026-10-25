@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "CRM-ESTADOS-1-CATALOGO",
+  "created_at": "2026-10-23T19:24:18Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610231919-reviewer-sup3b0ebb",
+  "release_sha": "bfa4edee00abb786d83b42ccaa01614a9985080d",
+  "reviewed_tree": "ac75c70fe358b82197088ff268f5ee74e2287b64",
+  "release_tree": "ac75c70fe358b82197088ff268f5ee74e2287b64",
+  "decision": "APPROVED",
+  "cause": null,
+  "candidate_evidence": "evidence/CRM-ESTADOS-1-CATALOGO/deployment/candidate-01.json",
+  "application_version": "h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1",
+  "lkg_version_label": "h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1",
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse bfa4ede^{tree} = ac75c70f = reviewed_tree de review-01 (reviewed_sha 938b3bf^{tree} = ac75c70f) y de merge-01"
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "tras git fetch origin main, origin/main = bfa4ede (ancestro verificado con merge-base --is-ancestor); padre 7d934a3"
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "gh run view 40008580405: completed/success, headSha bfa4ede, 6/6 jobs success (Authorize source revision, Tests, Security Audit, Lint & Format, Docker Build, Publish)"
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "ecr describe-images: tpi-dev-app sha256:f3f5b79f... y tpi-dev-caddy sha256:42093164... ACTIVE, tag unico = release_sha, manifest Docker v2 (no indice OCI); referenciadas por digest en el bundle"
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "describe-image-scan-findings: COMPLETE en ambos digests (19:15:27Z / 19:15:28Z), findings vacios, findingSeverityCounts vacio"
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "git diff --quiet bfa4ede sobre template domainlocked y build_eb_ecr_bundle.py (exit 0); reconstruccion independiente en tempfile.mkdtemp con build_domain_locked_bundle y los digests verificados: sha256 2c4c5905c70d5784ecf7879a1715afd9f235ea327afa7beb2b5826ce3837ae8a, 4917 bytes, igual al candidate"
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "zip con una sola entrada docker-compose.yml; sin clave build; sin genialabs; dominios literales dev.tupensioninteligente.cl y backoffice.dev.tupensioninteligente.cl; 3 lineas image por digest sha256"
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "head-object --checksum-mode ENABLED: ChecksumSHA256 LExZBccNV4Ts94eaFxWv2fI16jJ6+nvrK1gmzjg3roo= (= base64 del sha256 reconstruido), FULL_OBJECT, ContentLength 4917; key content-addressed con el sha256"
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "describe-application-versions (un label): h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1 UNPROCESSED, SourceBundle = bucket/key S3 del candidate"
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "reviewed_tree ac75c70f -> release bfa4ede -> publish 40008580405 -> digests app f3f5b79f / caddy 42093164 -> bundle 2c4c5905 -> S3 key + checksum -> AV h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1"
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "describe-environments en esta sesion: tpi-backoffice-dev-green VersionLabel = h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1, Ready/Green/Ok, sin operacion en curso, DateUpdated 15:37:58Z (environment sin mutar)"
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "AV LKG existe (UNPROCESSED, como todas las del fast path), SourceBundle con key content-addressed 6b9b08ea...; head-object ChecksumSHA256 a5sI6hav... = base64 de 6b9b08ea..., 4917 bytes"
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "digests del LKG segun evidence/CRM-UI-1-ARMONIA-VISUAL/deployment/candidate-01.json (app c4915328..., caddy 7495bb18...): ambos ACTIVE en ECR, tag db51f95"
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "inspeccion estructural del compose reconstruido y del zip del deployer: las 5 lineas con nombres de variables sensibles son interpolaciones, ninguna con valor literal; no se leyeron archivos de credenciales. candidate-01 y esta evidencia solo contienen IDs, digests, hashes y labels"
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "9 entradas: HTTPS publico, login, catalogos API, app.css (AC-4), /leads con auth, sin dominio legado, identidad runtime, conteos de logs y AC-7 humano"
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "un unico update-environment con --environment-name y --version-label; sin option settings, template, platform ni tier"
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "policies.yaml: DEPLOYING -> deployer cutover = @read + elasticbeanstalk update-environment; ROLLING_BACK -> rollback igual; los comandos van por aws_guard.py"
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "note": "un solo comando de cutover; espera por describe-environments con limite de 30 min, sin reintentos"
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "rollback version-only a h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1, max_attempts 1, condicionado a las 7 condiciones de rollback_authorization"
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": "sin IAM, Route53, secretos ni migraciones; database_changes ninguna (estado de lead es texto sin restriccion)"
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "note": "el plan solo registra labels, estado y eventos acotados; logs solo por conteo"
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS",
+      "note": "residuos declarados: imagenes ECR, objeto S3 content-addressed y AV UNPROCESSED inertes; environment sin mutar"
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "note": "rollback_plan.conditions: un defecto funcional o visual no autoriza rollback (not_purely_functional_defect)"
+    }
+  ],
+  "findings": [
+    {
+      "id": "CR-1",
+      "severity": "info",
+      "file": null,
+      "summary": "El checkout local esta en 7d934a3, atrasado respecto de origin/main (bfa4ede); las comparaciones se hicieron contra el release_sha (git diff --quiet sobre template y constructor, exit 0) y no contra el arbol de trabajo.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "CR-2",
+      "severity": "info",
+      "file": null,
+      "summary": "No se ejecuto dry-run de update-environment (el modo candidate_read no lo permite); los checks del plan se demostraron por inspeccion de comandos y de harness/policies.yaml.",
+      "required_action": "Ninguna."
+    }
+  ],
+  "risks": [
+    "ECR lifecycle keep-100 podria expirar imagenes del LKG a futuro; hoy presentes.",
+    "Los leads de DEV con estados retirados se mostraran con su valor crudo hasta el reinicio humano de datos (AC-7).",
+    "AC-7 requiere comprobacion humana tras el cutover."
+  ]
+}

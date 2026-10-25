@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "resolution",
+  "task_id": "CRM-ESTADOS-1-CATALOGO",
+  "created_at": "2026-10-25T02:16:07Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "from_state": "BLOCKED_HUMAN",
+  "to_state": "IDLE",
+  "reason": "Cierre manual: CRM-ESTADOS-1 desplegado en DEV y aceptado (AC-1..AC-7). La verificacion automatica quedo bloqueada por 1 coincidencia del indicador fuerte 'secret' que es una falsa alarma: linea de acceso de Caddy de un robot que pidio GET /secrets.json y recibio 404 (inspeccionada por el humano, valores enmascarados). La regla se corregira en una tarea aparte."
+}
