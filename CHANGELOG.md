@@ -28,6 +28,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ### ✅ Agregado
 
+- **Documentación del inventario de DEV y herramienta de reinicio de datos**
+  - `docs/database/08_DEV_DATA_INVENTORY.md`: procedencia de los datos de DEV, inventario con fecha (2026-10-24), orden de dependencias de las claves foráneas, ubicación de los adjuntos en S3, consultas útiles y el procedimiento de reinicio.
+  - `docs/database/02_PHYSICAL_SCHEMA.md` y `01_ARCHITECTURE.md`: las cinco tablas operativas del pipeline (`campanas_atribucion`, `eventos_lead`, `citas`, `fichas_diagnosticas`, `ingesta_google_sheets`) y el mapa de relaciones.
+  - `scripts/dev_reset_leads.py` (solo para el humano, solo contra DEV por el túnel, con `tpi_admin`): `--inspeccionar` (solo lectura), simulación por defecto y `--ejecutar` con frase de confirmación; borra los leads sintéticos con sus tablas dependientes y los adjuntos de S3 y siembra 100 leads ficticios completos en los 12 estados (50 hombres de 62 a 68 años y 50 mujeres de 57 a 63, con género, estado civil y AFP de los catálogos, consentimiento, atribución de campaña, evento e ingesta). Pruebas en `tests/unit/test_dev_reset_leads.py`.
+
 - **Revisión previa a producción de los adjuntos de notas** (CRM-ADJUNTOS-REVISION-PREPROD)
   - Informe `docs/ADJUNTOS_REVISION_PREPROD.md` con los seis puntos abiertos (archivos incrustados, visibilidad, EXIF/GPS,
     retención y borrado, costo de GuardDuty y streams comprimidos): cómo funciona hoy con referencias al código, riesgo,

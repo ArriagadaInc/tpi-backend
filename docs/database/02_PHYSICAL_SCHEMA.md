@@ -295,6 +295,93 @@ Estado:
 
 - `No validado todavia en AWS DEV` at column level in this document
 
+### Tablas operativas del pipeline de datos
+
+Las cinco tablas siguientes las crea el proyecto hermano `tpi-data-pipeline` (`setup_db.py`; descripcion funcional en su
+`docs/BASE_DE_DATOS_TPI.md`). El backoffice no las lee ni las escribe hoy. Verificado en AWS DEV el 2026-10-24 con
+`scripts/dev_reset_leads.py --inspeccionar`: que existen, sus filas y que las claves foraneas apuntan como se indica (todas `NO ACTION`).
+Las columnas vienen del DDL del pipeline y **no se han comparado columna a columna con DEV**. Los privilegios de `tpi_app` sobre ellas no
+estan verificados. Inventario y orden de borrado: [08_DEV_DATA_INVENTORY.md](08_DEV_DATA_INVENTORY.md).
+
+#### `tpi.campanas_atribucion`
+
+Atribucion de campana (UTM) de un lead; una sola por lead. Filas en DEV al 2026-10-24: 69.
+
+| Columna | Tipo | Nullable | Default | PK / FK / UNIQUE | Proposito |
+| ------- | ---- | -------- | ------- | ---------------- | --------- |
+| `id_atribucion` | UUID | No | `gen_random_uuid()` | PK | Identificador |
+| `id_lead` | UUID | No | none | UNIQUE; FK -> `tpi.leads(id_lead)` | Lead atribuido (1:1) |
+| `utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content` | VARCHAR(150) | Yes | none | - | Parametros UTM |
+| `created_at` | TIMESTAMPTZ | No | `now()` | - | Creacion |
+
+#### `tpi.eventos_lead`
+
+Eventos relevantes de un lead (bitacora del pipeline). Filas en DEV: 69. Indice `idx_eventos_lead_id` sobre `id_lead`.
+
+| Columna | Tipo | Nullable | Default | PK / FK / UNIQUE | Proposito |
+| ------- | ---- | -------- | ------- | ---------------- | --------- |
+| `id_evento` | UUID | No | `gen_random_uuid()` | PK | Identificador |
+| `id_lead` | UUID | No | none | FK -> `tpi.leads(id_lead)` | Lead del evento |
+| `tipo_evento` | VARCHAR(80) | No | none | - | Tipo de evento |
+| `descripcion` | TEXT | Yes | none | - | Detalle |
+| `fecha_evento` | TIMESTAMPTZ | No | `now()` | - | Momento |
+| `usuario_responsable` | VARCHAR(150) | Yes | none | - | Quien lo origino |
+| `metadata` | JSONB | Yes | none | - | Datos estructurados |
+
+#### `tpi.citas`
+
+Citas de un lead con un asesor. Filas en DEV: 0 (sin uso todavia).
+
+| Columna | Tipo | Nullable | Default | PK / FK / UNIQUE | Proposito |
+| ------- | ---- | -------- | ------- | ---------------- | --------- |
+| `id_cita` | UUID | No | `gen_random_uuid()` | PK | Identificador |
+| `id_lead` | UUID | No | none | FK -> `tpi.leads(id_lead)` | Lead de la cita |
+| `id_asesor` | UUID | Yes | none | FK -> `tpi.asesores(id_asesor)` | Asesor de la cita |
+| `fecha_hora` | TIMESTAMPTZ | No | none | - | Fecha y hora |
+| `canal` | VARCHAR(50) | No | `'Google Meet'` | - | Canal de la reunion |
+| `estado_cita` | VARCHAR(50) | No | `'agendada'` | - | Estado de la cita |
+| `link_reunion` | TEXT | Yes | none | - | Enlace |
+| `created_at` | TIMESTAMPTZ | No | `now()` | - | Creacion |
+
+El estado `reunion_agendada` del lead (`tpi.leads.estado_lead`) **no** esta ligado a esta tabla: hoy es solo el valor del estado.
+
+#### `tpi.fichas_diagnosticas`
+
+Fichas de diagnostico de un lead. Filas en DEV: 0 (sin uso todavia).
+
+| Columna | Tipo | Nullable | Default | PK / FK / UNIQUE | Proposito |
+| ------- | ---- | -------- | ------- | ---------------- | --------- |
+| `id_ficha` | UUID | No | `gen_random_uuid()` | PK | Identificador |
+| `id_lead` | UUID | No | none | FK -> `tpi.leads(id_lead)` | Lead de la ficha |
+| `id_asesor` | UUID | Yes | none | FK -> `tpi.asesores(id_asesor)` | Asesor |
+| `creada_por` | VARCHAR(150) | Yes | none | - | Autor |
+| `fecha_creacion` | TIMESTAMPTZ | No | `now()` | - | Creacion |
+| `version` | INTEGER | No | `1` | - | Version de la ficha |
+| `formato` | VARCHAR(30) | No | `'PDF'` | - | Formato |
+| `ruta_archivo` | TEXT | Yes | none | - | Ubicacion del archivo |
+| `resumen_caso` | TEXT | Yes | none | - | Resumen |
+| `retiro_programado`, `renta_vitalicia_simple`, `renta_vitalicia_garantizada`, `renta_vitalicia_con_aumentos` | JSONB | Yes | none | - | Alternativas evaluadas |
+| `beneficios_reforma` | TEXT | Yes | none | - | Beneficios de la reforma |
+| `estado_ficha` | VARCHAR(50) | No | `'borrador'` | - | Estado de la ficha |
+
+El estado `ficha_generada` del lead tampoco esta ligado a esta tabla.
+
+#### `tpi.ingesta_google_sheets`
+
+Una fila por fila ingerida desde Google Sheets (control de la ingesta y sus errores). Filas en DEV: 69, todas ligadas a un lead.
+Indice `idx_ingesta_estado` sobre `estado_procesamiento`.
+
+| Columna | Tipo | Nullable | Default | PK / FK / UNIQUE | Proposito |
+| ------- | ---- | -------- | ------- | ---------------- | --------- |
+| `id_ingesta` | UUID | No | `gen_random_uuid()` | PK | Identificador |
+| `fila_origen` | INTEGER | Yes | none | - | Numero de fila en la hoja |
+| `sheet_origen` | VARCHAR(200) | No | none | - | Hoja de origen |
+| `payload_original` | JSONB | No | none | - | Fila original |
+| `estado_procesamiento` | VARCHAR(50) | No | `'pendiente'` | Indice | Estado del procesamiento |
+| `errores_validacion` | JSONB | Yes | none | - | Errores de validacion |
+| `id_lead_generado` | UUID | Yes | none | FK -> `tpi.leads(id_lead)` | Lead creado a partir de la fila (nulo si fallo) |
+| `fecha_ingesta` | TIMESTAMPTZ | No | `now()` | - | Momento de la ingesta |
+
 ### Catalog tables
 
 Contrato versionado:
@@ -339,6 +426,56 @@ Contrato versionado:
 Estado:
 
 - `No validado todavia en AWS DEV` in this release note
+
+## Mapa de relaciones y orden de dependencias
+
+Todas las relaciones del esquema `tpi` alrededor de `leads` y `personas`. Las claves foraneas fueron verificadas en AWS DEV el 2026-10-24
+(`scripts/dev_reset_leads.py --inspeccionar`); las de los catalogos y `asesores` vienen del DDL versionado.
+
+```mermaid
+erDiagram
+    PERSONAS ||--o{ LEADS : "id_persona"
+    PERSONAS ||--o{ CONSENTIMIENTOS : "id_persona"
+    PERSONAS |o--o{ AUDITORIA : "id_persona (opcional)"
+    LEADS |o--o{ CONSENTIMIENTOS : "id_lead (opcional)"
+    LEADS ||--o| CAMPANAS_ATRIBUCION : "id_lead (UNIQUE)"
+    LEADS ||--o{ EVENTOS_LEAD : "id_lead"
+    LEADS ||--o{ ASIGNACIONES : "id_lead"
+    LEADS ||--o{ CITAS : "id_lead"
+    LEADS ||--o{ FICHAS_DIAGNOSTICAS : "id_lead"
+    LEADS |o--o{ AUDITORIA : "id_lead (opcional)"
+    LEADS |o--o{ INGESTA_GOOGLE_SHEETS : "id_lead_generado (opcional)"
+    LEADS |o--o{ API_IDEMPOTENCY : "lead_id (SET NULL)"
+    ASESORES ||--o{ ASIGNACIONES : "id_asesor"
+    ASESORES |o--o{ CITAS : "id_asesor (opcional)"
+    ASESORES |o--o{ FICHAS_DIAGNOSTICAS : "id_asesor (opcional)"
+    CATALOGO_AFP |o--o{ LEADS : "afp_id (opcional)"
+    CATALOGO_GENERO |o--o{ LEADS : "genero_id (opcional)"
+    CATALOGO_ESTADO_CIVIL |o--o{ LEADS : "estado_civil_id (opcional)"
+```
+
+| Tabla hija | Columna | Padre | Obligatoria | Al borrar el padre |
+| ---------- | ------- | ----- | ----------- | ------------------ |
+| `leads` | `id_persona` | `personas` | Si | NO ACTION |
+| `consentimientos` | `id_persona` / `id_lead` | `personas` / `leads` | Si / No | NO ACTION |
+| `asignaciones` | `id_lead` / `id_asesor` | `leads` / `asesores` | Si / Si | NO ACTION |
+| `auditoria` | `id_lead` / `id_persona` | `leads` / `personas` | No / No | NO ACTION |
+| `campanas_atribucion` | `id_lead` (UNIQUE) | `leads` | Si | NO ACTION |
+| `eventos_lead` | `id_lead` | `leads` | Si | NO ACTION |
+| `citas` | `id_lead` / `id_asesor` | `leads` / `asesores` | Si / No | NO ACTION |
+| `fichas_diagnosticas` | `id_lead` / `id_asesor` | `leads` / `asesores` | Si / No | NO ACTION |
+| `ingesta_google_sheets` | `id_lead_generado` | `leads` | No | NO ACTION |
+| `api_idempotency` | `lead_id` | `leads` | No | **SET NULL** |
+
+Restricciones utiles al insertar o borrar:
+
+- `personas.rut` es UNIQUE (hasta 12 caracteres; forma canonica `12345678-5`, sin puntos).
+- Una sola asignacion `activa` por lead (`asignaciones_one_active_per_lead_uq`, UNIQUE parcial) y `asesores.nombre` UNIQUE en minusculas.
+- Una sola atribucion por lead (`campanas_atribucion.id_lead` UNIQUE).
+- Ninguna tabla depende de otra tabla dependiente: las hijas de `leads` son todas hojas. Por eso, para vaciar los leads, se borran primero
+  las hijas, luego `leads` y al final `personas` (el orden completo esta en [08_DEV_DATA_INVENTORY.md](08_DEV_DATA_INVENTORY.md)).
+- Los adjuntos de las notas no tienen tabla: la marca vive en `leads.comentarios` y los archivos en S3 (`leads/{id_lead}/{id_adjunto}`), de
+  modo que ninguna clave foranea los protege ni los borra.
 
 ## Divergencias relevantes
 
