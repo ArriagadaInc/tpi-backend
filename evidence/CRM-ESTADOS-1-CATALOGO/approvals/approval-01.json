@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "approval",
+  "task_id": "CRM-ESTADOS-1-CATALOGO",
+  "created_at": "2026-10-23T19:38:30Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "approved_commit": "bfa4edee00abb786d83b42ccaa01614a9985080d",
+  "app_digest": "sha256:f3f5b79f6e2e3fa6ffa6d4fa834ee852b330c45324edc5e1d458fe54615ea07d",
+  "caddy_digest": "sha256:420931647023a929506760e67bd743c2a03b9df75e482f2bd5cc9edffbde7837",
+  "bundle_sha256": "2c4c5905c70d5784ecf7879a1715afd9f235ea327afa7beb2b5826ce3837ae8a",
+  "s3_key": "tpi-backoffice/dev-releases/h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1/2c4c5905c70d5784ecf7879a1715afd9f235ea327afa7beb2b5826ce3837ae8a.zip",
+  "application_version": "h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "lkg_version_label": "h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1",
+  "candidate_evidence": {
+    "path": "evidence/CRM-ESTADOS-1-CATALOGO/deployment/candidate-01.json",
+    "sha256": "06ce536d2cf0363c5ec4bf0db7b44c2ab3975629b3f914d0941697e61da8cff9"
+  },
+  "rollback_authorization": {
+    "scope": "single_version_only_rollback_to_named_lkg",
+    "max_attempts": 1,
+    "lkg_version_label": "h3-crm-ui-1-armonia-visual-db51f95-domainlocked-r1",
+    "conditions": [
+      "update_environment_accepted",
+      "environment_degraded_inconsistent_or_not_expected_state",
+      "lkg_application_version_usable",
+      "lkg_images_present_in_ecr",
+      "no_option_settings_required",
+      "not_purely_functional_defect",
+      "no_previous_rollback_attempt"
+    ]
+  },
+  "decision": "approved"
+}

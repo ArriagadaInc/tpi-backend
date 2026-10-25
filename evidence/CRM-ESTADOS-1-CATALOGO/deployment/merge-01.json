@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "CRM-ESTADOS-1-CATALOGO",
+  "created_at": "2026-10-23T19:02:58Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610231901-deployer-sup9a8551",
+  "pr_number": 129,
+  "reviewed_sha": "938b3bf02198c0fb62385ec6a41c90af9aeef05b",
+  "reviewed_tree": "ac75c70fe358b82197088ff268f5ee74e2287b64",
+  "release_sha": "bfa4edee00abb786d83b42ccaa01614a9985080d",
+  "release_tree": "ac75c70fe358b82197088ff268f5ee74e2287b64",
+  "main_parent_sha": "7d934a34891154267899b3faa942285b4133cad4",
+  "method": "squash",
+  "match_head_commit_used": true
+}

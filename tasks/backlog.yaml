@@ -35,124 +35,6 @@ items:
   - 'decision del humano el 2026-10-21 (opcion B): los PDF con archivos incrustados se permiten, con condiciones
     (se siguen rechazando JavaScript, /Launch y cifrados; auditoria del dato; etiqueta en la interfaz;
     ajuste para volver al rechazo; revision antes de produccion); definida en CRM-ADJUNTOS-3-AJUSTES'
-- id: CRM-ESTADOS-1-CATALOGO
-  title: 'CRM: nuevo catalogo de 12 estados del lead segun el protocolo de runners'
-  priority: P1
-  category: functional
-  status: pending
-  change_class: A
-  summary: 'Segunda tarea de la produccion minima: los 12 estados del protocolo de runners, con ''Asignado''
-    solo por asignacion y la cartera activa redefinida. Solo catalogo: sin datos estructurados ni automatizacion.'
-  evidence:
-  - TPI_Protocolo_Runners_Canal_Web.pdf, pagina 8 (estados estandar)
-  - docs/ui/referencia/estados/crm_states.py (contrato aprobado)
-  task:
-    id: CRM-ESTADOS-1-CATALOGO
-    title: 'CRM: nuevo catalogo de 12 estados del lead segun el protocolo de runners'
-    objective: 'Reemplazar los estados del lead por los del protocolo de trabajo de los runners: Nuevo,
-      Asignado, Sin contacto, En seguimiento, Reunion agendada, Reunion realizada, Ficha generada, Cerrado,
-      No interesado, Datos erroneos, No contactado y Perdido. ''Nuevo'' significa sin asignar y ''Asignado''
-      se establece solo al asignar el lead a un ejecutivo (como hoy). Es solo el catalogo: los datos estructurados
-      (numero de intento, reunion, no contactar) y la automatizacion de los 14 dias son tareas posteriores.'
-    source:
-      type: story
-      ref: Protocolo de trabajo para Runners (TPI_Protocolo_Runners_Canal_Web.pdf (reunion de equipo runners,
-        octubre 2026)) y decisiones del humano del 2026-10-22; referencia en docs/ui/referencia/estados/.
-    change_class: A
-    deploy_required: true
-    requires_human_acceptance: true
-    acceptance_criteria:
-    - id: AC-1
-      verification: automated
-      description: 'Contrato de estados. app/models/crm_states.py queda con los 12 estados, etiquetas,
-        tonos y alias de docs/ui/referencia/estados/crm_states.py (valores: nuevo, asignado, sin_contacto,
-        en_seguimiento, reunion_agendada, reunion_realizada, ficha_generada, cerrado, no_interesado, datos_erroneos,
-        no_contactado, perdido; las etiquetas llevan sus tildes, como en el archivo de referencia: la
-        o de Reunion y la e de Datos erroneos). El alias ''pendiente'' sigue mapeando a ''nuevo''. Los
-        estados anteriores (prospecto, contactado, citado, en_tramite, expediente, no_califica, duplicado,
-        dormido) dejan de existir en el contrato; un valor desconocido guardado en la base se muestra
-        tal cual, sin error.'
-    - id: AC-2
-      verification: automated
-      description: '''Asignado'' sigue siendo exclusivo de la asignacion: asignar un lead a un ejecutivo
-        lo pasa a ''asignado'' y registra el evento de historial como hoy; elegir ''asignado'' a mano
-        en el cambio de estado se rechaza (servicio y repositorio); el selector de estado del detalle
-        no lo ofrece. Las pruebas de asignacion y de historial se actualizan sin debilitarse.'
-    - id: AC-3
-      verification: automated
-      description: Cartera activa. CARTERA_INACTIVA_ESTADOS pasa a (cerrado, perdido, no_interesado, datos_erroneos,
-        no_contactado); 'ficha_generada' sigue activo hasta cerrarse. El texto del dashboard que explica
-        la cartera activa nombra esos estados, el predicado de 'estancado' sigue excluyendo los inactivos
-        y 'sin asignar' sigue saliendo de las asignaciones. Pruebas de repositorio con base de datos para
-        cada estado inactivo y para uno activo.
-    - id: AC-4
-      verification: automated
-      description: 'Interfaz: el filtro de estado del listado y del dashboard, los chips y la barra de
-        estado del detalle usan el contrato nuevo. El CSS elimina las reglas de chip de los estados que
-        ya no existen (los tonos de los estados nuevos ya vienen en app.css de CRM-UI-1). La exportacion
-        a XLSX muestra las etiquetas nuevas. Sin transiciones restringidas: cualquier estado puede pasar
-        a cualquier otro salvo ''asignado'' (queda libre a proposito para esta primera version).'
-    - id: AC-5
-      verification: automated
-      description: 'Pruebas: se actualizan los archivos de prueba que mencionan los estados anteriores
-        (unos 30, entre ellos test_crm_states, test_web_app, test_solicitud_assignment_service, las de
-        dashboard, exportacion, historial y las de integracion con base de datos) preservando lo que cada
-        una protege; se agregan pruebas del contrato nuevo (12 estados, etiquetas, tonos, filtros, alias),
-        de los estados inactivos y de que un valor desconocido no rompe la pantalla.'
-    - id: AC-6
-      verification: automated
-      description: 'Sin migracion: el estado es texto sin restriccion en la base y no se agrega ninguna.
-        Documentacion actualizada: docs/database/03_BUSINESS_RULES.md y docs/H3_3_CRM_LITE_WEB_UX.md (estados
-        y su significado segun el protocolo, ''Nuevo'' = sin asignar, ''Asignado'' solo por asignacion),
-        docs/BITACORA.md. Suite completa, ruff, black y mypy en verde; cobertura >= 85%.'
-    - id: AC-7
-      verification: human
-      description: 'Tras el despliegue el humano reinicia los datos de DEV con el script que entrega Claude
-        (borra los leads sinteticos y siembra nuevos, incluidos sus adjuntos) y comprueba en DEV: filtrar
-        por cada estado, cambiar de estado, asignar un lead de ''Nuevo'' a un ejecutivo y ver ''Asignado'',
-        los conteos del dashboard (cartera activa, sin asignar, estancados), y los chips en claro y oscuro.'
-    constraints:
-    - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
-      desde ramas o worktrees antiguos.'
-    - 'change_class A: sin migracion ni cambio de esquema de base de datos, sin tocar deployment/**, IAM,
-      bucket ni GuardDuty.'
-    - 'NO implementes datos estructurados de intentos, reuniones, calificacion ni la marca de no contactar,
-      ni la transicion automatica a ''No contactado'' a los 14 dias, ni permisos por transicion: son tareas
-      posteriores. Los datos del ''intento N'' se anotan hoy en las notas.'
-    - Las transiciones quedan libres (salvo 'asignado'). No agregues reglas de transicion ni de permiso
-      por estado.
-    - 'Los leads de DEV son sinteticos y el humano los reinicia: NO escribas migraciones ni mapeos de
-      estados viejos a nuevos.'
-    - No cambies el aspecto mas alla de quitar reglas CSS de estados inexistentes; la armonia visual es
-      CRM-UI-1.
-    - Usa docs/ui/referencia/estados/crm_states.py como fuente exacta del contrato.
-    - 'Lecciones del guard de las tareas anteriores: (1) .env.example no esta en tu alcance; documenta
-      solo en docs/**. (2) El payload de evidencia se escribe con Write en la ruta ABSOLUTA de la raiz
-      de control (C:\desarrollos\TPI\tpi_deep_agents\tpi-backend\.harness-runtime\payloads\developer.json),
-      nunca dentro del worktree. (3) progress/current.md se edita con Edit o Write, no con Python ni heredocs.
-      (4) Ningun comando de shell nombra paquetes o textos denegados por policies.yaml y no se crean archivos
-      sueltos en la raiz del worktree. (5) git commit va solo, sin encadenar otros comandos. (6) Si el
-      guard registra mas de un worktree de Developer, retira el viejo con scripts/harness/worktree.py
-      remove antes de commitear. Un DENIED es definitivo: detenerse y reportar.'
-    dependencies:
-    - CRM-UI-1-ARMONIA-VISUAL
-    risk:
-      level: medium
-      notes: Cambia el vocabulario central del CRM y unas 30 suites de pruebas. Mitigado porque el estado
-        es texto sin restriccion, los datos de DEV son sinteticos y se reinician, el flujo de asignacion
-        no cambia y la tarea no agrega reglas nuevas. Rollback version-only al release anterior (los estados
-        nuevos guardados se mostrarian tal cual).
-    scope:
-      paths:
-      - app/models/**
-      - app/services/**
-      - app/repositories/**
-      - app/web/**
-      - tests/**
-      - docs/**
-      - README.md
-      - CHANGELOG.md
-    status: active
 - id: CRM-PERFILES-1-RBAC
   title: 'CRM: tres perfiles de usuario (Runner, Coordinador y Socio) con permisos por perfil'
   priority: P1
@@ -378,6 +260,37 @@ items:
     de aws_guard, con constancia en cutover y warnings'
   - 'denegacion de aws_guard del 2026-10-22: ya hubo un intento de cutover: un release, una promocion'
   - 'denegacion del guard del 2026-10-22: el Developer solo hace commit desde su worktree registrado'
+- id: HARNESS-LOGS-FALSOS-POSITIVOS-CADDY
+  title: Verificacion del Deployer bloqueada por robots de internet que piden rutas con la palabra secret
+    o token y quedan en el registro de acceso de Caddy
+  priority: P1
+  category: harness
+  status: pending
+  change_class: none
+  summary: 'CRM-ESTADOS-1-CATALOGO quedo bloqueada en VERIFYING (verification-02 FAIL) por 1 coincidencia
+    del indicador fuerte secret de harness/policies.yaml observability.log_indicators.strong. La linea
+    era un registro de acceso de Caddy de un robot de internet que pidio GET /secrets.json y recibio 404
+    (de unas 117 peticiones de barrido a /.env, /.docker/config.json, /.claude/settings.json, etc., todas
+    404): falso positivo, sin ninguna exposicion. Los indicadores fuertes no se degradan y la ventana
+    de conteo empieza en el inicio del despliegue, asi que el humano no puede clasificarlo y la verificacion
+    no puede pasar mientras el robot este dentro de la ventana; se repetira en cada despliegue, porque
+    cualquier robot que pida /secrets.json o /token activa la regla. Decision del humano (2026-10-25):
+    cerrar CRM-ESTADOS-1 a mano y tratar la regla como tarea aparte. Propuesta a evaluar: excluir las
+    lineas de acceso de Caddy (handled request) de los patrones fuertes, como ya se excluye Authorization
+    -REDACTED y hash -ACME, validando la sintaxis de exclusion de CloudWatch en solo lectura contra los
+    logs reales (debe dar 0 en la linea del robot y seguir detectando una linea de la app que contenga
+    la palabra). Contras ya analizados: se pierde la deteccion de un valor sensible puesto en la URL (hoy
+    la app no lo hace y Caddy ya oculta Authorization y Cookie); debilita una regla pensada como rigida
+    (exige una exclusion minima, documentada y con prueba que fije lo excluido); el patron puede quedar
+    mal escrito; y no cubre otros usos legitimos de esas palabras en los logs de la app. Es un cambio
+    de harness/policies.yaml (archivo protegido): requiere una sesion de mantenimiento lanzada por el
+    humano (TPI_HARNESS_MAINTENANCE=1), pruebas y revision. Debe quedar resuelta antes de desplegar CRM-PERFILES-1-RBAC.'
+  evidence:
+  - 'evidence/CRM-ESTADOS-1-CATALOGO/deployment/verification-02.json: FAIL por 1 coincidencia del indicador
+    fuerte secret'
+  - 'evidence/CRM-ESTADOS-1-CATALOGO/deployment/failure-01.json: fallo clasificado functional'
+  - 'evidence/CRM-ESTADOS-1-CATALOGO/approvals/resolution-01.json: resolucion humana del cierre manual'
+  - 'agents/deployer/skills/aws-observability/SKILL.md: los fuertes bloquean verified y nunca se degradan'
 - id: AUTOMATED_AUTHENTICATED_SMOKE
   title: Smoke autenticado automatizado con identidad sintetica
   priority: P3
