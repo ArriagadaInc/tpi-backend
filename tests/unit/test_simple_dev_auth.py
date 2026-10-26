@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+from typing import Any
+from uuid import UUID
 
 import pytest
 from argon2 import PasswordHasher
 
 from app.auth import AuthConfigurationError, AuthenticatedUser, SimpleDevAuth
+from app.auth.simple_dev import _parse_advisor_id
 from app.config import Settings
 
 
@@ -128,3 +131,74 @@ def test_disabled_auth_is_allowed_only_for_controlled_local_testing() -> None:
 
     assert settings.authentication_required is False
     settings.validate_auth_configuration()
+
+
+# ---------------------------------------------------------------------------
+# coordinator (AC-2): advisor_id parseado igual que advisor, fail-closed
+# ---------------------------------------------------------------------------
+
+_VALID_ADVISOR_ID = "11111111-2222-3333-4444-555555555555"
+
+
+def _coordinator_secret(*, advisor_id: object = _VALID_ADVISOR_ID) -> str:
+    entry: dict[str, object] = {
+        "subject": "user-coord",
+        "username": "coordinator",
+        "display_name": "Coordinador DEV",
+        "role": "coordinator",
+        "password_hash": _hasher().hash("valid-password"),
+    }
+    if advisor_id is not None:
+        entry["advisor_id"] = advisor_id
+    return json.dumps({"users": [entry]})
+
+
+@pytest.mark.parametrize(
+    ("advisor_id", "expected"),
+    [
+        (_VALID_ADVISOR_ID, UUID(_VALID_ADVISOR_ID)),
+        (None, None),
+        ("", None),
+        ("   ", None),
+        ("no-es-uuid", None),
+        (12345, None),
+    ],
+)
+def test_parse_advisor_id_for_coordinator(advisor_id: object, expected: UUID | None) -> None:
+    entry: dict[str, Any] = {}
+    if advisor_id is not None:
+        entry["advisor_id"] = advisor_id
+    assert _parse_advisor_id(entry, "coordinator", "subject-coord") == expected
+
+
+def test_parse_advisor_id_only_applies_to_portfolio_roles() -> None:
+    entry = {"advisor_id": _VALID_ADVISOR_ID}
+    assert _parse_advisor_id(entry, "advisor", "subject-1") == UUID(_VALID_ADVISOR_ID)
+    assert _parse_advisor_id(entry, "coordinator", "subject-1") == UUID(_VALID_ADVISOR_ID)
+    # Los roles sin cartera ignoran el campo (compatibilidad hacia atrás).
+    for role in ("ceo", "cto", "admin", "executive", "operations", "readonly", "tester"):
+        assert _parse_advisor_id(entry, role, "subject-1") is None
+
+
+def test_coordinator_role_is_allowed_and_resolves_advisor_id() -> None:
+    provider = SimpleDevAuth(_settings(secret=_coordinator_secret()), hasher=_hasher())
+
+    result = provider.authenticate("coordinator", "valid-password")
+
+    assert result.status == "authenticated"
+    assert result.user is not None
+    assert result.user.role == "coordinator"
+    assert result.user.advisor_id == UUID(_VALID_ADVISOR_ID)
+
+
+def test_coordinator_without_advisor_id_authenticates_fail_closed_to_none() -> None:
+    provider = SimpleDevAuth(
+        _settings(secret=_coordinator_secret(advisor_id=None)), hasher=_hasher()
+    )
+
+    result = provider.authenticate("coordinator", "valid-password")
+
+    assert result.status == "authenticated"
+    assert result.user is not None
+    assert result.user.role == "coordinator"
+    assert result.user.advisor_id is None

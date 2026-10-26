@@ -22,6 +22,33 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-26 - CRM-PERFILES-1-RBAC: perfiles Runner, Coordinador y Socio (desarrollo)
+
+- Contexto: el protocolo de Runners (reunion de equipo, octubre 2026) y las decisiones del humano del 2026-10-22 definen tres perfiles
+  operativos: Runner (hoy el rol `advisor`), Coordinador (rol nuevo `coordinator`) y Socio (`ceo`/`cto`). Todo se resuelve en el servidor y
+  falla cerrado; la interfaz solo guia.
+- Cambio: se agrega `coordinator` a `UserRole` y a los roles permitidos de la autenticacion (`app/auth/models.py`, `app/auth/simple_dev.py`).
+  Toda comprobacion `user.role == 'advisor'` se generaliza a una unica funcion `has_portfolio_scope` (`PORTFOLIO_ROLES = {advisor, coordinator}`);
+  `resolve_advisor_identity`, `_advisor_mutation_scope`, el detalle y la bandeja la usan. `can_assign_lead` queda solo para `ceo`/`cto` (admin y
+  executive pierden la asignacion). `SimuladorService.can_simulate` pasa a admitir `coordinator`. El cambio de estado respeta reglas por perfil
+  (`_RUNNER_FORBIDDEN_STATUS_STATES`).
+- Reglas por perfil: Runner y Coordinador ven solo su cartera (mismo alcance, `advisor_id` obligatorio y resuelto a un asesor activo; si no
+  resuelve, tablero vacio). Solo los Socios asignan leads. El Coordinador puede usar el simulador sobre su cartera; el Runner recibe 403 real.
+  El Runner no puede fijar `reunion_realizada`, `ficha_generada` ni `cerrado` (los fija el Coordinador o un Socio); Coordinador y Socio pueden
+  fijar todos los estados excepto `asignado` (solo por asignacion). Dashboard ejecutivo, exportacion XLSX y borrado de adjuntos siguen siendo
+  de `ceo`/`cto`; el enmascarado de PII no cambia (los datos de la propia cartera siguen sin enmascarar para Runner y Coordinador).
+- Pruebas: `tests/unit/test_crm_perfiles_rbac.py` amplia la matriz rol x accion (ver cartera, ver datos completos, asignar, cambiar estado,
+  simular y descargar PDF por perfil, exportar, dashboard, adjuntos) con el 403/404 esperado, incluyendo escrituras cruzadas (Runner A vs Runner B
+  y Coordinador) y adjuntos (subir con auditoria, ver, descargar y rechazo de borrado). Se actualizan las pruebas de asignacion sin debilitarse
+  (admin/executive pasan a denegados explicitos) y se agregan pruebas de `simple_dev` para `coordinator` (advisor_id valido, ausente y malformado).
+  Cobertura >= 85% verificada por el CI del PR.
+- Documentacion: `docs/SEGURIDAD.md` con la matriz de permisos por perfil y la configuracion de usuarios (valor `coordinator`, ejemplo ficticio
+  sin secretos ni claves).
+- Sin migracion ni cambio de esquema (clase A); no se toca `deployment/**`, IAM, bucket ni GuardDuty.
+- Nota de despliegue: el humano agrega los usuarios de prueba con rol `coordinator` (y su `advisor_id`) al secreto de usuarios del ambiente
+  DESPUES del despliegue, nunca antes: un rol `coordinator` en la configuracion con la version actual romperia el arranque. El smoke por perfil
+  es el criterio humano AC-8.
+
 ### 2026-10-25 - Harness: tarea CRM-ESTADOS-1-CATALOGO cerrada a mano (el Harness la registra como CANCELLED); desplegada y aceptada, bloqueada por una falsa alarma del escaneo de logs
 
 - Titulo: CRM: nuevo catalogo de 12 estados del lead segun el protocolo de runners
