@@ -22,6 +22,20 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-26 - Harness: tarea CRM-AGENDA-1-MIGRACION cerrada (DONE); la migración 010 queda por aplicar en DEV
+
+- Titulo: CRM agenda 1: ampliar tpi.citas y tpi.asesores, privilegios y scripts de altas
+- Evidencia: `evidence/CRM-AGENDA-1-MIGRACION/` y `tasks/completed/CRM-AGENDA-1-MIGRACION.yaml`.
+- release_sha: `c76ec21f9fec9defcc08ed5cb85e40494c9cac16`
+- pr_number: `138`
+- Resultado: una sola ronda (el Reviewer aprobó el PR #138 en unos 4 minutos con CI verde y 8 pruebas de integración de la migración). Con `deploy_required: false` el
+  merge pasó por `merged_no_deploy` a `DONE` y el arnés cerró solo. La nota del Deployer dice que la clase D lleva a `BLOCKED_HUMAN`; en la práctica no ocurrió, y no
+  cambia el resultado porque la aplicación de la migración nunca fue un paso del arnés.
+- **Pendiente del humano (AC-6): aplicar la migración 010 en AWS DEV** con `tpi_admin` (antes se comprobó `btree_gist`: disponible 1.7 y `tpi_admin` es `rds_superuser`) y
+  luego ejecutar `socios` y `marcar-coordinadores` de `scripts/dev_usuarios.py`. Hasta entonces `CRM-AGENDA-2-CALENDARIO` no puede activarse.
+- Observaciones menores del Reviewer, sin bloquear: `marcar-coordinadores` no avisa si un `advisor_id` no existe en `tpi.asesores`; `socios` busca por nombre y fija
+  `rol = 'socio'`, así que un nombre que coincida con el de un asesor real lo sacaría de la cartera (la simulación por defecto lo muestra antes de escribir).
+
 ### 2026-10-26 - Agenda de reuniones: migración 010 lista para el humano (CRM-AGENDA-1-MIGRACION)
 
 - Migración de clase D que amplía `tpi.citas` y `tpi.asesores` para la agenda (sección 6 de `docs/AGENDA_REUNIONES_DISENO.md`).

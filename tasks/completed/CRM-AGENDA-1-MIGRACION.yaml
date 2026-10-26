@@ -1,0 +1,129 @@
+schema_version: 1
+task:
+  id: CRM-AGENDA-1-MIGRACION
+  title: 'CRM agenda 1: ampliar tpi.citas y tpi.asesores, privilegios y scripts de altas'
+  objective: 'Preparar la migracion 010 del esquema que sostiene la agenda de reuniones (seccion 6 de
+    docs/AGENDA_REUNIONES_DISENO.md): ampliar tpi.citas (responsable obligatorio, fecha_hora_fin, quien
+    agendo, nota, motivo de cancelacion, updated_at, estados permitidos, una reunion agendada por lead
+    y una restriccion para que un responsable no tenga dos reuniones que se pisen), agregar tpi.asesores.atiende_reuniones,
+    dar a tpi_app solo SELECT, INSERT y UPDATE sobre tpi.citas, dejar listos el script de reversa, el
+    bootstrap de pruebas, la documentacion de la base y los comandos humanos que dan de alta a CEO y CTO
+    como responsables y marcan a los Coordinadores. La migracion la aplica el humano en AWS DEV.'
+  source:
+    type: story
+    ref: 'Pedido del humano del 2026-10-26 (agenda de reuniones: calendario propio y comun, con responsable
+      de la asesoria y quien agendo) y sus decisiones del mismo dia, registradas en docs/AGENDA_REUNIONES_DISENO.md.'
+  change_class: D
+  deploy_required: false
+  requires_human_acceptance: true
+  acceptance_criteria:
+  - id: AC-1
+    verification: automated
+    description: 'Migracion hacia adelante. Existe scripts/sql/010_extend_citas_agenda.sql (el numero
+      010 esta libre: inspeccionar todo scripts/sql y la historia git antes de crearlo), transaccional
+      (BEGIN y COMMIT), con preflight que aborta con un mensaje claro si tpi.citas tiene filas, si falta
+      el esquema tpi o si btree_gist no puede crearse. Hace: CREATE EXTENSION IF NOT EXISTS btree_gist;
+      en tpi.citas agrega fecha_hora_fin (TIMESTAMPTZ NOT NULL, CHECK fecha_hora_fin > fecha_hora), agendada_por_subject
+      y agendada_por_nombre (texto, sin clave foranea), nota (texto), motivo_cancelacion (texto) y updated_at
+      (TIMESTAMPTZ NOT NULL DEFAULT now()); deja id_asesor NOT NULL; agrega un CHECK de estado_cita con
+      agendada, realizada, no_asistio y cancelada; un indice unico parcial sobre id_lead donde estado_cita
+      = ''agendada''; una restriccion EXCLUDE USING gist sobre id_asesor y tstzrange(fecha_hora, fecha_hora_fin)
+      donde estado_cita = ''agendada''; un indice por fecha_hora; en tpi.asesores agrega atiende_reuniones
+      BOOLEAN NOT NULL DEFAULT false. Privilegios: REVOKE ALL sobre tpi.citas a PUBLIC y GRANT SELECT,
+      INSERT, UPDATE a tpi_app, sin DELETE. No toca los privilegios de tpi_app sobre tpi.auditoria ni
+      sobre las demas tablas.'
+  - id: AC-2
+    verification: automated
+    description: 'Reversa. Existe scripts/sql/010_drop_citas_agenda.sql, transaccional e idempotente:
+      aborta con un mensaje claro si tpi.citas tiene filas (para no perder reuniones); quita el indice,
+      las restricciones y las columnas nuevas de tpi.citas y la columna atiende_reuniones de tpi.asesores,
+      y revoca los privilegios nuevos de tpi_app. No elimina la tabla tpi.citas, no elimina la extension
+      btree_gist y no toca auditoria. Pruebas de texto sobre ambos scripts (como las de la migracion 009)
+      y pruebas de integracion que aplican hacia adelante y la reversa contra PostgreSQL, y demuestran:
+      dos reuniones agendadas del mismo responsable que se pisan se rechazan; dos que no se pisan (una
+      justo despues de la otra) se aceptan; una reunion cancelada o realizada no bloquea el horario; un
+      lead no admite dos agendadas; estado_cita invalido se rechaza; fecha_hora_fin anterior al inicio
+      se rechaza.'
+  - id: AC-3
+    verification: automated
+    description: Bootstrap de pruebas. scripts/init_test_database.py crea tpi.citas con su forma final
+      (las columnas originales del DDL de setup_db.py del proyecto tpi-data-pipeline mas las de la migracion
+      010) y tpi.asesores.atiende_reuniones, para que las pruebas de integracion de la tarea siguiente
+      tengan el esquema; el resto del bootstrap no cambia. Las pruebas existentes de la base siguen pasando.
+  - id: AC-4
+    verification: automated
+    description: 'Comandos humanos. scripts/dev_usuarios.py gana dos subcomandos, que son plan por defecto
+      y escriben solo con --ejecutar y su frase de confirmacion (como los existentes): ''socios'' da de
+      alta en tpi.asesores a los usuarios con rol ceo y cto del secreto (rol ''socio'', atiende_reuniones
+      = true; nombre tomado del nombre visible del usuario; es idempotente y no duplica) y ''marcar-coordinadores''
+      pone atiende_reuniones = true en la fila de tpi.asesores de cada usuario con rol coordinator (la
+      resuelve por su advisor_id; los Coordinadores conservan rol ''asesor''). Los dos validan que la
+      migracion 010 este aplicada (si falta la columna, se detienen con un mensaje claro), no imprimen
+      hashes ni claves y se pueden repetir. Pruebas unitarias en tests/unit/test_dev_usuarios.py sin debilitar
+      las existentes.'
+  - id: AC-5
+    verification: automated
+    description: Documentacion. docs/database/02_PHYSICAL_SCHEMA.md (tpi.citas y tpi.asesores con sus
+      columnas nuevas y la nota de que el DDL original de citas es del proyecto tpi-data-pipeline y esta
+      migracion lo amplia), 04_MIGRATIONS.md (inventario y notas de 010, con el procedimiento de aplicacion
+      y reversa para el humano, incluida la comprobacion previa de btree_gist en RDS), 08_DEV_DATA_INVENTORY.md
+      (citas, asesores y los comandos nuevos), docs/BITACORA.md y CHANGELOG.md. La seccion 6 de docs/AGENDA_REUNIONES_DISENO.md
+      se actualiza si algo del diseno cambia.
+  - id: AC-6
+    verification: human
+    description: 'Aplicacion en AWS DEV por el humano, con tpi_admin y el migration candidate congelado
+      (SHA exacto de main): comprobacion previa de btree_gist, preflight, aplicacion unica y postflight
+      (columnas, restricciones, tpi_app con SELECT, INSERT y UPDATE y sin DELETE sobre tpi.citas, auditoria
+      intacta). Despues ejecuta ''socios'' y ''marcar-coordinadores'' y comprueba que la lista de responsables
+      trae a CEO, CTO y a los Coordinadores de prueba.'
+  constraints:
+  - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
+    desde ramas o worktrees antiguos.'
+  - 'change_class D: la migracion 010 y su aplicacion en AWS DEV no siguen ningun fast path; tras el merge
+    la transicion obligatoria es merged_non_fast_path hacia BLOCKED_HUMAN, sin excepcion. El humano aplica
+    la migracion en DEV y resuelve el estado segun el procedimiento de H3.3.4.'
+  - No asumir el numero de migracion. No modificar las migraciones 001 a 009 ni sus scripts de reversa.
+  - 'No modificar app/**: esta tarea no cambia el codigo de la aplicacion (la agenda es CRM-AGENDA-2-CALENDARIO).
+    Tampoco deployment/**, IAM ni dependencias.'
+  - tpi.citas la crea hoy setup_db.py del proyecto tpi-data-pipeline (CREATE TABLE IF NOT EXISTS) y ese
+    proyecto no escribe en ella; esta migracion la amplia sin tocar ese proyecto. Documenta la diferencia
+    en docs/database y no la dupliques con otra tabla.
+  - tpi_app nunca recibe DELETE sobre tpi.citas ni nuevos privilegios sobre tpi.auditoria.
+  - 'La restriccion EXCLUDE exige btree_gist. Si el humano informa que RDS no la permite, detente y reporta:
+    no la reemplaces por tu cuenta (la alternativa es un candado de transaccion por responsable y cambia
+    el diseno).'
+  - 'No agregues secretos, claves ni usuarios reales al repositorio: los ejemplos son ficticios.'
+  - 'Lecciones del guard de las tareas anteriores: (1) .env.example no esta en tu alcance; documenta solo
+    en docs/**. (2) El payload de evidencia se escribe con Write en la ruta ABSOLUTA de la raiz de control
+    (C:\desarrollos\TPI\tpi_deep_agents\tpi-backend\.harness-runtime\payloads\developer.json), nunca dentro
+    del worktree. (3) progress/current.md se edita con Edit o Write, no con Python ni heredocs. (4) Ningun
+    comando de shell nombra paquetes o textos denegados por policies.yaml y no se crean archivos sueltos
+    en la raiz del worktree. (5) git commit va solo, sin encadenar otros comandos. (6) Si el guard registra
+    mas de un worktree de Developer, retira el viejo con scripts/harness/worktree.py remove antes de commitear.
+    Un DENIED es definitivo: detenerse y reportar.'
+  dependencies: []
+  risk:
+    level: medium
+    notes: Migracion aditiva de base de datos aplicada por el humano en AWS DEV. Mitigado porque tpi.citas
+      esta vacia (el preflight lo exige), por la reversa transaccional, por el grant minimo sin DELETE,
+      por las pruebas de integracion de las restricciones y por el procedimiento de clase D con Human
+      Gate ya probado.
+  scope:
+    paths:
+    - scripts/sql/**
+    - scripts/init_test_database.py
+    - scripts/dev_usuarios.py
+    - tests/**
+    - docs/database/**
+    - docs/AGENDA_REUNIONES_DISENO.md
+    - CHANGELOG.md
+    - docs/BITACORA.md
+  status: closed
+closure:
+  closed_at: '2026-10-26T20:05:19Z'
+  final_state: DONE
+  evidence_dir: evidence/CRM-AGENDA-1-MIGRACION
+  release:
+    release_sha: c76ec21f9fec9defcc08ed5cb85e40494c9cac16
+    pr_number: 138
+  rework_rounds: 0

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "CRM-AGENDA-1-MIGRACION",
+  "created_at": "2026-10-26T20:05:02Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610262003-deployer-sup9c6c9a",
+  "pr_number": 138,
+  "reviewed_sha": "c717a04d5d2d34f16d4aa93478d534dbf7013fbd",
+  "reviewed_tree": "8cbb82ec9c12edc8277fbe6e07d28f9253844f81",
+  "release_sha": "c76ec21f9fec9defcc08ed5cb85e40494c9cac16",
+  "release_tree": "8cbb82ec9c12edc8277fbe6e07d28f9253844f81",
+  "main_parent_sha": "09d380f76c0241a97ae80f1d17941097fc9ec9ab",
+  "method": "squash",
+  "match_head_commit_used": true
+}

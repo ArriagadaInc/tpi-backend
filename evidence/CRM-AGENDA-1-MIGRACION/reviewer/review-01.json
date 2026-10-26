@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "CRM-AGENDA-1-MIGRACION",
+  "created_at": "2026-10-26T20:03:04Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610261959-reviewer-sup4c3b46",
+  "reviewed_sha": "c717a04d5d2d34f16d4aa93478d534dbf7013fbd",
+  "reviewed_tree": "8cbb82ec9c12edc8277fbe6e07d28f9253844f81",
+  "pr_number": 138,
+  "ci": {
+    "run_id": "40390284229",
+    "conclusion": "success",
+    "head_sha": "c717a04d5d2d34f16d4aa93478d534dbf7013fbd",
+    "event": "pull_request",
+    "jobs": [
+      "Docker Build",
+      "Lint & Format",
+      "Release Tooling Validation",
+      "Security Audit",
+      "Tests"
+    ]
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "R1-MINOR-01",
+      "severity": "minor",
+      "file": "scripts/dev_usuarios.py",
+      "summary": "marcar-coordinadores ejecuta UPDATE por advisor_id sin comprobar filas afectadas: si un advisor_id del secreto no existe en tpi.asesores, el comando informa 'Listo' sin haber marcado a ese Coordinador. El postflight humano de AC-6 (comprobar la lista de responsables) lo detectaria.",
+      "required_action": "Seguimiento opcional (no bloquea): verificar rowcount == 1 por Coordinador y detener con mensaje claro si no; mostrar en el plan si el asesor existe."
+    },
+    {
+      "id": "R1-MINOR-02",
+      "severity": "minor",
+      "file": "scripts/dev_usuarios.py",
+      "summary": "socios resuelve la fila existente por nombre (lower/btrim) y marcar_socio fija rol = 'socio' sobre ella; si el nombre visible de un Socio coincidiera con el de un asesor real, ese asesor saldria de la cadena de cartera (rol = 'asesor'). El plan solo dice 'ya existe' sin mostrar el rol actual. Con los datos de DEV descritos no hay colision conocida.",
+      "required_action": "Seguimiento opcional (no bloquea): en el plan mostrar el rol actual de la fila encontrada y detener si es 'asesor' con asignaciones activas."
+    },
+    {
+      "id": "R1-INFO-01",
+      "severity": "info",
+      "file": "tests/integration/test_citas_agenda_migration.py",
+      "summary": "No hay prueba de integracion del aborto del preflight con filas en tpi.citas (forward ni reversa) ni de ejecutar la reversa dos veces; la idempotencia descansa en IF EXISTS y en las pruebas de texto. No lo exige literalmente AC-2.",
+      "required_action": "Ninguna en esta tarea."
+    },
+    {
+      "id": "R1-INFO-02",
+      "severity": "info",
+      "file": "app/repositories/executive_dashboard_repository.py",
+      "summary": "get_asesor_options lista todos los tpi.asesores sin filtrar por rol; tras ejecutar 'socios' los Socios apareceran como opcion del filtro de asesor del tablero ejecutivo (sin datos asignados). Fuera del alcance de esta tarea (no se modifica app/**).",
+      "required_action": "Considerar en CRM-AGENDA-2-CALENDARIO o tarea posterior."
+    },
+    {
+      "id": "R1-INFO-03",
+      "severity": "info",
+      "file": "docs/database/08_DEV_DATA_INVENTORY.md",
+      "summary": "El inventario sigue diciendo '4 activos con rol asesor'; la nota de progreso del orquestador indica 6 asesores activos hoy en DEV. Dato de inventario con fecha previa, no introducido por este PR.",
+      "required_action": "Ninguna en esta tarea."
+    }
+  ],
+  "checks": [
+    {
+      "name": "exact_sha: PR #138 OPEN, headRefOid == c717a04d5d2d34f16d4aa93478d534dbf7013fbd == head_sha de developer-01; worktree del reviewer en ese SHA",
+      "result": "PASS"
+    },
+    {
+      "name": "ci_green_exact_sha: run 40390284229 (pull_request) success sobre c717a04; 5 jobs pass; Tests 2170 passed, 17 skipped, cobertura 92% (>= 85)",
+      "result": "PASS"
+    },
+    {
+      "name": "integration_tests_ran: los 8 tests de tests/integration/test_citas_agenda_migration.py PASSED en el log de CI (no skipped), contra postgres de CI",
+      "result": "PASS"
+    },
+    {
+      "name": "up_to_date_with_main: merge-base == origin/main 09d380f76c0241a97ae80f1d17941097fc9ec9ab; mergeable MERGEABLE",
+      "result": "PASS"
+    },
+    {
+      "name": "scope: 12 archivos, todos dentro de task.scope.paths (scripts/sql, init_test_database, dev_usuarios, tests, docs/database, BITACORA, CHANGELOG); sin cambios en app/**, deployment/**, IAM ni dependencias",
+      "result": "PASS"
+    },
+    {
+      "name": "migration_number: 010 libre (solo 010_extend/010_drop introducidos por este PR); 001-009 sin modificar",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-1: forward transaccional, preflight (esquema, filas, disponibilidad btree_gist), columnas/checks/indice unico parcial/EXCLUDE gist/indice fecha_hora, atiende_reuniones, REVOKE ALL FROM PUBLIC + GRANT SELECT, INSERT, UPDATE a tpi_app sin DELETE; auditoria intacta",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-2: reversa transaccional, aborta con filas, IF EXISTS en todo, no borra tabla ni extension ni toca auditoria; pruebas de texto e integracion de las 6 reglas exigidas",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-3: bootstrap crea tpi.citas forma final (DDL real de DEV + 010) y atiende_reuniones; resto sin cambios; suite completa verde",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-4: subcomandos socios y marcar-coordinadores con plan por defecto, frase de confirmacion, verificacion de 010, sin hashes; 8 pruebas unitarias nuevas, sin pruebas existentes eliminadas; local 38 passed",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-5: 02_PHYSICAL_SCHEMA, 04_MIGRATIONS (inventario, notas y procedimiento humano con comprobacion de btree_gist), 08_DEV_DATA_INVENTORY, BITACORA y CHANGELOG actualizados; diseno sin cambios",
+      "result": "PASS"
+    },
+    {
+      "name": "security: sin secretos ni usuarios reales; tpi_app sin DELETE en citas y sin privilegios nuevos sobre auditoria; local ruff y black PASS",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "AC-6 (verificacion humana en AWS DEV) queda pendiente por diseno; no se evalua en esta revision.",
+    "Clase D: tras el merge la transicion obligatoria es merged_non_fast_path hacia BLOCKED_HUMAN; el humano aplica 010 en AWS DEV con tpi_admin.",
+    "El conjunto exacto de privilegios de tpi_app sobre tpi.citas no es verificable en CI (tpi_app es propietario alli); lo fija la prueba de texto y debe confirmarlo el postflight humano.",
+    "updated_at no tiene trigger: la aplicacion (CRM-AGENDA-2) debe fijarlo en cada UPDATE."
+  ]
+}
