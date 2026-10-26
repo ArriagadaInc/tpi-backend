@@ -132,7 +132,7 @@ class _FakeWebService:
             "perdido",
         ]
 
-    def get_crm_estado_lead_options_for_update(self):
+    def get_crm_estado_lead_options_for_update(self, actor=None):
         return [
             "nuevo",
             "sin_contacto",
@@ -164,7 +164,7 @@ class _FakeWebService:
 
     @staticmethod
     def can_assign_lead(user: AuthenticatedUser) -> bool:
-        return user.role in {"admin", "executive", "ceo", "cto"}
+        return user.role in {"ceo", "cto"}
 
     def get_solicitud_detalle_masked(self, id_lead, *, user=None):
         if str(id_lead) != str(self._full_detail["id_lead"]):
@@ -485,8 +485,8 @@ def test_non_privileged_users_continue_to_see_masked_pii() -> None:
 
 def test_assign_lead_updates_status_and_executes_with_authorization() -> None:
     service = _FakeWebService()
-    client = _build_client(service, auth_provider=_FakeAuthProvider(authenticated_role="executive"))
-    _login(client, username="exec.local")
+    client = _build_client(service, auth_provider=_FakeAuthProvider(authenticated_role="ceo"))
+    _login(client, username="ceo.local")
 
     detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
     csrf = _extract_csrf(detail.text)
@@ -508,8 +508,8 @@ def test_assign_lead_updates_status_and_executes_with_authorization() -> None:
 
 
 def test_assign_lead_rejects_unauthorized_user_and_direct_bypass() -> None:
-    privileged = _build_client(auth_provider=_FakeAuthProvider(authenticated_role="executive"))
-    _login(privileged, username="exec.local")
+    privileged = _build_client(auth_provider=_FakeAuthProvider(authenticated_role="ceo"))
+    _login(privileged, username="ceo.local")
     detail = privileged.get("/leads/11111111-1111-1111-1111-111111111111")
     csrf = _extract_csrf(detail.text)
 

@@ -83,10 +83,12 @@ def _actor(role: str = "executive") -> AuthenticatedUser:
 def test_assignment_access_control_is_centralized() -> None:
     service, _ = _build_service()
 
-    assert service.can_assign_lead(_actor("executive")) is True
-    assert service.can_assign_lead(_actor("admin")) is True
     assert service.can_assign_lead(_actor("ceo")) is True
     assert service.can_assign_lead(_actor("cto")) is True
+    assert service.can_assign_lead(_actor("admin")) is False
+    assert service.can_assign_lead(_actor("executive")) is False
+    assert service.can_assign_lead(_actor("advisor")) is False
+    assert service.can_assign_lead(_actor("coordinator")) is False
     assert service.can_assign_lead(_actor("readonly")) is False
     assert "asignado" not in service.get_crm_estado_lead_options_for_update()
 
@@ -135,7 +137,7 @@ def test_assignment_requires_privileged_actor_and_normalizes_identifiers() -> No
     assigned = service.assign_lead(
         "11111111-1111-1111-1111-111111111111",
         "22222222-2222-2222-2222-222222222222",
-        actor=_actor("executive"),
+        actor=_actor("ceo"),
     )
     assert assigned is True
     assert len(repo.assign_calls) == 1

@@ -724,7 +724,7 @@ class SimuladorService:
     def can_simulate(user: AuthenticatedUser | None) -> bool:
         if user is None:
             return False
-        return is_superuser(user.role) or user.role == "executive"
+        return is_superuser(user.role) or user.role in {"executive", "coordinator"}
 
     def simular(
         self,

@@ -566,6 +566,79 @@ async def get_solicitudes(
 
 ---
 
+## 🧑‍💼 Perfiles de usuario y matriz de permisos (CRM)
+
+El backoffice implementa tres perfiles de negocio sobre los roles técnicos
+existentes. Los roles técnicos **no cambian de nombre**; el cambio de etiqueta es
+solo de pantalla (`app/auth/models.py::profile_label`):
+
+| Perfil | Rol técnico | Etiqueta de pantalla |
+|---|---|---|
+| Runner (ejecutivo de cartera) | `advisor` | `Runner` |
+| Coordinador (nuevo) | `coordinator` | `Coordinador` |
+| Socio | `ceo`, `cto` | `Socio` |
+
+Roles técnicos sin perfil de negocio: `tester`, `admin`, `executive`, `operations`,
+`readonly`.
+
+### Matriz de permisos rol × acción
+
+La autorización es **siempre del servidor y falla cerrada**; la interfaz solo
+esconde controles. `cartera` = solo los leads cuya asignación activa pertenece al
+`advisor_id` resuelto del usuario.
+
+| Acción | Runner (`advisor`) | Coordinador (`coordinator`) | Socio (`ceo`/`cto`) | Otros roles técnicos |
+|---|---|---|---|---|
+| Ver cartera | solo propia | solo propia | global | según rol (global) |
+| Ver PII completa | su cartera | su cartera | todo | solo `ceo`/`cto`; resto enmascarado |
+| Asignar leads | ❌ | ❌ | ✅ | ❌ (`admin`/`executive` ya no asignan) |
+| Cambiar estado | 8 estados (ver abajo) | todos menos `asignado` | todos menos `asignado` | según rol de escritura |
+| Simulador | ❌ (403) | ✅ su cartera | ✅ | `executive` conserva acceso |
+| Dashboard ejecutivo | ❌ | ❌ | ✅ | ❌ |
+| Exportar XLSX | ❌ | ❌ | ✅ | ❌ |
+| Subir/ver/descargar adjuntos | ✅ su cartera | ✅ su cartera | ✅ | según rol de escritura |
+| Borrar adjuntos | ❌ | ❌ | ✅ | ❌ |
+
+Estados que el Runner **no** puede fijar directamente (los fija el Coordinador o un
+Socio sobre su caso): `reunion_realizada`, `ficha_generada` y `cerrado`. El estado
+`asignado` nunca se fija por cambio de estado: solo mediante una asignación válida.
+
+### Configuración de usuarios (valor `coordinator`)
+
+El rol `coordinator` se agrega a los roles permitidos de `AUTH_USERS_JSON` y exige
+`advisor_id` igual que `advisor` (se resuelve contra un `tpi.asesores` activo; si no
+resuelve, falla cerrado a cartera vacía). Ejemplo **ficticio** (sin secretos ni
+claves reales; el hash es un placeholder no válido y el humano provee el valor real
+en el ambiente):
+
+```json
+{
+  "users": [
+    {
+      "subject": "runner-001",
+      "username": "asesor.desarrollo1",
+      "display_name": "Asesor Desarrollo 1",
+      "role": "advisor",
+      "advisor_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "password_hash": "<argon2id-hash-real-aqui>"
+    },
+    {
+      "subject": "coord-001",
+      "username": "coordinador.desarrollo1",
+      "display_name": "Coordinador Desarrollo 1",
+      "role": "coordinator",
+      "advisor_id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+      "password_hash": "<argon2id-hash-real-aqui>"
+    }
+  ]
+}
+```
+
+Nunca se versionan usuarios, claves ni hashes reales: la configuración de usuarios
+vive como secreto del ambiente (fuera del repositorio).
+
+---
+
 ## 📋 Auditoría y Logging
 
 ### Logging de Auditoría (Futuro)

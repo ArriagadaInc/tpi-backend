@@ -101,7 +101,7 @@ def build_assignment_actor() -> AuthenticatedUser:
         subject="integration-actor-001",
         username="integration.actor",
         display_name="Integration Actor",
-        role="executive",
+        role="ceo",
     )
 
 

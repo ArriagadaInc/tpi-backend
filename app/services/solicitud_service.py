@@ -37,7 +37,7 @@ from app.attachments.validation import (
     AttachmentValidationError,
     ValidatedAttachment,
 )
-from app.auth.models import AuthenticatedUser, is_superuser
+from app.auth.models import AuthenticatedUser, has_portfolio_scope, is_superuser
 from app.config import Settings, get_settings
 from app.database import DatabaseAppError
 from app.database.errors import DevLeadCleanupBlockedError
@@ -62,6 +62,13 @@ from app.services.xlsx_export import (
 )
 
 logger = logging.getLogger(__name__)
+
+# States the Runner (``advisor``) may not set directly: those are fixed by the
+# Coordinador or a Socio on their case. ``asignado`` is excluded separately for
+# every role (it is set only through a valid assignment).
+_RUNNER_FORBIDDEN_STATUS_STATES: frozenset[str] = frozenset(
+    {"reunion_realizada", "ficha_generada", "cerrado"}
+)
 
 
 class SolicitudService:
@@ -185,40 +192,44 @@ class SolicitudService:
         return is_superuser(user.role)
 
     def resolve_advisor_identity(self, user: AuthenticatedUser | None) -> UUID | None:
-        """Resolve an advisor identity to its active ``id_asesor``, or ``None``.
+        """Resolve a portfolio identity to its active ``id_asesor``, or ``None``.
 
         This is the server-side resolution chain ``usuario -> advisor_id -> registro
         valido/activo``. It returns the active ``id_asesor`` only when the identity
-        resolves to an active advisor; otherwise ``None`` (fail-closed). Non-advisor
+        resolves to an active advisor; otherwise ``None`` (fail-closed). Non-portfolio
         roles also return ``None`` — callers distinguish them with ``user.role``.
 
-        The raw ``advisor_id`` and any secret value are never logged.
+        Both the Runner (``advisor``) and the Coordinador (``coordinator``) resolve
+        through this exact chain. The raw ``advisor_id`` and any secret value are
+        never logged.
         """
-        if user is None or user.role != "advisor":
+        if user is None or not has_portfolio_scope(user.role):
             return None
         advisor_id = user.advisor_id
         if advisor_id is None:
             logger.warning(
-                "event=advisor_scope_unavailable role=advisor result=fail_closed "
-                "reason=missing_advisor_id"
+                "event=advisor_scope_unavailable role=%s result=fail_closed "
+                "reason=missing_advisor_id",
+                user.role,
             )
             return None
         if self.repository.get_active_advisor_by_id(advisor_id) is None:
             logger.warning(
-                "event=advisor_scope_unavailable role=advisor result=fail_closed "
-                "reason=advisor_not_active_or_missing"
+                "event=advisor_scope_unavailable role=%s result=fail_closed "
+                "reason=advisor_not_active_or_missing",
+                user.role,
             )
             return None
         return advisor_id
 
     def _advisor_mutation_scope(self, actor: AuthenticatedUser) -> UUID | None | bool:
-        """Return the advisor portfolio scope for a mutation, or ``False`` to deny.
+        """Return the portfolio scope for a mutation, or ``False`` to deny.
 
-        ``None`` means "no portfolio restriction" (non-advisor). ``False`` means the
-        actor is an advisor whose identity does not resolve to an active advisor, so
-        every mutation must be rejected without writing.
+        ``None`` means "no portfolio restriction" (non-portfolio role). ``False``
+        means the actor is a portfolio role whose identity does not resolve to an
+        active advisor, so every mutation must be rejected without writing.
         """
-        if actor.role != "advisor":
+        if not has_portfolio_scope(actor.role):
             return None
         scope = self.resolve_advisor_identity(actor)
         if scope is None:
@@ -238,9 +249,9 @@ class SolicitudService:
         if user is not None and self.can_view_full_pii(user):
             return solicitud
 
-        if user is not None and user.role == "advisor":
+        if user is not None and has_portfolio_scope(user.role):
             # PII authorization is contextual per lead and active assignment, never a
-            # global advisor permission. Own lead -> full PII; other/no assignment -> 404.
+            # global portfolio permission. Own lead -> full PII; other/no assignment -> 404.
             advisor_id = self.resolve_advisor_identity(user)
             if advisor_id is None:
                 return None
@@ -328,13 +339,14 @@ class SolicitudService:
         if estado_lead is not None:
             normalized_estado = self._normalize_crm_state_for_filter(estado_lead)
 
-        # Portfolio scope: an advisor is always constrained server-side to the leads
-        # whose currently-active assignment belongs to their resolved id_asesor. A
-        # non-resolving advisor identity fails closed to an empty board. Non-advisor
-        # roles (including ceo/cto) keep the global view and the optional asesor filter.
+        # Portfolio scope: a portfolio role (advisor/coordinator) is always constrained
+        # server-side to the leads whose currently-active assignment belongs to their
+        # resolved id_asesor. A non-resolving portfolio identity fails closed to an
+        # empty board. Non-portfolio roles (including ceo/cto) keep the global view and
+        # the optional asesor filter.
         portfolio_asesor_id: UUID | None = None
         effective_asesor_id = asesor_id
-        if user is not None and user.role == "advisor":
+        if user is not None and has_portfolio_scope(user.role):
             portfolio_asesor_id = self.resolve_advisor_identity(user)
             if portfolio_asesor_id is None:
                 return {
@@ -575,10 +587,25 @@ class SolicitudService:
         """Return the actual lead states present in the current data model."""
         return self.repository.get_crm_estado_lead_options()
 
-    def get_crm_estado_lead_options_for_update(self) -> list[str]:
-        """Return lead states available for generic edits, excluding assignment-only flows."""
+    def get_crm_estado_lead_options_for_update(
+        self, actor: AuthenticatedUser | None = None
+    ) -> list[str]:
+        """Return lead states available for generic edits for the given actor.
+
+        ``asignado`` is always excluded (assignment-only flow). The Runner
+        (``advisor``) additionally cannot set ``reunion_realizada``,
+        ``ficha_generada`` nor ``cerrado``; the Coordinador and the Socios may set
+        every state except ``asignado``.
+        """
         return [
-            state for state in self.repository.get_crm_estado_lead_options() if state != "asignado"
+            state
+            for state in self.repository.get_crm_estado_lead_options()
+            if state != "asignado"
+            and not (
+                actor is not None
+                and actor.role == "advisor"
+                and state in _RUNNER_FORBIDDEN_STATUS_STATES
+            )
         ]
 
     def update_lead_status(
@@ -604,6 +631,8 @@ class SolicitudService:
             raise ValueError(
                 "El estado asignado solo puede establecerse mediante una asignacion valida"
             )
+        if actor.role == "advisor" and normalized_estado in _RUNNER_FORBIDDEN_STATUS_STATES:
+            raise PermissionError("Este perfil no puede fijar el estado seleccionado")
 
         advisor_scope = self._advisor_mutation_scope(actor)
         if advisor_scope is False:
@@ -631,7 +660,7 @@ class SolicitudService:
         return self.repository.assign_lead(lead_id, asesor_id, actor=actor)
 
     def can_assign_lead(self, user: AuthenticatedUser) -> bool:
-        return is_superuser(user.role) or user.role in {"admin", "executive"}
+        return is_superuser(user.role)
 
     def get_lead_assignment_events(self, id_lead: UUID | str) -> list[dict[str, Any]]:
         """Return sanitized assignment traceability events for one lead.
