@@ -257,6 +257,24 @@ def test_runner_solo_ve_su_cartera():
     assert ajena["link_reunion"] is None
 
 
+def test_cita_ajena_recorta_nota_y_motivo():
+    service, repo = _service()
+    ajena = _cita_row(FOREIGN_LEAD, COORD, cita_id=UUID("33333333-3333-3333-3333-333333333333"))
+    ajena["nota"] = "Nota con el nombre del lead ajeno"
+    ajena["motivo_cancelacion"] = "Lead no pudo asistir"
+    repo.citas_rows = [ajena]
+    repo.list_citas = lambda *a, **k: list(repo.citas_rows)  # type: ignore[method-assign]
+    views = service.get_agenda(
+        desde=datetime(2026, 1, 1, tzinfo=AGENDA_TZ),
+        hasta=datetime(2026, 2, 1, tzinfo=AGENDA_TZ),
+        user=_user("advisor", advisor_id=RUNNER),
+    )
+    vista = views[0]
+    assert vista["lead_fuera_de_alcance"] is True
+    assert vista["nota"] is None
+    assert vista["motivo_cancelacion"] is None
+
+
 def test_rol_sin_cartera_ve_todos():
     service, repo = _service()
     repo.citas_rows = [_cita_row(LEAD, RUNNER), _cita_row(FOREIGN_LEAD, COORD)]

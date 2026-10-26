@@ -39,8 +39,8 @@
     </form>
   </section>
 
-  {% if vista == 'lista' %}
-    <section class="card">
+  <div class="agenda-views {% if vista == 'lista' %}vista-lista{% endif %}">
+    <section class="card agenda-list-view">
       <div class="story-card-head">
         <div>
           <p class="section-kicker">Próximas reuniones</p>
@@ -82,8 +82,8 @@
         <div class="empty-followup">No hay reuniones agendadas próximas.</div>
       {% endif %}
     </section>
-  {% else %}
-    <section class="card agenda-week-card">
+
+    <section class="card agenda-week-card agenda-week-view">
       <div class="agenda-nav">
         <a class="secondary" href="{{ semana_anterior }}">← Anterior</a>
         <a class="secondary" href="{{ semana_hoy }}">Hoy</a>
@@ -122,5 +122,5 @@
         {% endfor %}
       </div>
     </section>
-  {% endif %}
+  </div>
 {% endblock %}

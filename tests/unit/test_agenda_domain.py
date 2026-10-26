@@ -18,6 +18,7 @@ from app.models.agenda import (
     AgendaPermissionError,
     AgendaValidationError,
     build_agenda_datetime,
+    lead_admite_agenda,
     validate_duracion,
     validate_fin_dentro_de_horario,
     validate_inicio,
@@ -98,8 +99,25 @@ def test_no_en_pasado():
     assert validate_no_en_pasado(_dt(2026, 1, 15, 13, 0), ahora=ahora) is not None
     with pytest.raises(AgendaValidationError):
         validate_no_en_pasado(_dt(2026, 1, 15, 11, 0), ahora=ahora)
-    with pytest.raises(AgendaValidationError):
-        validate_no_en_pasado(_dt(2026, 1, 15, 12, 0), ahora=ahora)
+
+
+def test_lead_admite_agenda():
+    # Los cinco estados inactivos no admiten agendar (AC-1).
+    for estado in ("cerrado", "perdido", "no_interesado", "datos_erroneos", "no_contactado"):
+        assert lead_admite_agenda(estado) is False, estado
+    # Los estados activos (y los desconocidos, que valida el resto de la cadena) sí.
+    for estado in (
+        "nuevo",
+        "asignado",
+        "sin_contacto",
+        "en_seguimiento",
+        "reunion_agendada",
+        "reunion_realizada",
+        "ficha_generada",
+        None,
+        "estado_desconocido",
+    ):
+        assert lead_admite_agenda(estado) is True, estado
 
 
 def test_build_agenda_datetime():

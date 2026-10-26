@@ -3062,6 +3062,21 @@ textarea:focus {
 }
 
 /* --- Agenda de reuniones (CRM-AGENDA-2) --------------------------------------------- */
+.agenda-views {
+  display: block;
+}
+.agenda-list-view {
+  display: none;
+}
+.agenda-week-view {
+  display: block;
+}
+.agenda-views.vista-lista .agenda-week-view {
+  display: none;
+}
+.agenda-views.vista-lista .agenda-list-view {
+  display: block;
+}
 .agenda-week-card {
   padding: var(--space-5);
 }
@@ -3233,8 +3248,12 @@ textarea:focus {
   }
 }
 @media (max-width: 640px) {
-  .agenda-week {
-    grid-template-columns: minmax(0, 1fr);
+  /* En celular solo se muestra la lista (AC-4). */
+  .agenda-week-view {
+    display: none;
+  }
+  .agenda-list-view {
+    display: block;
   }
   .agenda-meeting-label {
     min-width: 0;

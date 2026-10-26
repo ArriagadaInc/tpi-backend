@@ -59,6 +59,18 @@ LEAD_INACTIVO_PARA_AGENDA = frozenset(
 )
 
 
+def lead_admite_agenda(estado_lead: str | None) -> bool:
+    """True cuando el lead admite agendar (no esta en un estado inactivo).
+
+    Regla de la seccion 4 del diseño: solo se agenda un lead activo. Un estado
+    desconocido (``None`` incluido) no esta en la lista de inactivos, asi que se
+    considera activo y lo valida el resto de la cadena (el CHECK de ``estado_cita``
+    y las reglas de cartera); el repositorio aplica esta regla dentro de la
+    transaccion, con el estado del lead bloqueado.
+    """
+    return estado_lead not in LEAD_INACTIVO_PARA_AGENDA
+
+
 def cita_estado_label(value: str | None) -> str:
     if value is None:
         return ""

@@ -34,6 +34,7 @@ from app.models.agenda import (
     AgendaConflictError,
     AgendaNotFoundError,
     AgendaValidationError,
+    lead_admite_agenda,
 )
 from app.models.lead_assignment import ASSIGNMENT_ACTIVE_STATE
 from app.repositories.solicitud_repository import SolicitudRepository
@@ -259,7 +260,6 @@ class AgendaRepository:
         estado_nuevo: str,
         fecha_anterior: datetime | None,
         fecha_nueva: datetime | None,
-        motivo: str | None = None,
     ) -> None:
         detalle = {
             "actor_subject": actor.subject.strip(),
@@ -270,8 +270,6 @@ class AgendaRepository:
             "fecha_hora_anterior": fecha_anterior.isoformat() if fecha_anterior else None,
             "fecha_hora_nueva": fecha_nueva.isoformat() if fecha_nueva else None,
         }
-        if motivo is not None:
-            detalle["motivo"] = motivo
         cur.execute(
             """
             INSERT INTO tpi.auditoria
@@ -354,6 +352,10 @@ class AgendaRepository:
                 raise AgendaNotFoundError("No encontramos el lead solicitado")
             if not self._lead_owned(cur, lead_id, advisor_scope):
                 raise AgendaNotFoundError("No encontramos el lead solicitado")
+            if not lead_admite_agenda(lead.get("estado_lead")):
+                raise AgendaValidationError(
+                    "No se puede agendar una reunión a un lead que no está activo"
+                )
 
             cur.execute(
                 """
@@ -425,6 +427,10 @@ class AgendaRepository:
             lead = self._lock_lead(cur, lead_id)
             if lead is None or not self._lead_owned(cur, lead_id, advisor_scope):
                 raise AgendaNotFoundError("No encontramos el lead solicitado")
+            if not lead_admite_agenda(lead.get("estado_lead")):
+                raise AgendaValidationError(
+                    "No se puede reagendar una reunión a un lead que no está activo"
+                )
 
             fecha_anterior = cita["fecha_hora"]
             cur.execute(
@@ -524,7 +530,6 @@ class AgendaRepository:
                 estado_nuevo=CITA_ESTADO_CANCELADA,
                 fecha_anterior=cita["fecha_hora"],
                 fecha_nueva=None,
-                motivo=motivo,
             )
 
     def complete_cita(

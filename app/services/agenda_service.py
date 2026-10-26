@@ -16,7 +16,6 @@ from uuid import UUID
 from app.auth.models import AuthenticatedUser, has_portfolio_scope, is_superuser
 from app.models.agenda import (
     AGENDA_TZ,
-    LEAD_INACTIVO_PARA_AGENDA,
     AgendaNotFoundError,
     AgendaPermissionError,
     AgendaValidationError,
@@ -133,6 +132,8 @@ class AgendaService:
             view["lead_nombre"] = None
             view["id_lead"] = None
             view["link_reunion"] = None
+            view["nota"] = None
+            view["motivo_cancelacion"] = None
             view["lead_fuera_de_alcance"] = True
         return view
 
@@ -186,7 +187,7 @@ class AgendaService:
         modalidad_n = validate_modalidad(modalidad)
         nota_n = validate_nota(nota)
         link_n = self._normalize_link(link)
-        advisor_scope = self._require_scope(actor)
+        advisor_scope = self._require_lead_scope(lead_id, actor)
         responsable = self._resolve_responsable(responsable_id, actor, lead_id)
         self.repository.create_cita(
             lead_id=lead_id,
@@ -288,6 +289,21 @@ class AgendaService:
             raise AgendaNotFoundError("No encontramos el lead solicitado")
         return scope
 
+    def _require_lead_scope(self, lead_id: UUID, actor: AuthenticatedUser) -> UUID | None:
+        """Devuelve el alcance de cartera y exige que el lead este dentro de el.
+
+        Se resuelve ANTES de validar el responsable para que un lead fuera de alcance
+        responda siempre igual (404) y no se pueda inferir el dueno conociendo su UUID.
+        """
+        scope = self._mutation_scope(actor)
+        if scope is False:
+            raise AgendaNotFoundError("No encontramos el lead solicitado")
+        if scope is not None and not self.solicitudes.repository.lead_active_assignment_belongs_to(
+            lead_id, cast(UUID, scope)
+        ):
+            raise AgendaNotFoundError("No encontramos el lead solicitado")
+        return cast(UUID | None, scope)
+
     def _validate_horario(self, fecha: str, hora: str, duracion: int) -> Any:
         inicio = validate_inicio(build_agenda_datetime(fecha, hora))
         validate_no_en_pasado(inicio)
@@ -328,16 +344,5 @@ class AgendaService:
         if cita is None:
             raise AgendaNotFoundError("No encontramos la reunión solicitada")
         lead_id = UUID(str(cita["id_lead"]))
-        scope = self._mutation_scope(actor)
-        if scope is False:
-            raise AgendaNotFoundError("No encontramos el lead solicitado")
-        if scope is not None and not self.solicitudes.repository.lead_active_assignment_belongs_to(
-            lead_id, cast(UUID, scope)
-        ):
-            raise AgendaNotFoundError("No encontramos el lead solicitado")
+        self._require_lead_scope(lead_id, actor)
         return cita
-
-
-def is_lead_inactivo_para_agenda(estado_lead: str | None) -> bool:
-    """True cuando el lead no admite agendar (seccion 4 del diseño)."""
-    return estado_lead in LEAD_INACTIVO_PARA_AGENDA

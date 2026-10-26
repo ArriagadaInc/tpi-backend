@@ -161,6 +161,91 @@ def test_create_cita_actualiza_lead_y_audita(world: Any) -> None:
     assert "Lead" not in str(detalle)
 
 
+@pytest.mark.parametrize(
+    "estado", ["cerrado", "perdido", "no_interesado", "datos_erroneos", "no_contactado"]
+)
+def test_create_cita_rechaza_lead_inactivo(world: Any, estado: str) -> None:
+    repo = AgendaRepository()
+    with get_db_connection(operation="agenda.integration.inactive.setup") as conn:
+        with conn.cursor() as cur:
+            lead, persona = _make_lead(cur, f"{uuid4().hex[:8]}", estado=estado)
+            _assign(cur, lead, world["socio"])
+            conn.commit()
+    try:
+        with pytest.raises(AgendaValidationError):
+            repo.create_cita(
+                lead_id=lead,
+                responsable_id=world["socio"],
+                inicio=_inicio(10, 0),
+                fin=_inicio(10, 30),
+                modalidad="Google Meet",
+                link=None,
+                nota=None,
+                actor=_actor("ceo"),
+            )
+        with get_db_connection(operation="agenda.integration.inactive.verify") as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) AS n FROM tpi.citas WHERE id_lead = %s", (lead,))
+                assert cur.fetchone()["n"] == 0
+                cur.execute("SELECT estado_lead FROM tpi.leads WHERE id_lead = %s", (lead,))
+                assert cur.fetchone()["estado_lead"] == estado
+                cur.execute("SELECT COUNT(*) AS n FROM tpi.auditoria WHERE id_lead = %s", (lead,))
+                assert cur.fetchone()["n"] == 0
+    finally:
+        with get_db_connection(operation="agenda.integration.inactive.teardown") as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM tpi.auditoria WHERE id_lead = %s", (lead,))
+                cur.execute("DELETE FROM tpi.citas WHERE id_lead = %s", (lead,))
+                cur.execute("DELETE FROM tpi.asignaciones WHERE id_lead = %s", (lead,))
+                cur.execute("DELETE FROM tpi.leads WHERE id_lead = %s", (lead,))
+                cur.execute("DELETE FROM tpi.personas WHERE id_persona = %s", (persona,))
+                conn.commit()
+
+
+def test_update_cita_rechaza_lead_inactivo(world: Any) -> None:
+    repo = AgendaRepository()
+    repo.create_cita(
+        lead_id=world["lead"],
+        responsable_id=world["socio"],
+        inicio=_inicio(10, 0),
+        fin=_inicio(10, 30),
+        modalidad="Google Meet",
+        link=None,
+        nota=None,
+        actor=_actor("ceo"),
+    )
+    cita_id = _cita_id(world["lead"])
+    with get_db_connection(operation="agenda.integration.inactive_reagendar.setup") as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE tpi.leads SET estado_lead = 'cerrado' WHERE id_lead = %s", (world["lead"],)
+            )
+            conn.commit()
+
+    with pytest.raises(AgendaValidationError):
+        repo.update_cita(
+            cita_id=cita_id,
+            responsable_id=world["coordinador"],
+            inicio=_inicio(15, 0),
+            fin=_inicio(15, 45),
+            modalidad="Presencial",
+            link=None,
+            nota=None,
+            actor=_actor("ceo"),
+        )
+
+    with get_db_connection(operation="agenda.integration.inactive_reagendar.verify") as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT estado_cita, fecha_hora, id_asesor FROM tpi.citas WHERE id_cita = %s",
+                (cita_id,),
+            )
+            row = cur.fetchone()
+            assert row["estado_cita"] == "agendada"
+            assert row["fecha_hora"] == _inicio(10, 0)
+            assert str(row["id_asesor"]) == world["socio"]
+
+
 def test_superposicion_mismo_responsable_se_rechaza(world: Any) -> None:
     repo = AgendaRepository()
     repo.create_cita(
