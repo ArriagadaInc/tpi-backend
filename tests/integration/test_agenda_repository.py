@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import Any, cast
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -308,7 +308,7 @@ def test_list_citas_devuelve_nombre_y_dueno(world: Any) -> None:
     row = rows[0]
     assert str(row["lead_nombre"]).startswith("Lead ")
     assert row["link_reunion"] == "https://meet.example/abc"
-    assert row["lead_asesor_id"] == world["socio"]
+    assert str(row["lead_asesor_id"]) == world["socio"]
 
 
 def test_reagendar_actualiza_la_misma_cita(world: Any) -> None:
@@ -355,11 +355,11 @@ def test_reagendar_actualiza_la_misma_cita(world: Any) -> None:
 def test_read_responsables_y_responsable_por_id(world: Any) -> None:
     repo = AgendaRepository()
     responsables = repo.get_responsables()
-    ids = {r["id_asesor"] for r in responsables}
+    ids = {str(r["id_asesor"]) for r in responsables}
     assert world["socio"] in ids
     assert world["coordinador"] in ids
 
-    socio = repo.get_responsable_by_id(world["socio"])
+    socio = repo.get_responsable_by_id(UUID(world["socio"]))
     assert socio is not None
     assert socio["rol"] == "socio"
     assert repo.get_responsable_by_id(uuid4()) is None
@@ -391,7 +391,7 @@ def test_get_cita_by_id_y_for_lead(world: Any) -> None:
 
 def test_lead_active_assignment_owner(world: Any) -> None:
     repo = AgendaRepository()
-    assert repo.lead_active_assignment_owner(world["lead"]) == world["socio"]
+    assert str(repo.lead_active_assignment_owner(UUID(world["lead"]))) == world["socio"]
     assert repo.lead_active_assignment_owner(uuid4()) is None
 
 

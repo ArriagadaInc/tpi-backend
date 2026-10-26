@@ -1150,6 +1150,21 @@ class SolicitudRepository:
         return list(CRM_STATE_CONTRACT)
 
     @staticmethod
+    def _validate_status_write(estado_lead: str, actor: AuthenticatedUser) -> tuple[str, str]:
+        """Normaliza y valida una escritura de estado (sin I/O); lanza ``ValueError``."""
+        normalized_estado = normalize_crm_state_for_write(estado_lead)
+        if normalized_estado == "asignado":
+            raise ValueError(
+                "El estado asignado solo puede establecerse mediante una asignacion valida"
+            )
+        assigned_by = actor.subject.strip()
+        if not assigned_by:
+            raise ValueError("El actor autenticado no posee un identificador estable")
+        if len(assigned_by) > 150:
+            raise ValueError("El identificador tecnico del actor excede la longitud permitida")
+        return normalized_estado, assigned_by
+
+    @staticmethod
     def _update_lead_status_tx(
         cur: Any,
         id_lead: UUID,
@@ -1167,16 +1182,9 @@ class SolicitudRepository:
         public ``update_lead_status`` so the agenda writes the lead state through the
         same proven path (AC-3).
         """
-        normalized_estado = normalize_crm_state_for_write(estado_lead)
-        if normalized_estado == "asignado":
-            raise ValueError(
-                "El estado asignado solo puede establecerse mediante una asignacion valida"
-            )
-        assigned_by = actor.subject.strip()
-        if not assigned_by:
-            raise ValueError("El actor autenticado no posee un identificador estable")
-        if len(assigned_by) > 150:
-            raise ValueError("El identificador tecnico del actor excede la longitud permitida")
+        normalized_estado, assigned_by = SolicitudRepository._validate_status_write(
+            estado_lead, actor
+        )
 
         query_lock = """
             SELECT estado_lead, id_persona
@@ -1268,6 +1276,9 @@ class SolicitudRepository:
         statements back. The ``asignado`` state is rejected defensively here as well
         as in the service: it is only reachable through ``assign_lead``.
         """
+        # Validate before opening the connection so the domain ValueError is raised
+        # as-is (not wrapped as a DatabaseAppError) — preserved for callers.
+        SolicitudRepository._validate_status_write(estado_lead, actor)
         with get_db_connection(operation="update_lead_status") as conn:
             try:
                 with conn.cursor() as cur:
