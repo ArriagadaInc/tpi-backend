@@ -10,6 +10,11 @@ Subcomandos (todos aceptan --secreto, --profile y --region; por defecto tpi/dev/
   agregar   Agrega al secreto los usuarios coordinador.ejemploN (rol coordinator) con el advisor_id de su asesor.
             Conserva a todos los usuarios existentes y valida el resultado con el mismo parser que usa la app.
   quitar    Quita del secreto los usuarios coordinador.ejemplo* (para desmontar la prueba).
+  socios    Da de alta en tpi.asesores a los usuarios ceo/cto del secreto como responsables de reuniones
+            (rol 'socio', atiende_reuniones = true; idempotente y sin duplicar). Requiere la migracion 010.
+  marcar-coordinadores
+            Marca atiende_reuniones = true en el asesor de cada usuario coordinator (lo resuelve por su
+            advisor_id; los Coordinadores conservan rol 'asesor'). Requiere la migracion 010.
 
 Seguridad:
   * Sin --ejecutar nunca escribe: muestra el plan. Con --ejecutar pide escribir una frase exacta.
@@ -59,6 +64,8 @@ FRASES = {
     "asesores": "CREAR ASESORES DEV",
     "agregar": "AGREGAR USUARIOS DEV",
     "quitar": "QUITAR USUARIOS DEV",
+    "socios": "CREAR SOCIOS DEV",
+    "marcar-coordinadores": "MARCAR COORDINADORES DEV",
 }
 
 
@@ -162,6 +169,31 @@ def validar(payload: dict[str, Any], esperados: list[str]) -> None:
         hasher.verify(configurado.password_hash, usuario)
 
 
+def socios_del_secreto(payload: dict[str, Any]) -> list[tuple[str, str]]:
+    """[(usuario, nombre_visible)] de los usuarios con rol ceo o cto (los Socios)."""
+    return [
+        (str(u.get("username", "?")), str(u.get("display_name", "?")))
+        for u in usuarios_de(payload)
+        if str(u.get("role", "")) in {"ceo", "cto"}
+    ]
+
+
+def coordinadores_del_secreto(payload: dict[str, Any]) -> list[tuple[str, str, str]]:
+    """[(usuario, nombre_visible, advisor_id)] de los usuarios con rol coordinator."""
+    resultado: list[tuple[str, str, str]] = []
+    for u in usuarios_de(payload):
+        if str(u.get("role", "")) == ROL:
+            advisor_id = u.get("advisor_id")
+            resultado.append(
+                (
+                    str(u.get("username", "?")),
+                    str(u.get("display_name", "?")),
+                    str(advisor_id) if advisor_id else "",
+                )
+            )
+    return resultado
+
+
 # --------------------------------------------------------------------------------------
 # AWS (CLI del humano)
 # --------------------------------------------------------------------------------------
@@ -253,6 +285,49 @@ def crear_asesor(cur: Any, nombre: str) -> str:
     return str(cur.fetchone()["id_asesor"])
 
 
+def columna_existe(cur: Any, tabla: str, columna: str) -> bool:
+    """True si la columna existe en tpi.<tabla> (migracion 010 aplicada)."""
+    cur.execute(
+        "SELECT EXISTS ("
+        "  SELECT 1 FROM information_schema.columns "
+        "  WHERE table_schema = 'tpi' AND table_name = %s AND column_name = %s"
+        ") AS existe",
+        (tabla, columna),
+    )
+    return bool(cur.fetchone()["existe"])
+
+
+def verificar_agenda(cur: Any) -> None:
+    """Detiene si la migracion 010 no esta aplicada (falta atiende_reuniones)."""
+    if not columna_existe(cur, "asesores", "atiende_reuniones"):
+        raise ValueError("la migracion 010 no esta aplicada: falta tpi.asesores.atiende_reuniones")
+
+
+def crear_socio(cur: Any, nombre: str) -> str:
+    cur.execute(
+        """
+        INSERT INTO tpi.asesores (nombre, rol, estado_disponibilidad, carga_activa, atiende_reuniones)
+        VALUES (%s, 'socio', 'activo', 0, TRUE) RETURNING id_asesor
+        """,
+        (nombre,),
+    )
+    return str(cur.fetchone()["id_asesor"])
+
+
+def marcar_socio(cur: Any, id_asesor: str) -> None:
+    cur.execute(
+        "UPDATE tpi.asesores SET rol = 'socio', atiende_reuniones = TRUE WHERE id_asesor = %s",
+        (id_asesor,),
+    )
+
+
+def marcar_coordinador(cur: Any, id_asesor: str) -> None:
+    cur.execute(
+        "UPDATE tpi.asesores SET atiende_reuniones = TRUE WHERE id_asesor = %s",
+        (id_asesor,),
+    )
+
+
 def confirmar(subcomando: str, ejecutar: bool) -> bool:
     if not ejecutar:
         print("\nSimulacion: no se escribio nada. Agrega --ejecutar para aplicar.")
@@ -296,6 +371,66 @@ def cmd_asesores(args: argparse.Namespace) -> int:
     print(
         f"\nListo: {len(faltan)} asesor(es) creados. Siguiente: agregar (despues del despliegue)."
     )
+    return 0
+
+
+def cmd_socios(args: argparse.Namespace) -> int:
+    guardas_db(args.port)
+    verificar_cuenta(args.profile, args.region)
+    payload = leer_secreto(args.secreto, args.profile, args.region)
+    socios = socios_del_secreto(payload)
+    with get_db_connection(operation="dev_usuarios_socios") as conn:
+        with conn.cursor() as cur:
+            verificar_agenda(cur)
+            print(f"\nSocios del secreto (rol ceo/cto): {len(socios)}")
+            estado: dict[str, str | None] = {}
+            for usuario, nombre in socios:
+                id_asesor = buscar_asesor(cur, nombre)
+                estado[nombre] = id_asesor
+                print(f"  {nombre} ({usuario}): {'ya existe' if id_asesor else 'se creara'}")
+            if not socios:
+                print("\nNada que hacer: no hay socios (ceo/cto) en el secreto.")
+                return 0
+            if not confirmar("socios", args.ejecutar):
+                return 0
+            for _, nombre in socios:
+                id_asesor = estado[nombre]
+                if id_asesor:
+                    marcar_socio(cur, id_asesor)
+                else:
+                    crear_socio(cur, nombre)
+        conn.commit()
+    print(f"\nListo: {len(socios)} socio(s) con rol 'socio' y atiende_reuniones = true.")
+    return 0
+
+
+def cmd_marcar_coordinadores(args: argparse.Namespace) -> int:
+    guardas_db(args.port)
+    verificar_cuenta(args.profile, args.region)
+    payload = leer_secreto(args.secreto, args.profile, args.region)
+    coordinadores = coordinadores_del_secreto(payload)
+    with get_db_connection(operation="dev_usuarios_marcar_coordinadores") as conn:
+        with conn.cursor() as cur:
+            verificar_agenda(cur)
+            print(f"\nCoordinadores del secreto (rol coordinator): {len(coordinadores)}")
+            for usuario, nombre, advisor_id in coordinadores:
+                print(f"  {nombre} ({usuario}) -> asesor {advisor_id or '(sin advisor_id)'}")
+            if not coordinadores:
+                print("\nNada que hacer: no hay coordinadores en el secreto.")
+                return 0
+            sin_advisor = [u for u, _, aid in coordinadores if not aid]
+            if sin_advisor:
+                print(
+                    f"DETENIDO: coordinadores sin advisor_id: {', '.join(sin_advisor)}.",
+                    file=sys.stderr,
+                )
+                return 2
+            if not confirmar("marcar-coordinadores", args.ejecutar):
+                return 0
+            for _, _, advisor_id in coordinadores:
+                marcar_coordinador(cur, advisor_id)
+        conn.commit()
+    print(f"\nListo: {len(coordinadores)} coordinador(es) con atiende_reuniones = true.")
     return 0
 
 
@@ -365,6 +500,8 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         ("asesores", "crea los asesores de los coordinadores"),
         ("agregar", "agrega los usuarios al secreto"),
         ("quitar", "quita los usuarios del secreto"),
+        ("socios", "da de alta a ceo/cto como responsables de reuniones"),
+        ("marcar-coordinadores", "marca a los coordinadores como responsables de reuniones"),
     ):
         s = sub.add_parser(nombre, help=ayuda)
         s.add_argument("--secreto", default=SECRETO)
@@ -390,6 +527,8 @@ def main(argv: list[str] | None = None) -> int:
         "asesores": cmd_asesores,
         "agregar": cmd_agregar,
         "quitar": cmd_quitar,
+        "socios": cmd_socios,
+        "marcar-coordinadores": cmd_marcar_coordinadores,
     }
     try:
         return comandos[args.comando](args)
