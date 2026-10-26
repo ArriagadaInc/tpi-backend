@@ -271,7 +271,7 @@ def test_web_assignment_flow_persists_and_renders_after_refresh(
 
     app = create_web_app()
     app.state.web_service = service
-    app.state.auth_provider = _FakeAuthProvider(role="executive")
+    app.state.auth_provider = _FakeAuthProvider(role="ceo")
     assign_client = TestClient(app)
     login_response = assign_client.post(
         "/login",
