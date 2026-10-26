@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "CRM-AGENDA-2-CALENDARIO",
+  "created_at": "2026-10-26T21:21:38Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610262029-developer-supc7338e",
+  "head_sha": "9627fcafc1df41870e753ae10d5d5fa6348715cf",
+  "branch": "harness/CRM-AGENDA-2-CALENDARIO-calendario",
+  "pr_number": 140,
+  "change_class": "A",
+  "tests": {
+    "command": "Local (worktree, sin PostgreSQL): ruff check app/ tests/ scripts/ deployment/ PASS; black --check app/ tests/ scripts/ deployment/ PASS (276 files); mypy app/ --ignore-missing-imports PASS (77 files); bandit -r app/ --severity-level medium --confidence-level medium PASS. python -m pytest tests/unit/test_agenda_domain.py tests/unit/test_agenda_service.py tests/unit/test_agenda_web.py --no-cov -q -> 42 passed; suite completa de unit local: 1103 passed (12 fallos preexistentes por falta de PostgreSQL/woff2 MIME en Windows, ajenos a esta tarea). Los tests de integracion (tests/integration/test_agenda_repository.py) requieren PostgreSQL y corren en CI. CI PR #140 (ubuntu, Python 3.12, servicio postgres:15) sobre 9627fca: Tests PASS (pytest tests/ --cov=app --cov-fail-under=85; cobertura 91.10%), Lint & Format PASS, Security Audit PASS, Docker Build PASS, Release Tooling Validation PASS.",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "app/models/agenda.py con las constantes de la reunion (estados agendada/realizada/no_asistio/cancelada, modalidades Google Meet/Llamada/Presencial, duraciones 30/45/60) y las validaciones puras validate_inicio (zona horaria, lunes a viernes, cada 15 minutos, desde 09:00), validate_fin_dentro_de_horario (fin <= 19:00), validate_no_en_pasado, validate_duracion, validate_modalidad y validate_nota (hasta 500). El servicio AgendaService aplica estas reglas siempre en el servidor. La restriccion de superposicion la sostiene la base (EXCLUDE de la migracion 010) y el repositorio traduce ExclusionViolation a AgendaConflictError con mensaje claro, y UniqueViolation (una agendada por lead) a AgendaValidationError. Pruebas: tests/unit/test_agenda_domain.py (15 casos, incluidos los dos cambios de hora de Chile: verano UTC-3 / invierno UTC-4) y tests/integration/test_agenda_repository.py (superposicion y duplicado)."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "AgendaService._resolve_responsable valida contra la base: responsable = fila activa de tpi.asesores con atiende_reuniones (AgendaRepository.get_responsable_by_id); Runner (advisor) solo puede elegir rol 'socio'; Coordinador se elige a si mismo o a un Socio; el Socio elige un Socio o el Coordinador dueno de la cartera (la regla general 'un Coordinador solo es responsable de leads de su propia cartera' se valida comparando con lead_active_assignment_owner). get_responsables_para_agendar filtra las opciones para el formulario. Matriz actor x responsable x lead propio/ajeno en tests/unit/test_agenda_service.py."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "AgendaRepository.create_cita/update_cita/cancel_cita/complete_cita/no_show_cita operan en una sola transaccion (_agenda_tx) y reutilizan SolicitudRepository._update_lead_status_tx (la misma validacion, candado y auditoria cambio_estado_lead que update_lead_status) para el cambio de estado: agendar -> reunion_agendada, cancelar/no asistio -> en_seguimiento, realizada -> reunion_realizada. Una reunion realizada/cancelada/no_asistio no se reabre (se valida estado_cita == 'agendada'). Pruebas de integracion test_cancelar_devuelve_lead_en_seguimiento, test_realizada_pasa_lead_reunion_realizada, test_no_asistio_devuelve_lead_en_seguimiento, test_reagendar_actualiza_la_misma_cita, y de rechazo (cancelar/completar reunion no agendada)."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "GET /agenda (app/web/routes/agenda.py) con vista de semana (navegacion anterior/siguiente/hoy) y de lista, filtro por responsable, disponible para todo usuario autenticado. El servicio recorta en el servidor (_cita_view): si el lead esta fuera del alcance de quien mira, la respuesta NO contiene nombre, id ni enlace (lead_nombre/None, id_lead/None, link_reunion/None, lead_fuera_de_alcance=True); un Socio ve todo. El menu superior gana la entrada Agenda en base.html para todos los perfiles. Pruebas de recorte en tests/unit/test_agenda_service.py (test_runner_solo_ve_su_cartera, test_socio_ve_todos_los_leads) y test_agenda_page_renderiza."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "Tarjeta Reunion en app/web/templates/reunion_card.html (incluida en lead_detail_panel.html) con la reunion agendada (o la ultima) y los botones agendar/reagendar/cancelar/realizada/no-asistio segun el perfil; el formulario (agenda_form_fields.html) pide fecha, hora, duracion, responsable, modalidad, enlace y nota con token CSRF. Si la base falla o faltan las columnas de la migracion 010, build_lead_agenda_context captura DatabaseAppError y la tarjeta y la pagina Agenda muestran un aviso (unavailable) dejando el resto del CRM funcionando. Pruebas: test_lead_detail_renderiza_tarjeta_reunion y los POST de la agenda."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "evidence": "Matriz de permisos servidor-side y fail-closed: can_agendar (tester/advisor/coordinator/operations/admin + superusuarios; executive/readonly no escriben) y can_mark_attendance (solo coordinator/ceo/cto). Alcance de cartera reutilizado con has_portfolio_scope + resolve_advisor_identity; un lead ajeno responde 404 sin revelar existencia. Ningun permiso existente se amplia (no cambian dashboard/exportacion/adjuntos/simulador/asignacion). Pruebas: test_permisos_matriz, test_agendar_readonly_denegado, test_realizada_runner_denegado, test_agendar_csrf_invalido, test_reagendar_cita_ajena_es_404, test_identity_sin_asesor_activo_falla_cerrado."
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "evidence": "Cada accion inserta en tpi.auditoria (append-only) por el mecanismo vigente: cita_agendada/cita_reagendada/cita_cancelada/cita_realizada/cita_no_asistio con tabla_afectada='tpi.citas', actor_subject, id_cita, responsable_id y horas anterior/nueva (fecha_hora_anterior/fecha_hora_nueva) y motivo en cancelacion; el detalle no lleva nombre ni datos personales del lead. La app nunca borra una reunion (cancelar es UPDATE; tpi_app no tiene DELETE). Pruebas de cada evento en tests/integration/test_agenda_repository.py (acciones en _audit_rows + asercion de que el detalle no contiene 'Lead')."
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "evidence": "Documentacion de uso en docs/AGENDA_USO.md (agenda, reglas y permisos), CHANGELOG.md actualizado; docs/BITACORA.md la genera el cierre automatico del Harness. Cobertura 91.10% (>= 85%), ruff/black/mypy/bandit verdes, sin dependencias nuevas (pyproject.toml y requirements sin cambios)."
+    },
+    {
+      "id": "AC-9",
+      "status": "pending_verification",
+      "evidence": "Prueba humana en AWS DEV con un usuario de cada perfil (Runner agenda con Socio y no puede elegir Coordinador ni marcar realizada; Coordinador ve el calendario con leads ajenos sin nombre, agenda y marca realizada; Socio ve todo, reagenda, cancela y marca no asistio; dos reuniones del mismo responsable no se pisan; el estado del lead cambia segun el diseno; probar en celular). Requires_human_acceptance."
+    }
+  ],
+  "files_changed": [
+    "app/models/agenda.py (nuevo: constantes, errores de dominio y validaciones)",
+    "app/repositories/agenda_repository.py (nuevo: lecturas y escrituras transaccionales de tpi.citas)",
+    "app/services/agenda_service.py (nuevo: permisos, responsable, alcance y orquestacion)",
+    "app/web/agenda_presentation.py (nuevo: resolucion del servicio y contexto de la tarjeta)",
+    "app/web/routes/agenda.py (nuevo: GET /agenda y POST /leads/{id}/agenda/*)",
+    "app/web/templates/agenda.html (nuevo: vista semana y lista)",
+    "app/web/templates/agenda_form_fields.html (nuevo: campos del formulario de reunion)",
+    "app/web/templates/reunion_card.html (nuevo: tarjeta Reunion del detalle del lead)",
+    "app/repositories/solicitud_repository.py (extrae _update_lead_status_tx y _validate_status_write para reutilizar update_lead_status en la misma transaccion)",
+    "app/web/main.py (registra el router de agenda y el filtro cita_estado_label)",
+    "app/web/routes/leads.py (agrega el contexto de la tarjeta Reunion al detalle del lead)",
+    "app/web/templates/base.html (entrada Agenda en el menu superior)",
+    "app/web/templates/lead_detail_panel.html (incluye reunion_card.html)",
+    "app/web/static/css/app.css (componentes de la agenda con tokens, sin colores sueltos nuevos)",
+    "docs/AGENDA_USO.md (nuevo: guia de uso)",
+    "CHANGELOG.md",
+    "tests/unit/test_agenda_domain.py (nuevo)",
+    "tests/unit/test_agenda_service.py (nuevo)",
+    "tests/unit/test_agenda_web.py (nuevo)",
+    "tests/integration/test_agenda_repository.py (nuevo)"
+  ],
+  "assumptions": [
+    "Clase A: sin migracion ni cambio de esquema; la base ya tiene la migracion 010 (CRM-AGENDA-1-MIGRACION) aplicada en DEV. tpi_app solo recibe SELECT/INSERT/UPDATE sobre tpi.citas (sin DELETE).",
+    "Se reutilizan has_portfolio_scope, resolve_advisor_identity, lead_active_assignment_belongs_to y update_lead_status (via _update_lead_status_tx); no se escribe una segunda regla de alcance.",
+    "El cambio de estado del lead usa el mismo servicio y auditoria (cambio_estado_lead en tpi.leads) y ocurre en la misma transaccion que la reunion; una reunion realizada/cancelada/no_asistio no se reabre.",
+    "La validacion de superposicion la sostiene la base (EXCLUDE); el repositorio traduce la violacion a un mensaje claro y ademas el responsable se valida contra la base antes de escribir.",
+    "Roles heredados que escriben (tester/operations/admin) agendan 'como hoy en un lead' (sin restriccion de cartera, como update_lead_status); los roles de solo lectura (executive/readonly) no escriben y el Runner no puede marcar realizada/no asistio.",
+    "Socio = ceo/cto (rol 'socio'); Coordinador = rol 'asesor' con atiende_reuniones=true (la cadena de cartera lo exige).",
+    "El detalle de la auditoria no lleva nombre ni datos personales del lead (solo actor_subject, id_cita, responsable_id y horas).",
+    "Sin sincronizacion con Google Calendar/Meet, recordatorios, correos, WhatsApp, feriados, disponibilidad por Socio, intentos, cadencia, calificacion, comisiones ni la marca 'no contactar' (modulos posteriores).",
+    "Sin secretos, claves ni usuarios reales en el repositorio; los ejemplos son ficticios.",
+    "La entrada de cierre en docs/BITACORA.md la genera el cierre automatico del Harness; no se escribe manualmente."
+  ],
+  "migrations_included": false
+}
