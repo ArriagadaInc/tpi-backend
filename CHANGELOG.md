@@ -31,6 +31,12 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ### ✅ Agregado
 
+- **Ampliación de `tpi.citas` y `tpi.asesores` para la agenda de reuniones** (CRM-AGENDA-1-MIGRACION)
+  - Migración de clase D `scripts/sql/010_extend_citas_agenda.sql` (y su reversa `010_drop_citas_agenda.sql`): `tpi.citas` gana responsable obligatorio (`id_asesor NOT NULL`), `fecha_hora_fin` (CHECK > `fecha_hora`), quién agendó (`agendada_por_subject`/`agendada_por_nombre`), `nota`, `motivo_cancelacion` y `updated_at`; CHECK de `estado_cita` (`agendada`, `realizada`, `no_asistio`, `cancelada`); un índice único parcial (una reunión agendada por lead) y una restricción `EXCLUDE USING gist` (un responsable no se pisa, requiere `btree_gist`); `tpi.asesores` gana `atiende_reuniones`; `tpi_app` recibe `SELECT, INSERT, UPDATE` sobre `tpi.citas` sin `DELETE`.
+  - `scripts/init_test_database.py` crea `tpi.citas` en su forma final y `tpi.asesores.atiende_reuniones` para las pruebas de integración de la agenda.
+  - `scripts/dev_usuarios.py` gana `socios` (alta idempotente de CEO/CTO como responsables, rol `socio`) y `marcar-coordinadores` (marca a los Coordinadores por `advisor_id`), ambos plan por defecto y con validación de la migración aplicada.
+  - Documentación en `docs/database/` (02, 04 y 08) y pruebas de contrato, unitarias e integración.
+
 - **Documentación del inventario de DEV y herramienta de reinicio de datos**
   - `docs/database/08_DEV_DATA_INVENTORY.md`: procedencia de los datos de DEV, inventario con fecha (2026-10-24), orden de dependencias de las claves foráneas, ubicación de los adjuntos en S3, consultas útiles y el procedimiento de reinicio.
   - `docs/database/02_PHYSICAL_SCHEMA.md` y `01_ARCHITECTURE.md`: las cinco tablas operativas del pipeline (`campanas_atribucion`, `eventos_lead`, `citas`, `fichas_diagnosticas`, `ingesta_google_sheets`) y el mapa de relaciones.

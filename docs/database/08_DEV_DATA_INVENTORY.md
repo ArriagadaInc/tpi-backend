@@ -44,9 +44,9 @@ Medido con `scripts/dev_reset_leads.py --inspeccionar` y con su simulacion (solo
 | `tpi.eventos_lead` | 69 | `id_lead` | NO ACTION |
 | `tpi.ingesta_google_sheets` | 69 (las 69 ligadas a un lead) | `id_lead_generado` (opcional) | NO ACTION |
 | `tpi.api_idempotency` | 2 | `lead_id` | **SET NULL** |
-| `tpi.citas` | 0 | `id_lead` -> `leads`, `id_asesor` (opcional) | NO ACTION |
+| `tpi.citas` | 0 | `id_lead` -> `leads`, `id_asesor` (obligatorio tras 010) -> `asesores` | NO ACTION |
 | `tpi.fichas_diagnosticas` | 0 | `id_lead` -> `leads`, `id_asesor` (opcional) | NO ACTION |
-| `tpi.asesores` | 4 activos con rol `asesor` | referenciada por `asignaciones`, `citas` y `fichas_diagnosticas` | - |
+| `tpi.asesores` | 4 activos con rol `asesor` (los Socios CEO/CTO entran con rol `socio` tras 010) | referenciada por `asignaciones`, `citas` y `fichas_diagnosticas`; `atiende_reuniones` (010) marca a los responsables de reuniones | - |
 | Bucket de adjuntos `leads/` | 7 objetos | clave `leads/{id_lead}/{id_adjunto}` | no es una FK (ver abajo) |
 
 Notas de lectura:
@@ -231,6 +231,19 @@ secreto como `AWSPREVIOUS`. Las cuentas de prueba son sinteticas y su clave es i
 Orden seguro para un rol nuevo: el rol `coordinator` solo lo entiende la version RBAC (`ba53777` en adelante); la version anterior no arranca si lo ve
 (`Unknown auth role`), y un rollback con el usuario ya cargado tampoco levantaria. Por eso primero `asesores` (sin riesgo), despues del despliegue y de
 `Ready/Green/Ok` se ejecuta `agregar` y se reinicia el servidor de la aplicacion.
+
+### Socios y responsables de reuniones (migracion 010)
+
+Tras aplicar la migracion `010` (`scripts/sql/010_extend_citas_agenda.sql`), `scripts/dev_usuarios.py` gana dos subcomandos (plan por defecto; escriben solo con
+`--ejecutar` y su frase de confirmacion, y no imprimen hashes ni claves):
+
+- `socios`: da de alta en `tpi.asesores` a los usuarios `ceo` y `cto` del secreto (rol `socio`, `atiende_reuniones = true`, nombre tomado del nombre visible).
+  Idempotente: si el asesor ya existe por nombre, lo marca sin duplicarlo.
+- `marcar-coordinadores`: pone `atiende_reuniones = true` en la fila de `tpi.asesores` de cada usuario `coordinator`, resuelta por su `advisor_id`. Los
+  Coordinadores conservan rol `asesor`.
+
+Ambos validan que la migracion `010` este aplicada (si falta `tpi.asesores.atiende_reuniones` se detienen con un mensaje claro) y se pueden repetir. La lista de
+responsables de reuniones queda como `atiende_reuniones = true` (Socios CEO/CTO y Coordinadores marcados), nunca un Runner.
 
 ## Como mantener este documento
 

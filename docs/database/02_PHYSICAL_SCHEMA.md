@@ -104,6 +104,7 @@ Contrato versionado:
 | `estado_disponibilidad` | VARCHAR(50) | No | `'activo'` | - | Availability flag |
 | `especialidad` | VARCHAR(100) | Yes | none | - | Advisor specialty |
 | `carga_activa` | INTEGER | No | `0` | - | Load counter |
+| `atiende_reuniones` | BOOLEAN | No | `false` | - | Marca de quien puede ser responsable de una reunion (migracion 010) |
 | `created_at` | TIMESTAMPTZ | No | `now()` | - | Creation timestamp |
 
 Notas:
@@ -112,6 +113,11 @@ Notas:
 - The domain term is `asesor`; the UX may display `Ejecutivo`.
 - The current H3.3 assignment flow does not require mapping the authenticated
   user to `id_asesor`.
+- `atiende_reuniones` (migracion 010) marca a quienes pueden ser responsables de
+  una reunion de la agenda: los Socios (`rol = 'socio'`, CEO y CTO) y los
+  Coordinadores (`rol = 'asesor'` con la marca en `true`). Las consultas de
+  asignacion y cartera siguen filtrando por `rol = 'asesor'`, asi que los Socios
+  no entran al reparto automatico.
 
 ### `tpi.asignaciones`
 
@@ -330,18 +336,37 @@ Eventos relevantes de un lead (bitacora del pipeline). Filas en DEV: 69. Indice 
 
 #### `tpi.citas`
 
-Citas de un lead con un asesor. Filas en DEV: 0 (sin uso todavia).
+Reuniones de la agenda de un lead con un asesor. Filas en DEV: 0 (sin uso todavia).
+
+El DDL original de esta tabla es del proyecto `tpi-data-pipeline` (`setup_db.py`,
+`CREATE TABLE IF NOT EXISTS`); la migracion `010` (`scripts/sql/010_extend_citas_agenda.sql`)
+lo amplia sin tocar ese proyecto. La forma que se refleja aqui es la final tras `010`.
 
 | Columna | Tipo | Nullable | Default | PK / FK / UNIQUE | Proposito |
 | ------- | ---- | -------- | ------- | ---------------- | --------- |
 | `id_cita` | UUID | No | `gen_random_uuid()` | PK | Identificador |
-| `id_lead` | UUID | No | none | FK -> `tpi.leads(id_lead)` | Lead de la cita |
-| `id_asesor` | UUID | Yes | none | FK -> `tpi.asesores(id_asesor)` | Asesor de la cita |
-| `fecha_hora` | TIMESTAMPTZ | No | none | - | Fecha y hora |
-| `canal` | VARCHAR(50) | No | `'Google Meet'` | - | Canal de la reunion |
-| `estado_cita` | VARCHAR(50) | No | `'agendada'` | - | Estado de la cita |
+| `id_lead` | UUID | No | none | FK -> `tpi.leads(id_lead)` | Lead de la reunion |
+| `id_asesor` | UUID | No | none | FK -> `tpi.asesores(id_asesor)` | Responsable de la asesoria (obligatorio desde 010) |
+| `fecha_hora` | TIMESTAMPTZ | No | none | Indice `citas_fecha_hora_idx` | Fecha y hora de inicio |
+| `fecha_hora_fin` | TIMESTAMPTZ | No | none | CHECK `fecha_hora_fin > fecha_hora` | Fecha y hora de fin |
+| `agendada_por_subject` | TEXT | Yes | none | - | Quien agendo (subject de inicio de sesion; sin FK) |
+| `agendada_por_nombre` | TEXT | Yes | none | - | Nombre visible de quien agendo |
+| `canal` | VARCHAR(50) | No | `'Google Meet'` | - | Modalidad (`Google Meet`, `Llamada`, `Presencial`) |
+| `estado_cita` | VARCHAR(50) | No | `'agendada'` | CHECK `agendada`/`realizada`/`no_asistio`/`cancelada` | Estado de la reunion |
 | `link_reunion` | TEXT | Yes | none | - | Enlace |
+| `nota` | TEXT | Yes | none | - | Nota opcional |
+| `motivo_cancelacion` | TEXT | Yes | none | - | Motivo obligatorio al cancelar |
 | `created_at` | TIMESTAMPTZ | No | `now()` | - | Creacion |
+| `updated_at` | TIMESTAMPTZ | No | `now()` | - | Ultima actualizacion |
+
+Integridad agregada por la migracion `010`:
+
+- Indice unico parcial `citas_one_agendada_per_lead_uq` sobre `id_lead` cuando
+  `estado_cita = 'agendada'`: un lead tiene como maximo una reunion agendada.
+- Restriccion de exclusion `citas_responsable_no_superposicion_excl`
+  (`EXCLUDE USING gist`, `id_asesor` con `=`, `tstzrange(fecha_hora, fecha_hora_fin)`
+  con `&&`, cuando `estado_cita = 'agendada'`): un responsable no tiene dos
+  reuniones que se pisen. Requiere la extension `btree_gist`.
 
 El estado `reunion_agendada` del lead (`tpi.leads.estado_lead`) **no** esta ligado a esta tabla: hoy es solo el valor del estado.
 

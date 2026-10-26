@@ -329,3 +329,210 @@ def test_la_base_solo_se_toca_por_el_tunel_a_dev(
 
     with pytest.raises(ValueError, match=motivo):
         mod.guardas_db(None)
+
+
+# --------------------------------------------------------------------------------------
+# CRM-AGENDA-1-MIGRACION: subcomandos `socios` y `marcar-coordinadores`
+# --------------------------------------------------------------------------------------
+
+ID_SOCIO = "55555555-5555-4555-8555-555555555555"
+
+
+def _secreto_con_socios() -> dict[str, Any]:
+    return {
+        "users": [
+            {
+                "subject": "s-ceo",
+                "username": "diego.operaciones",
+                "display_name": "Diego",
+                "role": "ceo",
+                "password_hash": HASHER.hash("x"),
+            },
+            {
+                "subject": "s-cto",
+                "username": "alvaro.operaciones",
+                "display_name": "Alvaro",
+                "role": "cto",
+                "password_hash": HASHER.hash("x"),
+            },
+            {
+                "subject": "s1",
+                "username": "asesor.desarrollo1",
+                "display_name": "Asesor Desarrollo 1",
+                "role": "advisor",
+                "advisor_id": "33333333-3333-4333-8333-333333333333",
+                "password_hash": HASHER.hash("x"),
+            },
+        ]
+    }
+
+
+class _EstadoAgenda:
+    def __init__(self, asesores: dict[str, str], columna_agenda: bool = True) -> None:
+        self.asesores = {k.casefold(): v for k, v in asesores.items()}
+        self.roles: dict[str, str] = {}
+        self.atiende: dict[str, bool] = {}
+        self.columna_agenda = columna_agenda
+        self._contador = 0
+
+    def siguiente_id(self) -> str:
+        self._contador += 1
+        return f"99999999-9999-4999-8999-9999999999{self._contador:02d}"
+
+
+class _CursorAgendaFalso:
+    def __init__(self, estado: _EstadoAgenda) -> None:
+        self._estado = estado
+        self._filas: list[dict[str, Any]] = []
+
+    def execute(self, consulta: str, params: Any = None) -> None:
+        self._filas = []
+        if "information_schema.columns" in consulta:
+            self._filas = [{"existe": self._estado.columna_agenda}]
+        elif "INSERT INTO tpi.asesores" in consulta:
+            id_asesor = self._estado.siguiente_id()
+            self._estado.asesores[str(params[0]).casefold()] = id_asesor
+            self._estado.roles[id_asesor] = "socio"
+            self._estado.atiende[id_asesor] = True
+            self._filas = [{"id_asesor": id_asesor}]
+        elif "UPDATE tpi.asesores" in consulta:
+            id_asesor = str(params[0])
+            if "rol = 'socio'" in consulta:
+                self._estado.roles[id_asesor] = "socio"
+            self._estado.atiende[id_asesor] = True
+        else:
+            nombre = str(params[0]).casefold()
+            id_asesor = self._estado.asesores.get(nombre)
+            self._filas = [{"id_asesor": id_asesor}] if id_asesor else []
+
+    def fetchall(self) -> list[dict[str, Any]]:
+        return self._filas
+
+    def fetchone(self) -> dict[str, Any] | None:
+        return self._filas[0] if self._filas else None
+
+
+def _conexion_agenda_falsa(estado: _EstadoAgenda) -> Any:
+    @contextmanager
+    def conexion(operation: str = "") -> Iterator[Any]:
+        class _Conn:
+            @contextmanager
+            def cursor(self) -> Iterator[_CursorAgendaFalso]:
+                yield _CursorAgendaFalso(estado)
+
+            def commit(self) -> None:
+                return None
+
+        yield _Conn()
+
+    return conexion
+
+
+def test_socios_del_secreto_extrae_ceo_y_cto() -> None:
+    assert mod.socios_del_secreto(_secreto_con_socios()) == [
+        ("diego.operaciones", "Diego"),
+        ("alvaro.operaciones", "Alvaro"),
+    ]
+
+
+def test_coordinadores_del_secreto_extrae_coordinators_con_advisor_id() -> None:
+    con_nuevos, _, _ = mod.agregar_usuarios(_secreto_base(), _nuevos())
+
+    assert mod.coordinadores_del_secreto(con_nuevos) == [
+        ("coordinador.ejemplo1", "Coordinador Ejemplo 1", ID_1),
+        ("coordinador.ejemplo2", "Coordinador Ejemplo 2", ID_2),
+    ]
+
+
+def test_socios_sin_ejecutar_no_escribe_ni_imprime_hashes(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    aws_falso = _AwsFalso(_secreto_con_socios())
+    estado = _EstadoAgenda({})
+    _preparar(monkeypatch, tmp_path, aws_falso, {})
+    monkeypatch.setattr(mod, "get_db_connection", _conexion_agenda_falsa(estado))
+
+    assert mod.main(["socios"]) == 0
+
+    assert aws_falso.escrituras == 0
+    assert estado.asesores == {}
+    salida = capsys.readouterr().out
+    assert "Simulacion" in salida and "Diego" in salida and "Alvaro" in salida
+    assert "argon2" not in salida
+
+
+def test_socios_con_frase_crea_socios(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    aws_falso = _AwsFalso(_secreto_con_socios())
+    estado = _EstadoAgenda({})
+    _preparar(monkeypatch, tmp_path, aws_falso, {})
+    monkeypatch.setattr(mod, "get_db_connection", _conexion_agenda_falsa(estado))
+    monkeypatch.setattr("builtins.input", lambda _="": mod.FRASES["socios"])
+
+    assert mod.main(["socios", "--ejecutar"]) == 0
+
+    assert set(estado.asesores) == {"diego", "alvaro"}
+    assert all(estado.roles[i] == "socio" for i in estado.asesores.values())
+    assert all(estado.atiende[i] is True for i in estado.asesores.values())
+
+
+def test_socios_es_idempotente_y_no_duplica(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    aws_falso = _AwsFalso(_secreto_con_socios())
+    estado = _EstadoAgenda({"Diego": ID_SOCIO})
+    _preparar(monkeypatch, tmp_path, aws_falso, {})
+    monkeypatch.setattr(mod, "get_db_connection", _conexion_agenda_falsa(estado))
+    monkeypatch.setattr("builtins.input", lambda _="": mod.FRASES["socios"])
+
+    assert mod.main(["socios", "--ejecutar"]) == 0
+
+    # Diego ya existia: se marca sin duplicar; Alvaro se crea.
+    assert estado.asesores["diego"] == ID_SOCIO
+    assert estado.roles[ID_SOCIO] == "socio"
+    assert estado.atiende[ID_SOCIO] is True
+    assert "alvaro" in estado.asesores
+
+
+def test_marcar_coordinadores_marca_por_advisor_id_sin_cambiar_rol(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    con_nuevos, _, _ = mod.agregar_usuarios(_secreto_base(), _nuevos())
+    aws_falso = _AwsFalso(con_nuevos)
+    estado = _EstadoAgenda({"coordinador ejemplo 1": ID_1, "coordinador ejemplo 2": ID_2})
+    _preparar(monkeypatch, tmp_path, aws_falso, {})
+    monkeypatch.setattr(mod, "get_db_connection", _conexion_agenda_falsa(estado))
+    monkeypatch.setattr("builtins.input", lambda _="": mod.FRASES["marcar-coordinadores"])
+
+    assert mod.main(["marcar-coordinadores", "--ejecutar"]) == 0
+
+    assert estado.atiende.get(ID_1) is True
+    assert estado.atiende.get(ID_2) is True
+    # Los Coordinadores conservan rol 'asesor': no se toca el rol.
+    assert estado.roles == {}
+
+
+def test_socios_se_detiene_si_falta_la_columna_de_la_migracion(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    aws_falso = _AwsFalso(_secreto_con_socios())
+    estado = _EstadoAgenda({}, columna_agenda=False)
+    _preparar(monkeypatch, tmp_path, aws_falso, {})
+    monkeypatch.setattr(mod, "get_db_connection", _conexion_agenda_falsa(estado))
+
+    assert mod.main(["socios", "--ejecutar"]) == 2
+
+    assert "migracion 010" in capsys.readouterr().err
+
+
+def test_marcar_coordinadores_se_detiene_si_falta_la_columna_de_la_migracion(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    con_nuevos, _, _ = mod.agregar_usuarios(_secreto_base(), _nuevos())
+    aws_falso = _AwsFalso(con_nuevos)
+    estado = _EstadoAgenda({}, columna_agenda=False)
+    _preparar(monkeypatch, tmp_path, aws_falso, {})
+    monkeypatch.setattr(mod, "get_db_connection", _conexion_agenda_falsa(estado))
+
+    assert mod.main(["marcar-coordinadores", "--ejecutar"]) == 2
+
+    assert "migracion 010" in capsys.readouterr().err

@@ -12,6 +12,7 @@ SET max_parallel_maintenance_workers = 0;
 SET max_parallel_workers = 0;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS btree_gist;
 CREATE SCHEMA IF NOT EXISTS tpi;
 
 CREATE TABLE IF NOT EXISTS tpi.catalogo_genero (
@@ -84,6 +85,7 @@ CREATE TABLE IF NOT EXISTS tpi.asesores (
     estado_disponibilidad VARCHAR(50) NOT NULL,
     especialidad VARCHAR(100),
     carga_activa INTEGER NOT NULL DEFAULT 0,
+    atiende_reuniones BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -110,6 +112,43 @@ CREATE INDEX IF NOT EXISTS asignaciones_id_asesor_idx
 CREATE UNIQUE INDEX IF NOT EXISTS asignaciones_one_active_per_lead_uq
     ON tpi.asignaciones (id_lead)
     WHERE estado_asignacion = 'activa';
+
+-- CRM-AGENDA-1-MIGRACION: tpi.citas en su forma final (las columnas originales del DDL de
+-- setup_db.py del proyecto tpi-data-pipeline mas las de la migracion 010). La tabla real la
+-- crea setup_db.py; aqui se refleja el contrato ampliado para las pruebas de integracion de
+-- la agenda. btree_gist se crea mas arriba para la restriccion EXCLUDE.
+CREATE TABLE IF NOT EXISTS tpi.citas (
+    id_cita UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id_lead UUID NOT NULL REFERENCES tpi.leads(id_lead),
+    id_asesor UUID NOT NULL REFERENCES tpi.asesores(id_asesor),
+    fecha_hora TIMESTAMPTZ NOT NULL,
+    fecha_hora_fin TIMESTAMPTZ NOT NULL,
+    agendada_por_subject TEXT,
+    agendada_por_nombre TEXT,
+    canal VARCHAR(50) NOT NULL DEFAULT 'Google Meet',
+    estado_cita VARCHAR(50) NOT NULL DEFAULT 'agendada',
+    link_reunion TEXT,
+    nota TEXT,
+    motivo_cancelacion TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT citas_fecha_hora_fin_gt_inicio_chk CHECK (fecha_hora_fin > fecha_hora),
+    CONSTRAINT citas_estado_cita_check
+        CHECK (estado_cita IN ('agendada', 'realizada', 'no_asistio', 'cancelada')),
+    CONSTRAINT citas_responsable_no_superposicion_excl
+        EXCLUDE USING gist (
+            id_asesor WITH =,
+            tstzrange(fecha_hora, fecha_hora_fin) WITH &&
+        )
+        WHERE (estado_cita = 'agendada')
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS citas_one_agendada_per_lead_uq
+    ON tpi.citas (id_lead)
+    WHERE estado_cita = 'agendada';
+
+CREATE INDEX IF NOT EXISTS citas_fecha_hora_idx
+    ON tpi.citas (fecha_hora);
 
 CREATE TABLE IF NOT EXISTS tpi.consentimientos (
     id_consentimiento UUID PRIMARY KEY DEFAULT gen_random_uuid(),

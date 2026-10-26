@@ -22,6 +22,25 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-26 - Agenda de reuniones: migración 010 lista para el humano (CRM-AGENDA-1-MIGRACION)
+
+- Migración de clase D que amplía `tpi.citas` y `tpi.asesores` para la agenda (sección 6 de `docs/AGENDA_REUNIONES_DISENO.md`).
+- Forward `scripts/sql/010_extend_citas_agenda.sql`: `btree_gist` (la restricción EXCLUDE lo exige; preflight que aborta con mensaje claro), en `tpi.citas`
+  `id_asesor NOT NULL`, `fecha_hora_fin` (CHECK > `fecha_hora`), `agendada_por_subject`/`agendada_por_nombre`, `nota`, `motivo_cancelacion`, `updated_at`,
+  CHECK de `estado_cita` (agendada/realizada/no_asistio/cancelada), índice único parcial `citas_one_agendada_per_lead_uq` (una agendada por lead), índice
+  `citas_fecha_hora_idx` y exclusión `citas_responsable_no_superposicion_excl` (el responsable no se pisa); en `tpi.asesores` `atiende_reuniones BOOLEAN NOT NULL
+  DEFAULT false`; `REVOKE ALL FROM PUBLIC` + `GRANT SELECT, INSERT, UPDATE` a `tpi_app` sobre `tpi.citas` (sin DELETE, sin tocar auditoría).
+- Reversa `scripts/sql/010_drop_citas_agenda.sql` transaccional e idempotente: quita índices, restricciones, columnas nuevas y privilegios; aborta si `tpi.citas`
+  tiene filas; no elimina la tabla, ni `btree_gist`, ni toca `tpi.auditoria`.
+- Bootstrap `scripts/init_test_database.py`: crea `tpi.citas` en su forma final (DDL original de `tpi-data-pipeline` + 010) y `tpi.asesores.atiende_reuniones`;
+  agrega `CREATE EXTENSION btree_gist`.
+- `scripts/dev_usuarios.py` gana `socios` (alta idempotente de CEO/CTO con rol `socio` y `atiende_reuniones = true`) y `marcar-coordinadores` (marca por
+  `advisor_id`, conservan rol `asesor`); ambos validan la 010 aplicada y son plan por defecto.
+- Pruebas: contrato estático de ambos scripts (`tests/unit/test_agenda_migration_scripts.py`), unitarias de los subcomandos (`tests/unit/test_dev_usuarios.py`) e
+  integración forward/reversa y restricciones (`tests/integration/test_citas_agenda_migration.py`).
+- Pendiente del humano: comprobar que RDS permite `btree_gist` y aplicar la 010 en AWS DEV con `tpi_admin` (clase D, Human Gate), luego `socios` y
+  `marcar-coordinadores` y comprobar la lista de responsables.
+
 ### 2026-10-26 - Agenda de reuniones: tareas definidas (CRM-AGENDA-1-MIGRACION y CRM-AGENDA-2-CALENDARIO)
 
 - Decisiones del humano: «el Coordinador solo puede agendar sus leads y los Runner solo pueden asignar reuniones a los Socios»; `CRM-NO-CONTACTAR-1` queda para
