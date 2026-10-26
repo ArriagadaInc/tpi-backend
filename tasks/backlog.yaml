@@ -53,22 +53,50 @@ items:
     de 2026)
   - docs/ADJUNTOS_REVISION_PREPROD.md, punto 4 (retencion y borrado a solicitud del titular)
 - id: CRM-AGENDAMIENTO
-  title: 'CRM: modulo de agendamiento para runners, coordinadores y socios (intentos, cadencia y reuniones)'
+  title: 'CRM: seguimiento del protocolo (intentos, cadencia, calificacion y panel) y agenda v2'
   priority: P2
   category: functional
   status: pending
   change_class: D
-  summary: Modulo posterior a la produccion minima, accesible a los tres perfiles. Registro de intentos
-    (canal, resultado, fecha y hora; el numero de intento sale solo), cadencia del protocolo (dia 0, 1,
-    3, 7 y 14; alerta de atrasados; primer intento en 2 horas habiles; a los 14 dias, 'No contactado'),
-    calificacion (situacion previsional, fecha estimada de pension, preferencia de reunion), reuniones
-    (dia, hora, modalidad, socio, asistencia, vuelve a 'En seguimiento' si no llega) con agenda y recordatorios,
-    mensajes de WhatsApp copiables y panel por runner con los seis criterios del protocolo. Una sola migracion
-    agrupada (clase D). Se divide en tareas al definirlo.
+  summary: 'La agenda de reuniones de la v1 se separo en CRM-AGENDA-1-MIGRACION y CRM-AGENDA-2-CALENDARIO (docs/AGENDA_REUNIONES_DISENO.md).
+    Esta tarea queda con el resto: registro de intentos (canal, resultado, fecha y hora; el numero de intento sale solo),
+    cadencia del protocolo (dia 0, 1, 3, 7 y 14; alerta de atrasados; primer intento en 2 horas habiles; a los 14 dias,
+    No contactado), calificacion (situacion previsional, fecha estimada de pension, preferencia de reunion), mensajes de
+    WhatsApp copiables, panel por runner con los seis criterios del protocolo y la agenda v2 (Google Calendar y Meet,
+    recordatorios, feriados, disponibilidad por Socio). Una migracion agrupada (clase D). Se divide en tareas al definirlo.'
   evidence:
   - TPI_Protocolo_Runners_Canal_Web.pdf, paginas 4 a 9 y 13
-  - 'decision del humano del 2026-10-22: produccion minima primero (estados, perfiles y no contactar);
-    despues este modulo'
+  - 'decision del humano del 2026-10-22: produccion minima primero (estados, perfiles y no contactar); despues este modulo'
+  - 'decision del humano del 2026-10-26: la agenda empieza como calendario propio y comun; las sincronizaciones van en la v2'
+- id: CRM-AGENDA-1-MIGRACION
+  title: 'CRM agenda 1: ampliar tpi.citas, privilegios y alta de los Socios como responsables'
+  priority: P2
+  category: functional
+  status: pending
+  change_class: D
+  summary: 'Primer paso de la agenda de reuniones (calendario propio y comun). Amplia tpi.citas (responsable obligatorio,
+    fecha_hora_fin, quien agendo, nota, motivo de cancelacion, updated_at, estados permitidos, una reunion agendada por lead
+    y restriccion para que un responsable no se pise), da SELECT, INSERT y UPDATE a tpi_app y da de alta a los Socios en
+    tpi.asesores con rol socio. Script humano con tpi_admin (plan, apply, verify y rollback), probado antes en la base local.
+    Antes hay que comprobar que RDS permite btree_gist. Sin definicion de tarea hasta que el humano confirme la seccion 10
+    de docs/AGENDA_REUNIONES_DISENO.md.'
+  evidence:
+  - docs/AGENDA_REUNIONES_DISENO.md, secciones 6 y 11
+  - decision del humano del 2026-10-26 calendario propio y comun, visible y agendable por todos, con responsable de la asesoria y quien agendo
+- id: CRM-AGENDA-2-CALENDARIO
+  title: 'CRM agenda 2: calendario comun, agendar desde el lead y estados de la reunion'
+  priority: P2
+  category: functional
+  status: pending
+  change_class: A
+  summary: 'Segundo paso de la agenda: pagina Agenda (semana y lista), tarjeta Reunion y boton Agendar en el detalle del lead,
+    reagendar, cancelar con motivo, marcar realizada y no asistio (estas dos solo Coordinador y Socio), cambio de estado del
+    lead por el mismo servicio, auditoria de cada accion y matriz de permisos completa. Despliegue en DEV con aceptacion humana.
+    Depende de CRM-AGENDA-1-MIGRACION. Sin definicion de tarea hasta que el humano confirme la seccion 10 de
+    docs/AGENDA_REUNIONES_DISENO.md.'
+  evidence:
+  - docs/AGENDA_REUNIONES_DISENO.md, secciones 4, 5, 7, 8 y 11
+  - TPI_Protocolo_Runners_Canal_Web.pdf, paginas 4 a 9
 - id: SIM-CANARIA-MENSUAL
   title: Campana canaria mensual del simulador de renta vitalicia
   priority: P2
