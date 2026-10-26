@@ -22,6 +22,53 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-26 - Harness: tarea CRM-PERFILES-1-RBAC cerrada (DONE); perfiles Runner, Coordinador y Socio en DEV
+
+- Titulo: CRM: tres perfiles de usuario (Runner, Coordinador y Socio) con permisos por perfil
+- Evidencia: `evidence/CRM-PERFILES-1-RBAC/` y `tasks/completed/CRM-PERFILES-1-RBAC.yaml`.
+- release_sha: `ba537775a62d500907f44c5f52b27df400f3030f` (PR 132)
+- application_version: `h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1`
+- bundle_sha256: `b9f1a423f4a897efe6b79c3ee5eb7d1b0ee2ae3108d89b22ff948e9b6bc21f8a`
+- lkg: `h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1`
+- deployment: `success` (un solo `update-environment` version-only, 2026-10-26 14:17Z, sin rollback)
+- verification: `PASS`; el humano aceptó AC-8 el 2026-10-26 (14:39Z), 22 minutos después del cutover.
+
+**Resultado.** DEV corre el rol nuevo `coordinator`, las etiquetas Runner (`advisor`), Coordinador y Socio (`ceo`/`cto`), una única función de alcance de
+cartera (`has_portfolio_scope`), la asignación solo para los socios y los estados permitidos por perfil. Una ronda de rework: el Reviewer rechazó la primera
+entrega por falta de respaldo (cuatro hallazgos mayores: entrada de BITACORA, matriz de pruebas del `POST` del simulador y del PDF, escrituras cruzadas
+entre carteras y adjuntos del coordinador) y aprobó la segunda; no encontró ningún hueco de permisos en el código.
+
+**Prueba humana (AC-8).** Con los usuarios Runner (`asesor.desarrollo1/2`), Socio (`diego.operaciones` y `alvaro.operaciones`) y dos Coordinadores de prueba
+(`coordinador.ejemplo1` y `coordinador.ejemplo2`, cada uno con su propio asesor en `tpi.asesores` para aislar las carteras). Las cuentas de prueba son
+sintéticas y su clave es igual al usuario: **hay que desmontarlas** del secreto cuando ya no se necesiten (`scripts/dev_usuarios.py quitar`).
+
+**La falsa alarma de logs no se repitió.** Se aceptó la regla tal cual (`HARNESS-LOGS-FALSOS-POSITIVOS-CADDY` sigue en el backlog) apostando a una ventana
+corta entre el despliegue y la aceptación; fueron 22 minutos y la verificación dio cero coincidencias en los ocho patrones.
+
+**Orden seguro para dar de alta usuarios `coordinator`.** La versión anterior de la app no conoce el rol y no arranca si lo ve en `AUTH_USERS_JSON`
+(`Unknown auth role`), y un rollback con el usuario ya cargado tampoco levantaría. Por eso: primero el asesor del coordinador (sin riesgo), después del
+despliegue y de `Ready/Green/Ok` se agrega el usuario al secreto `tpi/dev/auth-users` y se hace `RestartAppServer`. Lo automatiza `scripts/dev_usuarios.py`
+(`listar`, `asesores`, `agregar`, `quitar`): conserva a los usuarios existentes, valida con el mismo parser de la app, no imprime hashes y deja la versión
+anterior del secreto como `AWSPREVIOUS`.
+
+**Lecciones de operación** (ninguna cambió código del Harness):
+
+1. *Una tarea de permisos exige la matriz completa de pruebas* (lectura y escritura, `GET` y `POST`, entre carteras, adjuntos y borrado por la ruta real),
+   no solo la lectura del detalle; y la entrada de BITACORA va en el PR, no la genera el cierre.
+2. *Los topes del Developer subieron a 600 llamadas y 1500 pasos* (`harness-deepagents/models.yaml`): el turno inicial entregó en unos 30 minutos
+   sin cortarse (el de CRM-ESTADOS-1 se había cortado en 300).
+3. *La API de Claude se detuvo dos veces en una misma tarea:* primero el límite de gasto mensual («You have reached your specified API usage limits») y luego
+   el saldo prepagado («Credit balance is too low»). Un turno de Reviewer cuesta ~1 USD y los del Deployer entre 0,3 y 1,6 USD.
+4. *La sesión de `aws login` caducó dos veces durante la tarea* (2026-10-26 02:01Z y ~14:25Z) y la renovación hecha a las 14:08Z no evitó el segundo vencimiento:
+   se verifica con `aws sts get-caller-identity` antes de lanzar el Deployer; un `identidad AWS no verificada` es un `DENIED` que detiene al Supervisor.
+5. *El Deployer vuelve a terminar su turno tras `update-environment` si espera con un `sleep` suelto* (pasó otra vez): el cutover queda hecho y sin registrar.
+   La nota en `progress/current.md` (no repetir el cutover, solo verificar y registrar) lo resuelve; mejora pendiente: instruirlo en su CONTEXT.
+6. *El orquestador no despierta tras decisiones humanas tomadas en otra terminal* y, al cambiar el estado por debajo, un aviso viejo puede quedar en pantalla:
+   se responde con el estado actual y Enter sin ejecutar el comando que imprime.
+
+**Siguiente paso:** desmontar las cuentas de prueba; resolver `HARNESS-LOGS-FALSOS-POSITIVOS-CADDY` (paquete listo, requiere una sesión de mantenimiento
+tuya); y elegir la próxima tarea de producción (`CRM-NO-CONTACTAR-1`, que necesita criterio legal antes del 2026-12-01, y `CRM-AGENDAMIENTO`).
+
 ### 2026-10-26 - CRM-PERFILES-1-RBAC: perfiles Runner, Coordinador y Socio (desarrollo)
 
 - Contexto: el protocolo de Runners (reunion de equipo, octubre 2026) y las decisiones del humano del 2026-10-22 definen tres perfiles

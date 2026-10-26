@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "approval",
+  "task_id": "CRM-PERFILES-1-RBAC",
+  "created_at": "2026-10-26T14:14:30Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "approved_commit": "ba537775a62d500907f44c5f52b27df400f3030f",
+  "app_digest": "sha256:9e0c519e391ae198bcd5ac51e02680242b15d52e49fc06bcb22df705dd9e2272",
+  "caddy_digest": "sha256:d8d9e2e1f99983f2349f71b17612ae8a2f16f8a4a5fc7c2d816dc6d6514e8cca",
+  "bundle_sha256": "b9f1a423f4a897efe6b79c3ee5eb7d1b0ee2ae3108d89b22ff948e9b6bc21f8a",
+  "s3_key": "tpi-backoffice/dev-releases/h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1/b9f1a423f4a897efe6b79c3ee5eb7d1b0ee2ae3108d89b22ff948e9b6bc21f8a.zip",
+  "application_version": "h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "lkg_version_label": "h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1",
+  "candidate_evidence": {
+    "path": "evidence/CRM-PERFILES-1-RBAC/deployment/candidate-01.json",
+    "sha256": "f3ac65844ae0e9f107facb0898b06b98c4d70a07c1dee1de3933430a9f7f5ba5"
+  },
+  "rollback_authorization": {
+    "scope": "single_version_only_rollback_to_named_lkg",
+    "max_attempts": 1,
+    "lkg_version_label": "h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1",
+    "conditions": [
+      "update_environment_accepted",
+      "environment_degraded_inconsistent_or_not_expected_state",
+      "lkg_application_version_usable",
+      "lkg_images_present_in_ecr",
+      "no_option_settings_required",
+      "not_purely_functional_defect",
+      "no_previous_rollback_attempt"
+    ]
+  },
+  "decision": "approved"
+}

@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "kind": "deployment",
+  "task_id": "CRM-PERFILES-1-RBAC",
+  "created_at": "2026-10-26T14:33:02Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610261430-deployer-sup24b4a4",
+  "approved_commit": "ba537775a62d500907f44c5f52b27df400f3030f",
+  "deployed_commit": "ba537775a62d500907f44c5f52b27df400f3030f",
+  "application_version": "h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "update_accepted": true,
+  "result": "success",
+  "started_at": "2026-10-26T14:17:35Z",
+  "finished_at": "2026-10-26T14:18:26Z",
+  "failure_class": null,
+  "previous_version_label": "h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1",
+  "final_state": {
+    "version_label": "h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "observed_at": "2026-10-26T14:31:30Z"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1/b9f1a423f4a897efe6b79c3ee5eb7d1b0ee2ae3108d89b22ff948e9b6bc21f8a.zip",
+    "s3_checksum_sha256_b64": "ufGkI/Sol+/mt5w+5et9Gw7irjEI2Jsi/5SOm2vCH4o=",
+    "s3_content_length": 4917,
+    "bundle_sha256": "b9f1a423f4a897efe6b79c3ee5eb7d1b0ee2ae3108d89b22ff948e9b6bc21f8a",
+    "app_digest": "sha256:9e0c519e391ae198bcd5ac51e02680242b15d52e49fc06bcb22df705dd9e2272",
+    "caddy_digest": "sha256:d8d9e2e1f99983f2349f71b17612ae8a2f16f8a4a5fc7c2d816dc6d6514e8cca",
+    "digests_equal_approval_01": true,
+    "note": "Observado en esta sesion (solo lecturas): describe-environments VersionLabel = aprobada, Ready/Green/Ok, sin operacion abortable; describe-application-versions SourceBundle = key de approval-01 (UNPROCESSED); head-object ChecksumSHA256 = base64 del bundle_sha256 aprobado, 4917 bytes; el ZIP local .harness-release/<label>.zip tiene sha256 b9f1a423... y su compose y manifest fijan app 9e0c519e... / caddy d8d9e2e1... (runtime_git_sha ba53777), iguales a approval-01."
+  },
+  "preflight": {
+    "at": "2026-10-26T14:17Z",
+    "result": "PASS",
+    "checks": [
+      "Ejecutado por la sesion claude-202610261414-deployer-sup96d4b6 antes del cutover (aws-audit.jsonl: lecturas en modo cutover hasta codepipeline get-pipeline-state a las 14:17:23Z, todas exit 0)",
+      "Esta sesion re-verifico la identidad: sts get-caller-identity cuenta 821656895812, region us-east-2"
+    ]
+  },
+  "cutover": {
+    "mechanism": "aws_guard update-environment version-label only",
+    "executed_by": "deployer (sesion claude-202610261414-deployer-sup96d4b6; su turno termino sin registrar el despliegue)",
+    "registered_by": "deployer (sesion claude-202610261430-deployer-sup24b4a4), solo con lecturas; sin repetir el cutover",
+    "updates_applied": 1,
+    "retries": 0,
+    "option_settings": false,
+    "restart_app_server": false,
+    "rollback_executed": false,
+    "request_id": "83bf5f96-25ab-45b2-8a20-11a93f1eed49",
+    "convergence": "exitosa en ~42 s (Environment update is starting 14:17:44Z, Environment update completed successfully 14:18:26Z; health Info -> Ok 14:19:57Z)",
+    "audit": "aws-audit.jsonl registra un unico update-environment (14:17:44Z, allowed, executed) con la AV aprobada"
+  },
+  "events": {
+    "levels_observed": [
+      "INFO"
+    ],
+    "errors": 0,
+    "note": "Environment update is starting -> Deploying new version to instance(s) -> Instance deployment completed successfully -> New application version was deployed -> Environment update completed successfully -> health Ok. Despues: restartAppServer 14:28:14Z (request 2d9cab11...) -> Restarted application server on all ec2 instances 14:28:26Z -> health Info -> Ok 14:29:57Z, con la misma VersionLabel aprobada."
+  },
+  "warnings": [
+    "Reinicio del servidor de aplicacion a las 14:28:14Z NO ejecutado por el Harness (no aparece en ningun aws-audit.jsonl ni en guard.log; restart-app-server esta prohibido al Deployer). Probablemente lo hizo el humano tras actualizar la configuracion de usuarios del ambiente para AC-8. No cambio la VersionLabel ni la cadena de identidad; el environment quedo Ready/Green/Ok. Se informa para que el humano lo confirme.",
+    "Un turno anterior (claude-202610261422-deployer-supa74c81) hizo lecturas a las 14:23-14:24Z y tampoco registro; esta sesion registra el despliegue.",
+    "AC-8 (smoke humano con un usuario de cada perfil) sigue pendiente; conteos de logs y smoke HTTP corresponden a VERIFYING (ventana desde started_at 2026-10-26T14:17:35Z).",
+    "Tras el cutover admin y executive ya no asignan leads (comportamiento pedido por AC-3)."
+  ]
+}

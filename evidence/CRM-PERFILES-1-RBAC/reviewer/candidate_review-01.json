@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "CRM-PERFILES-1-RBAC",
+  "created_at": "2026-10-26T02:42:26Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610260238-reviewer-sup56cadf",
+  "release_sha": "ba537775a62d500907f44c5f52b27df400f3030f",
+  "reviewed_tree": "2c8a64877f54fca8d80ee51463199fb38150aea5",
+  "release_tree": "2c8a64877f54fca8d80ee51463199fb38150aea5",
+  "decision": "APPROVED",
+  "cause": null,
+  "candidate_evidence": "evidence/CRM-PERFILES-1-RBAC/deployment/candidate-01.json",
+  "application_version": "h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1",
+  "lkg_version_label": "h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1",
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse ba53777^{tree} = 2c8a6487 = reviewed_tree de review-02 (64a3efb^{tree} = 2c8a6487) y de merge-01"
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "tras git fetch origin main, origin/main = ba53777 (merge-base --is-ancestor OK); padre a9af255; squash de PR #132"
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "gh run view 40259223307: completed/success, headSha ba53777, 6/6 jobs success (Authorize source revision, Tests, Security Audit, Lint & Format, Docker Build, Publish)"
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "ecr describe-images: tpi-dev-app sha256:9e0c519e... y tpi-dev-caddy sha256:d8d9e2e1... ACTIVE, tag unico = release_sha, manifest Docker v2 (no indice OCI); referenciadas por digest en el bundle"
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "describe-image-scan-findings: COMPLETE en ambos digests (02:35:06Z / 02:35:08Z), findings vacios, findingSeverityCounts vacio"
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "git diff --quiet ba53777 sobre template domainlocked y build_eb_ecr_bundle.py (exit 0); reconstruccion independiente en tempfile.mkdtemp con build_domain_locked_bundle y los digests verificados: sha256 b9f1a423f4a897efe6b79c3ee5eb7d1b0ee2ae3108d89b22ff948e9b6bc21f8a, 4917 bytes, byte a byte igual al zip del deployer"
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "zip con una sola entrada docker-compose.yml; sin clave build; sin genialabs; dominios literales dev.tupensioninteligente.cl y backoffice.dev.tupensioninteligente.cl; 3 lineas image por digest sha256"
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "head-object --checksum-mode ENABLED: ChecksumSHA256 ufGkI/Sol+/mt5w+5et9Gw7irjEI2Jsi/5SOm2vCH4o= (= base64 del sha256 reconstruido), FULL_OBJECT, ContentLength 4917; key content-addressed con el sha256"
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "describe-application-versions (un label): h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1 UNPROCESSED, SourceBundle = bucket/key S3 del candidate"
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "reviewed_tree 2c8a6487 -> release ba53777 -> publish 40259223307 -> digests app 9e0c519e / caddy d8d9e2e1 -> bundle b9f1a423 -> S3 key + checksum -> AV h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1"
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "describe-environments en esta sesion: tpi-backoffice-dev-green VersionLabel = h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1, Ready/Green/Ok, sin operacion en curso, DateUpdated 2026-10-23T20:06:35Z (environment sin mutar)"
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "AV LKG existe (UNPROCESSED, como todas las del fast path), SourceBundle con key content-addressed 2c4c5905...; head-object ChecksumSHA256 LExZBccN... = base64 de 2c4c5905..., 4917 bytes"
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "digests del LKG segun evidence/CRM-ESTADOS-1-CATALOGO/deployment/candidate-01.json (app f3f5b79f..., caddy 42093164...): ambos ACTIVE en ECR, tag bfa4ede"
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "inspeccion estructural del compose reconstruido: 5 lineas con nombres de variables sensibles, todas interpolaciones, 0 valores literales; no se leyeron archivos de credenciales. candidate-01 y esta evidencia solo contienen IDs, digests, hashes, labels y URLs publicas"
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "9 entradas: HTTPS publico, login, catalogos API, app.css, /leads con auth, sin dominio legado, identidad runtime, conteos de logs y AC-8 humano"
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "un unico update-environment con --environment-name y --version-label; sin option settings, template, platform ni tier"
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "policies.yaml: DEPLOYING -> deployer cutover = @read + elasticbeanstalk update-environment; ROLLING_BACK -> rollback igual; los comandos van por aws_guard.py"
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "note": "un solo comando de cutover; espera por describe-environments cada 30 s con limite de 30 min, sin reintentos"
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "rollback version-only a h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1, max_attempts 1, condicionado a las 7 condiciones de rollback_authorization"
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": "sin IAM, Route53, secretos ni migraciones; database_changes ninguna (change_class A)"
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "note": "el plan solo registra labels, estado y eventos acotados; logs solo por conteo"
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS",
+      "note": "residuos declarados: imagenes ECR tag ba53777, objeto S3 content-addressed y AV UNPROCESSED inertes; environment sin mutar"
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "note": "rollback_plan.conditions: un defecto puramente funcional no autoriza rollback (not_purely_functional_defect)"
+    }
+  ],
+  "findings": [
+    {
+      "id": "CR-1",
+      "severity": "info",
+      "file": null,
+      "summary": "El checkout local esta en a9af255, atrasado respecto de origin/main (ba53777); las comparaciones se hicieron contra el release_sha (git diff --quiet sobre template y constructor, exit 0) y no contra el arbol de trabajo.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "CR-2",
+      "severity": "info",
+      "file": null,
+      "summary": "No se ejecuto dry-run de update-environment (el modo candidate_read no lo permite); los checks del plan se demostraron por inspeccion de comandos y de harness/policies.yaml.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "CR-3",
+      "severity": "info",
+      "file": null,
+      "summary": "Acoplamiento operativo declarado en el plan: la version LKG no reconoce el rol coordinator; si el humano agrega usuarios coordinator a la configuracion de usuarios antes del cutover, o si hubiera rollback despues de agregarlos, el arranque de la version anterior podria fallar.",
+      "required_action": "Humano: agregar usuarios coordinator solo despues de un cutover exitoso; ante rollback, retirarlos (decision humana fuera del Harness)."
+    }
+  ],
+  "risks": [
+    "ECR lifecycle keep-100 podria expirar imagenes del LKG a futuro; hoy presentes.",
+    "Cambio de autorizacion (alto riesgo): admin y executive pierden la asignacion de leads tras el cutover, segun AC-3.",
+    "AC-8 requiere smoke humano con un usuario de cada perfil tras el cutover.",
+    "Riesgo aceptado por el humano: posible falsa alarma del indicador fuerte de logs por lineas de acceso de Caddy (HARNESS-LOGS-FALSOS-POSITIVOS-CADDY)."
+  ]
+}
