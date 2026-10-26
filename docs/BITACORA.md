@@ -22,6 +22,20 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-26 - Agenda de reuniones del CRM: diseño y decisiones (CRM-AGENDA)
+
+- Contexto: el humano pidió un módulo de agendamiento para que los Runners agenden a los Socios cuando un lead es positivo y quiere asesoría.
+- Decisión del humano: la v1 es un **calendario propio y común** (todos lo ven y todos pueden agendar), con el **responsable de la asesoría** y **quién agendó**
+  en cada reunión; sincronizaciones y lo demás van en la v2.
+- Qué se agrega: `docs/AGENDA_REUNIONES_DISENO.md` (decisiones, supuestos a confirmar, flujo, permisos por perfil, modelo de datos, pantallas, auditoría, v2 y criterios)
+  y dos tareas en el backlog, `CRM-AGENDA-1-MIGRACION` (clase D) y `CRM-AGENDA-2-CALENDARIO` (clase A). `CRM-AGENDAMIENTO` queda con el resto del protocolo
+  (intentos, cadencia, calificación, panel por runner y agenda v2).
+- Hallazgos del código que moldean el diseño: `tpi.citas` ya existe (0 filas) y se amplía en vez de crear otra tabla; el Runner no puede fijar `reunion_realizada`,
+  así que marcar «realizada» y «no asistió» es de Coordinador y Socio; las consultas de asignación y de cartera filtran por `rol = 'asesor'`, de modo que los Socios
+  pueden vivir en `tpi.asesores` con `rol = 'socio'` sin entrar al reparto.
+- Pendiente del humano: confirmar la sección 10 del documento (Socios responsables, horario y duración, privacidad del calendario común, quién marca asistencia,
+  avisos y orden respecto de `CRM-NO-CONTACTAR-1`). Sin código ni migración todavía.
+
 ### 2026-10-26 - Harness: la regla de logs deja de bloquear verificaciones por robots de internet (HARNESS-LOGS-FALSOS-POSITIVOS-CADDY)
 
 - Contexto: la verificación de `CRM-ESTADOS-1-CATALOGO` quedó en `FAIL` por 1 coincidencia del indicador fuerte `secret` que era una línea de acceso de Caddy
