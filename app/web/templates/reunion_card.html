@@ -1,0 +1,130 @@
+{% if agenda %}
+  {% set cita = agenda.cita %}
+  {% set hay_agendada = cita and cita.estado_cita == 'agendada' %}
+  <section class="card agenda-card" aria-label="Reunión">
+    <div class="story-card-head">
+      <div>
+        <p class="section-kicker">Agenda</p>
+        <h2>Reunión de asesoría</h2>
+      </div>
+    </div>
+
+    {% if agenda.unavailable %}
+      <div class="notice alert-error">La agenda no está disponible en este momento (revisa que la migración de la agenda esté aplicada).</div>
+    {% else %}
+      {% if hay_agendada %}
+        <div class="agenda-meeting">
+          <div class="agenda-meeting-row">
+            <span class="agenda-meeting-label">Responsable</span>
+            <strong>{{ cita.asesor_nombre }}</strong>
+          </div>
+          <div class="agenda-meeting-row">
+            <span class="agenda-meeting-label">Fecha y hora</span>
+            <strong>{{ cita.fecha_hora.strftime('%d/%m/%Y %H:%M') }} – {{ cita.fecha_hora_fin.strftime('%H:%M') }}</strong>
+          </div>
+          <div class="agenda-meeting-row">
+            <span class="agenda-meeting-label">Modalidad</span>
+            <strong>{{ cita.canal }}</strong>
+          </div>
+          {% if cita.link_reunion %}
+            <div class="agenda-meeting-row">
+              <span class="agenda-meeting-label">Enlace</span>
+              <a href="{{ cita.link_reunion }}" target="_blank" rel="noopener">{{ cita.link_reunion }}</a>
+            </div>
+          {% endif %}
+          {% if cita.nota %}
+            <div class="agenda-meeting-row">
+              <span class="agenda-meeting-label">Nota</span>
+              <span>{{ cita.nota }}</span>
+            </div>
+          {% endif %}
+          <div class="agenda-meeting-row">
+            <span class="agenda-meeting-label">Agendada por</span>
+            <span>{{ cita.agendada_por_nombre or '—' }}</span>
+          </div>
+        </div>
+
+        {% if agenda.can_agendar %}
+          <details class="agenda-form-details">
+            <summary class="secondary">Reagendar reunión</summary>
+            <form class="agenda-form" method="post" action="/leads/{{ selected_lead_id }}/agenda/reagendar">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="return_to" value="{{ return_to_url or '/leads' }}">
+              <input type="hidden" name="cita_id" value="{{ cita.id_cita }}">
+              {% include "agenda_form_fields.html" %}
+              <button class="primary" type="submit">Reagendar</button>
+            </form>
+          </details>
+        {% endif %}
+
+        {% if agenda.can_agendar %}
+          <details class="agenda-form-details">
+            <summary class="secondary">Cancelar reunión</summary>
+            <form class="agenda-form" method="post" action="/leads/{{ selected_lead_id }}/agenda/cancelar">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="return_to" value="{{ return_to_url or '/leads' }}">
+              <input type="hidden" name="cita_id" value="{{ cita.id_cita }}">
+              <label for="motivo">Motivo de la cancelación</label>
+              <input id="motivo" name="motivo" type="text" maxlength="500" required>
+              <button class="danger" type="submit">Cancelar reunión</button>
+            </form>
+          </details>
+        {% endif %}
+
+        {% if agenda.can_mark_attendance %}
+          <div class="agenda-actions">
+            <form method="post" action="/leads/{{ selected_lead_id }}/agenda/realizada">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="return_to" value="{{ return_to_url or '/leads' }}">
+              <input type="hidden" name="cita_id" value="{{ cita.id_cita }}">
+              <button class="primary" type="submit">Marcar realizada</button>
+            </form>
+            <form method="post" action="/leads/{{ selected_lead_id }}/agenda/no-asistio">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="return_to" value="{{ return_to_url or '/leads' }}">
+              <input type="hidden" name="cita_id" value="{{ cita.id_cita }}">
+              <button class="secondary" type="submit">Marcar no asistió</button>
+            </form>
+          </div>
+        {% endif %}
+      {% else %}
+        {% if cita %}
+          <div class="agenda-meeting">
+            <div class="agenda-meeting-row">
+              <span class="agenda-meeting-label">Última reunión</span>
+              <span><span class="pill cita-state cita-{{ cita.estado_cita }}">{{ cita.estado_cita|cita_estado_label }}</span></span>
+            </div>
+            <div class="agenda-meeting-row">
+              <span class="agenda-meeting-label">Responsable</span>
+              <strong>{{ cita.asesor_nombre }}</strong>
+            </div>
+            <div class="agenda-meeting-row">
+              <span class="agenda-meeting-label">Fecha y hora</span>
+              <strong>{{ cita.fecha_hora.strftime('%d/%m/%Y %H:%M') }}</strong>
+            </div>
+            {% if cita.motivo_cancelacion %}
+              <div class="agenda-meeting-row">
+                <span class="agenda-meeting-label">Motivo de cancelación</span>
+                <span>{{ cita.motivo_cancelacion }}</span>
+              </div>
+            {% endif %}
+          </div>
+        {% else %}
+          <div class="empty-inline">Sin reuniones registradas.</div>
+        {% endif %}
+
+        {% if agenda.can_agendar and selected_lead.estado_lead not in ['cerrado', 'perdido', 'no_interesado', 'datos_erroneos', 'no_contactado'] %}
+          <details class="agenda-form-details">
+            <summary class="primary">Agendar reunión</summary>
+            <form class="agenda-form" method="post" action="/leads/{{ selected_lead_id }}/agenda/agendar">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="return_to" value="{{ return_to_url or '/leads' }}">
+              {% include "agenda_form_fields.html" %}
+              <button class="primary" type="submit">Agendar</button>
+            </form>
+          </details>
+        {% endif %}
+      {% endif %}
+    {% endif %}
+  </section>
+{% endif %}

@@ -3060,3 +3060,184 @@ textarea:focus {
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
     U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
+
+/* --- Agenda de reuniones (CRM-AGENDA-2) --------------------------------------------- */
+.agenda-week-card {
+  padding: var(--space-5);
+}
+.agenda-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+.agenda-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.agenda-day {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+}
+.agenda-day-head {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+.agenda-day-label {
+  display: block;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+.agenda-day-date {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+}
+.agenda-day-body {
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 96px;
+}
+.agenda-day-empty {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  text-align: center;
+  padding: var(--space-2);
+}
+.agenda-block {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-tag);
+  padding: var(--space-2);
+}
+.agenda-block-time {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  color: var(--tone-accent-fg);
+}
+.agenda-block-title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+  margin-top: var(--space-1);
+}
+.agenda-block-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  font-size: var(--text-xs);
+  color: var(--muted);
+  margin-top: var(--space-1);
+}
+.agenda-block-lead {
+  font-size: var(--text-sm);
+  margin-top: var(--space-1);
+}
+.agenda-block-footer {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  margin-top: var(--space-1);
+}
+
+.cita-state {
+  font-size: var(--text-xs);
+}
+.cita-agendada {
+  color: var(--tone-accent-fg);
+  background: var(--tone-accent-bg);
+  border-color: var(--tone-accent-bd);
+}
+.cita-realizada {
+  color: var(--tone-success-fg);
+  background: var(--tone-success-bg);
+  border-color: var(--tone-success-bd);
+}
+.cita-no_asistio {
+  color: var(--tone-warning-fg);
+  background: var(--tone-warning-bg);
+  border-color: var(--tone-warning-bd);
+}
+.cita-cancelada {
+  color: var(--tone-slate-fg);
+  background: var(--tone-slate-bg);
+  border-color: var(--tone-slate-bd);
+}
+
+.agenda-meeting {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.agenda-meeting-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  font-size: var(--text-md);
+  flex-wrap: wrap;
+}
+.agenda-meeting-label {
+  color: var(--muted);
+  min-width: 150px;
+  font-size: var(--text-sm);
+}
+.agenda-form-details {
+  margin-top: var(--space-2);
+}
+.agenda-form-details summary {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+}
+.agenda-form {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+.agenda-form label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+}
+.agenda-form textarea {
+  min-height: 72px;
+  width: 100%;
+}
+.agenda-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  flex-wrap: wrap;
+}
+.agenda-actions form {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .agenda-week {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .agenda-week {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agenda-meeting-label {
+    min-width: 0;
+    width: 100%;
+  }
+}

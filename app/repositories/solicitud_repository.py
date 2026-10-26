@@ -7,6 +7,7 @@ Responsabilidades:
 - Mantener integridad referencial y transaccional
 """
 
+import json
 from datetime import UTC, date, datetime, time
 from typing import Any
 from uuid import UUID
@@ -1149,22 +1150,22 @@ class SolicitudRepository:
         return list(CRM_STATE_CONTRACT)
 
     @staticmethod
-    def update_lead_status(
+    def _update_lead_status_tx(
+        cur: Any,
         id_lead: UUID,
         estado_lead: str,
         *,
         actor: AuthenticatedUser,
         advisor_scope: UUID | None = None,
-    ) -> bool:
-        """Update a lead status transactionally, auditing only effective changes.
+    ) -> tuple[bool, str | None]:
+        """Core status update operating on an open cursor (same transaction).
 
-        Follows the proven ``assign_lead`` pattern: one transaction, ``SELECT ...
-        FOR UPDATE`` to serialize concurrent writers, compare previous/new state,
-        skip the write and the audit when there is no effective change (idempotent
-        no-op), and otherwise persist ``UPDATE tpi.leads`` + ``INSERT tpi.auditoria``
-        (accion ``cambio_estado_lead``) in a single commit. Any failure rolls both
-        statements back. The ``asignado`` state is rejected defensively here as well
-        as in the service: it is only reachable through ``assign_lead``.
+        Returns ``(ok, estado_anterior)``. ``ok`` is ``False`` when the lead does not
+        exist or (for portfolio-scoped writes) is not owned by ``advisor_scope``, so
+        the caller can surface a 404 without revealing existence. Reuses the exact
+        validation, lock, idempotent no-op and ``cambio_estado_lead`` audit of the
+        public ``update_lead_status`` so the agenda writes the lead state through the
+        same proven path (AC-3).
         """
         normalized_estado = normalize_crm_state_for_write(estado_lead)
         if normalized_estado == "asignado":
@@ -1176,8 +1177,6 @@ class SolicitudRepository:
             raise ValueError("El actor autenticado no posee un identificador estable")
         if len(assigned_by) > 150:
             raise ValueError("El identificador tecnico del actor excede la longitud permitida")
-
-        import json
 
         query_lock = """
             SELECT estado_lead, id_persona
@@ -1204,57 +1203,83 @@ class SolicitudRepository:
                 (id_usuario, id_persona, id_lead, accion, tabla_afectada, detalle)
             VALUES (%s, %s, %s, %s, %s, %s)
         """
+
+        cur.execute(query_lock, (str(id_lead),))
+        current_row = cur.fetchone()
+        if current_row is None:
+            return False, None
+
+        # Advisor ownership is checked inside the same transaction that holds the lead
+        # row lock, so a concurrent assignment cannot slip between check and write.
+        if advisor_scope is not None:
+            cur.execute(
+                query_ownership,
+                (str(id_lead), ASSIGNMENT_ACTIVE_STATE, str(advisor_scope)),
+            )
+            if cur.fetchone() is None:
+                return False, None
+
+        estado_anterior = str(current_row["estado_lead"])
+        id_persona = current_row.get("id_persona")
+
+        if estado_anterior == normalized_estado:
+            # Idempotent no-op: no UPDATE, no audit.
+            return True, estado_anterior
+
+        cur.execute(query_update, (normalized_estado, str(id_lead)))
+        if cur.rowcount != 1:
+            raise RuntimeError("No se pudo actualizar el estado del lead")
+        cur.execute(
+            query_trace,
+            (
+                None,
+                str(id_persona) if id_persona is not None else None,
+                str(id_lead),
+                "cambio_estado_lead",
+                "tpi.leads",
+                json.dumps(
+                    {
+                        "actor_subject": assigned_by,
+                        "estado_anterior": estado_anterior,
+                        "estado_nuevo": normalized_estado,
+                    }
+                ),
+            ),
+        )
+        if cur.rowcount != 1:
+            raise RuntimeError("No se pudo registrar la auditoria de cambio de estado")
+        return True, estado_anterior
+
+    @staticmethod
+    def update_lead_status(
+        id_lead: UUID,
+        estado_lead: str,
+        *,
+        actor: AuthenticatedUser,
+        advisor_scope: UUID | None = None,
+    ) -> bool:
+        """Update a lead status transactionally, auditing only effective changes.
+
+        Follows the proven ``assign_lead`` pattern: one transaction, ``SELECT ...
+        FOR UPDATE`` to serialize concurrent writers, compare previous/new state,
+        skip the write and the audit when there is no effective change (idempotent
+        no-op), and otherwise persist ``UPDATE tpi.leads`` + ``INSERT tpi.auditoria``
+        (accion ``cambio_estado_lead``) in a single commit. Any failure rolls both
+        statements back. The ``asignado`` state is rejected defensively here as well
+        as in the service: it is only reachable through ``assign_lead``.
+        """
         with get_db_connection(operation="update_lead_status") as conn:
             try:
                 with conn.cursor() as cur:
-                    cur.execute(query_lock, (str(id_lead),))
-                    current_row = cur.fetchone()
-                    if current_row is None:
-                        return False
-
-                    # Advisor ownership is checked inside the same transaction that
-                    # holds the lead row lock, so a concurrent assignment cannot slip
-                    # between the check and the write. Non-owned -> no write, no audit.
-                    if advisor_scope is not None:
-                        cur.execute(
-                            query_ownership,
-                            (str(id_lead), ASSIGNMENT_ACTIVE_STATE, str(advisor_scope)),
-                        )
-                        if cur.fetchone() is None:
-                            return False
-
-                    estado_anterior = str(current_row["estado_lead"])
-                    id_persona = current_row.get("id_persona")
-
-                    if estado_anterior == normalized_estado:
-                        # Idempotent no-op: no UPDATE, no audit. The open transaction
-                        # (which only holds the row lock) is rolled back on exit.
-                        return True
-
-                    cur.execute(query_update, (normalized_estado, str(id_lead)))
-                    if cur.rowcount != 1:
-                        raise RuntimeError("No se pudo actualizar el estado del lead")
-                    cur.execute(
-                        query_trace,
-                        (
-                            None,
-                            str(id_persona) if id_persona is not None else None,
-                            str(id_lead),
-                            "cambio_estado_lead",
-                            "tpi.leads",
-                            json.dumps(
-                                {
-                                    "actor_subject": assigned_by,
-                                    "estado_anterior": estado_anterior,
-                                    "estado_nuevo": normalized_estado,
-                                }
-                            ),
-                        ),
+                    ok, _ = SolicitudRepository._update_lead_status_tx(
+                        cur,
+                        id_lead,
+                        estado_lead,
+                        actor=actor,
+                        advisor_scope=advisor_scope,
                     )
-                    if cur.rowcount != 1:
-                        raise RuntimeError("No se pudo registrar la auditoria de cambio de estado")
                 conn.commit()
-                return True
+                return ok
             except Exception:
                 conn.rollback()
                 raise
