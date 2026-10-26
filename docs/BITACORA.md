@@ -22,6 +22,29 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-26 - Harness: la regla de logs deja de bloquear verificaciones por robots de internet (HARNESS-LOGS-FALSOS-POSITIVOS-CADDY)
+
+- Contexto: la verificación de `CRM-ESTADOS-1-CATALOGO` quedó en `FAIL` por 1 coincidencia del indicador fuerte `secret` que era una línea de acceso de Caddy
+  de un robot que pidió `GET /secrets.json` y recibió 404. Los indicadores fuertes no se degradan y la ventana empieza en el despliegue, así que el humano
+  no podía clasificarla; hubo que cerrar la tarea a mano. `CRM-PERFILES-1-RBAC` se desplegó asumiendo ese riesgo y pasó solo por una ventana corta.
+- Cambio (mantenimiento acotado, sesión abierta y cerrada por el humano): en `harness/policies.yaml`, `observability.log_indicators.strong`, los
+  patrones `password`, `cookie`, `secret` y `token` pasan a `"<palabra> -bytes_read"`. `bytes_read` es un campo que Caddy escribe en todas sus líneas de
+  acceso y que no aparece en ninguna otra: medido en los logs reales de DEV hubo 1.641 líneas de acceso y 1.641 con `bytes_read`, 0 fuera del acceso,
+  y las 300 líneas `INFO` de la app no cambian con la exclusión. `Authorization -REDACTED`, `Bearer`, `raw_payload` y los débiles no cambian.
+- Seguridad de la corrección: un patrón antiguo sin exclusión (`secret`) ya no está declarado, y `log_scan.py` trata lo no declarado como fuerte, así que
+  falla cerrado. Pruebas nuevas lo fijan, junto con la lista exacta de patrones fuertes y débiles del `policies.yaml` real.
+- Riesgo aceptado: un valor sensible puesto en la URL de una petición ya no lo detecta este escaneo. Hoy la app no lo hace (los parámetros de URL son
+  filtros del listado) y Caddy ya redacta `Authorization` y `Cookie` en esas líneas.
+- Proceso: el humano abrió el alcance (`maintenance-scope open`), lanzó `claude -p` con solo `Read,Glob,Grep,Write,Edit,Bash` y el guard no negó ninguna de
+  las 14 llamadas de la sesión; `check_scope_tools.py` dio `CHECK: PASS` ligado a esa sesión y el humano cerró el alcance. El orquestador revisó el diff,
+  corrió `validate_repo.py` (PASS) y 242 pruebas, y copió los tres archivos a un worktree normal para el PR (la sesión no puede commitear: cambiar el HEAD
+  invalida el alcance).
+- Observaciones: `runtime/claude/E2E-PROCEDURE.md`, citado por el README de mantención, no existe en el repositorio; el paso de comprobación de herramientas
+  se resolvió ejecutando el trabajo con `claude -p --output-format stream-json` y comprobándolo después con `check_scope_tools.py --guard-log --scope-id`. El
+  docstring de `scripts/harness/log_scan.py` aún lista los términos fuertes sin exclusión (es descriptivo, fuera del alcance de esta sesión).
+- Siguiente paso: retirar `HARNESS-LOGS-FALSOS-POSITIVOS-CADDY` del backlog (hecho en este PR) y, en una próxima mantención, corregir el docstring y el README
+  de mantención.
+
 ### 2026-10-26 - Harness: tarea CRM-PERFILES-1-RBAC cerrada (DONE); perfiles Runner, Coordinador y Socio en DEV
 
 - Titulo: CRM: tres perfiles de usuario (Runner, Coordinador y Socio) con permisos por perfil

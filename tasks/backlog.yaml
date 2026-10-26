@@ -131,37 +131,6 @@ items:
     de aws_guard, con constancia en cutover y warnings'
   - 'denegacion de aws_guard del 2026-10-22: ya hubo un intento de cutover: un release, una promocion'
   - 'denegacion del guard del 2026-10-22: el Developer solo hace commit desde su worktree registrado'
-- id: HARNESS-LOGS-FALSOS-POSITIVOS-CADDY
-  title: Verificacion del Deployer bloqueada por robots de internet que piden rutas con la palabra secret
-    o token y quedan en el registro de acceso de Caddy
-  priority: P1
-  category: harness
-  status: pending
-  change_class: none
-  summary: 'CRM-ESTADOS-1-CATALOGO quedo bloqueada en VERIFYING (verification-02 FAIL) por 1 coincidencia
-    del indicador fuerte secret de harness/policies.yaml observability.log_indicators.strong. La linea
-    era un registro de acceso de Caddy de un robot de internet que pidio GET /secrets.json y recibio 404
-    (de unas 117 peticiones de barrido a /.env, /.docker/config.json, /.claude/settings.json, etc., todas
-    404): falso positivo, sin ninguna exposicion. Los indicadores fuertes no se degradan y la ventana
-    de conteo empieza en el inicio del despliegue, asi que el humano no puede clasificarlo y la verificacion
-    no puede pasar mientras el robot este dentro de la ventana; se repetira en cada despliegue, porque
-    cualquier robot que pida /secrets.json o /token activa la regla. Decision del humano (2026-10-25):
-    cerrar CRM-ESTADOS-1 a mano y tratar la regla como tarea aparte. Propuesta a evaluar: excluir las
-    lineas de acceso de Caddy (handled request) de los patrones fuertes, como ya se excluye Authorization
-    -REDACTED y hash -ACME, validando la sintaxis de exclusion de CloudWatch en solo lectura contra los
-    logs reales (debe dar 0 en la linea del robot y seguir detectando una linea de la app que contenga
-    la palabra). Contras ya analizados: se pierde la deteccion de un valor sensible puesto en la URL (hoy
-    la app no lo hace y Caddy ya oculta Authorization y Cookie); debilita una regla pensada como rigida
-    (exige una exclusion minima, documentada y con prueba que fije lo excluido); el patron puede quedar
-    mal escrito; y no cubre otros usos legitimos de esas palabras en los logs de la app. Es un cambio
-    de harness/policies.yaml (archivo protegido): requiere una sesion de mantenimiento lanzada por el
-    humano (TPI_HARNESS_MAINTENANCE=1), pruebas y revision. Debe quedar resuelta antes de desplegar CRM-PERFILES-1-RBAC.'
-  evidence:
-  - 'evidence/CRM-ESTADOS-1-CATALOGO/deployment/verification-02.json: FAIL por 1 coincidencia del indicador
-    fuerte secret'
-  - 'evidence/CRM-ESTADOS-1-CATALOGO/deployment/failure-01.json: fallo clasificado functional'
-  - 'evidence/CRM-ESTADOS-1-CATALOGO/approvals/resolution-01.json: resolucion humana del cierre manual'
-  - 'agents/deployer/skills/aws-observability/SKILL.md: los fuertes bloquean verified y nunca se degradan'
 - id: AUTOMATED_AUTHENTICATED_SMOKE
   title: Smoke autenticado automatizado con identidad sintetica
   priority: P3

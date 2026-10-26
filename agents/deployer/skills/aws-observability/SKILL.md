@@ -39,20 +39,24 @@ Despues de un `update-environment` aceptado (cutover o rollback) y en VERIFYING.
   `python -c "import datetime as d; print(int(d.datetime(AAAA,M,D,h,m,s,tzinfo=d.timezone.utc).timestamp()*1000))"`
 
 - Clasificacion de conteos (v1.1, `harness/policies.yaml` `observability.log_indicators`):
-  `python scripts/harness/log_scan.py classify --counts '{"Authorization -REDACTED": 0, "hash -ACME": 1}'`
-  - **Fuertes** (`Authorization -REDACTED`, Bearer, password, cookie, raw_payload, secret,
-    token; y todo patron no declarado): cualquier coincidencia bloquea `verified`. Nunca se
-    degradan.
+  `python scripts/harness/log_scan.py classify --counts '{"Authorization -REDACTED": 0, "secret -bytes_read": 0, "token -bytes_read": 0, "hash -ACME": 1}'`
+  - **Fuertes** (`Authorization -REDACTED`, Bearer, `password -bytes_read`, `cookie -bytes_read`,
+    raw_payload, `secret -bytes_read`, `token -bytes_read`; y todo patron no declarado):
+    cualquier coincidencia bloquea `verified`. Nunca se degradan.
   - **Debiles** (`hash -ACME`; el `cert_hash` de Caddy/ACME ya queda excluido por `-ACME`): no
     equivalen a un secreto, pero cada coincidencia exige clasificacion **humana** (el humano
     inspecciona la linea; el Deployer no) registrada en `pii_log_scan.false_positives` con
     `classified_by: human`.
 - **Patrones exactos:** usa los patrones exactamente como estan en `harness/policies.yaml`, entre
-  comillas: `--filter-pattern "Authorization -REDACTED"` y `--filter-pattern "hash -ACME"`.
+  comillas: `--filter-pattern "Authorization -REDACTED"`, `--filter-pattern "hash -ACME"`,
+  `--filter-pattern "password -bytes_read"`, `--filter-pattern "cookie -bytes_read"`,
+  `--filter-pattern "secret -bytes_read"` y `--filter-pattern "token -bytes_read"`.
   Cualquier patron no declarado cuenta como fuerte. Caddy registra la cabecera como
   `["REDACTED"]` y su mantenimiento TLS escribe `cert_hash` en eventos que mencionan ACME; el
   `-REDACTED` y el `-ACME` excluyen ese ruido y dejan pasar un valor real. En la evidencia
   (`raw_pattern_hits`, `patterns`) ese mismo texto es la clave.
+  `-bytes_read`: las lineas de acceso de Caddy (las unicas con `bytes_read`) llevan la URL que
+  elige el cliente (robots que piden `/secrets.json`, `/token`); se excluyen y la app sigue vigilada.
 
 ## 6. Evidencia obligatoria
 - `runtime_identity` con los cuatro booleanos; `final_state`; eventos relevantes resumidos (sin

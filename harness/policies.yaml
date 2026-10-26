@@ -307,5 +307,10 @@ rollback_authorization:
 # pero toda coincidencia exige clasificacion humana registrada antes de `verified`.
 observability:
   log_indicators:
-    strong: ["Authorization -REDACTED", Bearer, password, cookie, raw_payload, secret, token]
+    # "-bytes_read": las lineas de acceso de Caddy llevan la URL elegida por el cliente (robots
+    # que piden /secrets.json o /token) y daban falsos positivos. El marcador bytes_read aparece
+    # solo en esas lineas; Caddy ya redacta Authorization y Cookie en ellas. Las lineas de la app
+    # siguen vigiladas con el termino completo. Validado contra los logs reales de DEV el
+    # 2026-10-25 (716 de 716 lineas de acceso, ninguna otra).
+    strong: ["Authorization -REDACTED", Bearer, "password -bytes_read", "cookie -bytes_read", raw_payload, "secret -bytes_read", "token -bytes_read"]
     weak: [hash, "hash -ACME"]

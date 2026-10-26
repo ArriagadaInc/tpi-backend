@@ -13,11 +13,11 @@ POLICIES = common.load_policies(REAL_ROOT)
 STRONG = [
     "Authorization -REDACTED",
     "Bearer",
-    "password",
-    "cookie",
+    "password -bytes_read",
+    "cookie -bytes_read",
     "raw_payload",
-    "secret",
-    "token",
+    "secret -bytes_read",
+    "token -bytes_read",
 ]
 
 
@@ -163,3 +163,28 @@ def test_bare_authorization_stays_fail_closed():
 def test_hash_excluding_acme_noise_is_weak_too():
     result = log_scan.classify({"hash -ACME": 1}, POLICIES)
     assert result["weak_matches"] == {"hash -ACME": 1} and result["strong_matches"] == 0
+
+
+def test_real_policy_declares_exactly_the_caddy_access_line_exclusions():
+    # las lineas de acceso de Caddy (las unicas con bytes_read) llevan la URL del cliente
+    strong, weak = log_scan.indicators(common.load_policies(REAL_ROOT))
+    assert strong == STRONG
+    assert weak == ["hash", "hash -ACME"]
+
+
+def test_secret_excluding_access_lines_is_strong():
+    result = log_scan.classify({"secret -bytes_read": 1}, POLICIES)
+    assert result["strong_matches"] == 1 and result["weak_matches"] == {}
+
+
+@pytest.mark.parametrize("pattern", ["secret", "token", "password", "cookie"])
+def test_bare_terms_stay_fail_closed(pattern):
+    # el patron antiguo ya no esta declarado: se trata como fuerte
+    result = log_scan.classify({pattern: 1}, POLICIES)
+    assert result["strong_matches"] == 1 and result["weak_matches"] == {}
+
+
+@pytest.mark.parametrize("pattern", ["Bearer", "raw_payload", "Authorization -REDACTED"])
+def test_unchanged_strong_indicators(pattern):
+    result = log_scan.classify({pattern: 1}, POLICIES)
+    assert result["strong_matches"] == 1 and result["weak_matches"] == {}
