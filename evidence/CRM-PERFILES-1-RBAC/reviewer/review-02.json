@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "CRM-PERFILES-1-RBAC",
+  "created_at": "2026-10-26T01:59:26Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610260156-reviewer-supf74be3",
+  "reviewed_sha": "64a3efb9469e31ba8d09bf5f57add75f1425190d",
+  "reviewed_tree": "2c8a64877f54fca8d80ee51463199fb38150aea5",
+  "pr_number": 132,
+  "ci": {
+    "run_id": "40254424256",
+    "conclusion": "success",
+    "head_sha": "64a3efb9469e31ba8d09bf5f57add75f1425190d",
+    "event": "pull_request",
+    "jobs": [
+      "Docker Build",
+      "Lint & Format",
+      "Release Tooling Validation",
+      "Security Audit",
+      "Tests"
+    ]
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "minor",
+      "file": "app/auth/simple_dev.py",
+      "summary": "_parse_advisor_id usa el literal {advisor, coordinator} en vez de PORTFOLIO_ROLES/has_portfolio_scope de app/auth/models.py; la definicion de cartera queda duplicada en dos lugares (cubierta por pruebas de simple_dev para coordinator, sin riesgo actual).",
+      "required_action": "Opcional (tarea futura): reutilizar has_portfolio_scope en simple_dev para evitar deriva."
+    },
+    {
+      "id": "F-2",
+      "severity": "minor",
+      "file": "app/web/routes/leads.py",
+      "summary": "can_simulate del contexto de detalle repite la regla de SimuladorService.can_simulate (is_superuser o executive/coordinator) en lugar de llamarla; patron preexistente. El servidor del simulador usa la funcion del servicio, por lo que solo afecta la visibilidad del boton.",
+      "required_action": "Opcional (tarea futura): usar SimuladorService.can_simulate(user) en el contexto."
+    },
+    {
+      "id": "F-3",
+      "severity": "info",
+      "file": "app/web/dependencies.py",
+      "summary": "El mock importa la constante privada _RUNNER_FORBIDDEN_STATUS_STATES del servicio para mantener la misma regla (F-7 de review-01); aceptable, solo acoplamiento de nombre privado.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "F-4",
+      "severity": "info",
+      "file": "tests/unit/test_web_app.py",
+      "summary": "Reproduccion local (Windows) en el worktree del SHA revisado: 184 passed, 1 failed (test_typography_is_hosted_locally_without_external_font_requests por mimetypes de Windows sin .woff2, preexistente y no relacionado); en CI ubuntu pasa.",
+      "required_action": "Ninguna."
+    }
+  ],
+  "previous_findings_resolution": [
+    {
+      "id": "F-1",
+      "status": "resolved",
+      "note": "docs/BITACORA.md con la entrada de desarrollo de la tarea (contexto, cambio, reglas por perfil, pruebas, documentacion, sin migracion, nota de alta de usuarios coordinator DESPUES del despliegue)."
+    },
+    {
+      "id": "F-2",
+      "status": "resolved",
+      "note": "POST del simulador (simular y descargar_pdf): runner 403 (rol antes de CSRF), coordinador ajeno 404 (alcance antes de CSRF), coordinador propio/ceo/cto/executive 200 y application/pdf."
+    },
+    {
+      "id": "F-3",
+      "status": "resolved",
+      "note": "Escrituras cruzadas en servicio y HTTP (estado, nota, nota con adjunto): rechazo sin escribir ni subir a S3 ni auditar; 404 real; advisor_scope == id_asesor propio; runner A vs runner B."
+    },
+    {
+      "id": "F-4",
+      "status": "resolved",
+      "note": "Adjuntos de runner y coordinador en su cartera: subida con auditoria adjunto_subido, ver inline y descargar attachment; lead ajeno: pagina generica no disponible (404) y sin S3; borrado por la ruta real 403 (rol verificado antes de CSRF en attachment_delete)."
+    },
+    {
+      "id": "F-5",
+      "status": "resolved",
+      "note": "tests/unit/test_simple_dev_auth.py: coordinator con advisor_id valido, ausente y malformado (fail closed), rol permitido; ejemplos ficticios."
+    },
+    {
+      "id": "F-6",
+      "status": "resolved",
+      "note": "test_topbar_profile_pill_renders_profile_label: Runner, Coordinador, Socio (ceo y cto) y valor tecnico admin."
+    },
+    {
+      "id": "F-7",
+      "status": "resolved",
+      "note": "El mock aplica la misma regla de perfil del runner."
+    }
+  ],
+  "checks": [
+    {
+      "name": "exact_sha: PR #132 OPEN, headRefOid == 64a3efb9469e31ba8d09bf5f57add75f1425190d == head_sha de developer-02; worktree del reviewer en ese SHA y limpio",
+      "result": "PASS"
+    },
+    {
+      "name": "ci_green_exact_sha: run 40254424256 (pull_request) success sobre 64a3efb; 5 jobs pass (Tests con cobertura >= 85%, Lint & Format, Security Audit, Docker Build, Release Tooling Validation)",
+      "result": "PASS"
+    },
+    {
+      "name": "up_to_date_with_main: merge-base == origin/main a9af2554e2f4568bd8c3ba25a8d503d66d82f74c; mergeable MERGEABLE",
+      "result": "PASS"
+    },
+    {
+      "name": "scope_no_unrelated_changes: 18 archivos bajo app/auth, app/services, app/web, tests y docs (scope.paths); rework 5a1d9ea..64a3efb solo toca app/web/dependencies.py (mock), docs/BITACORA.md y pruebas; sin deployment/**, SQL, migraciones ni dependencias; clase A",
+      "result": "PASS"
+    },
+    {
+      "name": "authz_fail_closed: no quedan comparaciones role == advisor de alcance en app/ (solo la regla de estados del runner, intencional); has_portfolio_scope en identidad, mutacion, detalle y bandeja; asignacion solo ceo/cto; simulador con can_simulate y alcance antes de CSRF; regla del runner en el servidor con 403; dashboard, XLSX y borrado de adjuntos siguen ceo/cto",
+      "result": "PASS"
+    },
+    {
+      "name": "no_existence_leak: lead ajeno responde 404 en detalle, estado, nota, adjuntos y simulador; el 403 del runner por estado reservado es independiente de la existencia del lead y el contexto re-renderizado usa el detalle con alcance (None para ajeno)",
+      "result": "PASS"
+    },
+    {
+      "name": "pii_server_side: can_view_full_pii sin cambios (ceo/cto); coordinador y runner ven PII completa solo de su cartera; probado",
+      "result": "PASS"
+    },
+    {
+      "name": "csrf_and_session: sin cambios en CSRF ni sesion",
+      "result": "PASS"
+    },
+    {
+      "name": "no_secrets_in_diff: ejemplos ficticios; sin claves ni usuarios reales; logs solo rol tecnico y subject",
+      "result": "PASS"
+    },
+    {
+      "name": "tests_cover_acceptance_criteria: matriz rol x accion completa (cartera, PII, asignar, estado, simular/PDF, exportar, dashboard, adjuntos) con permitido y denegado; 47 pruebas en test_crm_perfiles_rbac.py y 22 en test_simple_dev_auth.py",
+      "result": "PASS"
+    },
+    {
+      "name": "tests_validate_behavior_not_coverage: aserciones sobre estado del repositorio, llamadas a storage y auditoria, codigos HTTP y orden rol/alcance antes de CSRF",
+      "result": "PASS"
+    },
+    {
+      "name": "local_reproduction: pytest de 7 archivos relacionados en el worktree 64a3efb: 184 passed, 1 failed preexistente de Windows (F-4 info)",
+      "result": "PASS"
+    },
+    {
+      "name": "documentation: docs/SEGURIDAD.md (matriz y configuracion con coordinator ficticio) y docs/BITACORA.md (entrada de desarrollo)",
+      "result": "PASS"
+    },
+    {
+      "name": "functional_compliance: AC-1..AC-7 cumplidos; AC-8 humano pendiente tras despliegue",
+      "result": "PASS"
+    },
+    {
+      "name": "db_migration: no aplica (sin SQL ni esquema)",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "Tarea de autorizacion de riesgo alto: mitigado por la matriz de pruebas rol x accion y el smoke humano AC-8",
+    "AC-8 (humano) pendiente tras el despliegue; agregar usuarios coordinator a la configuracion de usuarios antes del despliegue romperia el arranque de la version actual",
+    "Riesgo aceptado por el humano: posible falsa alarma del escaneo de logs en la verificacion (HARNESS-LOGS-FALSOS-POSITIVOS-CADDY en backlog)"
+  ]
+}

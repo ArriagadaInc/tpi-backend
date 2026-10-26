@@ -1,0 +1,318 @@
+{
+  "schema_version": 1,
+  "kind": "candidate",
+  "task_id": "CRM-PERFILES-1-RBAC",
+  "created_at": "2026-10-26T02:38:26Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610260226-deployer-sup154a87",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "environment": "tpi-backoffice-dev-green",
+  "release_sha": "ba537775a62d500907f44c5f52b27df400f3030f",
+  "release_tree": "2c8a64877f54fca8d80ee51463199fb38150aea5",
+  "reviewed_tree": "2c8a64877f54fca8d80ee51463199fb38150aea5",
+  "release_verification": {
+    "origin_main_after_fetch": "ba537775a62d500907f44c5f52b27df400f3030f",
+    "release_commit_is_ancestor_of_main": true,
+    "parent": "a9af2554e2f4568bd8c3ba25a8d503d66d82f74c",
+    "equals_merge_01": true,
+    "equals_review_02_reviewed_tree": true,
+    "note": "origin/main = release ba53777. deployment/ identico entre ba53777, el checkout local (a9af255) y bfa4ede (LKG) (git diff --stat vacio): el template del compose y el builder usados son los del release."
+  },
+  "publish_run": {
+    "run_id": 40259223307,
+    "conclusion": "success",
+    "status": "completed",
+    "head_sha": "ba537775a62d500907f44c5f52b27df400f3030f",
+    "source_sha": "ba537775a62d500907f44c5f52b27df400f3030f",
+    "workflow": "Publish immutable DEV images to ECR",
+    "url": "https://github.com/ArriagadaInc/tpi-backend/actions/runs/40259223307",
+    "event": "workflow_dispatch",
+    "jobs": "6/6 completed/success (Authorize source revision, Tests, Security Audit, Lint & Format, Docker Build, Publish immutable images and release bundle)",
+    "artifact": {
+      "name": "tpi-dev-ecr-ba537775a62d500907f44c5f52b27df400f3030f",
+      "manifest_runtime_git_sha": "ba537775a62d500907f44c5f52b27df400f3030f",
+      "generated_at": "2026-10-26T02:35:22Z"
+    },
+    "note": "Un unico dispatch en esta sesion (no habia publish previo para ba53777). El bundle embebido en el artifact (sha256 6746dbf0...) no es el desplegable; el desplegable es el domain-locked construido localmente con los digests del manifest."
+  },
+  "scan_source": "ecr describe-image-scan-findings via scripts/harness/aws_guard.py: imageScanStatus COMPLETE, findings vacios y findingSeverityCounts vacio en ambos digests. ecr describe-images: imageManifestMediaType application/vnd.docker.distribution.manifest.v2+json en ambas imagenes, ACTIVE, tag = release_sha.",
+  "images": {
+    "app": {
+      "repository": "tpi-dev-app",
+      "digest": "sha256:9e0c519e391ae198bcd5ac51e02680242b15d52e49fc06bcb22df705dd9e2272",
+      "tag": "ba537775a62d500907f44c5f52b27df400f3030f",
+      "manifest_media_type": "application/vnd.docker.distribution.manifest.v2+json",
+      "scan": {
+        "status": "COMPLETE",
+        "completed_at": "2026-10-26T02:35:06Z",
+        "critical": 0,
+        "high": 0
+      }
+    },
+    "caddy": {
+      "repository": "tpi-dev-caddy",
+      "digest": "sha256:d8d9e2e1f99983f2349f71b17612ae8a2f16f8a4a5fc7c2d816dc6d6514e8cca",
+      "tag": "ba537775a62d500907f44c5f52b27df400f3030f",
+      "manifest_media_type": "application/vnd.docker.distribution.manifest.v2+json",
+      "scan": {
+        "status": "COMPLETE",
+        "completed_at": "2026-10-26T02:35:08Z",
+        "critical": 0,
+        "high": 0
+      }
+    }
+  },
+  "bundle": {
+    "sha256": "b9f1a423f4a897efe6b79c3ee5eb7d1b0ee2ae3108d89b22ff948e9b6bc21f8a",
+    "checksum_sha256_b64": "ufGkI/Sol+/mt5w+5et9Gw7irjEI2Jsi/5SOm2vCH4o=",
+    "artifact_type": "domain-locked",
+    "reproducible": true,
+    "size_bytes": 4917,
+    "entries": [
+      "docker-compose.yml"
+    ],
+    "path": ".harness-release/h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1.zip",
+    "builder_manifest": ".harness-release/h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1.manifest.json",
+    "runtime_git_sha": "ba537775a62d500907f44c5f52b27df400f3030f",
+    "reverification": "Segunda construccion independiente (check-h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1.zip) con los mismos digests del manifest del publish run: sha256 identico. El compose referencia las imagenes por digest y los dominios literales dev.tupensioninteligente.cl y backoffice.dev.tupensioninteligente.cl; sin referencias a genialabs."
+  },
+  "s3": {
+    "bucket": "elasticbeanstalk-us-east-2-821656895812",
+    "key": "tpi-backoffice/dev-releases/h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1/b9f1a423f4a897efe6b79c3ee5eb7d1b0ee2ae3108d89b22ff948e9b6bc21f8a.zip",
+    "checksum_sha256": "ufGkI/Sol+/mt5w+5et9Gw7irjEI2Jsi/5SOm2vCH4o=",
+    "checksum_type": "FULL_OBJECT",
+    "version_id": null,
+    "content_length": 4917,
+    "etag": "1597716fdd6b33963933d26f9c587eca",
+    "server_side_encryption": "AES256",
+    "if_none_match": "*",
+    "key_absent_before_put": true,
+    "absence_check": "describe-application-versions previo devolvio lista vacia para el label; put-object con --if-none-match * (key nueva, content-addressed) a las 02:37:04Z.",
+    "post_put_head_object": "ChecksumSHA256 ufGkI/Sol+/mt5w+5et9Gw7irjEI2Jsi/5SOm2vCH4o= (== base64 del sha256 del bundle local), ContentLength 4917, FULL_OBJECT."
+  },
+  "application_version": {
+    "label": "h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1",
+    "status": "UNPROCESSED",
+    "created_at": "2026-10-26T02:37:23Z",
+    "flags": "--no-process --no-auto-create-application",
+    "label_absent_before_create": true,
+    "source_bundle": {
+      "bucket": "elasticbeanstalk-us-east-2-821656895812",
+      "key": "tpi-backoffice/dev-releases/h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1/b9f1a423f4a897efe6b79c3ee5eb7d1b0ee2ae3108d89b22ff948e9b6bc21f8a.zip"
+    },
+    "source_bundle_matches_s3": true
+  },
+  "traceability_chain": {
+    "result": "PASS",
+    "chain": "release ba53777 (tree 2c8a6487 = reviewed_tree) -> publish run 40259223307 success, manifest runtime_git_sha = release -> ECR digests app 9e0c519e... / caddy d8d9e2e1... (manifest Docker v2, scan COMPLETE 0/0) -> bundle sha256 b9f1a423f4a897efe6b79c3ee5eb7d1b0ee2ae3108d89b22ff948e9b6bc21f8a (reproducible, domain-locked) -> S3 key content-addressed + ChecksumSHA256 ufGkI/Sol+/mt5w+5et9Gw7irjEI2Jsi/5SOm2vCH4o= + ContentLength 4917 -> AV h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1 SourceBundle = key S3, UNPROCESSED"
+  },
+  "environment_observed": {
+    "version_label": "h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-23T20:06:35Z",
+    "platform": "64bit Amazon Linux 2023 v4.13.6 running Docker",
+    "caller_account": "821656895812",
+    "note": "Observado al inicio del preflight y tras crear la AV: VersionLabel y DateUpdated sin cambio. CodePipeline tpi-backoffice-dev-promotion: transicion inbound de Promote deshabilitada."
+  },
+  "lkg": {
+    "version_label": "h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1",
+    "status": "UNPROCESSED",
+    "release_sha": "bfa4edee00abb786d83b42ccaa01614a9985080d",
+    "images": [
+      {
+        "repository": "tpi-dev-app",
+        "digest": "sha256:f3f5b79f6e2e3fa6ffa6d4fa834ee852b330c45324edc5e1d458fe54615ea07d",
+        "present": true
+      },
+      {
+        "repository": "tpi-dev-caddy",
+        "digest": "sha256:420931647023a929506760e67bd743c2a03b9df75e482f2bd5cc9edffbde7837",
+        "present": true
+      }
+    ],
+    "option_settings_required": false,
+    "source_bundle": {
+      "bucket": "elasticbeanstalk-us-east-2-821656895812",
+      "key": "tpi-backoffice/dev-releases/h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1/2c4c5905c70d5784ecf7879a1715afd9f235ea327afa7beb2b5826ce3837ae8a.zip",
+      "checksum_sha256": "LExZBccNV4Ts94eaFxWv2fI16jJ6+nvrK1gmzjg3roo=",
+      "bundle_sha256": "2c4c5905c70d5784ecf7879a1715afd9f235ea327afa7beb2b5826ce3837ae8a",
+      "content_length": 4917
+    },
+    "digests_source": "evidence/CRM-ESTADOS-1-CATALOGO/deployment/candidate-01.json; re-verificados en esta sesion: ECR describe-images (ACTIVE, tag bfa4ede), AV SourceBundle (describe-application-versions) y objeto S3 (head-object, checksum igual).",
+    "selected_by": "observacion de describe-environments en el preflight (no por timestamp ni por documento)",
+    "note": "La tarea CRM-ESTADOS-1-CATALOGO se cerro como CANCELLED por la falsa alarma de logs, pero su release esta desplegado en DEV, sano y con AC-1..AC-7 aceptados por el humano (progress/current.md, resolution-01)."
+  },
+  "smoke_plan": [
+    {
+      "name": "public_https",
+      "method": "GET",
+      "url": "https://dev.tupensioninteligente.cl/",
+      "expect_status": 200
+    },
+    {
+      "name": "backoffice_login",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/login",
+      "expect_status": 200
+    },
+    {
+      "name": "api_catalogs",
+      "method": "GET",
+      "url": "https://dev.tupensioninteligente.cl/api/v1/catalogs",
+      "expect_status": 200
+    },
+    {
+      "name": "static_css",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/static/css/app.css",
+      "expect_status": 200
+    },
+    {
+      "name": "leads_requires_auth",
+      "method": "GET",
+      "url": "https://backoffice.dev.tupensioninteligente.cl/leads",
+      "expect": "redirect a /login o 401/403 (auth sin cambios)"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "check": "ninguna respuesta redirige a genialabs.cl"
+    },
+    {
+      "name": "runtime_identity_chain",
+      "check": "VersionLabel = h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1 -> AV SourceBundle = key S3 del candidate -> ChecksumSHA256 ufGkI/Sol+/mt5w+5et9Gw7irjEI2Jsi/5SOm2vCH4o= -> digests app 9e0c519e... / caddy d8d9e2e1..."
+    },
+    {
+      "name": "log_counts",
+      "check": "aws-observability: solo conteos de indicadores de PII/variables sensibles y de errores en logs; ausencia de errores de arranque en api y backoffice (la configuracion de usuarios actual sigue siendo valida: el rol nuevo es aditivo) y de Traceback en listado, detalle y dashboard. Riesgo aceptado por el humano: posible falsa alarma del indicador fuerte de secretos por lineas de acceso de Caddy (HARNESS-LOGS-FALSOS-POSITIVOS-CADDY)."
+    },
+    {
+      "name": "human_AC-8",
+      "check": "Tras el cutover el humano agrega usuarios de prueba (runner, coordinador, socio) a la configuracion de usuarios del ambiente fuera del repositorio, asigna leads como socio y comprueba: runner y coordinador solo ven su cartera, solo el socio asigna, el simulador solo lo usan coordinador y socio, el runner no puede marcar 'Reunion realizada', y sube y ve un adjunto. Pendiente de approve.py accept."
+    }
+  ],
+  "deployment_plan": {
+    "commands": [
+      "python scripts/harness/aws_guard.py elasticbeanstalk update-environment --environment-name tpi-backoffice-dev-green --version-label h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1"
+    ],
+    "type": "version-only",
+    "option_settings_used": false,
+    "environment_properties_required": [],
+    "database_changes": "Ninguna. Sin migracion ni cambio de esquema (change_class A).",
+    "preconditions": [
+      "Human Gate aprobado para release_sha ba537775a62d500907f44c5f52b27df400f3030f y AV h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1.",
+      "Preflight inmediato antes del cutover: cuenta, region, environment Ready/Green/Ok con VersionLabel = LKG (h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1), sin update en curso, AV existe, digests del candidate y del LKG presentes en ECR.",
+      "El humano NO agrega usuarios con rol coordinator a la configuracion de usuarios antes del cutover (romperia el arranque de la version actual); solo despues."
+    ],
+    "wait": "describe-environments cada 30 s, maximo 30 min; describe-events --max-records 20; exito = VersionLabel exacta h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1 + Ready/Green/Ok."
+  },
+  "rollback_plan": {
+    "version_label": "h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1",
+    "commands": [
+      "python scripts/harness/aws_guard.py elasticbeanstalk update-environment --environment-name tpi-backoffice-dev-green --version-label h3-crm-estados-1-catalogo-bfa4ede-domainlocked-r1"
+    ],
+    "max_attempts": 1,
+    "lkg_bundle_intact": true,
+    "database": "Sin cambios de esquema; el rollback no requiere reversa de base de datos.",
+    "conditions": "Un unico rollback version-only al LKG, solo si se cumplen las 7 condiciones de harness/policies.yaml rollback_authorization. Un defecto puramente funcional no autoriza rollback. Nota: si el humano ya agrego usuarios coordinator a la configuracion de usuarios, la version LKG no los reconoce; retirarlos es decision humana fuera del Harness."
+  },
+  "acceptance_criteria_status": [
+    {
+      "id": "AC-1..AC-7",
+      "status": "automated_pre_deploy",
+      "note": "Revision aprobada (review-02), CI verde en PR #132 y publish run 40259223307 6/6 (gates incluidos)."
+    },
+    {
+      "id": "AC-8",
+      "status": "pending_human",
+      "note": "Smoke humano en DEV con un usuario de cada perfil tras el cutover (approve.py accept)."
+    }
+  ],
+  "blast_radius_and_residues": {
+    "scope": "Solo AWS DEV, environment tpi-backoffice-dev-green; cutover version-only sin option settings.",
+    "stage_residues": "Imagenes ECR tag ba53777 (app 9e0c519e.../caddy d8d9e2e1...), objeto S3 content-addressed y AV UNPROCESSED nuevos; inertes hasta el cutover. El Harness no puede borrar nada.",
+    "authorization_note": "La tarea toca autorizacion (alto riesgo): admin y executive pierden la asignacion de leads tras el cutover; es el comportamiento pedido (AC-3).",
+    "local_artifacts": ".harness-release/ (no versionado).",
+    "runtime": "Environment sin mutar durante PREPARING_DEPLOYMENT."
+  },
+  "safety": {
+    "update_environment": false,
+    "environment_mutated": false,
+    "option_settings": false,
+    "smoke_executed": false,
+    "rds_access": false,
+    "secrets_accessed": false,
+    "code_or_dependencies_modified": false,
+    "human_decision_tooling_executed": false,
+    "aws_writes": [
+      "s3api put-object (content-addressed, --if-none-match *, checksum SHA256) x1",
+      "elasticbeanstalk create-application-version (--no-process --no-auto-create-application) x1"
+    ],
+    "github_writes": [
+      "gh workflow run publish-dev-ecr-images.yml (source_sha=release_sha) x1"
+    ],
+    "publish_rerun": false
+  },
+  "checks": [
+    {
+      "name": "init_state_role",
+      "result": "PASS"
+    },
+    {
+      "name": "release_on_origin_main_tree_equals_reviewed",
+      "result": "PASS"
+    },
+    {
+      "name": "preflight_account_region",
+      "result": "PASS"
+    },
+    {
+      "name": "preflight_env_ready_green_ok_no_update",
+      "result": "PASS"
+    },
+    {
+      "name": "lkg_av_and_digests_present",
+      "result": "PASS"
+    },
+    {
+      "name": "promote_disabled",
+      "result": "PASS"
+    },
+    {
+      "name": "publish_run_success",
+      "result": "PASS"
+    },
+    {
+      "name": "image_manifest_docker_v2_not_index",
+      "result": "PASS"
+    },
+    {
+      "name": "scan_complete_high_critical_zero",
+      "result": "PASS"
+    },
+    {
+      "name": "bundle_reproducible_domain_locked",
+      "result": "PASS"
+    },
+    {
+      "name": "av_label_absent_before_create",
+      "result": "PASS"
+    },
+    {
+      "name": "s3_key_content_addressed_checksum",
+      "result": "PASS"
+    },
+    {
+      "name": "av_unprocessed_source_matches",
+      "result": "PASS"
+    },
+    {
+      "name": "environment_not_mutated",
+      "result": "PASS"
+    }
+  ]
+}

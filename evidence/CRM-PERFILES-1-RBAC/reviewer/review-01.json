@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "CRM-PERFILES-1-RBAC",
+  "created_at": "2026-10-26T01:14:31Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610260110-reviewer-sup3b60b7",
+  "reviewed_sha": "5a1d9ead523f40e4b7cc65908a9da92a5a8a0836",
+  "reviewed_tree": "c23d0885de4b8973559627c877ab38c061d45775",
+  "pr_number": 132,
+  "ci": {
+    "run_id": "40252293987",
+    "conclusion": "success",
+    "head_sha": "5a1d9ead523f40e4b7cc65908a9da92a5a8a0836",
+    "jobs": [
+      "Docker Build",
+      "Lint & Format",
+      "Release Tooling Validation",
+      "Security Audit",
+      "Tests"
+    ]
+  },
+  "decision": "REJECTED",
+  "findings": [
+    {
+      "id": "F-1",
+      "severity": "major",
+      "file": "docs/BITACORA.md",
+      "summary": "AC-7 exige docs/BITACORA.md y el PR no lo toca. La evidencia del Developer afirma que 'la entrada la genera el cierre automatico del Harness', pero scripts/harness/closure.py::_bitacora_entry solo agrega un resumen administrativo (titulo, carpeta de evidencia, release) al cerrar; no documenta el cambio. El precedente inmediato (CRM-ESTADOS-1-CATALOGO, bfa4ede) escribio su entrada de desarrollo en el propio PR. AC-7 se declara 'met' sin respaldo.",
+      "required_action": "Agregar en el PR la entrada de desarrollo en docs/BITACORA.md (contexto, cambio, reglas por perfil, pruebas, documentacion, sin migracion, nota de que el humano agrega usuarios coordinator al secreto DESPUES del despliegue) y corregir la descripcion de AC-7 en la evidencia."
+    },
+    {
+      "id": "F-2",
+      "severity": "major",
+      "file": "tests/unit/test_crm_perfiles_rbac.py",
+      "summary": "AC-4 pide 'pruebas de la matriz completa para simular y para descargar el PDF'. Solo se prueba GET /leads/{id}/simulador (runner 403, coordinador propio 200, coordinador ajeno 404) y can_simulate. No hay prueba del POST /leads/{id}/simulador (intent simular y descargar_pdf) por perfil: runner 403, coordinador propio permitido, coordinador sobre lead ajeno 404, socio y executive permitidos.",
+      "required_action": "Agregar pruebas HTTP del POST del simulador (simular y descargar_pdf) para runner, coordinador (propio y ajeno), socio y executive con el estado esperado."
+    },
+    {
+      "id": "F-3",
+      "severity": "major",
+      "file": "tests/unit/test_crm_perfiles_rbac.py",
+      "summary": "AC-2 pide pruebas cruzadas de que el runner 'no ve ni toca' leads del runner B ni del coordinador, y al reves, en notas, cambio de estado, adjuntos 'y cualquier ruta por id de lead'. test_cross_portfolio_isolation_between_runner_and_coordinator solo prueba lectura del detalle. No hay prueba de mutacion cruzada del coordinador (estado, nota, nota con adjuntos sobre lead ajeno -> rechazo sin escribir / 404), ni entre dos runners; test_coordinator_and_socio_state_matrix ni siquiera afirma que el coordinador escribe con advisor_scope == su id_asesor, y el repositorio falso ignora el alcance.",
+      "required_action": "Agregar pruebas cruzadas de escritura (servicio y HTTP): coordinador y runner sobre lead ajeno en estado, nota y nota con adjuntos -> rechazo sin escritura ni subida a S3 y 404 sin filtrar existencia; afirmar advisor_scope == id_asesor del coordinador en sus escrituras; incluir runner A vs runner B."
+    },
+    {
+      "id": "F-4",
+      "severity": "major",
+      "file": "tests/unit/test_crm_perfiles_rbac.py",
+      "summary": "AC-6 pide probar que runner y coordinador pueden subir, ver y descargar adjuntos de su cartera con las mismas validaciones y auditoria, y que no pueden borrarlos. coordinator se agrega a _WRITE_ROLES (amplia escritura) sin ninguna prueba de adjuntos para coordinador; el borrado solo se prueba via can_view_full_pii, no por la ruta POST /leads/{id}/adjuntos/{uuid}/eliminar.",
+      "required_action": "Agregar pruebas de adjuntos para coordinador (y runner) en su cartera: subir (con auditoria), ver y descargar permitidos; sobre lead ajeno, pagina generica de no disponible; POST de eliminar rechazado para runner y coordinador por la ruta real."
+    },
+    {
+      "id": "F-5",
+      "severity": "minor",
+      "file": "app/auth/simple_dev.py",
+      "summary": "AC-2: _parse_advisor_id ahora acepta advisor_id para coordinator, pero no hay prueba de la configuracion de usuarios con role coordinator (advisor_id valido, ausente y malformado -> None, fail closed) ni de que 'coordinator' este en los roles permitidos del parser.",
+      "required_action": "Agregar pruebas de simple_dev para coordinator (valido, ausente, malformado) con ejemplos ficticios."
+    },
+    {
+      "id": "F-6",
+      "severity": "minor",
+      "file": "app/web/templates/base.html",
+      "summary": "AC-1: la pildora de perfil en la barra superior no tiene prueba de renderizado (solo se prueba la funcion profile_label).",
+      "required_action": "Agregar una prueba web que verifique 'Runner', 'Coordinador' y 'Socio' en la barra superior y el valor tecnico para un rol sin perfil."
+    },
+    {
+      "id": "F-7",
+      "severity": "info",
+      "file": "app/web/dependencies.py",
+      "summary": "_MockLeadBoardService.get_crm_estado_lead_options_for_update acepta actor pero lo ignora (el mock ofrece al runner estados que el servicio real rechaza). Solo afecta el modo mock; la autorizacion real esta en SolicitudService.",
+      "required_action": "Opcional: aplicar la misma regla de perfil en el mock para coherencia."
+    },
+    {
+      "id": "F-8",
+      "severity": "info",
+      "file": "tests/unit/test_web_app.py",
+      "summary": "Ejecucion local (Windows): 152 passed y 1 failed (test_typography_is_hosted_locally_without_external_font_requests por mimetypes de Windows), igual a lo declarado; en CI pasa.",
+      "required_action": "Ninguna."
+    }
+  ],
+  "checks": [
+    {
+      "name": "ci_green_exact_sha: run 40252293987 success sobre headSha 5a1d9ea; jobs Docker Build, Lint & Format, Release Tooling Validation, Security Audit, Tests en success",
+      "result": "PASS"
+    },
+    {
+      "name": "PR 132 OPEN, MERGEABLE, base main, head 5a1d9ea == head_sha de developer-01; merge-base == origin/main a9af255; reviewed_tree = c23d0885",
+      "result": "PASS"
+    },
+    {
+      "name": "scope_no_unrelated_changes: 16 archivos bajo app/auth, app/services, app/web, tests y docs (scope.paths); sin deployment/**, SQL, migraciones ni dependencias; clase A no mezclada",
+      "result": "PASS"
+    },
+    {
+      "name": "authz_fail_closed (codigo): has_portfolio_scope unico en resolve_advisor_identity, _advisor_mutation_scope, detalle y bandeja; coordinador sin advisor_id valido -> tablero vacio y escrituras denegadas; can_assign_lead solo ceo/cto con PermissionError en assign_lead y 403 en la ruta; simulador con can_simulate + detalle con alcance (404 ajeno); regla del runner en update_lead_status antes del alcance con 403 en la ruta; dashboard, XLSX y borrado de adjuntos siguen ceo/cto",
+      "result": "PASS"
+    },
+    {
+      "name": "pii_server_side / no_pii_in_html_for_restricted_roles: masking sin cambios (can_view_full_pii = ceo/cto); coordinador ve PII completa solo de su cartera, igual que advisor",
+      "result": "PASS"
+    },
+    {
+      "name": "csrf_and_session: rutas de estado, asignacion y simulador validan CSRF como antes; sin cambios de sesion",
+      "result": "PASS"
+    },
+    {
+      "name": "no_secrets_in_diff: ejemplo de configuracion de usuarios ficticio con hash placeholder; sin claves ni usuarios reales",
+      "result": "PASS"
+    },
+    {
+      "name": "safe_logging: logs de alcance registran solo el rol tecnico y subject, nunca advisor_id crudo",
+      "result": "PASS"
+    },
+    {
+      "name": "layering y maintainability: reglas en el servicio, rutas solo traducen PermissionError a 403; sin abstracciones nuevas innecesarias",
+      "result": "PASS"
+    },
+    {
+      "name": "tests_cover_acceptance_criteria: faltan PDF del simulador por perfil (AC-4), mutaciones cruzadas (AC-2), adjuntos del coordinador y borrado por ruta (AC-6), configuracion coordinator (AC-2), pildora renderizada (AC-1)",
+      "result": "FAIL"
+    },
+    {
+      "name": "documentation: docs/SEGURIDAD.md con matriz y configuracion; docs/BITACORA.md ausente pese a AC-7",
+      "result": "FAIL"
+    },
+    {
+      "name": "functional_compliance: comportamiento implementado coherente con AC-1..AC-6; AC-7 incompleto (BITACORA y matriz de pruebas)",
+      "result": "FAIL"
+    },
+    {
+      "name": "tests_validate_behavior_not_coverage: pruebas de asignacion actualizadas sin debilitarse (admin/executive pasan a denegados explicitos)",
+      "result": "PASS"
+    },
+    {
+      "name": "db_migration: no aplica (sin SQL ni esquema)",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "Tarea de autorizacion de riesgo alto: sin la matriz de pruebas completa, una regresion futura en el alcance del coordinador sobre escrituras, adjuntos o PDF no seria detectada",
+    "AC-8 (humano) pendiente tras el despliegue; agregar usuarios coordinator al secreto antes del despliegue romperia el arranque de la version actual"
+  ]
+}

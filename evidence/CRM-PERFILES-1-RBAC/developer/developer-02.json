@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "CRM-PERFILES-1-RBAC",
+  "created_at": "2026-10-26T01:36:07Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610260115-developer-sup952ddc",
+  "head_sha": "64a3efb9469e31ba8d09bf5f57add75f1425190d",
+  "branch": "harness/CRM-PERFILES-1-RBAC-perfiles-rbac",
+  "pr_number": 132,
+  "change_class": "A",
+  "tests": {
+    "command": "Local (worktree, sin PostgreSQL): python -m ruff check app/ tests/ PASS; python -m black --check app/ tests/ PASS (212 files); python -m mypy app/ --ignore-missing-imports PASS (72 files); python -m bandit -r app/ --severity-level medium --confidence-level medium -q PASS (sin hallazgos); python -m pip_audit --requirement requirements/runtime.lock PASS (sin vulnerabilidades conocidas). python -m pytest tests/unit --no-cov -q -> 1026 passed, 12 failed: 11 de test_executive_dashboard_render/service (DatabaseConfigurationError por falta de PostgreSQL local, preexistentes y no relacionados con la tarea) y 1 de test_typography_is_hosted_locally_without_external_font_requests (mimetypes de Windows sin .woff2). tests/unit/test_crm_perfiles_rbac.py ahora con 47 tests y tests/unit/test_simple_dev_auth.py con 22 tests, todas en verde. CI PR #132 (ubuntu, Python 3.12, servicio postgres) sobre 64a3efb: job Tests PASS (pytest tests/ --cov=app --cov-fail-under=85), Lint & Format PASS, Security Audit PASS, Docker Build PASS, Release Tooling Validation PASS.",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "Se agrega el rol 'coordinator' a UserRole (app/auth/models.py) y a _ALLOWED_ROLES (app/auth/simple_dev.py). Las etiquetas de pantalla viven en una unica funcion probada profile_label: advisor->Runner, coordinator->Coordinador, ceo/cto->Socio; los roles tecnicos (tester, admin, executive, operations, readonly) conservan su valor. La barra superior muestra el perfil junto al nombre (base.html: <span class='pill pill-muted'>{{ selected_user.role|profile_label }}</span>, filtro registrado en app/web/main.py). Pruebas: test_profile_labels_map_the_three_business_profiles_only y test_topbar_profile_pill_renders_profile_label (verifica Runner, Coordinador y Socio en la barra y el valor tecnico 'admin' para un rol sin perfil)."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "Toda comprobacion user.role == 'advisor' se generaliza a una unica funcion has_portfolio_scope (PORTFOLIO_ROLES = {advisor, coordinator}). resolve_advisor_identity, _advisor_mutation_scope, get_solicitud_detalle_masked y get_crm_bandeja usan has_portfolio_scope. La configuracion parsea advisor_id para coordinator igual que para advisor (_parse_advisor_id con role in {advisor, coordinator}); si no resuelve a un asesor activo, falla cerrado a tablero vacio. Pruebas de lectura: test_portfolio_scope_covers_advisor_and_coordinator_only, test_coordinator_resolves_identity_like_advisor, test_coordinator_board_is_scoped_to_own_portfolio, test_coordinator_without_valid_advisor_id_fails_closed_to_empty_board, test_coordinator_detail_own_lead_returns_full_pii, test_coordinator_foreign_lead_is_404, test_cross_portfolio_isolation_between_runner_and_coordinator. Pruebas de escritura cruzada (servicio y HTTP): test_coordinator_own_mutations_assert_advisor_scope (advisor_scope == id_asesor del coordinador), test_runner_and_coordinator_foreign_lead_mutations_rejected_without_writing, test_runner_a_cannot_mutate_runner_b_lead_and_vice_versa, test_coordinator_foreign_lead_attachment_upload_is_rejected_without_s3 y test_coordinator_foreign_lead_http_mutations_return_404 (404 real sin filtrar existencia). Configuracion coordinator: test_parse_advisor_id_for_coordinator, test_parse_advisor_id_only_applies_to_portfolio_roles, test_coordinator_role_is_allowed_and_resolves_advisor_id, test_coordinator_without_advisor_id_authenticates_fail_closed_to_none."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "can_assign_lead devuelve unicamente is_superuser(role) (ceo/cto); admin y executive pierden la asignacion. El formulario de asignar no se muestra a otros perfiles (can_assign = service.can_assign_lead(user)) y el servidor responde 403 real (assign_lead -> PermissionError -> 403 en la ruta). Pruebas actualizadas sin debilitarse: test_can_assign_lead_is_true_only_for_socios, test_assign_lead_rejects_non_socio_server_side, test_assign_form_hidden_for_non_socios_and_403_on_post, test_ac3_manual_assignment_authorization, test_assignment_access_control_is_centralized, y los actores de asignacion de integracion (test_database_runtime, test_web_crm_lite) pasan a socio (ceo)."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "SimuladorService.can_simulate ahora es is_superuser o role in {executive, coordinator}; el runner (advisor) recibe 403 real como hoy. La ruta del simulador usa get_solicitud_detalle_masked(lead_id, user=user), que por has_portfolio_scope devuelve 404 para un lead ajeno del coordinador. El boton no se muestra al runner (can_simulate en _resolve_detail_context). Pruebas del GET: test_can_simulate_roles, test_runner_gets_real_403_on_simulator, test_coordinator_opens_simulator_on_own_lead, test_coordinator_gets_404_on_foreign_lead_simulator. Matriz del POST (simular y descargar_pdf): test_runner_post_simulator_is_403_for_simular_and_pdf, test_coordinator_post_simulator_foreign_lead_is_404, test_allowed_roles_post_simulator_own_lead (coordinador propio, ceo, cto y executive: 200 simular y 200 application/pdf descargar)."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "El runner (advisor) puede fijar nuevo, sin_contacto, en_seguimiento, reunion_agendada, no_interesado, datos_erroneos, no_contactado y perdido; NO reunion_realizada, ficha_generada ni cerrado (_RUNNER_FORBIDDEN_STATUS_STATES). El coordinador y el socio pueden fijar todos excepto 'asignado' (que sigue siendo solo por asignacion). El rechazo es del servidor: update_lead_status -> PermissionError -> 403; el selector (get_crm_estado_lead_options_for_update(actor=...)) solo ofrece lo permitido. Pruebas: test_runner_state_matrix, test_coordinator_and_socio_state_matrix, test_state_options_are_role_aware, test_runner_status_selector_does_not_offer_forbidden_states, test_runner_status_update_to_forbidden_state_is_rejected."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "evidence": "No cambia: dashboard ejecutivo y exportacion XLSX siguen siendo ceo/cto (require_executive_access e is_superuser sin cambios; test_runner_and_coordinator_do_not_see_dashboard_or_export). El borrado de adjuntos sigue siendo ceo/cto y se prueba por la ruta real (test_portfolio_role_cannot_delete_attachment_by_route -> 403 para runner y coordinador). El enmascarado se mantiene: los datos de SU cartera siguen sin enmascarar para runner y coordinador (test_own_portfolio_pii_stays_unmasked_for_runner_and_coordinator). Adjuntos de la propia cartera: subir con auditoria, ver y descargar para runner y coordinador (test_portfolio_role_uploads_attachment_on_own_lead_with_audit, test_portfolio_role_views_and_downloads_own_attachment); sobre lead ajeno, pagina generica de no disponible y sin subida a S3 (test_coordinator_foreign_lead_attachment_returns_generic_unavailable, test_portfolio_role_foreign_lead_upload_is_404_and_no_s3). _WRITE_ROLES incluye coordinator (notas y adjuntos con las mismas validaciones/auditoria)."
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "evidence": "Matriz de pruebas rol x accion en tests/unit/test_crm_perfiles_rbac.py (ver cartera, ver datos completos, asignar, cambiar estado, simular y descargar PDF, exportar, dashboard, adjuntos) con el 403 o 404 esperado, incluidas las escrituras cruzadas y los adjuntos. docs/SEGURIDAD.md con la matriz de permisos por perfil y la configuracion de usuarios (valor 'coordinator', ejemplo ficticio SIN secretos ni claves). docs/BITACORA.md con la entrada de desarrollo de la tarea (contexto, cambio, reglas por perfil, pruebas, documentacion, sin migracion y nota de que el humano agrega los usuarios coordinator al secreto DESPUES del despliegue). Suite completa, ruff, black y mypy en verde; cobertura >= 85% verificada por el CI del PR; pip-audit sin excepciones."
+    },
+    {
+      "id": "AC-8",
+      "status": "pending_verification",
+      "evidence": "Smoke del humano en DEV con un usuario de cada perfil (runner, coordinador y socio): el humano agrega los usuarios de prueba a la configuracion de usuarios del ambiente (secreto fuera del repositorio) con su advisor_id, asigna leads como socio, y comprueba que el runner y el coordinador solo ven su cartera, que solo el socio asigna, que el simulador solo lo usan coordinador y socio, que el runner no puede marcar 'Reunion realizada', y que sube y ve un adjunto. Requiere requires_human_acceptance."
+    }
+  ],
+  "files_changed": [
+    "app/auth/models.py (rol coordinator, PORTFOLIO_ROLES, has_portfolio_scope, PROFILE_LABELS, profile_label)",
+    "app/auth/simple_dev.py (_ALLOWED_ROLES + coordinator; _parse_advisor_id para portfolio roles)",
+    "app/services/solicitud_service.py (has_portfolio_scope en cartera/mutacion/detalle; can_assign_lead solo socios; _RUNNER_FORBIDDEN_STATUS_STATES; get_crm_estado_lead_options_for_update(actor))",
+    "app/services/simulador_service.py (can_simulate incluye coordinator)",
+    "app/web/dependencies.py (protocolo y mock: can_assign_lead solo socios, opciones de estado por actor y misma regla de perfil del runner en el mock)",
+    "app/web/routes/leads.py (_WRITE_ROLES + coordinator; can_simulate + coordinator; opciones de estado por actor; 403 en update_lead_status)",
+    "app/web/main.py (filtro Jinja profile_label)",
+    "app/web/templates/base.html (pildora de perfil junto al nombre)",
+    "docs/SEGURIDAD.md (matriz de permisos por perfil + configuracion de usuarios con coordinator)",
+    "docs/BITACORA.md (entrada de desarrollo CRM-PERFILES-1-RBAC)",
+    "tests/unit/test_crm_perfiles_rbac.py (47 tests: matriz rol x accion, escrituras cruzadas, adjuntos, simulador POST, pildora)",
+    "tests/unit/test_simple_dev_auth.py (coordinator: advisor_id valido/ausente/malformado, rol permitido)",
+    "tests/unit/test_solicitud_assignment_service.py (asignacion solo socios)",
+    "tests/unit/test_h3_3_1_rbac_pii_assignment.py (asignacion solo socios)",
+    "tests/unit/test_h3_3_5_advisor_service.py (estados permitidos del runner)",
+    "tests/unit/test_web_app.py (actor de asignacion ceo)",
+    "tests/integration/test_database_runtime.py (actor de asignacion ceo)",
+    "tests/integration/test_web_crm_lite.py (actor de asignacion ceo)"
+  ],
+  "assumptions": [
+    "Clase A: sin migracion ni cambio de esquema; NO se toca deployment/**, IAM, bucket ni GuardDuty.",
+    "No se renombran los roles tecnicos en el codigo ni en la configuracion ('advisor' sigue siendo el valor del runner); el cambio de nombre es solo de etiqueta.",
+    "El valor 'coordinator' NO se agrega al secreto de usuarios de DEV: lo hace el humano despues del despliegue (un rol 'coordinator' antes de desplegar romperia el arranque de la version actual).",
+    "Los 11 fallos locales de test_executive_dashboard_render/service son por falta de PostgreSQL local (DatabaseConfigurationError), preexistentes y no relacionados; pasan en CI con el servicio postgres.",
+    "El fallo local de test_typography_is_hosted_locally_without_external_font_requests es por mimetypes de Windows (sin .woff2); en CI (ubuntu) el content-type es font/woff2 y pasa. No se debilita la prueba.",
+    "La pildora de perfil reutiliza los componentes canonicos existentes (.pill/.pill-muted); no se agrega CSS nuevo, por lo que la auditoria ui_css_audit no cambia (sin regresion visual).",
+    "Sin dependencias nuevas y sin migraciones (migrations_included=false)."
+  ],
+  "migrations_included": false
+}

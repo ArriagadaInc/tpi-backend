@@ -214,6 +214,24 @@ Lo que se SEMBRARA (version inicial, reemplazada): 42 leads ficticios en 12 esta
 El primer reinicio de DEV queda **pendiente de ejecucion por el humano** al cierre de este documento (criterio AC-7 de
 `CRM-ESTADOS-1-CATALOGO`). Tras ejecutarlo, actualizar esta seccion con la fecha y los conteos sembrados.
 
+## Usuarios de prueba por perfil en DEV
+
+Los usuarios de la aplicacion en DEV viven en el secreto `tpi/dev/auth-users` de AWS Secrets Manager (Elastic Beanstalk lo inyecta como `AUTH_USERS_JSON`
+con `aws:elasticbeanstalk:application:environmentsecrets`); no se versionan. La app lo lee una sola vez al arrancar: un cambio solo se ve tras
+`RestartAppServer` o un `UpdateEnvironment`, que ejecuta el humano fuera del Harness.
+
+Usuarios conocidos al 2026-10-26 (sin claves): `asesor.desarrollo1` y `asesor.desarrollo2` (rol `advisor`, perfil Runner, con `advisor_id`),
+`diego.operaciones` (`ceo`) y `alvaro.operaciones` (`cto`) (perfil Socio), `h2-5d-smoke` (`tester`) y, mientras dure la prueba del perfil Coordinador,
+`coordinador.ejemplo1` y `coordinador.ejemplo2` (rol `coordinator`, cada uno con su propio asesor en `tpi.asesores`).
+
+Herramienta del humano: [`scripts/dev_usuarios.py`](../../scripts/dev_usuarios.py) (`listar`, `asesores`, `agregar`, `quitar`). Conserva a los usuarios existentes,
+valida el resultado con el parser de la app, no imprime hashes ni claves, pide una frase de confirmacion antes de escribir y deja la version anterior del
+secreto como `AWSPREVIOUS`. Las cuentas de prueba son sinteticas y su clave es igual al usuario: **desmontarlas con `quitar` cuando termine la prueba**.
+
+Orden seguro para un rol nuevo: el rol `coordinator` solo lo entiende la version RBAC (`ba53777` en adelante); la version anterior no arranca si lo ve
+(`Unknown auth role`), y un rollback con el usuario ya cargado tampoco levantaria. Por eso primero `asesores` (sin riesgo), despues del despliegue y de
+`Ready/Green/Ok` se ejecuta `agregar` y se reinicia el servidor de la aplicacion.
+
 ## Como mantener este documento
 
 - Tras cada reinicio o cambio de esquema en DEV, volver a correr `--inspeccionar` y la simulacion y actualizar el inventario y la fecha.
