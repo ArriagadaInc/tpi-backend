@@ -1,0 +1,189 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "CRM-AGENDA-2-CALENDARIO",
+  "created_at": "2026-10-26T22:48:18Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610262240-deployer-sup827bbb",
+  "verification_scope": "VERIFYING de CRM-AGENDA-2-CALENDARIO tras deployment-01: estado EB, eventos, identidad de runtime, smoke HTTP no autenticado y conteos de logs desde el inicio del cutover. Solo lecturas AWS via aws_guard. AC-9 (prueba humana con un usuario de cada perfil y en celular) queda pendiente de approve.py accept.",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "a4a5beec1265730a5eb537bc3bb8d430882d23bd",
+  "deployed_commit": "a4a5beec1265730a5eb537bc3bb8d430882d23bd",
+  "application_version": "h3-crm-agenda-2-calendario-a4a5bee-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "PASS",
+  "failure_class": null,
+  "final_state": {
+    "version_label": "h3-crm-agenda-2-calendario-a4a5bee-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-26T22:43:38Z",
+    "observed_at": "2026-10-26T22:44:30Z"
+  },
+  "events": {
+    "observed": 6,
+    "levels": {
+      "INFO": 6
+    },
+    "errors": 0,
+    "note": "Cutover 22:42:54Z-22:43:38Z todo INFO (starting, deploying, instance deployment completed, new version deployed, update completed, health Ok -> Info por update en curso); describe-environments posterior Ready/Green/Ok. Sin abortos, rollback ni degradacion."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "note": "Verificada en esta sesion (ver deployment-01): AV UNPROCESSED con key aprobada; ChecksumSHA256 CDU76ZjecJfG... = bundle 08353be9...; digests app d0a50c85... / caddy 5ddd81e5... iguales a approval-01."
+  },
+  "smoke_client": "python urllib (cliente independiente), TLS por defecto, sin seguir redirects (.harness-release/smoke_agenda2.py)",
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "observed": "200 text/css; charset=utf-8"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "dashboard_requires_auth",
+      "result": "PASS",
+      "observed": "403 anonimo (fail closed por diseno)"
+    },
+    {
+      "name": "agenda_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login (ruta nueva sin acceso anonimo)"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "observed": "ninguna respuesta redirige a dominios legacy"
+    }
+  ],
+  "logs": {
+    "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+    "window_start": "2026-10-26T22:42:54Z",
+    "method": "aws_guard logs filter-log-events con --query length(events); solo conteos; no se leyeron lineas; patrones exactos de harness/policies.yaml. Conteo adicional de Traceback: 0. Control de vida del log group: patron GET = 58 eventos en la ventana (los ceros no son por falta de ingesta)."
+  },
+  "pii_log_scan": {
+    "matches": 0,
+    "raw_pattern_hits": {
+      "Authorization -REDACTED": 0,
+      "Bearer": 0,
+      "password -bytes_read": 0,
+      "cookie -bytes_read": 0,
+      "raw_payload": 0,
+      "secret -bytes_read": 0,
+      "token -bytes_read": 0,
+      "hash -ACME": 0
+    },
+    "strong_matches": 0,
+    "strong_hits": {},
+    "weak_matches": {},
+    "classification_required": false,
+    "patterns": [
+      "Authorization -REDACTED",
+      "Bearer",
+      "password -bytes_read",
+      "cookie -bytes_read",
+      "raw_payload",
+      "secret -bytes_read",
+      "token -bytes_read",
+      "hash -ACME"
+    ]
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 aprobada con CI verde (PR #140); release tree 07031ff2 == reviewed_tree; publish run 40411235171 6/6."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 aprobada con CI verde; matriz actor x responsable x lead."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 aprobada con CI verde; acciones y cambio de estado en la misma transaccion."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 aprobada con CI verde; en DEV /agenda exige login (307 -> /login)."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 aprobada con CI verde."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 aprobada con CI verde; en DEV /dashboard sigue 403 anonimo y /leads exige login."
+    },
+    {
+      "id": "AC-7",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 aprobada con CI verde; eventos de auditoria cita_*."
+    },
+    {
+      "id": "AC-8",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-02 aprobada; gates del publish run (tests, cobertura, lint, formato, auditoria de seguridad) en verde."
+    },
+    {
+      "id": "AC-9",
+      "status": "pending_human",
+      "method": "human",
+      "evidence": "Prueba humana en AWS DEV con un usuario de cada perfil (Runner, Coordinador, Socio) y en celular, segun tasks/current.yaml AC-9. Smoke HTTP y conteos de logs PASS antes del smoke humano."
+    }
+  ],
+  "warnings": [
+    "La dependencia de la migracion 010 en DEV no es verificable por el Harness (sin RDS); el humano la confirma durante AC-9 (si faltara, la tarjeta y /agenda muestran un aviso).",
+    "La verificacion final (verified) requiere la aceptacion humana de AC-9 y una revalidacion de los conteos de logs hasta esa sesion (incluye el smoke humano)."
+  ],
+  "rollback_executed": false,
+  "safety": {
+    "aws_writes": [],
+    "update_environment_in_this_session": true,
+    "secrets_accessed": false,
+    "log_lines_read": false,
+    "credentials_used_in_smoke": false
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "CRM-AGENDA-2-CALENDARIO",
+  "created_at": "2026-10-26T22:15:13Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610262213-deployer-sup3e03d3",
+  "pr_number": 140,
+  "reviewed_sha": "91cebc5ba81712ffa168673e14ba4aca9eff8863",
+  "reviewed_tree": "07031ff2da5d7b62f718d527e975da091d09eac4",
+  "release_sha": "a4a5beec1265730a5eb537bc3bb8d430882d23bd",
+  "release_tree": "07031ff2da5d7b62f718d527e975da091d09eac4",
+  "main_parent_sha": "197df6b85740e48ca4563464e746bd0e37733247",
+  "method": "squash",
+  "match_head_commit_used": true
+}

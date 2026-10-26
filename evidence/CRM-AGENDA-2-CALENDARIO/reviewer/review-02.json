@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "CRM-AGENDA-2-CALENDARIO",
+  "created_at": "2026-10-26T22:13:11Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610262206-reviewer-sup60aab3",
+  "reviewed_sha": "91cebc5ba81712ffa168673e14ba4aca9eff8863",
+  "reviewed_tree": "07031ff2da5d7b62f718d527e975da091d09eac4",
+  "pr_number": 140,
+  "ci": {
+    "run_id": "40406458464",
+    "conclusion": "success",
+    "head_sha": "91cebc5ba81712ffa168673e14ba4aca9eff8863",
+    "event": "pull_request",
+    "jobs": [
+      "Docker Build",
+      "Lint & Format",
+      "Release Tooling Validation",
+      "Security Audit",
+      "Tests"
+    ]
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "R2-MINOR-01",
+      "severity": "minor",
+      "file": "tests/unit/test_agenda_domain.py",
+      "summary": "El rework retiro de test_no_en_pasado la asercion del limite (inicio == ahora debe rechazarse) sin explicarlo. El comportamiento no cambio (validate_no_en_pasado sigue usando inicio <= referencia), pero la prueba del borde quedo sin cubrir.",
+      "required_action": "En una tarea posterior, restaurar la asercion del limite exacto en test_no_en_pasado. No bloquea."
+    },
+    {
+      "id": "R2-INFO-01",
+      "severity": "info",
+      "file": "app/repositories/agenda_repository.py",
+      "summary": "R1-BLOCKER-01 corregido: lead_admite_agenda se aplica en create_cita y update_cita dentro de la transaccion, tras _lock_lead y el chequeo de cartera, antes de cualquier INSERT/UPDATE. Las pruebas de integracion (cinco estados inactivos en agendar y reagendar sobre lead cerrado) corrieron y pasaron en CI (PostgreSQL), verificando 0 citas, estado del lead intacto y 0 auditoria.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "R2-INFO-02",
+      "severity": "info",
+      "file": "tests/unit/test_agenda_web.py",
+      "summary": "R1-MAJOR-01 y R1-MAJOR-02 corregidos: matriz web con CSRF valido (Runner y Coordinador sobre lead propio y ajeno de Runner/Coordinador -> 303 o 404 sin escritura; asistencia del Runner -> 403; Socio ceo/cto en todas las acciones; executive y readonly -> 403 con CSRF valido de la sesion firmada; POST sin sesion -> 307 /login en las cinco rutas) y pruebas de GET /agenda en vista semana y lista que leen response.text (lead ajeno sin nombre, id ni enlace, con 'De otra cartera'; Socio ve ambos). R1-MINOR-01/02/03 corregidos: en <=640px solo la lista (la ruta calcula semana y proximas en ambas vistas); alcance antes que responsable (_require_lead_scope) con prueba; nota y motivo recortados fuera de alcance y motivo libre retirado del detalle de auditoria.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "R2-INFO-03",
+      "severity": "info",
+      "file": "tests/",
+      "summary": "Localmente (Windows, sin PostgreSQL) tests/unit y tests/security dan 1277 passed y 12 failed; los mismos 12 fallan identicos en main 197df6b (executive_dashboard_service y tipografia local), por lo que son del entorno local y no del PR. La decision se basa en el CI del SHA exacto (2291 passed, 17 skipped, cobertura 91.57%; ninguna prueba de agenda omitida). docs/BITACORA.md la escribe el commit de cierre del Harness, como en CRM-AGENDA-1-MIGRACION (197df6b).",
+      "required_action": "Ninguna."
+    }
+  ],
+  "checks": [
+    {
+      "name": "exact_sha: PR #140 OPEN, headRefOid == 91cebc5ba817 == head_sha de developer-02; worktree del reviewer en ese SHA",
+      "result": "PASS"
+    },
+    {
+      "name": "ci_green_exact_sha: run 40406458464 (pull_request) success sobre 91cebc5; 5 jobs pass",
+      "result": "PASS"
+    },
+    {
+      "name": "coverage_85: 91.57% en CI",
+      "result": "PASS"
+    },
+    {
+      "name": "branch_up_to_date_with_main: merge-base == origin/main 197df6b; MERGEABLE",
+      "result": "PASS"
+    },
+    {
+      "name": "scope_no_unrelated_changes: archivos dentro de tasks/current.yaml; sin deployment/, scripts/, migraciones ni dependencias nuevas",
+      "result": "PASS"
+    },
+    {
+      "name": "functional_compliance AC-1: regla de lead activo aplicada en servidor y probada (unit + integracion)",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-2: responsable validado contra la base; alcance resuelto antes del responsable",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-3: misma transaccion cita + estado + auditoria via _update_lead_status_tx",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-4 / no_pii_in_html_for_restricted_roles: GET /agenda semana y lista sin nombre, id ni enlace del lead ajeno (probado sobre response.text); en movil solo lista",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-5: tarjeta Reunion, formulario con CSRF, degradacion ante fallo de base",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-6 / authz_fail_closed / csrf_and_session: matriz rol x accion x alcance completa con CSRF valido; sin sesion -> login",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-7 / safe_logging: eventos por accion; detalle sin datos del lead ni motivo libre",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-8 / documentation: docs/AGENDA_USO.md, CHANGELOG; BITACORA en el cierre (AC-9 pendiente de verificacion humana, fuera de esta revision)",
+      "result": "PASS"
+    },
+    {
+      "name": "layering: rutas -> AgendaService -> AgendaRepository; sin acceso directo a BD desde web",
+      "result": "PASS"
+    },
+    {
+      "name": "least_privilege_grants: la app no usa DELETE sobre tpi.citas (solo teardown de pruebas)",
+      "result": "PASS"
+    },
+    {
+      "name": "no_secrets_in_diff",
+      "result": "PASS"
+    },
+    {
+      "name": "tests_validate_behavior_not_coverage (ver R2-MINOR-01)",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "AC-9 (prueba humana con un usuario de cada perfil, incluida la vista en celular) queda pendiente de verificacion humana tras el deploy.",
+    "El borde exacto de 'no en el pasado' queda sin prueba unitaria (R2-MINOR-01); el codigo lo rechaza."
+  ]
+}

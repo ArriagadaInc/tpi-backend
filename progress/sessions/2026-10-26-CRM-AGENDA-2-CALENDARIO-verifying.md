@@ -1,0 +1,28 @@
+# Sesion archivada: CRM-AGENDA-2-CALENDARIO-verifying
+
+- Archivada: 2026-10-26T22:48:33Z
+- Estado: VERIFYING
+
+# Progreso actual
+
+## Estado
+<!-- harness:projection:begin (autogenerado desde harness/state.json por transition.py; no editar a mano) -->
+- Estado del Harness: VERIFYING (rol: deployer)
+- Tarea: CRM-AGENDA-2-CALENDARIO
+- Proximo paso: Deployer: observabilidad + smoke; si hay criterios humanos esperar approve.py accept; verified o verify_failed
+- Ultima transicion: deploy_succeeded (DEPLOYING -> VERIFYING)
+- Actualizado: 2026-10-26T22:45:25Z
+<!-- harness:projection:end -->
+- Ultima sesion archivada: progress/sessions/2026-10-26-CRM-AGENDA-2-CALENDARIO-deploying.md
+
+## Estado reciente
+- 2026-10-26: Tarea CRM-AGENDA-1-MIGRACION cerrada; resumen en tasks/completed/CRM-AGENDA-1-MIGRACION.yaml
+- NOTA (ORQUESTADOR INTERACTIVO, 2026-10-26) PARA CRM-AGENDA-2-CALENDARIO: la migracion 010 YA esta en main (PR 138) y aplicada en AWS DEV: tpi.citas tiene fecha_hora_fin, agendada_por_subject, agendada_por_nombre, nota, motivo_cancelacion, updated_at, id_asesor NOT NULL, estado_cita con CHECK (agendada, realizada, no_asistio, cancelada), una agendada por lead y EXCLUDE para que un responsable no se pise; tpi.asesores tiene atiende_reuniones. Los Socios son filas de asesores con rol 'socio' y atiende_reuniones = true (Diego y Alvaro Operaciones); los Coordinadores conservan rol 'asesor' con la marca en true; el Runner tiene la marca en false. scripts/init_test_database.py ya trae la forma final para las pruebas. Pistas de reutilizacion (verificalas): (1) SolicitudRepository.update_lead_status (app/repositories/solicitud_repository.py, estatico, abre SU PROPIA conexion y transaccion: SELECT ... FOR UPDATE del lead, comprobacion de cartera con advisor_scope, UPDATE de tpi.leads y auditoria cambio_estado_lead) NO sirve tal cual para el AC-3, que exige la misma transaccion que la reunion: extrae su logica a una funcion que reciba un cursor ya abierto y haz que update_lead_status y la agenda la usen, sin cambiar su comportamiento ni debilitar sus pruebas. (2) Permisos del servicio: SolicitudService.update_lead_status (rechazo del Runner para reunion_realizada, ficha_generada y cerrado), has_portfolio_scope y resolve_advisor_identity; en la web, _can_write y _validate_csrf_token (app/web/routes/leads.py). (3) Menu: app/web/templates/base.html (barra superior). (4) Zona horaria: ZoneInfo('America/Santiago') como en app/repositories/executive_dashboard_repository.py.
+- DECISION (DEPLOYER, 2026-10-26, claude-202610262227-deployer-sup3e62b7): candidate de CRM-AGENDA-2-CALENDARIO preparado. Release a4a5bee (PR 140, tree = reviewed_tree), publish run 40411235171 6/6 (despachado por la sesion deployer anterior; reutilizado, sin re-dispatch), scans 0/0, bundle domain-locked reproducible sha256 08353be9..., S3 content-addressed y AV h3-crm-agenda-2-calendario-a4a5bee-domainlocked-r1 UNPROCESSED. LKG observado: h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1 (Ready/Green/Ok, digests presentes). Environment sin mutar. Evidencia: evidence/CRM-AGENDA-2-CALENDARIO/deployment/candidate-01.json. La dependencia de la migracion 010 en DEV no es verificable por el Harness (sin RDS): precondicion para el Human Gate.
+- DECISION (REVIEWER, 2026-10-26, claude-202610262233-reviewer-supcc3cf4): candidate de CRM-AGENDA-2-CALENDARIO APPROVED. Re-verificado en esta sesion: tree a4a5bee = reviewed_tree 07031ff2, publish 40411235171 success, digests ACTIVE en repos IMMUTABLE con scans 0/0, bundle reconstruido sha256 08353be9... igual, S3 checksum y AV SourceBundle coinciden, LKG h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1 Ready/Green/Ok con AV, objeto S3 y digests presentes. Pendiente del humano antes del Human Gate: confirmar la migracion 010 en DEV (CR-3). Evidencia: evidence/CRM-AGENDA-2-CALENDARIO/reviewer/candidate_review-01.json.
+- DECISION (DEPLOYER, 2026-10-26, claude-202610262240-deployer-sup827bbb): cutover de CRM-AGENDA-2-CALENDARIO exitoso. Preflight PASS (cuenta/region, env Ready/Green/Ok en LKG, AV candidata y LKG presentes, 4 digests en ECR, Promote deshabilitado); un unico update-environment version-only a h3-crm-agenda-2-calendario-a4a5bee-domainlocked-r1 (22:42:54Z -> completed 22:43:38Z, solo eventos INFO). Final Ready/Green/Ok; cadena VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests verificada. Evidencia: evidence/CRM-AGENDA-2-CALENDARIO/deployment/deployment-01.json. Siguiente: VERIFYING (smoke HTTP, conteos de logs desde 22:42:54Z, AC-9 humano).
+- DECISION (DEPLOYER, 2026-10-26, claude-202610262240-deployer-sup827bbb): verificacion previa a la aceptacion humana PASS. Smoke HTTP no autenticado 8/8 (incluye /agenda -> 307 /login), conteos de logs desde 22:42:54Z: indicadores fuertes y debiles 0, Traceback 0, GET 58 (log vivo). AC-1..AC-8 met (automatizados). Evidencia: evidence/CRM-AGENDA-2-CALENDARIO/deployment/verification-01.json. Sin transicion: esperando al humano.
+- PENDIENTE HUMANO (AC-9): prueba en AWS DEV con un usuario de cada perfil y en celular: el Runner agenda un lead de su cartera con un Socio y no puede elegir a un Coordinador ni marcar realizada; el Coordinador ve el calendario completo (leads ajenos sin nombre), agenda uno de su cartera como responsable y lo marca realizada; el Socio ve todo, reagenda, cancela y marca no asistio; dos reuniones del mismo responsable no se pisan; el estado del lead cambia segun el diseno. Confirmar de paso que la migracion 010 esta en DEV. Luego, en su terminal: `python scripts/harness/approve.py accept --decision accept --criteria AC-9`. Despues, una sesion Deployer revalida los conteos de logs, registra verification-02 y aplica `verified`.
+
+## Bloqueos
+- Ninguno.

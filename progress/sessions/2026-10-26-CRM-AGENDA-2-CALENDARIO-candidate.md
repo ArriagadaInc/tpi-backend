@@ -1,0 +1,27 @@
+# Sesion archivada: CRM-AGENDA-2-CALENDARIO-candidate
+
+- Archivada: 2026-10-26T22:33:31Z
+- Estado: PREPARING_DEPLOYMENT
+
+# Progreso actual
+
+## Estado
+<!-- harness:projection:begin (autogenerado desde harness/state.json por transition.py; no editar a mano) -->
+- Estado del Harness: PREPARING_DEPLOYMENT (rol: deployer)
+- Tarea: CRM-AGENDA-2-CALENDARIO
+- Proximo paso: Deployer: preflight, publish ECR, bundle, S3, AV, plan; registrar candidate y candidate_ready
+- Ultima transicion: merged_deploy (MERGING -> PREPARING_DEPLOYMENT)
+- Actualizado: 2026-10-26T22:15:22Z
+<!-- harness:projection:end -->
+- Ultima sesion archivada: progress/sessions/2026-10-26-CRM-AGENDA-2-CALENDARIO-review-02.md
+
+## Estado reciente
+- DECISION (DEVELOPER, 2026-10-26): CRM-AGENDA-1-MIGRACION implementada y entregada a revision (PR #138, rama harness/CRM-AGENDA-1-MIGRACION-agenda, SHA c717a04d5d2d). Migracion 010 (forward + reversa), bootstrap de pruebas, subcomandos humanos socios/marcar-coordinadores y documentacion. CI verde (Tests 91.68% cobertura, Lint & Format, Security Audit, Docker Build, Release Tooling Validation). AC-1 a AC-5 cubiertos por pruebas; AC-6 (aplicacion en AWS DEV por el humano) pendiente de verificacion humana. Evidencia: evidence/CRM-AGENDA-1-MIGRACION/developer/developer-01.json.
+- DECISION (ORQUESTADOR INTERACTIVO, 2026-10-26): CRM-PERFILES-1-RBAC cerrada en DONE (verificacion PASS, AC-8 aceptado). Release ba53777 (PR 132) desplegado en DEV como h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1; una ronda de rework (el Reviewer pidio la matriz de pruebas completa y la entrada de BITACORA). Pendiente del humano: desmontar las cuentas de prueba coordinador.ejemplo1 y coordinador.ejemplo2 del secreto tpi/dev/auth-users con scripts/dev_usuarios.py quitar. La tarea HARNESS-LOGS-FALSOS-POSITIVOS-CADDY sigue en el backlog. Detalle en docs/BITACORA.md.
+- NOTA (ORQUESTADOR INTERACTIVO, 2026-10-26) PARA CRM-AGENDA-1-MIGRACION: chequeo de solo lectura del humano en AWS DEV (PostgreSQL 17.9): tpi_admin es miembro de rds_superuser y btree_gist 1.7 esta disponible (no instalada), asi que la restriccion EXCLUDE es viable. Forma REAL de tpi.citas en DEV (0 filas): id_cita uuid PK default gen_random_uuid(); id_lead uuid NOT NULL FK a tpi.leads(id_lead); id_asesor uuid NULL FK a tpi.asesores(id_asesor); fecha_hora timestamptz NOT NULL; canal varchar NOT NULL default 'Google Meet'; estado_cita varchar NOT NULL default 'agendada'; link_reunion text NULL; created_at timestamptz NOT NULL default now(); sin CHECK ni otros indices; las FK son NO ACTION. Usala como base de tpi.citas en scripts/init_test_database.py (tambien esta en docs/database/02_PHYSICAL_SCHEMA.md). tpi.asesores en DEV: id_asesor, nombre, email NULL, rol default 'asesor', estado_disponibilidad default 'activo', especialidad NULL, carga_activa default 0, created_at; hoy 6 asesores activos con rol asesor. Privilegios de tpi_app: citas ninguno, asesores SELECT, auditoria INSERT.
+- 2026-10-26: Tarea CRM-AGENDA-1-MIGRACION cerrada; resumen en tasks/completed/CRM-AGENDA-1-MIGRACION.yaml
+- NOTA (ORQUESTADOR INTERACTIVO, 2026-10-26) PARA CRM-AGENDA-2-CALENDARIO: la migracion 010 YA esta en main (PR 138) y aplicada en AWS DEV: tpi.citas tiene fecha_hora_fin, agendada_por_subject, agendada_por_nombre, nota, motivo_cancelacion, updated_at, id_asesor NOT NULL, estado_cita con CHECK (agendada, realizada, no_asistio, cancelada), una agendada por lead y EXCLUDE para que un responsable no se pise; tpi.asesores tiene atiende_reuniones. Los Socios son filas de asesores con rol 'socio' y atiende_reuniones = true (Diego y Alvaro Operaciones); los Coordinadores conservan rol 'asesor' con la marca en true; el Runner tiene la marca en false. scripts/init_test_database.py ya trae la forma final para las pruebas. Pistas de reutilizacion (verificalas): (1) SolicitudRepository.update_lead_status (app/repositories/solicitud_repository.py, estatico, abre SU PROPIA conexion y transaccion: SELECT ... FOR UPDATE del lead, comprobacion de cartera con advisor_scope, UPDATE de tpi.leads y auditoria cambio_estado_lead) NO sirve tal cual para el AC-3, que exige la misma transaccion que la reunion: extrae su logica a una funcion que reciba un cursor ya abierto y haz que update_lead_status y la agenda la usen, sin cambiar su comportamiento ni debilitar sus pruebas. (2) Permisos del servicio: SolicitudService.update_lead_status (rechazo del Runner para reunion_realizada, ficha_generada y cerrado), has_portfolio_scope y resolve_advisor_identity; en la web, _can_write y _validate_csrf_token (app/web/routes/leads.py). (3) Menu: app/web/templates/base.html (barra superior). (4) Zona horaria: ZoneInfo('America/Santiago') como en app/repositories/executive_dashboard_repository.py.
+- DECISION (DEPLOYER, 2026-10-26, claude-202610262227-deployer-sup3e62b7): candidate de CRM-AGENDA-2-CALENDARIO preparado. Release a4a5bee (PR 140, tree = reviewed_tree), publish run 40411235171 6/6 (despachado por la sesion deployer anterior; reutilizado, sin re-dispatch), scans 0/0, bundle domain-locked reproducible sha256 08353be9..., S3 content-addressed y AV h3-crm-agenda-2-calendario-a4a5bee-domainlocked-r1 UNPROCESSED. LKG observado: h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1 (Ready/Green/Ok, digests presentes). Environment sin mutar. Evidencia: evidence/CRM-AGENDA-2-CALENDARIO/deployment/candidate-01.json. La dependencia de la migracion 010 en DEV no es verificable por el Harness (sin RDS): precondicion para el Human Gate.
+
+## Bloqueos
+- Ninguno.

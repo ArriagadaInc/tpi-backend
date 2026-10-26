@@ -22,6 +22,41 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-26 - Harness: tarea CRM-AGENDA-2-CALENDARIO cerrada (DONE)
+
+- Titulo: CRM agenda 2: calendario comun, agendar desde el lead y estados de la reunion
+- Evidencia: `evidence/CRM-AGENDA-2-CALENDARIO/` y `tasks/completed/CRM-AGENDA-2-CALENDARIO.yaml`.
+- release_sha: `a4a5beec1265730a5eb537bc3bb8d430882d23bd`
+- pr_number: `140`
+- application_version: `h3-crm-agenda-2-calendario-a4a5bee-domainlocked-r1`
+- bundle_sha256: `08353be998de7097c65d7e97e93e2e6c4a3a6fb38a81bb8755bb4be777402c68`
+- lkg: `h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `a4a5beec1265730a5eb537bc3bb8d430882d23bd`
+- verification: `PASS`
+
+
+**Resultado.** La agenda de reuniones (v1) está en DEV: calendario común, tarjeta Reunión y formulario en el detalle del lead, reagendar, cancelar con motivo y marcar
+realizada o no asistió (estas dos solo Coordinador y Socio). El responsable lo valida el servidor (el Runner solo elige Socios; el Coordinador solo es responsable de leads de su
+cartera) y el cambio de estado del lead ocurre en la misma transacción que la reunión. El humano aceptó el AC-9 con los tres perfiles el 2026-10-26 (23:04Z).
+
+**Una ronda de rework.** El Reviewer rechazó la primera entrega por un bloqueante (no se exigía que el lead estuviera activo: agendar sobre un lead cerrado o perdido lo reabría
+como «Reunión agendada»), dos mayores (faltaba la matriz de permisos completa y una prueba que leyera el HTML del calendario para un lead ajeno; una prueba de «solo lectura» pasaba
+por el token CSRF y no por el permiso) y tres menores (la vista de semana seguía visible en celular, el orden de las validaciones dejaba inferir el dueño de un lead ajeno y el motivo
+de cancelación en texto libre iba a la auditoría). Aprobó la segunda entrega.
+
+**Lecciones de operación.**
+
+1. *Una tarea de permisos y datos personales vuelve a exigir la matriz completa de pruebas desde la primera entrega*, igual que `CRM-PERFILES-1-RBAC`. Conviene ponerlo en las
+   restricciones de cada tarea de este tipo, con el ejemplo de la prueba que pasa por el motivo equivocado.
+2. *La API de Claude se quedó sin saldo prepagado en plena revisión* («Credit balance is too low»): el Reviewer murió a los 2 minutos y el orquestador se detuvo. Tras recargar y relanzar
+   desde la terminal del humano (la clave solo existe ahí) el arnés retomó en `REVIEWING` sin perder trabajo.
+3. *Al cerrar `CRM-AGENDA-1-MIGRACION` con `deploy_required: false` la tarea no pasó por `BLOCKED_HUMAN`* aunque la clase era D: la aplicación de la migración quedó como paso manual del humano,
+   con un script que simula primero. La nota del Deployer decía lo contrario.
+
+**Pendiente.** Desmontar las cuentas de prueba `coordinador.ejemplo1` y `coordinador.ejemplo2` cuando termine la ronda de pruebas de la agenda
+(`python scripts/dev_usuarios.py quitar --ejecutar` y `restart-app-server`). `CRM-NO-CONTACTAR-1` sigue pendiente y debe cerrarse antes de usar la agenda con datos reales (Ley 21.719 desde el 2026-12-01).
+
 ### 2026-10-26 - Harness: tarea CRM-AGENDA-1-MIGRACION cerrada (DONE); la migración 010 queda por aplicar en DEV
 
 - Titulo: CRM agenda 1: ampliar tpi.citas y tpi.asesores, privilegios y scripts de altas

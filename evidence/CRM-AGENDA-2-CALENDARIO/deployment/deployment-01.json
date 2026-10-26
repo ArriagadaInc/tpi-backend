@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "kind": "deployment",
+  "task_id": "CRM-AGENDA-2-CALENDARIO",
+  "created_at": "2026-10-26T22:45:01Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610262240-deployer-sup827bbb",
+  "approved_commit": "a4a5beec1265730a5eb537bc3bb8d430882d23bd",
+  "deployed_commit": "a4a5beec1265730a5eb537bc3bb8d430882d23bd",
+  "application_version": "h3-crm-agenda-2-calendario-a4a5bee-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "update_accepted": true,
+  "result": "success",
+  "started_at": "2026-10-26T22:42:54Z",
+  "finished_at": "2026-10-26T22:43:38Z",
+  "failure_class": null,
+  "previous_version_label": "h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1",
+  "final_state": {
+    "version_label": "h3-crm-agenda-2-calendario-a4a5bee-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "observed_at": "2026-10-26T22:44:30Z"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-crm-agenda-2-calendario-a4a5bee-domainlocked-r1/08353be998de7097c65d7e97e93e2e6c4a3a6fb38a81bb8755bb4be777402c68.zip",
+    "s3_checksum_sha256_b64": "CDU76ZjecJfGXX6X6T4ubEo6b7OKgbuHVbtL53dALGg=",
+    "s3_content_length": 4917,
+    "bundle_sha256": "08353be998de7097c65d7e97e93e2e6c4a3a6fb38a81bb8755bb4be777402c68",
+    "app_digest": "sha256:d0a50c8545d76d604bc693d8ba641c3a792800e7dde14ae406a6ed6e1ffb2d46",
+    "caddy_digest": "sha256:5ddd81e54fc9e827fb014163e3f864fb02abe0bb39fc33b25167f4831ebbfa39",
+    "digests_equal_approval_01": true,
+    "note": "Observado en esta sesion: describe-environments VersionLabel = aprobada, Ready/Green/Ok, sin operacion abortable; describe-application-versions SourceBundle = key de approval-01 (UNPROCESSED); head-object ChecksumSHA256 = base64 del bundle_sha256 aprobado, 4917 bytes, FULL_OBJECT; el ZIP local .harness-release/<label>.zip tiene sha256 08353be9... y su compose fija app d0a50c85... / caddy 5ddd81e5..., iguales a approval-01."
+  },
+  "preflight": {
+    "at": "2026-10-26T22:42Z",
+    "result": "PASS",
+    "checks": [
+      "sts get-caller-identity: cuenta 821656895812, region us-east-2",
+      "environment tpi-backoffice-dev-green Ready/Green/Ok, VersionLabel = LKG h3-crm-perfiles-1-rbac-ba53777-domainlocked-r1, sin operacion abortable",
+      "AV candidata existe (UNPROCESSED, SourceBundle = key aprobada); AV del LKG existe (UNPROCESSED)",
+      "ECR: digests del candidate (app d0a50c85..., caddy 5ddd81e5...) y del LKG (app 9e0c519e..., caddy d8d9e2e1...) presentes",
+      "CodePipeline tpi-backoffice-dev-promotion: transicion inbound de Promote deshabilitada"
+    ]
+  },
+  "cutover": {
+    "mechanism": "aws_guard update-environment version-label only",
+    "executed_by": "deployer (sesion claude-202610262240-deployer-sup827bbb)",
+    "updates_applied": 1,
+    "retries": 0,
+    "option_settings": false,
+    "restart_app_server": false,
+    "rollback_executed": false,
+    "convergence": "exitosa en ~44 s (Environment update is starting 22:42:54Z, Environment update completed successfully 22:43:38Z)"
+  },
+  "events": {
+    "levels_observed": [
+      "INFO"
+    ],
+    "errors": 0,
+    "note": "Environment update is starting -> Deploying new version to instance(s) -> Instance deployment completed successfully -> New application version was deployed -> Environment update completed successfully -> health Ok to Info (application update in progress); describe-environments posterior: HealthStatus Ok."
+  },
+  "warnings": [
+    "La dependencia de la migracion 010 en DEV no es verificable por el Harness (sin RDS); si faltara, AC-5 exige aviso en la tarjeta y en /agenda.",
+    "AC-9 (prueba humana con un usuario de cada perfil y en celular) sigue pendiente; smoke HTTP y conteos de logs corresponden a VERIFYING (ventana desde started_at 2026-10-26T22:42:54Z)."
+  ]
+}

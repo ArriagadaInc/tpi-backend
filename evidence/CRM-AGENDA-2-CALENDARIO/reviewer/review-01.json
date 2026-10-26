@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "CRM-AGENDA-2-CALENDARIO",
+  "created_at": "2026-10-26T21:26:16Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610262122-reviewer-sup3d2776",
+  "reviewed_sha": "9627fcafc1df41870e753ae10d5d5fa6348715cf",
+  "reviewed_tree": "527a086ad3ecf6b77e2a6951105ca8fe6f585c4e",
+  "pr_number": 140,
+  "ci": {
+    "run_id": "40402371590",
+    "conclusion": "success",
+    "head_sha": "9627fcafc1df41870e753ae10d5d5fa6348715cf",
+    "event": "pull_request",
+    "jobs": [
+      "Docker Build",
+      "Lint & Format",
+      "Release Tooling Validation",
+      "Security Audit",
+      "Tests"
+    ]
+  },
+  "decision": "REJECTED",
+  "findings": [
+    {
+      "id": "R1-BLOCKER-01",
+      "severity": "blocker",
+      "file": "app/services/agenda_service.py",
+      "summary": "AC-1 y seccion 4 del diseno: 'el lead debe estar activo (no cerrado, perdido, no_interesado, datos_erroneos ni no_contactado)' no se aplica en ninguna capa. LEAD_INACTIVO_PARA_AGENDA e is_lead_inactivo_para_agenda (agenda_service.py:341) no tienen ningun uso; AgendaService.agendar no lo valida y AgendaRepository.create_cita bloquea el lead (_lock_lead lee estado_lead) pero no lo compara. _update_lead_status_tx solo normaliza el estado y no valida transiciones, asi que agendar sobre un lead cerrado o perdido lo reabre a reunion_agendada (y reagendar tambien lo fuerza a reunion_agendada). La evidencia del Developer declara AC-1 'met' sin esta regla ni pruebas de ella.",
+      "required_action": "Validar en el servidor, dentro de la transaccion y con el estado_lead bloqueado (create_cita y update_cita), que el lead no este en LEAD_INACTIVO_PARA_AGENDA, devolviendo AgendaValidationError con mensaje claro y sin escribir cita, estado ni auditoria. Agregar pruebas (unit e integracion) para cada uno de los cinco estados inactivos y el caso permitido. Opcional: ocultar el boton Agendar en la tarjeta si el lead esta inactivo."
+    },
+    {
+      "id": "R1-MAJOR-01",
+      "severity": "major",
+      "file": "tests/unit/test_agenda_web.py",
+      "summary": "AC-6 exige una matriz completa rol x accion x alcance (GET y POST, lead propio y ajeno, entre carteras de Runners y de Coordinadores, executive y readonly, peticiones armadas a mano, CSRF invalido y usuario sin sesion). Faltan: POST sin sesion a cada ruta de escritura; Coordinador sobre lead de otra cartera (agendar, reagendar, cancelar, realizada, no asistio -> 404 sin escritura); Runner sobre lead de otro Runner y de un Coordinador en la capa web; readonly; executive con CSRF valido; cada accion por rol permitido y denegado. Ademas test_agenda_web.py::test_agendar_readonly_denegado (rol executive) obtiene el 403 por el token CSRF invalido ('token-cualquiera'), no por permiso, por lo que no demuestra la denegacion por perfil.",
+      "required_action": "Completar la matriz parametrizada rol x accion x (lead propio / ajeno de Runner / ajeno de Coordinador) en la capa web con CSRF valido, verificando codigo HTTP y que el repositorio no recibe escritura en los casos denegados; agregar POST sin sesion; corregir test_agendar_readonly_denegado para usar un CSRF valido y cubrir readonly."
+    },
+    {
+      "id": "R1-MAJOR-02",
+      "severity": "major",
+      "file": "tests/unit/test_agenda_web.py",
+      "summary": "AC-4 exige demostrar leyendo la respuesta del servidor que un lead fuera de alcance no aparece con nombre, id ni enlace, y que el bloque dice que es de otra cartera. Solo hay pruebas a nivel servicio (test_runner_solo_ve_su_cartera); test_agenda_page_renderiza solo comprueba que el texto 'Agenda' aparece. No hay prueba del HTML de GET /agenda (vista semana y lista) para Runner/Coordinador con una cita ajena, ni de que el Socio si ve el nombre.",
+      "required_action": "Agregar pruebas de GET /agenda (vista=semana y vista=lista) con una cita de lead ajeno y otra propia para Runner y Coordinador, afirmando sobre response.text que no contiene el nombre ni el id ni /leads/<id> del lead ajeno y que contiene la etiqueta de otra cartera; y que ceo/cto ven ambos nombres."
+    },
+    {
+      "id": "R1-MINOR-01",
+      "severity": "minor",
+      "file": "app/web/static/css/app.css",
+      "summary": "AC-4 dice 'en celular solo la lista'; en max-width 640px la vista semana sigue mostrandose en una columna (.agenda-week grid de 1 columna) en vez de ocultarse a favor de la lista.",
+      "required_action": "En pantallas angostas ocultar la vista semana y mostrar la lista (o documentar la decision si el humano la acepta)."
+    },
+    {
+      "id": "R1-MINOR-02",
+      "severity": "minor",
+      "file": "app/services/agenda_service.py",
+      "summary": "_resolve_responsable se ejecuta antes del chequeo de cartera: un Coordinador que elige a otro Coordinador X como responsable de un lead ajeno recibe 400 si X no es el dueno y 404 si lo es, lo que permite inferir el dueno de un lead fuera de su alcance conociendo su UUID.",
+      "required_action": "Verificar el alcance del actor sobre el lead (y la cita) antes de resolver el responsable, para que todo lead ajeno responda igual (404)."
+    },
+    {
+      "id": "R1-MINOR-03",
+      "severity": "minor",
+      "file": "app/repositories/agenda_repository.py",
+      "summary": "AC-7: el detalle de la auditoria de cita_cancelada incluye el motivo en texto libre, que puede contener nombre o datos del lead (las propias pruebas usan 'Lead no pudo asistir'); ademas _cita_view devuelve nota y motivo_cancelacion de leads fuera de alcance (hoy agenda.html no los renderiza, pero el contrato del servicio no los recorta).",
+      "required_action": "Recortar nota y motivo_cancelacion en _cita_view cuando el lead esta fuera de alcance; considerar no copiar el motivo libre al detalle de auditoria (ya queda en tpi.citas) o documentar la decision."
+    },
+    {
+      "id": "R1-INFO-01",
+      "severity": "info",
+      "file": "app/repositories/solicitud_repository.py",
+      "summary": "La extraccion de _update_lead_status_tx conserva validacion, candado, chequeo de cartera, no-op idempotente y auditoria cambio_estado_lead de update_lead_status; la transaccion de la agenda es unica (cita + estado + auditorias). Correcto para AC-3. CI verde en el SHA exacto; la rama parte de origin/main actual (197df6b); alcance de archivos dentro de tasks/current.yaml; sin dependencias nuevas ni cambios en deployment/ ni scripts/.",
+      "required_action": "Ninguna."
+    }
+  ],
+  "checks": [
+    {
+      "name": "exact_sha: PR #140 OPEN, headRefOid == 9627fcafc1df41870e753ae10d5d5fa6348715cf == head_sha de developer-01; worktree del reviewer en ese SHA",
+      "result": "PASS"
+    },
+    {
+      "name": "ci_green_exact_sha: run 40402371590 (pull_request) success sobre 9627fca; 5 jobs pass",
+      "result": "PASS"
+    },
+    {
+      "name": "branch_up_to_date_with_main: merge-base == origin/main 197df6b",
+      "result": "PASS"
+    },
+    {
+      "name": "scope_paths dentro de tasks/current.yaml; sin dependencias nuevas; sin deployment/ ni scripts/",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-1: regla de lead activo no aplicada (R1-BLOCKER-01)",
+      "result": "FAIL"
+    },
+    {
+      "name": "AC-2: responsable validado contra la base (ver R1-MINOR-02)",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-3: misma transaccion cita + estado + auditoria via _update_lead_status_tx",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-4: recorte en servidor correcto; falta prueba sobre la respuesta y vista movil (R1-MAJOR-02, R1-MINOR-01)",
+      "result": "FAIL"
+    },
+    {
+      "name": "AC-5: tarjeta Reunion, formulario con CSRF, degradacion ante fallo de base",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-6: matriz rol x accion x alcance incompleta (R1-MAJOR-01)",
+      "result": "FAIL"
+    },
+    {
+      "name": "AC-7: eventos de auditoria por accion (observacion R1-MINOR-03)",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-8: docs, CHANGELOG, cobertura 91.10%, lint/seguridad verdes (AC-9 queda pendiente de verificacion humana, fuera de esta revision)",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "Sin la regla de lead activo, la agenda puede reabrir leads cerrados o perdidos cambiando su estado sin pasar por la regla de negocio.",
+    "La matriz de permisos incompleta deja sin demostrar denegaciones entre carteras en la capa web."
+  ]
+}
