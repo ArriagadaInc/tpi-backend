@@ -13,107 +13,19 @@
     "deployer": null
   },
   "worktrees": [],
-  "updated_at": "2026-10-26T14:44:22Z",
+  "updated_at": "2026-10-26T20:05:21Z",
   "last_transition": {
-    "at": "2026-10-26T14:44:22Z",
+    "at": "2026-10-26T20:05:21Z",
     "transition": "close",
     "event": "close",
     "from": "DONE",
     "to": "IDLE",
     "actor": "system",
     "runtime": "claude",
-    "session_id": "claude-202610261440-deployer-sup71254d",
+    "session_id": "claude-202610262003-deployer-sup9c6c9a",
     "evidence": null
   },
   "history": [
-    {
-      "at": "2026-10-25T00:09:10Z",
-      "transition": "verify_failed",
-      "event": "verify_failed",
-      "from": "VERIFYING",
-      "to": "VERIFY_FAILED",
-      "actor": "deployer",
-      "runtime": "claude",
-      "session_id": "claude-202610250000-deployer-sup281149",
-      "evidence": "evidence/CRM-ESTADOS-1-CATALOGO/deployment/verification-02.json"
-    },
-    {
-      "at": "2026-10-25T00:09:46Z",
-      "transition": "escalate_verify_failure",
-      "event": "escalate",
-      "from": "VERIFY_FAILED",
-      "to": "BLOCKED_HUMAN",
-      "actor": "deployer",
-      "runtime": "claude",
-      "session_id": "claude-202610250000-deployer-sup281149",
-      "evidence": "evidence/CRM-ESTADOS-1-CATALOGO/deployment/failure-01.json"
-    },
-    {
-      "at": "2026-10-25T02:16:11Z",
-      "transition": "resolve_cancel",
-      "event": "human_resolve",
-      "from": "BLOCKED_HUMAN",
-      "to": "IDLE",
-      "actor": "human",
-      "runtime": null,
-      "session_id": null,
-      "evidence": "evidence/CRM-ESTADOS-1-CATALOGO/approvals/resolution-01.json"
-    },
-    {
-      "at": "2026-10-26T00:37:22Z",
-      "transition": "activate_task",
-      "event": "activate_task",
-      "from": "IDLE",
-      "to": "NEW",
-      "actor": "human",
-      "runtime": null,
-      "session_id": null,
-      "evidence": null
-    },
-    {
-      "at": "2026-10-26T00:40:26Z",
-      "transition": "start_development",
-      "event": "start_development",
-      "from": "NEW",
-      "to": "DEVELOPING",
-      "actor": "developer",
-      "runtime": "other",
-      "session_id": "other-202610260039-developer-supc63536",
-      "evidence": null
-    },
-    {
-      "at": "2026-10-26T01:10:35Z",
-      "transition": "submit_for_review",
-      "event": "submit_for_review",
-      "from": "DEVELOPING",
-      "to": "READY_FOR_REVIEW",
-      "actor": "developer",
-      "runtime": "other",
-      "session_id": "other-202610260039-developer-supc63536",
-      "evidence": "evidence/CRM-PERFILES-1-RBAC/developer/developer-01.json"
-    },
-    {
-      "at": "2026-10-26T01:11:29Z",
-      "transition": "start_review",
-      "event": "start_review",
-      "from": "READY_FOR_REVIEW",
-      "to": "REVIEWING",
-      "actor": "reviewer",
-      "runtime": "claude",
-      "session_id": "claude-202610260110-reviewer-sup3b60b7",
-      "evidence": null
-    },
-    {
-      "at": "2026-10-26T01:14:45Z",
-      "transition": "review_reject",
-      "event": "review_reject",
-      "from": "REVIEWING",
-      "to": "REVIEW_REJECTED",
-      "actor": "reviewer",
-      "runtime": "claude",
-      "session_id": "claude-202610260110-reviewer-sup3b60b7",
-      "evidence": "evidence/CRM-PERFILES-1-RBAC/reviewer/review-01.json"
-    },
     {
       "at": "2026-10-26T01:15:46Z",
       "transition": "resume_development",
@@ -244,6 +156,94 @@
       "actor": "system",
       "runtime": "claude",
       "session_id": "claude-202610261440-deployer-sup71254d",
+      "evidence": null
+    },
+    {
+      "at": "2026-10-26T19:07:50Z",
+      "transition": "activate_task",
+      "event": "activate_task",
+      "from": "IDLE",
+      "to": "NEW",
+      "actor": "human",
+      "runtime": null,
+      "session_id": null,
+      "evidence": null
+    },
+    {
+      "at": "2026-10-26T19:09:12Z",
+      "transition": "start_development",
+      "event": "start_development",
+      "from": "NEW",
+      "to": "DEVELOPING",
+      "actor": "developer",
+      "runtime": "other",
+      "session_id": "other-202610261908-developer-supe77b51",
+      "evidence": null
+    },
+    {
+      "at": "2026-10-26T19:59:09Z",
+      "transition": "submit_for_review",
+      "event": "submit_for_review",
+      "from": "DEVELOPING",
+      "to": "READY_FOR_REVIEW",
+      "actor": "developer",
+      "runtime": "other",
+      "session_id": "other-202610261908-developer-supe77b51",
+      "evidence": "evidence/CRM-AGENDA-1-MIGRACION/developer/developer-01.json"
+    },
+    {
+      "at": "2026-10-26T20:00:07Z",
+      "transition": "start_review",
+      "event": "start_review",
+      "from": "READY_FOR_REVIEW",
+      "to": "REVIEWING",
+      "actor": "reviewer",
+      "runtime": "claude",
+      "session_id": "claude-202610261959-reviewer-sup4c3b46",
+      "evidence": null
+    },
+    {
+      "at": "2026-10-26T20:03:23Z",
+      "transition": "review_approve",
+      "event": "review_approve",
+      "from": "REVIEWING",
+      "to": "REVIEW_APPROVED",
+      "actor": "reviewer",
+      "runtime": "claude",
+      "session_id": "claude-202610261959-reviewer-sup4c3b46",
+      "evidence": "evidence/CRM-AGENDA-1-MIGRACION/reviewer/review-01.json"
+    },
+    {
+      "at": "2026-10-26T20:04:23Z",
+      "transition": "start_merge",
+      "event": "start_merge",
+      "from": "REVIEW_APPROVED",
+      "to": "MERGING",
+      "actor": "deployer",
+      "runtime": "claude",
+      "session_id": "claude-202610262003-deployer-sup9c6c9a",
+      "evidence": null
+    },
+    {
+      "at": "2026-10-26T20:05:19Z",
+      "transition": "merged_no_deploy",
+      "event": "merged",
+      "from": "MERGING",
+      "to": "DONE",
+      "actor": "deployer",
+      "runtime": "claude",
+      "session_id": "claude-202610262003-deployer-sup9c6c9a",
+      "evidence": "evidence/CRM-AGENDA-1-MIGRACION/deployment/merge-01.json"
+    },
+    {
+      "at": "2026-10-26T20:05:21Z",
+      "transition": "close",
+      "event": "close",
+      "from": "DONE",
+      "to": "IDLE",
+      "actor": "system",
+      "runtime": "claude",
+      "session_id": "claude-202610262003-deployer-sup9c6c9a",
       "evidence": null
     }
   ]

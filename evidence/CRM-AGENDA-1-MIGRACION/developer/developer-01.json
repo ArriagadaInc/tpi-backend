@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "CRM-AGENDA-1-MIGRACION",
+  "created_at": "2026-10-26T19:58:42Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610261908-developer-supe77b51",
+  "head_sha": "c717a04d5d2d34f16d4aa93478d534dbf7013fbd",
+  "branch": "harness/CRM-AGENDA-1-MIGRACION-agenda",
+  "pr_number": 138,
+  "change_class": "D",
+  "tests": {
+    "command": "Local (worktree, sin PostgreSQL): ruff check scripts/ tests/ PASS; black --check scripts/ tests/ PASS; mypy app/ --ignore-missing-imports PASS (72 files). python -m pytest tests/unit/test_agenda_migration_scripts.py tests/unit/test_dev_usuarios.py --no-cov -q -> 38 passed. Los tests de integracion (test_citas_agenda_migration.py) requieren PostgreSQL y corren en CI. CI PR #138 (ubuntu, Python 3.12, servicio postgres:15) sobre c717a04: Tests PASS (pytest tests/ --cov=app --cov-fail-under=85; cobertura 91.68%), Lint & Format PASS, Security Audit PASS, Docker Build PASS, Release Tooling Validation PASS.",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "scripts/sql/010_extend_citas_agenda.sql transaccional (BEGIN/COMMIT) con preflight que aborta con mensaje claro si falta el esquema tpi, si tpi.citas tiene filas o si btree_gist no esta disponible. Crea btree_gist; en tpi.citas agrega fecha_hora_fin (NOT NULL, CHECK > fecha_hora), agendada_por_subject/agendada_por_nombre (texto, sin FK), nota, motivo_cancelacion, updated_at; id_asesor NOT NULL; CHECK de estado_cita (agendada/realizada/no_asistio/cancelada); indice unico parcial citas_one_agendada_per_lead_uq; indice citas_fecha_hora_idx; EXCLUDE citas_responsable_no_superposicion_excl (id_asesor WITH =, tstzrange WITH &&). En tpi.asesores agrega atiende_reuniones. REVOKE ALL ON tpi.citas FROM PUBLIC y GRANT SELECT, INSERT, UPDATE a tpi_app (sin DELETE); no toca tpi.auditoria ni otras tablas. Verificado por test_agenda_migration_scripts.py y test_citas_agenda_migration.py::test_forward_migration_aplica_y_verifica."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "scripts/sql/010_drop_citas_agenda.sql transaccional e idempotente: aborta si tpi.citas tiene filas; quita el indice, las restricciones y las columnas nuevas de tpi.citas, revierte id_asesor a opcional, quita atiende_reuniones y revoca SELECT/INSERT/UPDATE a tpi_app. No elimina la tabla, ni btree_gist, ni toca auditoria. Pruebas de texto (test_agenda_migration_scripts.py) y de integracion que aplican forward/reversa contra PostgreSQL (test_citas_agenda_migration.py) y demuestran: dos agendadas del mismo responsable que se pisan se rechazan (ExclusionViolation); dos que no se pisan se aceptan; cancelada/realizada no bloquea; un lead no admite dos agendadas (UniqueViolation); estado_cita invalido se rechaza (CheckViolation); fecha_hora_fin < inicio se rechaza (CheckViolation)."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "scripts/init_test_database.py crea tpi.citas con su forma final (columnas originales del DDL de setup_db.py de tpi-data-pipeline mas las de la migracion 010) y tpi.asesores.atiende_reuniones, con btree_gist y la restriccion EXCLUDE; el resto del bootstrap no cambia. Las pruebas existentes de la base siguen pasando en CI (2168 passed)."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "scripts/dev_usuarios.py gana 'socios' (alta idempotente en tpi.asesores de los usuarios ceo/cto del secreto con rol 'socio' y atiende_reuniones=true, nombre del nombre visible, sin duplicar) y 'marcar-coordinadores' (atiende_reuniones=true en la fila de cada coordinator resuelta por advisor_id; conservan rol 'asesor'). Plan por defecto y escriben solo con --ejecutar y su frase de confirmacion; validan la migracion 010 aplicada (falta de columna -> se detienen con mensaje claro); no imprimen hashes ni claves y son repetibles. Pruebas en tests/unit/test_dev_usuarios.py sin debilitar las existentes."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "Actualizados docs/database/02_PHYSICAL_SCHEMA.md (tpi.citas y tpi.asesores con sus columnas nuevas y la nota del DDL original de tpi-data-pipeline), 04_MIGRATIONS.md (inventario y notas de 010 con procedimiento de aplicacion/reversa y comprobacion previa de btree_gist en RDS), 08_DEV_DATA_INVENTORY.md (citas, asesores y los comandos nuevos), docs/BITACORA.md y CHANGELOG.md. La seccion 6 de docs/AGENDA_REUNIONES_DISENO.md no cambia (se implemento exactamente lo disenado)."
+    },
+    {
+      "id": "AC-6",
+      "status": "pending_verification",
+      "evidence": "Aplicacion en AWS DEV por el humano con tpi_admin y el migration candidate congelado (SHA exacto de main), comprobacion previa de btree_gist en RDS, preflight, aplicacion unica y postflight (columnas, restricciones, tpi_app con SELECT/INSERT/UPDATE y sin DELETE sobre tpi.citas, auditoria intacta); despues ejecuta 'socios' y 'marcar-coordinadores' y comprueba la lista de responsables. Requires_human_acceptance y change_class D (fuera del alcance de desarrollo)."
+    }
+  ],
+  "files_changed": [
+    "scripts/sql/010_extend_citas_agenda.sql (nuevo, forward)",
+    "scripts/sql/010_drop_citas_agenda.sql (nuevo, reversa)",
+    "scripts/init_test_database.py (tpi.citas forma final + atiende_reuniones + btree_gist)",
+    "scripts/dev_usuarios.py (subcomandos socios y marcar-coordinadores)",
+    "tests/unit/test_agenda_migration_scripts.py (nuevo, contrato estatico de 010)",
+    "tests/unit/test_dev_usuarios.py (pruebas de socios y marcar-coordinadores)",
+    "tests/integration/test_citas_agenda_migration.py (nuevo, forward/reversa y restricciones)",
+    "docs/database/02_PHYSICAL_SCHEMA.md",
+    "docs/database/04_MIGRATIONS.md",
+    "docs/database/08_DEV_DATA_INVENTORY.md",
+    "docs/BITACORA.md",
+    "CHANGELOG.md"
+  ],
+  "assumptions": [
+    "Clase D: migracion aditiva aplicada por el humano en AWS DEV; no sigue fast path y tras el merge la transicion obligatoria es merged_non_fast_path hacia BLOCKED_HUMAN.",
+    "No se modifica app/**, deployment/**, IAM ni dependencias (la agenda es CRM-AGENDA-2-CALENDARIO).",
+    "No se modifican las migraciones 001 a 009; el numero 010 estaba libre (inspeccionado scripts/sql y la historia git).",
+    "tpi.citas la crea setup_db.py de tpi-data-pipeline (0 filas en DEV); la migracion 010 la amplia sin tocar ese proyecto y documenta la diferencia.",
+    "tpi_app nunca recibe DELETE sobre tpi.citas ni nuevos privilegios sobre tpi.auditoria.",
+    "La restriccion EXCLUDE exige btree_gist; si RDS no la permitiera, se detiene y se reporta (no se reemplaza por cuenta propia).",
+    "La verificacion exacta del conjunto de privilegios de tpi_app sobre tpi.citas en integracion no es fiable en CI (tpi_app es superusuario/propietario alli); queda fijada por la prueba de texto y la verificara el postflight humano en DEV.",
+    "Sin secretos, claves ni usuarios reales en el repositorio; los ejemplos son ficticios."
+  ],
+  "migrations_included": true
+}
