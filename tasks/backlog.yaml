@@ -76,10 +76,10 @@ items:
   change_class: D
   summary: 'Primer paso de la agenda de reuniones (calendario propio y comun). Amplia tpi.citas (responsable obligatorio,
     fecha_hora_fin, quien agendo, nota, motivo de cancelacion, updated_at, estados permitidos, una reunion agendada por lead
-    y restriccion para que un responsable no se pise), da SELECT, INSERT y UPDATE a tpi_app y da de alta a los Socios en
-    tpi.asesores con rol socio. Script humano con tpi_admin (plan, apply, verify y rollback), probado antes en la base local.
-    Antes hay que comprobar que RDS permite btree_gist. Sin definicion de tarea hasta que el humano confirme la seccion 10
-    de docs/AGENDA_REUNIONES_DISENO.md.'
+    y restriccion para que un responsable no se pise), da SELECT, INSERT y UPDATE a tpi_app, agrega tpi.asesores.atiende_reuniones, da de alta a CEO y CTO
+    (rol socio) y marca a los Coordinadores. Script humano con tpi_admin (plan, apply, verify y rollback), probado antes en la base local.
+    Antes hay que comprobar que RDS permite btree_gist. Sin definicion de tarea hasta que el humano confirme el punto J de
+    la seccion 10 de docs/AGENDA_REUNIONES_DISENO.md y elija el orden respecto de CRM-NO-CONTACTAR-1.'
   evidence:
   - docs/AGENDA_REUNIONES_DISENO.md, secciones 6 y 11
   - decision del humano del 2026-10-26 calendario propio y comun, visible y agendable por todos, con responsable de la asesoria y quien agendo
@@ -90,10 +90,10 @@ items:
   status: pending
   change_class: A
   summary: 'Segundo paso de la agenda: pagina Agenda (semana y lista), tarjeta Reunion y boton Agendar en el detalle del lead,
-    reagendar, cancelar con motivo, marcar realizada y no asistio (estas dos solo Coordinador y Socio), cambio de estado del
+    reagendar, cancelar con motivo, marcar realizada y no asistio (estas dos solo Coordinador y Socio; el responsable es un Socio o un Coordinador), cambio de estado del
     lead por el mismo servicio, auditoria de cada accion y matriz de permisos completa. Despliegue en DEV con aceptacion humana.
-    Depende de CRM-AGENDA-1-MIGRACION. Sin definicion de tarea hasta que el humano confirme la seccion 10 de
-    docs/AGENDA_REUNIONES_DISENO.md.'
+    Depende de CRM-AGENDA-1-MIGRACION. Sin definicion de tarea hasta que el humano confirme el punto J de la seccion 10 de
+    docs/AGENDA_REUNIONES_DISENO.md y elija el orden respecto de CRM-NO-CONTACTAR-1.'
   evidence:
   - docs/AGENDA_REUNIONES_DISENO.md, secciones 4, 5, 7, 8 y 11
   - TPI_Protocolo_Runners_Canal_Web.pdf, paginas 4 a 9
