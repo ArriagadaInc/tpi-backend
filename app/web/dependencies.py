@@ -20,7 +20,9 @@ class LeadBoardService(Protocol):
 
     def get_crm_estado_lead_options(self) -> list[str]: ...
 
-    def get_crm_estado_lead_options_for_update(self) -> list[str]: ...
+    def get_crm_estado_lead_options_for_update(
+        self, actor: AuthenticatedUser | None = None
+    ) -> list[str]: ...
 
     def get_catalogo_afp(self) -> list[dict[str, Any]]: ...
 
@@ -179,7 +181,9 @@ class _MockLeadBoardService:
     def get_crm_estado_lead_options(self) -> list[str]:
         return list(MOCK_ESTADOS)
 
-    def get_crm_estado_lead_options_for_update(self) -> list[str]:
+    def get_crm_estado_lead_options_for_update(
+        self, actor: AuthenticatedUser | None = None
+    ) -> list[str]:
         return [estado for estado in MOCK_ESTADOS if estado != "asignado"]
 
     def get_catalogo_afp(self) -> list[dict[str, Any]]:
@@ -198,7 +202,7 @@ class _MockLeadBoardService:
         ]
 
     def can_assign_lead(self, user: AuthenticatedUser) -> bool:
-        return is_superuser(user.role) or user.role in {"admin", "executive"}
+        return is_superuser(user.role)
 
     def get_solicitud_detalle(self, id_lead: Any) -> dict[str, Any] | None:
         for row in MOCK_BOARD_ROWS:

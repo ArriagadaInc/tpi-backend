@@ -38,7 +38,7 @@ from app.web.presentation import (
 )
 
 router = APIRouter()
-_WRITE_ROLES = {"tester", "advisor", "operations", "admin"}
+_WRITE_ROLES = {"tester", "advisor", "coordinator", "operations", "admin"}
 _CLEANUP_ROLES = {"tester", "admin"}
 _FLASH_KEY = "_tpi_web_flash"
 _CSRF_KEY = "_tpi_web_csrf_token"
@@ -509,7 +509,7 @@ def _resolve_detail_context(
     if selected_lead is None:
         selected_lead = service.get_solicitud_detalle_masked(lead_id, user=user)
 
-    state_options = service.get_crm_estado_lead_options_for_update()
+    state_options = service.get_crm_estado_lead_options_for_update(actor=user)
     can_assign = bool(user and service.can_assign_lead(user))
     parsed_comments = parse_lead_comments(
         (selected_lead or {}).get("comentarios") if selected_lead else None
@@ -531,7 +531,7 @@ def _resolve_detail_context(
         "request": request,
         "selected_user": user,
         "can_view_executive_dashboard": _can_view_executive_dashboard(user),
-        "can_simulate": bool(user) and (is_superuser(user.role) or user.role == "executive"),  # type: ignore[union-attr]
+        "can_simulate": bool(user) and (is_superuser(user.role) or user.role in {"executive", "coordinator"}),  # type: ignore[union-attr]
         "active_nav": "leads",
         "can_write": _can_write(user),
         "can_assign": can_assign,
@@ -837,6 +837,19 @@ async def lead_status_update(request: Request, lead_id: str):
     service = _resolve_service(request)
     try:
         updated = service.update_lead_status(lead_id, estado_lead, actor=user)
+    except PermissionError:
+        context, _ = _resolve_detail_context(
+            request,
+            lead_id,
+            lead_not_found=False,
+            error_message="Este perfil no puede fijar el estado seleccionado.",
+        )
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "lead_detail.html",
+            context,
+            status_code=403,
+        )
     except ValueError:
         context, _ = _resolve_detail_context(
             request,

@@ -21,6 +21,7 @@ _ALLOWED_ROLES = {
     "tester",
     "admin",
     "advisor",
+    "coordinator",
     "executive",
     "operations",
     "readonly",
@@ -132,16 +133,16 @@ def _parse_user(entry: Any) -> _ConfiguredUser:
 
 
 def _parse_advisor_id(entry: dict[str, Any], role: str, subject: str) -> UUID | None:
-    """Parse ``advisor_id`` only for ``advisor`` identities; fail closed otherwise.
+    """Parse ``advisor_id`` only for portfolio roles (advisor, coordinator).
 
     The raw ``advisor_id`` value and any secret are never logged. A malformed or
-    absent ``advisor_id`` for an ``advisor`` yields ``None`` so the identity
+    absent ``advisor_id`` for a portfolio role yields ``None`` so the identity
     authenticates but resolves to an empty portfolio at the service layer (D1/D4
-    fail-closed). Non-advisor roles ignore the field entirely for backward
+    fail-closed). Non-portfolio roles ignore the field entirely for backward
     compatibility. The warning identifies the entry by its stable ``subject``
     (technical identifier, not the secret payload).
     """
-    if role != "advisor":
+    if role not in {"advisor", "coordinator"}:
         return None
 
     raw = entry.get("advisor_id")
@@ -156,15 +157,17 @@ def _parse_advisor_id(entry: dict[str, Any], role: str, subject: str) -> UUID | 
             return UUID(candidate)
         except ValueError:
             logger.warning(
-                "event=advisor_id_invalid role=advisor result=fail_closed "
+                "event=advisor_id_invalid role=%s result=fail_closed "
                 "reason=malformed_advisor_id subject=%s",
+                role,
                 subject,
             )
             return None
 
     logger.warning(
-        "event=advisor_id_invalid role=advisor result=fail_closed "
+        "event=advisor_id_invalid role=%s result=fail_closed "
         "reason=unexpected_advisor_id_type subject=%s",
+        role,
         subject,
     )
     return None

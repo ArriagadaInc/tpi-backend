@@ -38,6 +38,7 @@
         {% if selected_user %}
           <div class="user-meta">
             <span class="user-name">{{ selected_user.display_name }}</span>
+            <span class="pill pill-muted">{{ selected_user.role|profile_label }}</span>
             {% if web_env_label %}
               <span class="env-pill">{{ web_env_label }}</span>
             {% endif %}

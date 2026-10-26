@@ -10,6 +10,7 @@ UserRole = Literal[
     "tester",
     "admin",
     "advisor",
+    "coordinator",
     "executive",
     "operations",
     "readonly",
@@ -18,6 +19,21 @@ UserRole = Literal[
 ]
 
 SUPERUSER_ROLES: frozenset[str] = frozenset({"ceo", "cto"})
+
+# Roles bound to their own lead portfolio: their identity resolves to an active
+# ``tpi.asesores`` record and every read/write is scoped to their assigned leads.
+# ``advisor`` is the Runner and ``coordinator`` the Coordinador of the Runners
+# protocol; both share the exact same portfolio scope.
+PORTFOLIO_ROLES: frozenset[str] = frozenset({"advisor", "coordinator"})
+
+# Display-only labels for the top bar profile chip. Only the three business
+# profiles are renamed; the technical roles keep their technical value.
+PROFILE_LABELS: dict[str, str] = {
+    "advisor": "Runner",
+    "coordinator": "Coordinador",
+    "ceo": "Socio",
+    "cto": "Socio",
+}
 
 
 def is_superuser(role: UserRole) -> bool:
@@ -29,14 +45,33 @@ def is_superuser(role: UserRole) -> bool:
     return role in SUPERUSER_ROLES
 
 
+def has_portfolio_scope(role: UserRole) -> bool:
+    """Return True for roles whose data access is scoped to their own portfolio.
+
+    This is the single function that generalizes every former ``role == "advisor"``
+    check: both the Runner (``advisor``) and the Coordinador (``coordinator``)
+    share the same portfolio scope, resolved server-side against ``tpi.asesores``.
+    """
+    return role in PORTFOLIO_ROLES
+
+
+def profile_label(role: UserRole) -> str:
+    """Return the display-only profile label for a role (Runner/Coordinador/Socio).
+
+    The technical roles keep their own value unchanged; this never affects
+    authorization, only the top-bar presentation.
+    """
+    return PROFILE_LABELS.get(role, role)
+
+
 @dataclass(frozen=True, slots=True)
 class AuthenticatedUser:
     """Minimal application identity, deliberately excluding credentials and tokens.
 
-    ``advisor_id`` binds an ``advisor`` identity to ``tpi.asesores.id_asesor``. It is
-    functional for ``advisor`` only and optional/ignored for every other role. The
-    value is resolved server-side against ``tpi.asesores``; it is never derived from
-    ``username`` or ``display_name``.
+    ``advisor_id`` binds a portfolio identity (``advisor`` or ``coordinator``) to
+    ``tpi.asesores.id_asesor``. It is functional for portfolio roles only and
+    optional/ignored for every other role. The value is resolved server-side against
+    ``tpi.asesores``; it is never derived from ``username`` or ``display_name``.
     """
 
     subject: str

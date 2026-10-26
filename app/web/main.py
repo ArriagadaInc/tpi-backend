@@ -13,6 +13,7 @@ from starlette.templating import Jinja2Templates
 
 from app.api.abuse import InMemoryRateLimiter
 from app.auth import build_auth_provider
+from app.auth.models import profile_label
 from app.components.formatting import format_currency_clp
 from app.config import get_settings
 from app.models.crm_states import crm_state_label, normalize_crm_state_for_display
@@ -58,6 +59,7 @@ def create_web_app() -> FastAPI:
     app.state.templates.env.filters["crm_state_label"] = crm_state_label
     app.state.templates.env.filters["crm_state_canonical"] = normalize_crm_state_for_display
     app.state.templates.env.filters["format_currency_clp"] = format_currency_clp
+    app.state.templates.env.filters["profile_label"] = profile_label
     app.state.templates.env.filters["format_int"] = format_int
     app.state.templates.env.filters["format_percentage"] = format_percentage
     app.state.templates.env.filters["format_dias"] = format_dias
