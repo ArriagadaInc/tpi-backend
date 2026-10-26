@@ -2,7 +2,7 @@
 Unit tests for H3.3.1 acceptance criteria:
 - AC-1: CEO/CTO view full PII in board and detail.
 - AC-2: Restricted roles receive server-side masked PII without full PII in rendered HTML.
-- AC-3: Manual assignment control appears only for authorized roles (admin, executive) and superusers (ceo, cto).
+- AC-3: Manual assignment control appears only for Socios (ceo, cto).
 - AC-4: Assignment route behavior (CSRF, role authorization, conflict) is covered here; single-active-assignment, state transition and audit persistence are covered by tests/integration/test_database_runtime.py.
 - AC-5: Documentation H3.3 updated without obsolete versions/acceptance items.
 """
@@ -204,12 +204,20 @@ def test_ac1_ac2_pii_visibility_by_role() -> None:
 def test_ac3_manual_assignment_authorization() -> None:
     service, _ = _build_stub_service()
 
-    # Authorized assignment roles (admin, executive) plus superusers (ceo, cto).
-    for role in ("admin", "executive", "ceo", "cto"):
+    # Only Socios (ceo, cto) can assign leads (CRM-PERFILES-1-RBAC AC-3).
+    for role in ("ceo", "cto"):
         assert service.can_assign_lead(_user(role)) is True
 
-    # Unauthorized assignment roles
-    for role in ("advisor", "operations", "readonly", "tester"):
+    # Unauthorized assignment roles (admin and executive lost the capability).
+    for role in (
+        "advisor",
+        "coordinator",
+        "admin",
+        "executive",
+        "operations",
+        "readonly",
+        "tester",
+    ):
         assert service.can_assign_lead(_user(role)) is False
 
 
@@ -293,11 +301,11 @@ def test_ac1_ac2_ac3_web_html_rendering() -> None:
     assert "juan.perez@example.com" in html_detail_ceo
     assert "+56912345678" in html_detail_ceo
 
-    # 3. Authorized assignment role web rendering (admin)
-    client_admin = _client_for_role("admin", service)
-    resp_detail_admin = client_admin.get(f"/leads/{repo.lead_id}")
-    assert resp_detail_admin.status_code == 200
-    assert "Maria Asesora" in resp_detail_admin.text
+    # 3. Authorized assignment role web rendering (Socio/ceo)
+    client_ceo_assign = _client_for_role("ceo", service)
+    resp_detail_ceo_assign = client_ceo_assign.get(f"/leads/{repo.lead_id}")
+    assert resp_detail_ceo_assign.status_code == 200
+    assert "Maria Asesora" in resp_detail_ceo_assign.text
 
 
 # ---------------------------------------------------------------------------
@@ -370,7 +378,7 @@ def test_ac1_ceo_sees_full_pii_with_web_mask_pii_false() -> None:
 def test_ac4_assign_lead_web_success() -> None:
     """POST /leads/{id}/assign with valid CSRF and authorized role returns 303."""
     service, repo = _build_stub_service()
-    client = _client_for_role("admin", service)
+    client = _client_for_role("ceo", service)
     csrf_token = _get_csrf_token(client, repo.lead_id)
 
     resp = client.post(
@@ -385,13 +393,13 @@ def test_ac4_assign_lead_web_success() -> None:
     assert resp.status_code == 303
     assert repo.assigned is True
     assert len(repo.assign_calls) == 1
-    assert repo.assign_calls[0]["actor"].subject == "usr-admin"
+    assert repo.assign_calls[0]["actor"].subject == "usr-ceo"
 
 
 def test_ac4_assign_lead_invalid_csrf_returns_403() -> None:
     """POST /leads/{id}/assign with invalid CSRF returns 403."""
     service, repo = _build_stub_service()
-    client = _client_for_role("admin", service)
+    client = _client_for_role("ceo", service)
 
     resp = client.post(
         f"/leads/{repo.lead_id}/assign",
@@ -424,7 +432,7 @@ def test_ac4_assign_lead_conflict_returns_409() -> None:
     """POST /leads/{id}/assign when lead already assigned returns 409."""
     service, repo = _build_stub_service()
     repo.force_conflict = True
-    client = _client_for_role("admin", service)
+    client = _client_for_role("ceo", service)
     csrf_token = _get_csrf_token(client, repo.lead_id)
 
     resp = client.post(

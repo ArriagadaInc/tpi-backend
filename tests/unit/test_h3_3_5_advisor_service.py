@@ -208,14 +208,17 @@ def test_detail_invalid_advisor_is_404() -> None:
 def test_status_update_valid_advisor_passes_scope() -> None:
     service, repo = _service()
     assert (
-        service.update_lead_status(LEAD_ID, "cerrado", actor=_user("advisor", ADVISOR_ID)) is True
+        service.update_lead_status(LEAD_ID, "en_seguimiento", actor=_user("advisor", ADVISOR_ID))
+        is True
     )
     assert repo.status_calls[0]["advisor_scope"] == ADVISOR_ID
 
 
 def test_status_update_invalid_advisor_is_denied_without_write() -> None:
     service, repo = _service()
-    assert service.update_lead_status(LEAD_ID, "cerrado", actor=_user("advisor", None)) is False
+    assert (
+        service.update_lead_status(LEAD_ID, "en_seguimiento", actor=_user("advisor", None)) is False
+    )
     assert repo.status_calls == []
 
 
