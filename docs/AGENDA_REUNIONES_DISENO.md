@@ -1,6 +1,6 @@
 # Agenda de reuniones del CRM: diseño y decisiones
 
-Estado: **decisiones del humano del 2026-10-26, confirmadas el mismo día (secciones 2 y 3); sin código ni migración todavía**. Este documento fija las decisiones antes de escribir código. Las tareas que lo
+Estado: **decisiones del humano del 2026-10-26, confirmadas el mismo día (secciones 2 y 3); tareas definidas; sin código ni migración todavía**. Este documento fija las decisiones antes de escribir código. Las tareas que lo
 implementan están en `tasks/backlog.yaml` (prefijo `CRM-AGENDA-`). Si una decisión cambia, se cambia aquí primero.
 
 ## 1. Qué se quiere
@@ -23,6 +23,8 @@ modalidad y socio; si el lead no llega, vuelve a «En seguimiento»).
 | 6 | Quiénes son Socios | Para la agenda, **Socio = solo CEO y CTO** (Diego y Álvaro en DEV), para no sumar complejidad. Pepe y María de los Ángeles quedan fuera por ahora. |
 | 7 | Quién hace la reunión con el lead | **Los Socios y los Coordinadores**: solo ellos pueden ser el responsable de la asesoría. El Runner no. |
 | 8 | Supuestos B a I de la sección 3 | **Confirmados** tal como están escritos («de acuerdo con todo»). |
+| 9 | Quién agenda con quién | «El Coordinador solo puede agendar sus leads y los Runner solo pueden asignar reuniones a los Socios» (2026-10-26). Detalle en el supuesto J. |
+| 10 | Orden | **`CRM-NO-CONTACTAR-1` queda para después**: primero la agenda (`CRM-AGENDA-1-MIGRACION` y luego `CRM-AGENDA-2-CALENDARIO`). |
 
 ## 3. Supuestos (confirmados, salvo J)
 
@@ -40,7 +42,7 @@ consecuencia de la decisión 7 y sigue por confirmar (sección 10). Cada uno se 
 | G | Avisos en la v1 | **Ninguno automático**: la reunión se ve en el calendario y en el detalle del lead. Correo, WhatsApp y recordatorios son v2. |
 | H | Feriados | No se bloquean en la v1 (se ve el calendario y se decide). |
 | I | Modalidad | Google Meet, Llamada o Presencial. El enlace de la reunión se pega a mano y es opcional. |
-| J | Coordinador como responsable | **Por confirmar.** Un Coordinador solo puede ser responsable de la reunión de un lead **de su propia cartera** (es su caso); para cualquier otro lead el Runner elige un Socio. Así quien atiende la reunión siempre puede ver al lead: el calendario no le oculta el nombre ni se le abre un lead ajeno. |
+| J | Quién puede ser responsable de cada reunión | **Confirmado** (decisión 9). **Runner**: solo agenda leads de su cartera y solo puede elegir como responsable a un Socio. **Coordinador**: solo agenda leads de su cartera y puede ser el responsable o elegir a un Socio. **Socio**: agenda cualquier lead y elige a un Socio o al Coordinador dueño de la cartera de ese lead. Un Coordinador solo es responsable de leads de su propia cartera, así que quien atiende la reunión siempre puede ver al lead. El servidor lo valida con los datos de la base. La última frase (el Socio puede elegir al Coordinador dueño del lead) la deduje de la decisión; no la dijo el humano. |
 
 ## 4. Cómo funciona
 
@@ -61,7 +63,7 @@ Reglas:
 - El cambio de estado del lead usa **el mismo servicio y la misma auditoría** que el cambio de estado manual (`update_lead_status`), no un camino aparte. Esa regla
   ya impide al Runner fijar `reunion_realizada`, `ficha_generada` y `cerrado` (`_RUNNER_FORBIDDEN_STATUS_STATES`); la agenda no la debilita.
 - No se agenda en el pasado ni fuera del horario (supuestos B y C); el servidor lo valida, no solo el formulario.
-- El responsable es un Socio (CEO o CTO) o un Coordinador activo, nunca un Runner; un Coordinador solo para leads de su cartera (supuesto J).
+- El responsable es un Socio (CEO o CTO) o un Coordinador activo, nunca un Runner. El Runner solo elige Socios y un Coordinador solo es responsable de leads de su cartera (supuesto J).
 - Si el responsable ya tiene una reunión que se pisa, se rechaza con un mensaje claro («Ese Socio ya tiene una reunión entre 15:00 y 15:45»). La regla la sostiene la
   base de datos (sección 6), así que dos personas agendando a la vez no pueden duplicar el horario.
 - Una reunión `realizada`, `cancelada` o `no_asistio` no se reabre: si hace falta otra, se agenda una nueva.
@@ -78,7 +80,8 @@ El alcance de cartera es el de `CRM-PERFILES-1-RBAC` (`has_portfolio_scope`): el
 | Roles que hoy no escriben (`executive`, `readonly`) | Sí | Según su regla actual | No | No |
 | Roles heredados que hoy escriben (`tester`, `operations`, `admin`) | Sí | Según su regla actual | Como hoy en un lead | No |
 
-Quién puede ser **responsable** de una reunión es otra pregunta: los Socios (CEO y CTO) y los Coordinadores (con la restricción del supuesto J), nunca un Runner.
+Quién puede ser **responsable** de una reunión es otra pregunta: los Socios (CEO y CTO) y los Coordinadores (con la restricción del supuesto J), nunca un Runner; el Runner
+solo puede elegir a un Socio.
 
 «Agendar» reutiliza las comprobaciones del cambio de estado (`_can_write`, el alcance de cartera del servicio y el token CSRF), sin una regla nueva. Un lead fuera
 de alcance responde `404` si se intenta abrir o modificar, como hoy.
@@ -150,24 +153,20 @@ Respuestas del humano del 2026-10-26 («de acuerdo con todo»), con sus cambios:
 3. **Calendario común y privacidad** (E): confirmado.
 4. **Quién hace qué** (F): confirmado.
 5. **Avisos** (G): confirmado, sin avisos automáticos en la v1.
-6. **Orden**: el humano no eligió. Esta tarea y `CRM-NO-CONTACTAR-1` no dependen una de otra y la ley obliga a la segunda antes de cargar datos reales (2026-12-01);
-   se decide al activar la primera tarea.
+6. **Orden**: `CRM-NO-CONTACTAR-1` queda para después (decisión 10). Mientras tanto la agenda no debe usarse con datos reales: la ley obliga a esa tarea antes de cargarlos
+   (2026-12-01).
 
-Sigue abierto:
-
-- **J. Coordinador como responsable**: la decisión 7 permite que un Coordinador atienda, pero las carteras de los Runners y de los Coordinadores son independientes (no hay
-  equipos en el código). Si un Runner pudiera elegir a un Coordinador para un lead que no es de este, el Coordinador vería el bloque sin nombre y no sabría con quién se
-  reúne. La propuesta es que **un Coordinador solo sea responsable de leads de su cartera** y el Runner elija entre los Socios. La alternativa, que el responsable vea el
-  lead aunque no sea de su cartera, abre una excepción a los permisos de `CRM-PERFILES-1-RBAC` y no se propone.
+También quedó resuelto el punto J (quién puede ser responsable): ver el supuesto J de la sección 3. No quedan preguntas abiertas.
 
 ## 11. Tareas y criterios para darla por terminada
 
-Tareas (en `tasks/backlog.yaml`; ninguna tiene definición de tarea hasta que el humano confirme el punto J de la sección 10 y elija el orden):
+Tareas (definidas en `tasks/backlog.yaml`; el humano activa la primera con `approve.py activate`, en este orden):
 
 1. `CRM-AGENDA-1-MIGRACION` (clase D): ampliar `tpi.citas`, privilegios, script humano con `plan`/`apply`/`verify`/`rollback`, columna `atiende_reuniones`, alta de CEO y CTO como
    responsables, marca de los Coordinadores y documentación de la base. La aplica el humano en DEV.
 2. `CRM-AGENDA-2-CALENDARIO` (clase A, con despliegue y aceptación humana): servicio, rutas, pantallas y pruebas. Depende de la anterior.
-3. Siembra de reuniones de prueba en DEV (extender `scripts/dev_reset_leads.py`: futuras para los leads en `reunion_agendada`, pasadas para `reunion_realizada`).
+3. Opcional, después: siembra de reuniones de prueba en DEV (extender `scripts/dev_reset_leads.py`: futuras para los leads en `reunion_agendada`, pasadas para
+   `reunion_realizada`). No está definida como tarea; la prueba humana puede agendar a mano.
 
 La función está terminada cuando:
 
@@ -180,7 +179,7 @@ La función está terminada cuando:
 - **AC-7**: la matriz de permisos está probada completa: lectura y escritura, `GET` y `POST`, entre carteras, y un rol de solo lectura que no puede escribir.
 - **AC-8**: cada acción queda en la auditoría con su autor.
 - **AC-9**: horario, duración, pasado y cambio de hora de Chile se validan en el servidor.
-- **AC-10**: la lista de responsables trae solo a CEO, CTO y a los Coordinadores marcados; un Runner no puede ser responsable y un Coordinador solo lo es en leads de su
-  cartera (si se confirma J).
+- **AC-10**: la lista de responsables trae solo a CEO, CTO y a los Coordinadores marcados; un Runner no puede ser responsable, solo elige Socios, y un Coordinador solo lo es
+  en leads de su cartera.
 - **AC-11** (humano, en DEV): un Runner agenda con un Socio, un Coordinador ve el calendario y atiende y marca como realizada la reunión de un lead de su cartera, y un
   Socio marca como realizada la de un lead de un Runner.
