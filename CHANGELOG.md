@@ -10,6 +10,9 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ### 🐛 Corregido
 
+- **Falsos positivos de los indicadores de logs del Harness** (`HARNESS-LOGS-FALSOS-POSITIVOS-CADDY`)
+  - Los robots de internet que piden rutas como `/secrets.json` o `/token` dejaban la palabra en el registro de acceso de Caddy y bloqueaban `verified` (indicadores fuertes, que nunca se degradan). En `harness/policies.yaml`, `password`, `cookie`, `secret` y `token` pasan a `"<palabra> -bytes_read"`: `bytes_read` aparece solo en las líneas de acceso de Caddy (validado contra los logs reales de DEV: 1.641 de 1.641, ninguna otra), así que la app y los eventos TLS siguen vigilados. `Authorization -REDACTED`, `Bearer` y `raw_payload` no cambian.
+  - Se actualizan la guía del Deployer (`aws-observability`) y las pruebas de `test_log_scan.py`, que fijan los patrones declarados y que los antiguos, sin exclusión, siguen fallando cerrado.
 - **Publish de imágenes a ECR fijado en `ubuntu-24.04`** (incidente del release `db51f95`, 2026-10-23)
   - `ubuntu-latest` pasó a `ubuntu-26.04`, donde `docker build` + `docker push` suben a ECR un índice OCI con un manifiesto de atestación. ECR no puede escanear un índice (`UnsupportedImageTypeException`), así que el gate de escaneo vencía sin resultado y el publish fallaba cerrado.
   - `publish-dev-ecr-images.yml` fija todos sus jobs en `ubuntu-24.04`, con una prueba que lo vigila; el runbook documenta el síntoma, la causa y la comprobación del tipo de manifiesto. Para recuperar un publish ya hecho: borrar las dos imagenes del release y relanzar el workflow con el mismo SHA.
