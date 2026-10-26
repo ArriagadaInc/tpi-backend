@@ -30,6 +30,7 @@ from app.models.lead_assignment import (
     LeadAssignmentValidationError,
 )
 from app.services.xlsx_export import ExportLimitExceededError
+from app.web.agenda_presentation import build_lead_agenda_context, resolve_agenda_service
 from app.web.dependencies import build_service_for_web
 from app.web.presentation import (
     build_timeline_items,
@@ -561,6 +562,12 @@ def _resolve_detail_context(
         "error_message": error_message,
         "lead_not_found": lead_not_found,
     }
+    if selected_lead is not None and user is not None:
+        context["agenda"] = build_lead_agenda_context(
+            resolve_agenda_service(request), lead_id, user
+        )
+    else:
+        context["agenda"] = None
     return context, status_code
 
 

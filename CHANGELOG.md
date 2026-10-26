@@ -31,6 +31,15 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ### ✅ Agregado
 
+- **Agenda de reuniones del CRM** (CRM-AGENDA-2-CALENDARIO)
+  - Módulo propio de agenda (`app/models/agenda.py`, `app/repositories/agenda_repository.py`, `app/services/agenda_service.py`) sobre `tpi.citas` (migración 010): agendar, reagendar, cancelar (con motivo) y marcar realizada o no asistió, con responsable de la asesoría y quién agendó. Cada acción cambia el estado del lead reutilizando `update_lead_status` (misma validación y auditoría) y deja un evento `cita_*` en `tpi.auditoria` (`tabla_afectada = 'tpi.citas'`), todo en la misma transacción.
+  - Validación server-side del horario (lunes a viernes 09:00–19:00 de Chile, inicio cada 15 minutos, duración 30/45/60, sin agendar en el pasado) y de la modalidad (Google Meet, Llamada, Presencial), con pruebas de los dos cambios de hora de Chile.
+  - Responsable validado contra la base: solo filas activas de `tpi.asesores` con `atiende_reuniones`; el Runner solo elige Socios, el Coordinador se elige a sí mismo o a un Socio, y el Socio elige a un Socio o al Coordinador dueño de la cartera del lead; un Coordinador nunca es responsable de leads ajenos. El formulario solo ofrece las opciones válidas.
+  - `GET /agenda` con vista de semana (navegación anterior/siguiente/hoy) y de lista, filtro por responsable, para todos los perfiles autenticados. Un lead fuera del alcance aparece sin nombre, sin id y sin enlace en la respuesta del servidor (el Socio ve todo).
+  - Tarjeta «Reunión» en el detalle del lead con la reunión agendada (o la última) y las acciones permitidas al perfil; entrada «Agenda» en el menú superior para todos los perfiles. Si la base falla o faltan las columnas de la migración 010, la agenda muestra un aviso y el resto del CRM sigue funcionando.
+  - Matriz de permisos rol × acción × alcance (Runner, Coordinador, Socio, roles de solo lectura y roles heredados) probada en el servidor; el Runner recibe un rechazo real al intentar marcar realizada o no asistió.
+  - Documentación de uso en `docs/AGENDA_USO.md`; sin dependencias nuevas.
+
 - **Ampliación de `tpi.citas` y `tpi.asesores` para la agenda de reuniones** (CRM-AGENDA-1-MIGRACION)
   - Migración de clase D `scripts/sql/010_extend_citas_agenda.sql` (y su reversa `010_drop_citas_agenda.sql`): `tpi.citas` gana responsable obligatorio (`id_asesor NOT NULL`), `fecha_hora_fin` (CHECK > `fecha_hora`), quién agendó (`agendada_por_subject`/`agendada_por_nombre`), `nota`, `motivo_cancelacion` y `updated_at`; CHECK de `estado_cita` (`agendada`, `realizada`, `no_asistio`, `cancelada`); un índice único parcial (una reunión agendada por lead) y una restricción `EXCLUDE USING gist` (un responsable no se pisa, requiere `btree_gist`); `tpi.asesores` gana `atiende_reuniones`; `tpi_app` recibe `SELECT, INSERT, UPDATE` sobre `tpi.citas` sin `DELETE`.
   - `scripts/init_test_database.py` crea `tpi.citas` en su forma final y `tpi.asesores.atiende_reuniones` para las pruebas de integración de la agenda.

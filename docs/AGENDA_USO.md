@@ -1,0 +1,81 @@
+# Agenda de reuniones del CRM: guía de uso
+
+La agenda de reuniones es el calendario común del CRM (un solo calendario para todos los
+perfiles). Permite agendar una reunión de asesoría desde el detalle de un lead, verla en
+el calendario semanal o en la lista de próximas reuniones, y registrar su desenlace. No se
+conecta a ningún calendario externo (Google Calendar, Meet) en esta versión.
+
+Fuente de las decisiones: `docs/AGENDA_REUNIONES_DISENO.md`.
+
+## 1. Quién puede hacer qué
+
+El alcance de cartera es el de siempre (`has_portfolio_scope`): el Runner y el Coordinador
+trabajan sus leads; el Socio (CEO/CTO) ve y trabaja todos.
+
+| Perfil | Ver calendario | Ver nombre/enlace del lead | Agendar, reagendar y cancelar | Marcar realizada / no asistió |
+|---|---|---|---|---|
+| Runner (`advisor`) | Todo | Solo su cartera | Solo leads de su cartera | No |
+| Coordinador (`coordinator`) | Todo | Solo su cartera | Solo leads de su cartera | Solo leads de su cartera |
+| Socio (`ceo`/`cto`) | Todo | Todos | Todos | Todos |
+| Roles que hoy no escriben (`executive`, `readonly`) | Sí | Según su regla actual | No | No |
+| Roles heredados que escriben (`tester`, `operations`, `admin`) | Sí | Según su regla actual | Como hoy en un lead | No |
+
+Un lead fuera del alcance responde como hoy (404) si se intenta abrir o modificar. En el
+calendario, un lead fuera del alcance aparece sin nombre, sin identificador y sin enlace;
+el bloque dice «De otra cartera».
+
+## 2. Quién puede ser el responsable de la reunión
+
+El responsable es una fila activa de `tpi.asesores` con `atiende_reuniones = true`. Solo
+los **Socios** (CEO y CTO, rol `socio`) y los **Coordinadores** (rol `asesor` con la marca)
+pueden ser responsables; el Runner nunca.
+
+- **Runner**: solo elige como responsable a un Socio.
+- **Coordinador**: elige a un Socio o se elige a sí mismo (solo en leads de su cartera).
+- **Socio**: elige a un Socio o al Coordinador dueño de la cartera de ese lead.
+
+Un Coordinador solo es responsable de leads de su propia cartera. El servidor valida todo
+contra la base, no con lo que envía el formulario, y el formulario solo ofrece las opciones
+válidas.
+
+## 3. Reglas de horario y modalidad
+
+- Lunes a viernes, de **09:00 a 19:00** hora de Chile (`America/Santiago`).
+- El inicio cae cada **15 minutos**; la duración es de **30, 45 o 60 minutos** (30 por
+  defecto). La reunión debe terminar a más tardar a las 19:00.
+- No se agenda en el pasado.
+- Modalidad: **Google Meet**, **Llamada** o **Presencial**. El enlace y la nota son
+  opcionales (la nota hasta 500 caracteres).
+- Un responsable no puede tener dos reuniones que se pisen (lo sostiene la base). Un lead
+  tiene como máximo una reunión agendada.
+
+## 4. Estados de la reunión y efecto en el lead
+
+| Acción | Estado de la reunión | Estado del lead |
+|---|---|---|
+| Agendar | `agendada` | `reunion_agendada` |
+| Reagendar | `agendada` (la misma reunión) | sigue en `reunion_agendada` |
+| Cancelar (motivo obligatorio) | `cancelada` | `en_seguimiento` |
+| Marcar realizada | `realizada` | `reunion_realizada` |
+| Marcar no asistió | `no_asistio` | `en_seguimiento` |
+
+Una reunión `realizada`, `cancelada` o `no_asistio` no se reabre: si hace falta otra, se
+agenda una nueva. La reunión nunca se borra.
+
+## 5. Dónde se usa
+
+- **Página Agenda** (`/agenda`, en el menú superior para todos los perfiles): vista de
+  semana con navegación anterior/siguiente/hoy y vista de lista de las próximas reuniones;
+  filtro por responsable. Cada bloque muestra hora, responsable, quién agendó, modalidad y
+  estado; en pantalla de celular se usa la vista de lista.
+- **Detalle del lead**: la tarjeta «Reunión» muestra la reunión agendada (o la última) y
+  los botones para agendar, reagendar, cancelar y marcar realizada o no asistió, según el
+  perfil. El formulario pide fecha, hora, duración, responsable, modalidad, enlace y nota,
+  con el token CSRF y las mismas protecciones del cambio de estado.
+
+## 6. Auditoría
+
+Cada acción deja un evento en `tpi.auditoria` (`tabla_afectada = 'tpi.citas'`):
+`cita_agendada`, `cita_reagendada`, `cita_cancelada`, `cita_realizada` y `cita_no_asistio`,
+con el sujeto que actuó, el identificador de la reunión, el responsable y las horas
+anterior y nueva. El detalle no lleva nombre ni datos personales del lead.

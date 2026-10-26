@@ -1,0 +1,33 @@
+<label for="fecha">Fecha</label>
+<input id="fecha" name="fecha" type="date" required>
+
+<label for="hora">Hora</label>
+<input id="hora" name="hora" type="time" min="09:00" max="19:00" step="900" required>
+
+<label for="duracion">Duración</label>
+<select id="duracion" name="duracion">
+  <option value="30" selected>30 minutos</option>
+  <option value="45">45 minutos</option>
+  <option value="60">60 minutos</option>
+</select>
+
+<label for="responsable_id">Responsable</label>
+<select id="responsable_id" name="responsable_id" required>
+  <option value="">Selecciona un responsable</option>
+  {% for r in agenda.responsables %}
+    <option value="{{ r.id_asesor }}">{{ r.nombre }}</option>
+  {% endfor %}
+</select>
+
+<label for="modalidad">Modalidad</label>
+<select id="modalidad" name="modalidad">
+  <option value="Google Meet" selected>Google Meet</option>
+  <option value="Llamada">Llamada</option>
+  <option value="Presencial">Presencial</option>
+</select>
+
+<label for="enlace">Enlace (opcional)</label>
+<input id="enlace" name="enlace" type="text" maxlength="2000">
+
+<label for="nota">Nota (opcional, hasta 500 caracteres)</label>
+<textarea id="nota" name="nota" rows="2" maxlength="500"></textarea>
