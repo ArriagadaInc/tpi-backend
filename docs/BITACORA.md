@@ -22,6 +22,17 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-26 - Agenda de reuniones: tareas definidas (CRM-AGENDA-1-MIGRACION y CRM-AGENDA-2-CALENDARIO)
+
+- Decisiones del humano: «el Coordinador solo puede agendar sus leads y los Runner solo pueden asignar reuniones a los Socios»; `CRM-NO-CONTACTAR-1` queda para
+  después. Con eso el punto J del diseño queda resuelto y no quedan preguntas abiertas (`docs/AGENDA_REUNIONES_DISENO.md`).
+- `CRM-AGENDA-1-MIGRACION` (clase D, `deploy_required: false`): migración 010 que amplía `tpi.citas` y `tpi.asesores`, su reversa, el bootstrap de pruebas, la documentación
+  de la base y dos subcomandos humanos de `scripts/dev_usuarios.py` (`socios` y `marcar-coordinadores`). La aplica el humano en DEV tras comprobar que RDS permite
+  `btree_gist`. Sin dependencias.
+- `CRM-AGENDA-2-CALENDARIO` (clase A, con despliegue y aceptación humana): reglas de la reunión, calendario común, tarjeta en el detalle del lead, permisos por perfil
+  (el servidor decide quién puede ser responsable), privacidad del calendario, auditoría y matriz de pruebas completa. Depende de la anterior.
+- Orden: la agenda no debe usarse con datos reales hasta cerrar `CRM-NO-CONTACTAR-1` (la ley rige desde el 2026-12-01).
+
 ### 2026-10-26 - Agenda de reuniones: decisiones confirmadas (CRM-AGENDA)
 
 - Contexto: el humano respondió «de acuerdo con todo» a los supuestos del diseño (`docs/AGENDA_REUNIONES_DISENO.md`, PR 135) con dos precisiones.
