@@ -119,18 +119,6 @@ def _index_existe(cur, nombre: str) -> bool:
     return bool(cur.fetchone()["existe"])
 
 
-def _privilegios_citas(cur) -> set[str]:
-    # Solo los grants explicitos del ACL (aclexplode), no los privilegios implicitos del
-    # propietario/superusuario. En CI tpi_app es el propietario de tpi.citas, asi que
-    # information_schema.role_table_grants mostraria tambien DELETE/TRUNCATE/TRIGGER/REFERENCES.
-    cur.execute(
-        "SELECT acl.privilege_type AS privilege_type "
-        "FROM aclexplode((SELECT relacl FROM pg_class WHERE oid = 'tpi.citas'::regclass)) AS acl "
-        "WHERE acl.grantee = (SELECT oid FROM pg_roles WHERE rolname = 'tpi_app')"
-    )
-    return {row["privilege_type"] for row in cur.fetchall()}
-
-
 def _public_tiene_privilegio_citas(cur) -> bool:
     cur.execute(
         "SELECT COALESCE((SELECT bool_or(grantee = 0) FROM aclexplode(relacl)), false) "
@@ -204,7 +192,11 @@ def test_forward_migration_aplica_y_verifica() -> None:
             assert _index_existe(cur, "citas_one_agendada_per_lead_uq")
             assert _index_existe(cur, "citas_fecha_hora_idx")
 
-            assert _privilegios_citas(cur) == {"SELECT", "INSERT", "UPDATE"}
+            # REVOKE ALL FROM PUBLIC aplicado. El grant exacto a tpi_app (SELECT, INSERT,
+            # UPDATE, sin DELETE) lo fija la prueba de texto
+            # tests/unit/test_agenda_migration_scripts.py; aqui no se comprueba el conjunto
+            # exacto de tpi_app porque en CI tpi_app es el propietario de tpi.citas (y por
+            # tanto acumula todos los privilegios de propietario).
             assert _public_tiene_privilegio_citas(cur) is False
         conn.commit()
 
@@ -225,7 +217,6 @@ def test_rollback_migration_revierte_sin_borrar_tabla() -> None:
                 assert _constraint_existe(cur, "citas_responsable_no_superposicion_excl") is False
                 assert _index_existe(cur, "citas_one_agendada_per_lead_uq") is False
                 assert _index_existe(cur, "citas_fecha_hora_idx") is False
-                assert _privilegios_citas(cur) == set()
 
                 # La tabla sigue existiendo.
                 cur.execute("SELECT to_regclass('tpi.citas') AS reg")
