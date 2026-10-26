@@ -120,9 +120,13 @@ def _index_existe(cur, nombre: str) -> bool:
 
 
 def _privilegios_citas(cur) -> set[str]:
+    # Solo los grants explicitos del ACL (aclexplode), no los privilegios implicitos del
+    # propietario/superusuario. En CI tpi_app es el propietario de tpi.citas, asi que
+    # information_schema.role_table_grants mostraria tambien DELETE/TRUNCATE/TRIGGER/REFERENCES.
     cur.execute(
-        "SELECT DISTINCT privilege_type FROM information_schema.role_table_grants "
-        "WHERE grantee = 'tpi_app' AND table_schema = 'tpi' AND table_name = 'citas'"
+        "SELECT acl.privilege_type AS privilege_type "
+        "FROM aclexplode((SELECT relacl FROM pg_class WHERE oid = 'tpi.citas'::regclass)) AS acl "
+        "WHERE acl.grantee = (SELECT oid FROM pg_roles WHERE rolname = 'tpi_app')"
     )
     return {row["privilege_type"] for row in cur.fetchall()}
 
