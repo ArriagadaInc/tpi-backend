@@ -22,6 +22,16 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-26 - Agenda de reuniones: decisiones confirmadas (CRM-AGENDA)
+
+- Contexto: el humano respondió «de acuerdo con todo» a los supuestos del diseño (`docs/AGENDA_REUNIONES_DISENO.md`, PR 135) con dos precisiones.
+- Decisión 6: para la agenda, **Socio = solo CEO y CTO** (Diego y Álvaro en DEV). Pepe y María de los Ángeles quedan fuera por ahora; sumarlos es una fila.
+- Decisión 7: **la reunión con el lead la hacen los Socios y los Coordinadores**. El Runner agenda, pero no puede ser el responsable.
+- Consecuencia en el modelo: los Coordinadores conservan `rol = 'asesor'` en `tpi.asesores` (la cadena de cartera lo exige), así que se agrega la columna
+  `atiende_reuniones` para distinguir a quién puede ser responsable. La migración `CRM-AGENDA-1-MIGRACION` la incluye.
+- Sigue abierto el punto J: un Coordinador solo sería responsable de leads de su cartera (propuesta), porque las carteras son independientes y, si no, atendería una
+  reunión sin poder ver al lead. Tampoco se eligió el orden respecto de `CRM-NO-CONTACTAR-1`.
+
 ### 2026-10-26 - Agenda de reuniones del CRM: diseño y decisiones (CRM-AGENDA)
 
 - Contexto: el humano pidió un módulo de agendamiento para que los Runners agenden a los Socios cuando un lead es positivo y quiere asesoría.
