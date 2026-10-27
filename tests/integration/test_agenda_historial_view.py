@@ -174,10 +174,15 @@ def _inicio(hh: int, mm: int = 0) -> datetime:
     return datetime(2099, 1, 15, hh, mm, tzinfo=UTC)
 
 
-def _cita_id(lead_id: str) -> str:
+def _cita_agendada_id(lead_id: str) -> str:
+    """Id de la reunion agendada actual del lead (la unica con estado 'agendada')."""
     with get_db_connection(operation="agenda_view.integration.cita_id") as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id_cita FROM tpi.citas WHERE id_lead = %s", (lead_id,))
+            cur.execute(
+                "SELECT id_cita FROM tpi.citas WHERE id_lead = %s AND estado_cita = 'agendada' "
+                "ORDER BY created_at DESC, id_cita DESC LIMIT 1",
+                (lead_id,),
+            )
             return str(cur.fetchone()["id_cita"])
 
 
@@ -222,7 +227,7 @@ def _produce_all_agenda_actions(
         nota=nota,
         actor=actor,
     )
-    cita_a = _cita_id(lead_id)
+    cita_a = _cita_agendada_id(lead_id)
     repo.update_cita(
         cita_id=UUID(cita_a),
         responsable_id=UUID(socio),
@@ -246,7 +251,7 @@ def _produce_all_agenda_actions(
         nota=None,
         actor=actor,
     )
-    cita_b = _cita_id(lead_id)
+    cita_b = _cita_agendada_id(lead_id)
     repo.complete_cita(cita_id=UUID(cita_b), actor=actor)
 
     repo.create_cita(
@@ -259,7 +264,7 @@ def _produce_all_agenda_actions(
         nota=None,
         actor=actor,
     )
-    cita_c = _cita_id(lead_id)
+    cita_c = _cita_agendada_id(lead_id)
     repo.no_show_cita(cita_id=UUID(cita_c), actor=actor)
     return nota, motivo
 
