@@ -22,6 +22,14 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-27 - Harness: tarea CRM-AGENDA-4-HISTORIAL-MIGRACION cerrada (DONE)
+
+- Titulo: CRM agenda 4a: vista de solo lectura con los eventos de la agenda para el historial del lead
+- Evidencia: `evidence/CRM-AGENDA-4-HISTORIAL-MIGRACION/` y `tasks/completed/CRM-AGENDA-4-HISTORIAL-MIGRACION.yaml`.
+- release_sha: `bfa288f63c3de6a0838fcf7b4a76770c6570f5d6`
+- pr_number: `148`
+- Cierre automático por `merged_no_deploy` (clase D sin despliegue), 1 ronda. Pendiente del humano (AC-6): aplicar la migración 011 en AWS DEV desde `bfa288f` (script humano con simulación previa); después se activa `CRM-AGENDA-4-HISTORIAL`.
+
 ### 2026-10-27 - Agenda: migración 011 lista para el humano (CRM-AGENDA-4-HISTORIAL-MIGRACION)
 
 - Qué se hizo: vista de solo lectura `tpi.v_historial_agenda` (migración `011`, clase D) sobre `tpi.auditoria` para

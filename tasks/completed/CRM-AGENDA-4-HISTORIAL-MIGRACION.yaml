@@ -1,0 +1,119 @@
+schema_version: 1
+task:
+  id: CRM-AGENDA-4-HISTORIAL-MIGRACION
+  title: 'CRM agenda 4a: vista de solo lectura con los eventos de la agenda para el historial del lead'
+  objective: 'Preparar la migracion 011: una vista de solo lectura, tpi.v_historial_agenda, sobre los
+    eventos de auditoria de la agenda (cita_agendada, cita_reagendada, cita_cancelada, cita_realizada
+    y cita_no_asistio), con el mismo patron de minimo privilegio de las vistas 007, 008 y 009: tpi_app
+    lee la vista y sigue sin poder leer tpi.auditoria. Incluye el script de reversa, el bootstrap de pruebas,
+    las pruebas de contrato (con las filas producidas por el flujo real de la agenda) y la documentacion
+    de la base. La migracion la aplica el humano en AWS DEV. El codigo que usa la vista es la tarea siguiente,
+    CRM-AGENDA-4-HISTORIAL.'
+  source:
+    type: story
+    ref: 'Pedido del humano del 2026-10-27: los eventos del agendamiento deben quedar en el historial
+      del lead. La app no lee tpi.auditoria directamente (migraciones 007 a 009), asi que hace falta una
+      vista nueva.'
+  change_class: D
+  deploy_required: false
+  requires_human_acceptance: true
+  acceptance_criteria:
+  - id: AC-1
+    verification: automated
+    description: 'Migracion hacia adelante. Existe scripts/sql/011_create_historial_agenda.sql (el numero
+      011 debe estar libre: inspeccionar todo scripts/sql y la historia git antes de crearlo), transaccional
+      (BEGIN y COMMIT), con el mismo preflight y postflight de scripts/sql/009_create_historial_simulaciones.sql
+      (aborta si tpi_app no tiene USAGE sobre tpi o si ya tiene SELECT, UPDATE o DELETE directo sobre
+      tpi.auditoria). Crea la vista tpi.v_historial_agenda WITH (security_barrier = true) sobre tpi.auditoria
+      con el filtro fijo accion IN (''cita_agendada'', ''cita_reagendada'', ''cita_cancelada'', ''cita_realizada'',
+      ''cita_no_asistio'') AND tabla_afectada = ''tpi.citas'' y exactamente estas columnas: id_auditoria,
+      id_lead, fecha_hora, accion, actor_subject, id_cita (uuid), responsable_id (uuid, puede ser NULL),
+      estado_anterior, estado_nuevo, fecha_hora_anterior y fecha_hora_nueva (timestamptz, pueden ser NULL).
+      NO expone el detalle crudo, id_persona, id_usuario ni ip_origen. REVOKE ALL ... FROM PUBLIC y GRANT
+      SELECT unicamente a tpi_app; no cambia los privilegios de tpi_app sobre tpi.auditoria ni sobre ninguna
+      otra tabla. Antes de fijar los tipos, lee el escritor real (AgendaRepository._insert_cita_audit
+      en app/repositories/agenda_repository.py) y confirma las claves y el formato del detalle (fechas
+      ISO 8601 con zona horaria); si algun valor no se puede convertir de forma segura, detente y reporta:
+      no cambies el escritor. No se crea ningun indice nuevo salvo que lo justifiques por escrito en el
+      SQL (el indice de apoyo de la migracion 008 ya cubre accion, tabla_afectada, id_lead y fecha_hora).'
+  - id: AC-2
+    verification: automated
+    description: 'Reversa y pruebas de texto. Existe scripts/sql/011_drop_historial_agenda.sql, transaccional
+      e idempotente (DROP VIEW IF EXISTS), que no toca tpi.auditoria ni las otras vistas ni los privilegios
+      de tpi_app sobre otras tablas. Pruebas de texto sobre ambos scripts (modelo: tests/unit/test_sim_historial_migration_scripts.py)
+      en un archivo nuevo tests/unit/test_agenda_historial_migration_scripts.py: transaccionalidad, preflight,
+      filtro fijo con las cinco acciones, lista exacta de columnas, ausencia de detalle crudo e id_persona,
+      security_barrier, REVOKE a PUBLIC, GRANT solo a tpi_app y reversa idempotente.'
+  - id: AC-3
+    verification: automated
+    description: 'Pruebas de integracion contra PostgreSQL (modelo: tests/integration/test_audit_simulation_view.py),
+      con un rol de minimo privilegio. Las filas de auditoria se producen con el flujo REAL de la agenda
+      (agendar, reagendar, cancelar, marcar realizada y marcar no asistio a traves de AgendaRepository),
+      no con inserts escritos a mano, para que cualquier diferencia entre el escritor y la vista haga
+      fallar la prueba. Demuestran: la vista devuelve las cinco acciones del lead con sus columnas y tipos
+      (fechas con zona horaria, responsable_id y id_cita como uuid); solo devuelve acciones de la agenda
+      (una simulacion o un cambio de estado del mismo lead no aparece); filtra por lead; el rol de minimo
+      privilegio puede leer la vista pero no tpi.auditoria; la vista no tiene columnas de detalle, id_persona,
+      id_usuario ni ip_origen; y ninguna fila contiene el texto libre de la nota ni del motivo de cancelacion.'
+  - id: AC-4
+    verification: automated
+    description: Bootstrap de pruebas. scripts/init_test_database.py crea la misma vista (como ya crea
+      las de las migraciones 007 a 009) con el mismo DDL, para que las pruebas de integracion de esta
+      y de la tarea siguiente la tengan. El resto del bootstrap no cambia y las pruebas existentes de
+      la base siguen pasando.
+  - id: AC-5
+    verification: automated
+    description: Documentacion. docs/database/02_PHYSICAL_SCHEMA.md (la vista y su contrato), 04_MIGRATIONS.md
+      (inventario y notas de 011, con el procedimiento de aplicacion y reversa para el humano), docs/BITACORA.md
+      y CHANGELOG.md. docs/AGENDA_REUNIONES_DISENO.md anota que el historial del lead lee esta vista.
+  - id: AC-6
+    verification: human
+    description: 'Aplicacion en AWS DEV por el humano, con tpi_admin y el migration candidate congelado
+      (SHA exacto de main): preflight, aplicacion unica y postflight (la vista existe con security_barrier,
+      tpi_app tiene SELECT sobre la vista y sigue sin SELECT sobre tpi.auditoria). Luego consulta la vista
+      como tpi_app y comprueba que devuelve los eventos de agenda que ya existen en DEV por las pruebas.'
+  constraints:
+  - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar
+    desde ramas o worktrees antiguos.'
+  - 'change_class D: la migracion 011 y su aplicacion en AWS DEV no siguen ningun fast path; el humano
+    la aplica en DEV con el procedimiento de H3.3.4. Tu no la aplicas.'
+  - No asumir el numero de migracion. No modificar las migraciones 001 a 010 ni sus scripts de reversa.
+  - 'No modificar app/**: esta tarea no cambia el codigo de la aplicacion (el historial en pantalla es
+    CRM-AGENDA-4-HISTORIAL). Tampoco el escritor de auditoria de la agenda, deployment/**, IAM ni dependencias.'
+  - 'tpi_app nunca recibe SELECT, UPDATE ni DELETE sobre tpi.auditoria: la aplicacion lee solo vistas
+    sanitizadas. La vista no expone texto libre (la nota ni el motivo de cancelacion no estan en la auditoria
+    de la agenda y no deben llegar nunca).'
+  - 'No agregues secretos, claves ni usuarios reales al repositorio: los ejemplos son ficticios.'
+  - 'Lecciones del guard de las tareas anteriores: (1) .env.example no esta en tu alcance; documenta solo
+    en docs/**. (2) El payload de evidencia se escribe con Write en la ruta ABSOLUTA de la raiz de control
+    (C:\desarrollos\TPI\tpi_deep_agents\tpi-backend\.harness-runtime\payloads\developer.json), nunca dentro
+    del worktree. (3) progress/current.md se edita con Edit o Write, no con Python ni heredocs. (4) Ningun
+    comando de shell nombra paquetes o textos denegados por policies.yaml y no se crean archivos sueltos
+    en la raiz del worktree. (5) git commit va solo, sin encadenar otros comandos. (6) Si el guard registra
+    mas de un worktree de Developer, retira el viejo con scripts/harness/worktree.py remove antes de commitear.
+    Un DENIED es definitivo: detenerse y reportar.'
+  dependencies: []
+  risk:
+    level: low
+    notes: 'Vista aditiva de solo lectura sobre una tabla que ya existe, con el patron de minimo privilegio
+      ya probado en las migraciones 007 a 009 y reversa trivial. Riesgo principal: que la vista y el escritor
+      de auditoria se desalineen; mitigado por las pruebas de integracion que usan el flujo real de la
+      agenda.'
+  scope:
+    paths:
+    - scripts/sql/**
+    - scripts/init_test_database.py
+    - tests/**
+    - docs/database/**
+    - docs/AGENDA_REUNIONES_DISENO.md
+    - CHANGELOG.md
+    - docs/BITACORA.md
+  status: closed
+closure:
+  closed_at: '2026-10-27T14:26:57Z'
+  final_state: DONE
+  evidence_dir: evidence/CRM-AGENDA-4-HISTORIAL-MIGRACION
+  release:
+    release_sha: bfa288f63c3de6a0838fcf7b4a76770c6570f5d6
+    pr_number: 148
+  rework_rounds: 0

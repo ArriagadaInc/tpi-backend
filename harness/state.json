@@ -13,107 +13,19 @@
     "deployer": null
   },
   "worktrees": [],
-  "updated_at": "2026-10-27T12:21:37Z",
+  "updated_at": "2026-10-27T14:26:58Z",
   "last_transition": {
-    "at": "2026-10-27T12:21:37Z",
+    "at": "2026-10-27T14:26:58Z",
     "transition": "close",
     "event": "close",
     "from": "DONE",
     "to": "IDLE",
     "actor": "system",
     "runtime": "claude",
-    "session_id": "claude-202610271218-deployer-sup13df5c",
+    "session_id": "claude-202610271424-deployer-supadcef0",
     "evidence": null
   },
   "history": [
-    {
-      "at": "2026-10-26T22:15:22Z",
-      "transition": "merged_deploy",
-      "event": "merged",
-      "from": "MERGING",
-      "to": "PREPARING_DEPLOYMENT",
-      "actor": "deployer",
-      "runtime": "claude",
-      "session_id": "claude-202610262213-deployer-sup3e03d3",
-      "evidence": "evidence/CRM-AGENDA-2-CALENDARIO/deployment/merge-01.json"
-    },
-    {
-      "at": "2026-10-26T22:33:39Z",
-      "transition": "candidate_ready",
-      "event": "candidate_ready",
-      "from": "PREPARING_DEPLOYMENT",
-      "to": "CANDIDATE_REVIEW",
-      "actor": "deployer",
-      "runtime": "claude",
-      "session_id": "claude-202610262227-deployer-sup3e62b7",
-      "evidence": "evidence/CRM-AGENDA-2-CALENDARIO/deployment/candidate-01.json"
-    },
-    {
-      "at": "2026-10-26T22:38:49Z",
-      "transition": "candidate_approve",
-      "event": "candidate_approve",
-      "from": "CANDIDATE_REVIEW",
-      "to": "WAITING_HUMAN_APPROVAL",
-      "actor": "reviewer",
-      "runtime": "claude",
-      "session_id": "claude-202610262233-reviewer-supcc3cf4",
-      "evidence": "evidence/CRM-AGENDA-2-CALENDARIO/reviewer/candidate_review-01.json"
-    },
-    {
-      "at": "2026-10-26T22:39:50Z",
-      "transition": "human_approve",
-      "event": "human_approve",
-      "from": "WAITING_HUMAN_APPROVAL",
-      "to": "DEPLOYING",
-      "actor": "human",
-      "runtime": null,
-      "session_id": null,
-      "evidence": "evidence/CRM-AGENDA-2-CALENDARIO/approvals/approval-01.json"
-    },
-    {
-      "at": "2026-10-26T22:45:25Z",
-      "transition": "deploy_succeeded",
-      "event": "deploy_succeeded",
-      "from": "DEPLOYING",
-      "to": "VERIFYING",
-      "actor": "deployer",
-      "runtime": "claude",
-      "session_id": "claude-202610262240-deployer-sup827bbb",
-      "evidence": "evidence/CRM-AGENDA-2-CALENDARIO/deployment/deployment-01.json"
-    },
-    {
-      "at": "2026-10-26T23:08:21Z",
-      "transition": "verified",
-      "event": "verified",
-      "from": "VERIFYING",
-      "to": "DONE",
-      "actor": "deployer",
-      "runtime": "claude",
-      "session_id": "claude-202610262304-deployer-sup4cc533",
-      "evidence": "evidence/CRM-AGENDA-2-CALENDARIO/deployment/verification-02.json"
-    },
-    {
-      "at": "2026-10-26T23:08:24Z",
-      "transition": "close",
-      "event": "close",
-      "from": "DONE",
-      "to": "IDLE",
-      "actor": "system",
-      "runtime": "claude",
-      "session_id": "claude-202610262304-deployer-sup4cc533",
-      "evidence": null
-    },
-    {
-      "at": "2026-10-27T01:06:45Z",
-      "transition": "activate_task",
-      "event": "activate_task",
-      "from": "IDLE",
-      "to": "NEW",
-      "actor": "human",
-      "runtime": null,
-      "session_id": null,
-      "evidence": null
-    },
     {
       "at": "2026-10-27T01:10:11Z",
       "transition": "start_development",
@@ -244,6 +156,94 @@
       "actor": "system",
       "runtime": "claude",
       "session_id": "claude-202610271218-deployer-sup13df5c",
+      "evidence": null
+    },
+    {
+      "at": "2026-10-27T13:40:51Z",
+      "transition": "activate_task",
+      "event": "activate_task",
+      "from": "IDLE",
+      "to": "NEW",
+      "actor": "human",
+      "runtime": null,
+      "session_id": null,
+      "evidence": null
+    },
+    {
+      "at": "2026-10-27T13:48:39Z",
+      "transition": "start_development",
+      "event": "start_development",
+      "from": "NEW",
+      "to": "DEVELOPING",
+      "actor": "developer",
+      "runtime": "other",
+      "session_id": "other-202610271345-developer-supc8f156",
+      "evidence": null
+    },
+    {
+      "at": "2026-10-27T14:21:16Z",
+      "transition": "submit_for_review",
+      "event": "submit_for_review",
+      "from": "DEVELOPING",
+      "to": "READY_FOR_REVIEW",
+      "actor": "developer",
+      "runtime": "other",
+      "session_id": "other-202610271345-developer-supc8f156",
+      "evidence": "evidence/CRM-AGENDA-4-HISTORIAL-MIGRACION/developer/developer-01.json"
+    },
+    {
+      "at": "2026-10-27T14:22:04Z",
+      "transition": "start_review",
+      "event": "start_review",
+      "from": "READY_FOR_REVIEW",
+      "to": "REVIEWING",
+      "actor": "reviewer",
+      "runtime": "claude",
+      "session_id": "claude-202610271421-reviewer-sup473120",
+      "evidence": null
+    },
+    {
+      "at": "2026-10-27T14:24:32Z",
+      "transition": "review_approve",
+      "event": "review_approve",
+      "from": "REVIEWING",
+      "to": "REVIEW_APPROVED",
+      "actor": "reviewer",
+      "runtime": "claude",
+      "session_id": "claude-202610271421-reviewer-sup473120",
+      "evidence": "evidence/CRM-AGENDA-4-HISTORIAL-MIGRACION/reviewer/review-01.json"
+    },
+    {
+      "at": "2026-10-27T14:25:27Z",
+      "transition": "start_merge",
+      "event": "start_merge",
+      "from": "REVIEW_APPROVED",
+      "to": "MERGING",
+      "actor": "deployer",
+      "runtime": "claude",
+      "session_id": "claude-202610271424-deployer-supadcef0",
+      "evidence": null
+    },
+    {
+      "at": "2026-10-27T14:26:57Z",
+      "transition": "merged_no_deploy",
+      "event": "merged",
+      "from": "MERGING",
+      "to": "DONE",
+      "actor": "deployer",
+      "runtime": "claude",
+      "session_id": "claude-202610271424-deployer-supadcef0",
+      "evidence": "evidence/CRM-AGENDA-4-HISTORIAL-MIGRACION/deployment/merge-01.json"
+    },
+    {
+      "at": "2026-10-27T14:26:58Z",
+      "transition": "close",
+      "event": "close",
+      "from": "DONE",
+      "to": "IDLE",
+      "actor": "system",
+      "runtime": "claude",
+      "session_id": "claude-202610271424-deployer-supadcef0",
       "evidence": null
     }
   ]
