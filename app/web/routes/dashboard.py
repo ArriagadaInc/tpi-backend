@@ -32,6 +32,8 @@ from app.web.dashboard_presentation import (
     SCOPE_EXPLANATION,
     build_age_ladder,
     build_alert_views,
+    build_asesor_cell_groups,
+    build_asesor_groups,
     build_categoria_rows,
     build_estado_rows,
     build_funnel_rows,
@@ -285,6 +287,10 @@ def executive_dashboard(request: Request) -> HTMLResponse:
 
     snapshot = dashboard.current_snapshot
     period = dashboard.period_activity
+    asesor_groups, sin_asesor_rows = build_asesor_groups(snapshot.cartera_por_asesor)
+    asesor_cell_groups, sin_asesor_cells = build_asesor_cell_groups(
+        snapshot.casos_por_estado_y_asesor
+    )
     context.update(
         {
             "dashboard": dashboard,
@@ -306,6 +312,10 @@ def executive_dashboard(request: Request) -> HTMLResponse:
             "funnel_unavailable_title": FUNNEL_UNAVAILABLE_TITLE,
             "funnel_unavailable_reason": funnel_unavailable_reason(period.funnel),
             "asesor_rows": snapshot.cartera_por_asesor,
+            "asesor_groups": asesor_groups,
+            "sin_asesor_rows": sin_asesor_rows,
+            "asesor_cell_groups": asesor_cell_groups,
+            "sin_asesor_cells": sin_asesor_cells,
             "kpi_total": format_int(snapshot.total_leads),
             "kpi_ingresados": format_int(period.leads_ingresados),
             "kpi_cartera_activa": format_int(snapshot.cartera_activa),

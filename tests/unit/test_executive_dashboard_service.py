@@ -236,3 +236,67 @@ def test_contract_uses_only_mvp_categories() -> None:
     snapshot_keys = set(dashboard.current_snapshot.__dataclass_fields__)
     assert "genero" not in snapshot_keys
     assert "estado_civil" not in snapshot_keys
+
+
+# --------------------------------------------------------------------------- #
+# Agrupacion por perfil (AC-5)
+# --------------------------------------------------------------------------- #
+
+
+def test_grupo_clasifica_por_rol_y_atiende_reuniones() -> None:
+    service, _ = _service()
+    assert service._grupo("asesor", True) == "coordinador"
+    assert service._grupo("asesor", False) == "runner"
+    assert service._grupo("socio", False) == "socio"
+    # Cualquier valor inesperado cae en runner para no ocultar filas.
+    assert service._grupo("otro", True) == "runner"
+
+
+def test_grupo_de_row_es_sin_asesor_cuando_no_hay_asignacion() -> None:
+    service, _ = _service()
+    assert service._grupo_de_row({"id_asesor": None}) == "sin_asesor"
+    assert (
+        service._grupo_de_row({"id_asesor": "x", "rol": "asesor", "atiende_reuniones": True})
+        == "coordinador"
+    )
+
+
+def test_build_asesores_computa_grupo_en_cada_fila() -> None:
+    class _Repo:
+        def get_cartera_por_asesor(self, filters):
+            return [
+                {
+                    "id_asesor": None,
+                    "nombre": None,
+                    "rol": None,
+                    "atiende_reuniones": None,
+                    "cartera_total": 3,
+                    "cartera_activa": 3,
+                },
+                {
+                    "id_asesor": "c1",
+                    "nombre": "Coord",
+                    "rol": "asesor",
+                    "atiende_reuniones": True,
+                    "cartera_total": 5,
+                    "cartera_activa": 2,
+                },
+                {
+                    "id_asesor": "r1",
+                    "nombre": "Runner",
+                    "rol": "asesor",
+                    "atiende_reuniones": False,
+                    "cartera_total": 4,
+                    "cartera_activa": 1,
+                },
+            ]
+
+        def get_metricas_operacionales_por_asesor(self, filters, threshold_days, cutover):
+            return []
+
+    service = ExecutiveDashboardService(repository=_Repo(), settings=_settings())
+    rows = service._build_asesores(DashboardFilters.from_raw())
+    by_id = {row.id_asesor: row for row in rows}
+    assert by_id[None].grupo == "sin_asesor"
+    assert by_id["c1"].grupo == "coordinador"
+    assert by_id["r1"].grupo == "runner"

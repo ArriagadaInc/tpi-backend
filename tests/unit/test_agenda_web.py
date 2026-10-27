@@ -151,6 +151,9 @@ class FakeAgendaRepo:
     def list_citas(self, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:
         return list(self.citas_rows)
 
+    def get_lead_agenda_events(self, id_lead: UUID) -> list[dict[str, Any]]:
+        return []
+
     def lead_active_assignment_owner(self, id_lead: UUID) -> UUID | None:
         return self.ownership.get(id_lead)
 

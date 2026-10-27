@@ -90,3 +90,31 @@ Cada acción deja un evento en `tpi.auditoria` (`tabla_afectada = 'tpi.citas'`):
 `cita_agendada`, `cita_reagendada`, `cita_cancelada`, `cita_realizada` y `cita_no_asistio`,
 con el sujeto que actuó, el identificador de la reunión, el responsable y las horas
 anterior y nueva. El detalle no lleva nombre ni datos personales del lead.
+
+## 7. Historial del lead (Seguimiento y Notas Internas)
+
+Los eventos de la agenda también aparecen en la línea de tiempo del historial del lead,
+mezclados en orden cronológico con las notas humanas, los cambios de estado y las
+simulaciones. La aplicación **nunca** lee `tpi.auditoria` directamente para esto: lee la
+vista de solo lectura `tpi.v_historial_agenda` (migración 011), que solo expone las cinco
+acciones de la agenda con sus columnas sanitizadas, unida a `tpi.asesores` para el nombre
+del responsable.
+
+Cada evento se muestra con la insignia «Automático» y el actor, con estos textos (fechas en
+`DD/MM/AAAA HH:MM`, hora de Santiago):
+
+| Acción | Texto |
+|---|---|
+| Agendada | `Reunión agendada para <fecha> con <responsable>` |
+| Reagendada | `Reunión reagendada: <fecha anterior> → <fecha nueva> (con <responsable>)` |
+| Cancelada | `Reunión cancelada (era el <fecha> con <responsable>)` |
+| Realizada | `Reunión realizada (<fecha> con <responsable>)` |
+| No asistió | `El lead no asistió a la reunión (<fecha> con <responsable>)` |
+
+Si el responsable no se puede resolver, se escribe «responsable no disponible». No se
+muestran la nota ni el motivo de cancelación (no están en la auditoría de la agenda) ni
+ningún id interno. Los eventos se cargan solo cuando el usuario puede abrir el lead (el
+mismo control de alcance del detalle): un Runner no ve eventos de un lead de otra cartera.
+Si la lectura de la vista falla, el detalle sigue funcionando (200) con el resto del
+historial, sin las líneas de agenda y sin registrar el error.
+

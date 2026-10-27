@@ -169,7 +169,7 @@
               <div class="timeline-meta">
                 <span>{{ item.display_time }}</span>
                 <span>·</span>
-                {% if item.kind == 'event' or item.kind == 'state_change' or item.kind == 'simulation' %}
+                {% if item.kind == 'event' or item.kind == 'state_change' or item.kind == 'simulation' or item.kind == 'agenda' %}
                   <span class="timeline-badge-auto">Automático</span>
                   <span class="timeline-author">{{ item.actor }}</span>
                 {% else %}
@@ -248,6 +248,19 @@
                     </dl>
                   </div>
                 </details>
+                {% endif %}
+              {% elif item.kind == 'agenda' %}
+                {% set responsable = item.responsable or 'responsable no disponible' %}
+                {% if item.accion == 'cita_agendada' %}
+                  <div class="timeline-text">Reunión agendada para {{ item.fecha_reunion }} con {{ responsable }}</div>
+                {% elif item.accion == 'cita_reagendada' %}
+                  <div class="timeline-text">Reunión reagendada: {{ item.fecha_anterior }} → {{ item.fecha_reunion }} (con {{ responsable }})</div>
+                {% elif item.accion == 'cita_cancelada' %}
+                  <div class="timeline-text">Reunión cancelada (era el {{ item.fecha_reunion }} con {{ responsable }})</div>
+                {% elif item.accion == 'cita_realizada' %}
+                  <div class="timeline-text">Reunión realizada ({{ item.fecha_reunion }} con {{ responsable }})</div>
+                {% elif item.accion == 'cita_no_asistio' %}
+                  <div class="timeline-text">El lead no asistió a la reunión ({{ item.fecha_reunion }} con {{ responsable }})</div>
                 {% endif %}
               {% else %}
                 <div class="timeline-text">{{ item.text }}</div>

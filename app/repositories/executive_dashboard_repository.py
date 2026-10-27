@@ -395,6 +395,8 @@ class ExecutiveDashboardRepository:
             SELECT
                 aa.id_asesor,
                 ases.nombre AS nombre,
+                ases.rol AS rol,
+                ases.atiende_reuniones AS atiende_reuniones,
                 COUNT(DISTINCT l.id_lead) AS cartera_total,
                 COUNT(DISTINCT l.id_lead) FILTER (
                     WHERE LOWER(TRIM(l.estado_lead)) NOT IN ({cartera_inactiva})
@@ -403,7 +405,7 @@ class ExecutiveDashboardRepository:
             LEFT JOIN active_assignment aa ON aa.id_lead = l.id_lead
             LEFT JOIN tpi.asesores ases ON ases.id_asesor = aa.id_asesor
             {where}
-            GROUP BY aa.id_asesor, ases.nombre
+            GROUP BY aa.id_asesor, ases.nombre, ases.rol, ases.atiende_reuniones
             ORDER BY cartera_total DESC, ases.nombre ASC
             """).format(
             cte=sql.SQL(cte),
@@ -466,6 +468,8 @@ class ExecutiveDashboardRepository:
             WITH {cte}
             SELECT
                 aa.id_asesor,
+                ases.rol AS rol,
+                ases.atiende_reuniones AS atiende_reuniones,
                 COUNT(DISTINCT l.id_lead) FILTER (WHERE {estancado}) AS estancados,
                 COUNT(fa.first_ts) AS n_asignacion,
                 AVG(EXTRACT(EPOCH FROM (fa.first_ts - l.fecha_ingreso)) / 86400.0)
@@ -475,6 +479,7 @@ class ExecutiveDashboardRepository:
                     AS tiempo_primera_gestion_dias
             FROM tpi.leads l
             LEFT JOIN active_assignment aa ON aa.id_lead = l.id_lead
+            LEFT JOIN tpi.asesores ases ON ases.id_asesor = aa.id_asesor
             LEFT JOIN LATERAL (
                 SELECT MIN(a.fecha_asignacion) AS first_ts
                 FROM tpi.asignaciones a
@@ -482,7 +487,7 @@ class ExecutiveDashboardRepository:
             ) fa ON TRUE
             {gestion_join}
             {where}
-            GROUP BY aa.id_asesor
+            GROUP BY aa.id_asesor, ases.rol, ases.atiende_reuniones
             """).format(
             cte=sql.SQL(cte),
             estancado=sql.SQL(estancado_predicate("l")),
@@ -553,13 +558,15 @@ class ExecutiveDashboardRepository:
             SELECT
                 aa.id_asesor,
                 ases.nombre AS nombre,
+                ases.rol AS rol,
+                ases.atiende_reuniones AS atiende_reuniones,
                 l.estado_lead AS estado,
                 COUNT(DISTINCT l.id_lead) AS n
             FROM tpi.leads l
             LEFT JOIN active_assignment aa ON aa.id_lead = l.id_lead
             LEFT JOIN tpi.asesores ases ON ases.id_asesor = aa.id_asesor
             {where}
-            GROUP BY aa.id_asesor, ases.nombre, l.estado_lead
+            GROUP BY aa.id_asesor, ases.nombre, ases.rol, ases.atiende_reuniones, l.estado_lead
             ORDER BY n DESC, ases.nombre ASC, l.estado_lead ASC
             """).format(cte=sql.SQL(cte), where=sql.SQL(where))
         params = [ASSIGNMENT_ACTIVE_STATE, *dimension_params]

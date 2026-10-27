@@ -57,6 +57,14 @@ PERIOD_SCOPE = "period_activity"
 _DEFAULT_GRANULARIDAD: DashboardGranularity = "diaria"
 _DEFAULT_ESTANCAMIENTO_DIAS = 5
 
+# Grupos del resumen por asesor (CRM-AGENDA-4-HISTORIAL, AC-5).
+# Coordinador = rol 'asesor' + atiende_reuniones; Runner = rol 'asesor' sin la marca;
+# Socio = rol 'socio' (no tiene cartera; solo defensivo); sin_asesor = sin asignacion activa.
+GRUPO_COORDINADOR = "coordinador"
+GRUPO_RUNNER = "runner"
+GRUPO_SOCIO = "socio"
+GRUPO_SIN_ASESOR = "sin_asesor"
+
 
 def granularity_sql_field(granularidad: str) -> str:
     """Return the whitelisted SQL date_trunc field for a granularity value."""
@@ -216,6 +224,11 @@ class AsesorRow:
     Only the visible name is exposed (CEO/CTO surface); never RUT, e-mail or
     phone. ``tiempo_*_dias`` is ``None`` when the underlying event does not exist
     for any lead of that advisor, and is then rendered as ``N/D`` — never zero.
+
+    ``grupo`` is computed by the service from ``rol`` + ``atiende_reuniones``
+    (AC-5): Coordinador = ``rol='asesor'`` y ``atiende_reuniones=true``; Runner =
+    ``rol='asesor'`` y ``atiende_reuniones=false``; Socio = ``rol='socio'``;
+    ``sin_asesor`` agrupa los leads sin asignacion activa.
     """
 
     id_asesor: str | None
@@ -227,6 +240,7 @@ class AsesorRow:
     tiempo_asignacion_dias: float | None = None
     n_primera_gestion: int = 0
     tiempo_primera_gestion_dias: float | None = None
+    grupo: str = GRUPO_RUNNER
 
 
 @dataclass(frozen=True, slots=True)
@@ -236,6 +250,7 @@ class EstadoAsesorCell:
     estado: str
     estado_label: str
     n: int
+    grupo: str = GRUPO_RUNNER
 
 
 @dataclass(frozen=True, slots=True)

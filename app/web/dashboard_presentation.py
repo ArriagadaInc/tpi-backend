@@ -30,9 +30,13 @@ from app.models.executive_dashboard import (
     FUNNEL_SIN_CUTOVER,
     FUNNEL_SIN_PERIODO,
     FUNNEL_SIN_TRANSICIONES,
+    GRUPO_COORDINADOR,
+    GRUPO_SOCIO,
     AlertTarget,
     AntiguedadBucket,
+    AsesorRow,
     DistribucionBucket,
+    EstadoAsesorCell,
     EstadoBucket,
     EvolucionPoint,
     Funnel,
@@ -503,3 +507,98 @@ def build_alert_views(
             )
         )
     return views
+
+
+# --------------------------------------------------------------------------- #
+# Advisor groups (Coordinadores / Runners, AC-5)
+# --------------------------------------------------------------------------- #
+
+
+@dataclass(frozen=True, slots=True)
+class AsesorGroupView:
+    titulo: str
+    empty_label: str
+    rows: tuple[AsesorRow, ...]
+    subtotal_cartera_total: int
+    subtotal_cartera_activa: int
+    subtotal_estancados: int
+
+
+def _asesor_group(titulo: str, empty_label: str, rows: Sequence[AsesorRow]) -> AsesorGroupView:
+    return AsesorGroupView(
+        titulo=titulo,
+        empty_label=empty_label,
+        rows=tuple(rows),
+        subtotal_cartera_total=sum(row.cartera_total for row in rows),
+        subtotal_cartera_activa=sum(row.cartera_activa for row in rows),
+        subtotal_estancados=sum(row.estancados for row in rows),
+    )
+
+
+def build_asesor_groups(
+    rows: Sequence[AsesorRow],
+) -> tuple[list[AsesorGroupView], list[AsesorRow]]:
+    """Agrupa el resumen por asesor en Coordinadores y Runners (y Socios si aparecen).
+
+    ``Sin asesor`` se devuelve aparte (segunda posicion), como hoy. El subtotal suma
+    solo los conteos (cartera total, cartera activa y estancados); los tiempos promedio
+    no se suman y la plantilla los muestra como ``—``.
+    """
+    coordinadores: list[AsesorRow] = []
+    runners: list[AsesorRow] = []
+    socios: list[AsesorRow] = []
+    sin_asesor: list[AsesorRow] = []
+    for row in rows:
+        if row.id_asesor is None:
+            sin_asesor.append(row)
+        elif row.grupo == GRUPO_SOCIO:
+            socios.append(row)
+        elif row.grupo == GRUPO_COORDINADOR:
+            coordinadores.append(row)
+        else:
+            runners.append(row)
+
+    groups = [
+        _asesor_group("Coordinadores", "Sin coordinadores con cartera", coordinadores),
+        _asesor_group("Runners", "Sin runners con cartera", runners),
+    ]
+    if socios:
+        groups.append(_asesor_group("Socios", "Sin socios con cartera", socios))
+    return groups, sin_asesor
+
+
+@dataclass(frozen=True, slots=True)
+class AsesorCellGroupView:
+    titulo: str
+    cells: tuple[EstadoAsesorCell, ...]
+
+
+def build_asesor_cell_groups(
+    cells: Sequence[EstadoAsesorCell],
+) -> tuple[list[AsesorCellGroupView], list[EstadoAsesorCell]]:
+    """Agrupa la matriz 'casos por estado y asesor' por el mismo perfil (AC-5).
+
+    ``Sin asesor`` se devuelve aparte, como hoy; el detalle no lleva subtotal porque
+    sus columnas (Asesor, Estado, Leads) son todas de conteo por celda.
+    """
+    coordinadores: list[EstadoAsesorCell] = []
+    runners: list[EstadoAsesorCell] = []
+    socios: list[EstadoAsesorCell] = []
+    sin_asesor: list[EstadoAsesorCell] = []
+    for cell in cells:
+        if cell.id_asesor is None:
+            sin_asesor.append(cell)
+        elif cell.grupo == GRUPO_SOCIO:
+            socios.append(cell)
+        elif cell.grupo == GRUPO_COORDINADOR:
+            coordinadores.append(cell)
+        else:
+            runners.append(cell)
+
+    groups = [
+        AsesorCellGroupView("Coordinadores", tuple(coordinadores)),
+        AsesorCellGroupView("Runners", tuple(runners)),
+    ]
+    if socios:
+        groups.append(AsesorCellGroupView("Socios", tuple(socios)))
+    return groups, sin_asesor

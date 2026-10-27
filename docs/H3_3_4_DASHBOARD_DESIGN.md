@@ -205,6 +205,26 @@ de lectura del CRM existente.
 | 11 | Aviso de cobertura | ¿Desde cuándo son confiables el funnel y los tiempos? | fecha de cutover de la migración 008 | — | Banner informativo (`.notice-soft`), no un ícono suelto | Alta (para el CTO) | Ninguna | Ancho completo, texto que hace wrap normal | Es texto plano, ya accesible | Es requisito explícito (AC-15) que la cobertura sea visible y honesta, no un tecnicismo escondido |
 | 12 | Estados vacíos y de error | ¿Qué veo si no hay datos, hay un filtro sin resultados o falla una consulta? | — | — | Reutiliza `.empty-state` (cero datos) y `.alert-error` (error parcial) ya existentes en `leads_board.html`/`lead_detail.html` | Alta | El estado de error indica qué sección falló sin ocultar las demás que sí cargaron | Igual que el resto de la página | Mensaje de texto explícito, nunca solo un ícono | Consistencia: el CRM ya resuelve esto para leads; el dashboard no necesita un lenguaje nuevo |
 
+### Resumen por asesor: Coordinadores y Runners por separado (CRM-AGENDA-4-HISTORIAL)
+
+El «Resumen por asesor» (fila 10) y su detalle «Ver casos por estado y asesor» agrupan a los
+asesores por su perfil, calculado por el servicio a partir de `tpi.asesores` (que trae `rol`
+y `atiende_reuniones` en las mismas consultas, sin consultas nuevas):
+
+- **Coordinadores**: `rol = 'asesor'` y `atiende_reuniones = true`.
+- **Runners**: `rol = 'asesor'` y `atiende_reuniones = false`.
+- **Socios**: `rol = 'socio'`; no tienen cartera asignada y no aparecen. Solo si por datos
+  inesperados un Socio tuviera leads asignados, se muestra un tercer grupo «Socios» para no
+  ocultar ningún lead.
+
+Cada grupo tiene su título, su tabla con las mismas columnas de hoy y una fila de subtotal
+que suma solo los conteos (cartera total, cartera activa y estancados); las columnas de
+tiempos promedio no se suman y el subtotal muestra «—». Un grupo sin cartera muestra su
+estado vacío («Sin coordinadores con cartera» / «Sin runners con cartera»). «Sin asesor»
+sigue aparte, como hoy. Se conservan `N/D` nunca como cero, los filtros, el nombre del
+asesor visible solo para CEO/CTO, la ausencia de datos personales y el manejo de sección
+fallida.
+
 ---
 
 ## 6. Visualizaciones: criterio aplicado

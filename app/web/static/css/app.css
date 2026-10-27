@@ -1700,6 +1700,29 @@ a.bar-label:hover {
   overflow-wrap: anywhere;
 }
 
+.asesor-group {
+  margin-top: var(--space-4);
+}
+
+.asesor-group:first-child {
+  margin-top: 0;
+}
+
+.asesor-group-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.asesor-subtotal th,
+.asesor-subtotal td {
+  border-top: 2px solid var(--border);
+  font-weight: var(--weight-bold);
+}
+
 .table-foot-note {
   margin-top: var(--space-2);
   color: var(--muted);
