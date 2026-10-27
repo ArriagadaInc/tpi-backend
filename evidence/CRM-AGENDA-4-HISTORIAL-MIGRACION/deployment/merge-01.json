@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "CRM-AGENDA-4-HISTORIAL-MIGRACION",
+  "created_at": "2026-10-27T14:26:23Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610271424-deployer-supadcef0",
+  "pr_number": 148,
+  "reviewed_sha": "57406d5df03f2f06d36e2d4a15ca1b28b0d466b4",
+  "reviewed_tree": "b5d95fed7d374899535dc345211b30f156f6404e",
+  "release_sha": "bfa288f63c3de6a0838fcf7b4a76770c6570f5d6",
+  "release_tree": "b5d95fed7d374899535dc345211b30f156f6404e",
+  "main_parent_sha": "736c7e4ab30a8478230067d6ab13e0447a495ff3",
+  "method": "squash",
+  "match_head_commit_used": true
+}

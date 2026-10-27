@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "CRM-AGENDA-4-HISTORIAL-MIGRACION",
+  "created_at": "2026-10-27T14:20:50Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610271345-developer-supc8f156",
+  "head_sha": "57406d5df03f2f06d36e2d4a15ca1b28b0d466b4",
+  "branch": "harness/CRM-AGENDA-4-HISTORIAL-MIGRACION-historial-migracion",
+  "pr_number": 148,
+  "change_class": "D",
+  "tests": {
+    "command": "pytest tests/unit/test_agenda_historial_migration_scripts.py -q --no-cov (local, 8 passed) + pytest tests/ --cov=app --cov-fail-under=85 (CI del PR #148, verde)",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "docker_compose_config": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "scripts/sql/011_create_historial_agenda.sql (011 libre, verificado contra scripts/sql y la historia git): transaccional, preflight/postflight igual que 009, vista tpi.v_historial_agenda WITH (security_barrier = true), filtro accion IN (las cinco acciones) AND tabla_afectada = 'tpi.citas', columnas id_auditoria/id_lead/fecha_hora/accion/actor_subject/id_cita(uuid)/responsable_id(uuid nullable)/estado_anterior/estado_nuevo/fecha_hora_anterior/fecha_hora_nueva (timestamptz nullable), REVOKE ALL FROM PUBLIC y GRANT SELECT solo a tpi_app, sin indice nuevo. Tipos fijados tras leer AgendaRepository._insert_cita_audit (ISO 8601 con zona horaria o null)."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "scripts/sql/011_drop_historial_agenda.sql (transaccional, idempotente DROP VIEW IF EXISTS, no toca auditoria ni otras vistas) + tests/unit/test_agenda_historial_migration_scripts.py (transaccionalidad, preflight, filtro fijo, columnas exactas, ausencia de detalle/id_persona/id_usuario/ip_origen, security_barrier, REVOKE/Grant, reversa idempotente)."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "tests/integration/test_agenda_historial_view.py: filas producidas con el flujo real de AgendaRepository (agendar, reagendar, cancelar, realizada y no asistio); demuestra las cinco acciones con columnas y tipos, filtro por lead y por accion (simulacion/cambio de estado no aparecen), rol de minimo privilegio (lee la vista, no auditoria), sin columnas de detalle/PII, y que la nota/motivo no llegan a la vista. Verde en CI del PR #148."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "scripts/init_test_database.py crea tpi.v_historial_agenda con el mismo DDL de la migracion 011 (sin preflight/postflight ni grant a tpi_app); el resto del bootstrap no cambia."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "docs/database/02_PHYSICAL_SCHEMA.md (vista y contrato), docs/database/04_MIGRATIONS.md (inventario y notas de 011 con procedimiento de aplicacion y reversa), docs/BITACORA.md, CHANGELOG.md y docs/AGENDA_REUNIONES_DISENO.md (el historial del lead lee esta vista)."
+    },
+    {
+      "id": "AC-6",
+      "status": "pending_verification",
+      "evidence": "Aplicacion en AWS DEV por el humano con tpi_admin y el migration candidate congelado (SHA exacto de main): preflight, aplicacion unica y postflight. Fuera del alcance del Developer."
+    }
+  ],
+  "files_changed": [
+    "scripts/sql/011_create_historial_agenda.sql",
+    "scripts/sql/011_drop_historial_agenda.sql",
+    "scripts/init_test_database.py",
+    "tests/unit/test_agenda_historial_migration_scripts.py",
+    "tests/integration/test_agenda_historial_view.py",
+    "docs/database/02_PHYSICAL_SCHEMA.md",
+    "docs/database/04_MIGRATIONS.md",
+    "docs/AGENDA_REUNIONES_DISENO.md",
+    "docs/BITACORA.md",
+    "CHANGELOG.md"
+  ],
+  "assumptions": [
+    "El numero 011 estaba libre (inspeccionados scripts/sql/ y la historia git antes de crearlo).",
+    "El escritor real AgendaRepository._insert_cita_audit guarda fecha_hora_anterior/fecha_hora_nueva como ISO 8601 con zona horaria (datetime.isoformat() de datetime timezone-aware) o JSON null; ambos valores se convierten de forma segura a timestamptz, por eso la vista los proyecta con un cast directo.",
+    "Las pruebas de integracion requieren PostgreSQL y corren en CI (PostgreSQL 15, usuario tpi_app); no se ejecutan localmente sin base de datos.",
+    "La nota y el motivo de cancelacion no se registran en la auditoria de la agenda (solo en tpi.citas), por lo que la vista, que lee unicamente tpi.auditoria, no los expone."
+  ],
+  "migrations_included": true
+}

@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "CRM-AGENDA-4-HISTORIAL-MIGRACION",
+  "created_at": "2026-10-27T14:24:13Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610271421-reviewer-sup473120",
+  "reviewed_sha": "57406d5df03f2f06d36e2d4a15ca1b28b0d466b4",
+  "reviewed_tree": "b5d95fed7d374899535dc345211b30f156f6404e",
+  "pr_number": 148,
+  "ci": {
+    "run_id": "40518838168",
+    "conclusion": "success",
+    "head_sha": "57406d5df03f2f06d36e2d4a15ca1b28b0d466b4",
+    "event": "pull_request",
+    "jobs": [
+      "Docker Build",
+      "Lint & Format",
+      "Release Tooling Validation",
+      "Security Audit",
+      "Tests"
+    ]
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "info",
+      "file": "scripts/sql/011_create_historial_agenda.sql",
+      "summary": "id_cita y responsable_id se protegen con CASE + regex de UUID antes del cast, pero fecha_hora_anterior y fecha_hora_nueva usan un cast directo a timestamptz. Si alguna vez existiera en tpi.auditoria una fila de agenda con un valor de fecha no convertible, la consulta completa sobre la vista fallaria. Hoy el unico escritor (AgendaRepository._insert_cita_audit) emite datetime.isoformat() de valores timezone-aware o null, y las pruebas de integracion producen las filas con ese escritor real, asi que el riesgo es teorico. Lo que la tarea pedia (confirmar el formato antes de fijar el tipo) se cumplio.",
+      "required_action": "Ninguna. Si en el futuro otro escritor agrega eventos de agenda, debe mantener ISO 8601 con zona horaria."
+    },
+    {
+      "id": "R2",
+      "severity": "info",
+      "file": "tests/integration/test_agenda_historial_view.py",
+      "summary": "La comprobacion de que el rol de minimo privilegio no puede leer tpi.auditoria usa pytest.raises(Exception) en vez de la excepcion de privilegio concreta. Ademas, test_view_privileges_public_and_app_only valida privilegios con has_table_privilege y lectura efectiva, que es lo relevante. Las filas negativas (simulacion y cambio de estado) se insertan a mano, lo cual es correcto porque no son eventos de agenda; las cinco acciones de agenda salen del flujo real.",
+      "required_action": "Ninguna; mejora opcional en una tarea futura (usar psycopg.errors.InsufficientPrivilege)."
+    }
+  ],
+  "checks": [
+    {
+      "name": "exact_sha: PR #148 OPEN, headRefOid == 57406d5df03f == head_sha de developer-01; worktree del reviewer en ese SHA",
+      "result": "PASS"
+    },
+    {
+      "name": "ci_green_exact_sha: run 40518838168 success sobre 57406d5d; 5 jobs pass; Tests 2331 passed, 17 skipped, cobertura 91.62% (>= 85); las 5 pruebas de integracion y las 8 de texto nuevas corren y pasan en CI (no se saltan)",
+      "result": "PASS"
+    },
+    {
+      "name": "branch_up_to_date_with_main: merge-base == origin/main 736c7e4; MERGEABLE",
+      "result": "PASS"
+    },
+    {
+      "name": "scope: 10 archivos en scripts/sql/**, scripts/init_test_database.py, tests/**, docs/database/**, docs/AGENDA_REUNIONES_DISENO.md, docs/BITACORA.md y CHANGELOG.md; sin app/**, deployment/**, dependencias ni migraciones 001-010 modificadas",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-1: 011 libre (scripts/sql tenia hasta 010); forward transaccional con preflight/postflight identicos a 009; vista WITH security_barrier, filtro fijo de las cinco acciones + tabla_afectada = 'tpi.citas'; 11 columnas exactas con id_cita/responsable_id uuid y fechas timestamptz; sin detalle crudo, id_persona, id_usuario ni ip_origen; REVOKE ALL FROM PUBLIC y GRANT SELECT solo a tpi_app; sin GRANT sobre auditoria; sin indice nuevo, justificado por auditoria_state_history_idx de 008 (verificado en 008). Claves y formato contrastados con AgendaRepository._insert_cita_audit (isoformat o null; str(UUID) o null)",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-2: 011_drop transaccional, idempotente (guarda EXISTS en pg_views + DROP VIEW IF EXISTS), solo REVOKE de la vista y DROP; tests/unit/test_agenda_historial_migration_scripts.py cubre transaccionalidad, preflight, filtro, columnas, ausencias, security_barrier, REVOKE/GRANT, sin indice y reversa",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-3: tests/integration/test_agenda_historial_view.py produce las cinco acciones con create_cita, update_cita, cancel_cita, complete_cita y no_show_cita de AgendaRepository; valida conjunto exacto de columnas y tipos (UUID, datetime con tzinfo), solo acciones de agenda, filtro por lead, rol de minimo privilegio lee la vista y no tpi.auditoria, nota y motivo unicos no aparecen en ninguna fila, reversa sin tocar auditoria ni otras vistas",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-4: init_test_database.py agrega la misma vista con DDL identico al de 011 (sin preflight/postflight ni grant, igual que 007-009) y REVOKE a PUBLIC; resto del bootstrap sin cambios; suite completa verde en CI",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-5: 02_PHYSICAL_SCHEMA.md, 04_MIGRATIONS.md (inventario, notas de 011, procedimiento de aplicacion y reversa para el humano, estado no aplicada en DEV), BITACORA.md, CHANGELOG.md y AGENDA_REUNIONES_DISENO.md actualizados",
+      "result": "PASS"
+    },
+    {
+      "name": "security_pii: tpi_app sigue sin SELECT/UPDATE/DELETE sobre tpi.auditoria (pre y postflight lo exigen); la vista no expone texto libre ni PII; sin secretos en el diff; ejemplos ficticios",
+      "result": "PASS"
+    },
+    {
+      "name": "migrations: no se modifican 001-010; 005/006 no se reejecutan; aplicacion en AWS queda para el humano (db_path)",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "change_class D: la migracion 011 la aplica el humano en AWS DEV con tpi_admin y el SHA exacto de main (AC-6); hasta entonces la vista no existe en DEV y CRM-AGENDA-4-HISTORIAL no debe desplegarse.",
+    "Cast directo de fechas a timestamptz en la vista depende de que el escritor mantenga ISO 8601 con zona horaria (R1)."
+  ]
+}
