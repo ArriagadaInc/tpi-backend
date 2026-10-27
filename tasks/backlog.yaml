@@ -52,6 +52,110 @@ items:
   - TPI_Protocolo_Runners_Canal_Web.pdf, paginas 7 y 14 (respeto al no, Ley 21.719 desde el 1 de diciembre
     de 2026)
   - docs/ADJUNTOS_REVISION_PREPROD.md, punto 4 (retencion y borrado a solicitud del titular)
+- id: CRM-AGENDA-3-LOOK
+  title: 'CRM agenda 3: nuevo aspecto de la agenda y contraste del historial del lead'
+  priority: P3
+  category: functional
+  status: pending
+  change_class: A
+  summary: 'Aplica el aspecto aprobado de la agenda (cuadricula por horas, leyenda de responsables que filtra, resumen de la
+    semana, lista por dia, tarjeta Reunion y formulario nuevos) y el fondo mas oscuro del historial del lead. Solo estetica;
+    referencia exacta en docs/ui/referencia/agenda. Tarea definida y activable.'
+  evidence:
+  - docs/ui/referencia/agenda/README.md
+  - 'pedido del humano del 2026-10-26: look and feel moderno y facil de entender para el agendamiento, alineado con la UX del
+    CRM; y comentarios del historial con un fondo mas oscuro para que contrasten'
+  task:
+    id: CRM-AGENDA-3-LOOK
+    title: 'CRM agenda 3: nuevo aspecto de la agenda y contraste del historial del lead'
+    objective: 'Aplicar el aspecto aprobado por el humano el 2026-10-26 (referencia exacta en docs/ui/referencia/agenda/):
+      pagina Agenda con cuadricula por horas, leyenda de responsables que filtra, resumen de la semana y lista agrupada
+      por dia; tarjeta Reunion y formulario de agendar con el nuevo diseno; y el historial del lead (Seguimiento y Notas
+      Internas) con el mismo fondo que la solicitud original para que contraste. Es solo estetica: las reglas de la
+      agenda, los permisos, la privacidad de los leads ajenos y el CSRF no cambian.'
+    source:
+      type: story
+      ref: Pedido del humano del 2026-10-26 (mejorar el look and feel del agendamiento, moderno, alineado con la UX
+        del CRM y facil de entender; y oscurecer el fondo de los comentarios del historial para que hagan contraste)
+        y vista previa aprobada (docs/ui/referencia/agenda/README.md).
+    change_class: A
+    deploy_required: true
+    requires_human_acceptance: true
+    acceptance_criteria:
+    - id: AC-1
+      verification: automated
+      description: Fidelidad a la referencia. Los siete archivos de docs/ui/referencia/agenda/ (agenda.html, agenda_form_fields.html,
+        agenda_macros.html y reunion_card.html en app/web/templates; app.css en app/web/static/css; agenda_presentation.py
+        en app/web y agenda.py en app/web/routes) quedan en sus rutas destino IDENTICOS a la referencia ignorando fines
+        de linea (git diff --no-index --ignore-cr-at-eol sin diferencias). Si app.css cambio en main desde dae6d58,
+        se reaplican solo el bloque de la agenda y la regla .timeline-item de la referencia, sin reemplazar el archivo
+        entero. El Developer no modifica el diseno.
+    - id: AC-2
+      verification: automated
+      description: 'Pruebas de lo nuevo en Python (sin base de datos): color_map (orden alfabetico, ciclo de la paleta
+        y color neutro de un nombre desconocido), rango_label (semana dentro de un mes y semana que cruza dos meses),
+        etiqueta_dia (Hoy, Manana y dia con fecha), _asignar_carriles (reuniones que no se pisan, dos simultaneas, tres
+        encadenadas y un grupo que termina antes del siguiente), build_week_grid (lunes a viernes, posicion y duracion
+        en minutos desde las 09:00, dia actual y linea de ahora solo dentro del horario, reuniones de otros dias excluidas),
+        resumen_semana, agrupar_por_dia y meeting_tile (hoy, manana, en N dias y ya paso). Cobertura del proyecto sin
+        bajar (85%).'
+    - id: AC-3
+      verification: automated
+      description: 'El comportamiento no cambia y se prueba con la nueva pantalla: las 101 pruebas de agenda existentes
+        (tests/unit/test_agenda_web.py, test_agenda_service.py, test_agenda_domain.py) siguen pasando sin debilitarlas;
+        solo se ajustan si dependen de un texto o marcado que la referencia cambio, y entonces la aserción nueva es
+        igual de estricta. Se agregan pruebas que leen response.text de GET /agenda en vista semana y lista para un
+        Runner con una reunion de un lead ajeno: la respuesta NO contiene su nombre, su id ni un enlace a /leads/<id>,
+        y si dice De otra cartera; el Socio si ve el nombre. Tambien se prueba que el filtro por responsable, la navegacion
+        por semanas y el selector Semana/Lista conservan los parametros de la URL.'
+    - id: AC-4
+      verification: automated
+      description: Historial del lead. En el tema claro .timeline-item usa el fondo --surface-soft (el mismo de .original-request-box)
+        y en el oscuro sigue igual que hoy. Una prueba sobre app.css lo comprueba. No se cambia ningun otro estilo del
+        detalle del lead.
+    - id: AC-5
+      verification: automated
+      description: 'Calidad. Sin dependencias, tipografias, scripts ni librerias nuevas; sin colores sueltos ni !important
+        nuevos en el CSS (todo sale de tokens); Lint, formato y auditoria de seguridad verdes. Documentacion: docs/AGENDA_USO.md
+        describe las vistas nuevas, docs/UI_DESIGN_SYSTEM.md agrega una nota breve de los patrones nuevos (cuadricula
+        por horas, tonos por responsable, ficha de fecha), CHANGELOG.md y docs/BITACORA.md.'
+    - id: AC-6
+      verification: human
+      description: 'Revision visual del humano en AWS DEV, en escritorio y celular, con tema claro y oscuro: la semana
+        por horas (hoy resaltado, reuniones simultaneas lado a lado, canceladas atenuadas), la lista por dia, el filtro
+        por responsable, la tarjeta Reunion y el formulario de agendar, y el historial del lead con mejor contraste.
+        Prueba con un Runner (los leads ajenos salen como De otra cartera), un Coordinador y un Socio.'
+    constraints:
+    - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar desde ramas
+      o worktrees antiguos.'
+    - 'change_class A: sin migracion ni cambio de esquema de base de datos, sin tocar deployment/**, IAM, bucket ni
+      GuardDuty. Solo aspecto: no cambies reglas de la agenda, permisos, auditoria, CSRF ni rutas, y no toques app/services/**,
+      app/repositories/** ni app/auth/**.'
+    - 'REPRODUCE la referencia, no la reinterpretes: la fuente exacta esta en docs/ui/referencia/agenda/ (README.md
+      explica cada archivo). Si algo de la referencia te parece un error, no lo corrijas: detente y reporta.'
+    - 'Privacidad: en el calendario un lead fuera de alcance no debe mostrar nombre, id ni enlace en ninguna vista (semana,
+      lista ni atributos title o aria). Lo prueba el AC-3.'
+    - 'No agregues secretos, claves ni usuarios reales al repositorio: los ejemplos son ficticios.'
+    - 'Lecciones del guard de las tareas anteriores: (1) .env.example no esta en tu alcance; documenta solo en docs/**.
+      (2) El payload de evidencia se escribe con Write en la ruta ABSOLUTA de la raiz de control (C:\desarrollos\TPI\tpi_deep_agents\tpi-backend\.harness-runtime\payloads\developer.json),
+      nunca dentro del worktree. (3) progress/current.md se edita con Edit o Write, no con Python ni heredocs. (4) Ningun
+      comando de shell nombra paquetes o textos denegados por policies.yaml y no se crean archivos sueltos en la raiz
+      del worktree. (5) git commit va solo, sin encadenar otros comandos. (6) Si el guard registra mas de un worktree
+      de Developer, retira el viejo con scripts/harness/worktree.py remove antes de commitear. Un DENIED es definitivo:
+      detenerse y reportar.'
+    dependencies: []
+    risk:
+      level: low
+      notes: 'Solo presentacion sobre una pantalla ya aceptada. Riesgos: que un cambio de marcado rompa pruebas que
+        leen el HTML y que el calendario muestre datos de un lead ajeno; mitigados por la referencia exacta, por las
+        101 pruebas de agenda que ya pasan con esta version y por las pruebas nuevas de privacidad que leen la respuesta.'
+    scope:
+      paths:
+      - app/web/**
+      - tests/**
+      - docs/**
+      - CHANGELOG.md
+    status: active
 - id: CRM-AGENDAMIENTO
   title: 'CRM: seguimiento del protocolo (intentos, cadencia, calificacion y panel) y agenda v2'
   priority: P2
