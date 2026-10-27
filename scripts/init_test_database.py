@@ -248,6 +248,39 @@ WHERE a.accion = 'simulacion_renta_vitalicia'
 
 REVOKE ALL ON tpi.v_historial_simulaciones FROM PUBLIC;
 
+-- CRM-AGENDA-4-HISTORIAL read model: sanitized agenda-history view (mirrors migration 011,
+-- without the AWS-DEV preflight/postflight and without the app-role grant, which the real
+-- migration grants to tpi_app and the integration tests exercise via a least-privilege
+-- reader role). Exposes the agenda events (cita_agendada, cita_reagendada, cita_cancelada,
+-- cita_realizada, cita_no_asistio) filtered by tabla_afectada = 'tpi.citas'.
+CREATE OR REPLACE VIEW tpi.v_historial_agenda
+WITH (security_barrier = true) AS
+SELECT
+    a.id_auditoria,
+    a.id_lead,
+    a.fecha_hora,
+    a.accion,
+    a.detalle->>'actor_subject' AS actor_subject,
+    CASE
+        WHEN a.detalle->>'id_cita' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+            THEN (a.detalle->>'id_cita')::uuid
+        ELSE NULL
+    END AS id_cita,
+    CASE
+        WHEN a.detalle->>'responsable_id' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+            THEN (a.detalle->>'responsable_id')::uuid
+        ELSE NULL
+    END AS responsable_id,
+    a.detalle->>'estado_anterior' AS estado_anterior,
+    a.detalle->>'estado_nuevo' AS estado_nuevo,
+    (a.detalle->>'fecha_hora_anterior')::timestamptz AS fecha_hora_anterior,
+    (a.detalle->>'fecha_hora_nueva')::timestamptz AS fecha_hora_nueva
+FROM tpi.auditoria a
+WHERE a.accion IN ('cita_agendada', 'cita_reagendada', 'cita_cancelada', 'cita_realizada', 'cita_no_asistio')
+  AND a.tabla_afectada = 'tpi.citas';
+
+REVOKE ALL ON tpi.v_historial_agenda FROM PUBLIC;
+
 -- Stores no payload or PII: only a keyed fingerprint and the resulting lead id.
 CREATE TABLE IF NOT EXISTS tpi.api_idempotency (
     idempotency_key UUID PRIMARY KEY,

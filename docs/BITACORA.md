@@ -22,6 +22,25 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-27 - Agenda: migración 011 lista para el humano (CRM-AGENDA-4-HISTORIAL-MIGRACION)
+
+- Qué se hizo: vista de solo lectura `tpi.v_historial_agenda` (migración `011`, clase D) sobre `tpi.auditoria` para
+  que el historial del lead muestre los eventos de la agenda sin leer la tabla directamente (mismo patrón de mínimo
+  privilegio de las migraciones 007 a 009). Filtro fijo `accion IN ('cita_agendada', 'cita_reagendada',
+  'cita_cancelada', 'cita_realizada', 'cita_no_asistio') AND tabla_afectada = 'tpi.citas'`; columnas tipadas
+  (`id_cita` y `responsable_id` como UUID, `fecha_hora_anterior`/`fecha_hora_nueva` como TIMESTAMPTZ); `security_barrier`;
+  `REVOKE ALL FROM PUBLIC` y `GRANT SELECT` solo a `tpi_app`; sin índice nuevo (reutiliza `auditoria_state_history_idx`).
+- Reversa idempotente `scripts/sql/011_drop_historial_agenda.sql` (REVOKE SELECT + DROP VIEW IF EXISTS); no toca
+  `tpi.auditoria` ni las vistas 007/008/009.
+- Pruebas: unitarias de contrato (`tests/unit/test_agenda_historial_migration_scripts.py`) y de integración
+  (`tests/integration/test_agenda_historial_view.py`) que producen las filas con el flujo real de `AgendaRepository`
+  (agendar, reagendar, cancelar, realizada y no asistió) y demuestran que la nota y el motivo de cancelación no llegan
+  a la vista.
+- `scripts/init_test_database.py` crea la misma vista para el bootstrap de pruebas; documentación en
+  `docs/database/` (02 y 04), `docs/AGENDA_REUNIONES_DISENO.md` y `CHANGELOG.md`.
+- Pendiente: la aplica el humano en AWS DEV (change_class D, `deploy_required: false`); el código que la usa es la
+  tarea siguiente `CRM-AGENDA-4-HISTORIAL`.
+
 ### 2026-10-27 - Agenda: definidas las tareas del historial del lead y de los casos por asesor
 
 - Pedido del humano (2026-10-27): (1) en el dashboard, la tabla de casos por asesor debe separar coordinadores de runners (los socios no van: no tienen cartera asignada); (2) quitar el botón
