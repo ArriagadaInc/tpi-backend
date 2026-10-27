@@ -22,6 +22,14 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-26 - Agenda: el logo sustituye al botón Home (se suma a CRM-AGENDA-3-LOOK)
+
+- Pedido del humano: quitar el botón **Home** de la barra superior y llegar al home presionando el logo de TPI.
+- Interpretación: el botón enviaba al sitio público aprobado (`TPI_PUBLIC_SITE_URL`, lista permitida en `app/components/urls.py`); el logo toma ese mismo destino. Se mantiene todo lo
+  que protegían las pruebas: solo con sesión iniciada, solo con la URL aprobada (si falta o no está aprobada, el logo queda sin enlace), pestaña nueva y `rel="noopener noreferrer"`.
+- Qué se hizo: cambio en la vista previa local (verificado: 0 botones Home, logo con el `href` aprobado), referencia actualizada (`base.html` y `app.css`) y la tarea
+  `CRM-AGENDA-3-LOOK` ampliada con un criterio nuevo (AC-6) que actualiza las pruebas del botón Home sin debilitarlas. Sigue sin activarse.
+
 ### 2026-10-26 - Agenda: nuevo aspecto aprobado y tarea CRM-AGENDA-3-LOOK definida
 
 - Contexto: con la agenda v1 funcionando en DEV, el humano pidió mejorar su look and feel (moderno, alineado con la UX del CRM y fácil de entender) y, como anexo,
