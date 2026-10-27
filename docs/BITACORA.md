@@ -22,6 +22,14 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-27 - Se retira la referencia visual de la agenda y cambia la fecha de vigencia de la Ley 21.719
+
+- Se retira `docs/ui/referencia/agenda/` de `main`: la tarea `CRM-AGENDA-3-LOOK` está cerrada (PR 144 y cierre en el PR 145) y su README pedía retirarla al cerrar. El resultado vive en `app/web/` y las
+  carpetas `docs/ui/referencia/estados/` y `docs/ui/referencia/ui1/` no se tocan.
+- Fecha de la Ley 21.719: el humano confirmó el 2026-10-27 que entra en vigencia el **2027-10-01** (se creía 2026-12-01, que es lo que dicen las guías públicas consultadas y el PDF del protocolo
+  de runners). Se actualizan el backlog (`CRM-NO-CONTACTAR-1`) y el diseño de la agenda; las entradas anteriores de esta bitácora quedan como estaban porque reflejan lo que se sabía en ese momento.
+  `CRM-NO-CONTACTAR-1` sigue siendo requisito antes de usar la agenda con datos reales, ya sin la presión de diciembre de 2026.
+
 ### 2026-10-27 - Harness: tarea CRM-AGENDA-3-LOOK cerrada (DONE)
 
 - Titulo: CRM agenda 3: nuevo aspecto de la agenda, contraste del historial y logo como acceso al sitio
