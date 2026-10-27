@@ -22,6 +22,19 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-26 - Agenda: nuevo aspecto aprobado y tarea CRM-AGENDA-3-LOOK definida
+
+- Contexto: con la agenda v1 funcionando en DEV, el humano pidió mejorar su look and feel (moderno, alineado con la UX del CRM y fácil de entender) y, como anexo,
+  oscurecer el fondo de los comentarios del historial del lead para que contrasten (igual que la solicitud original).
+- Qué se hizo: una vista previa local con datos ficticios (17 reuniones, tres perfiles, claro y oscuro, celular), construida con la skill `ui-ux-pro-max` sobre el
+  sistema visual existente. El humano la aprobó el mismo día. Las 101 pruebas de agenda existentes pasan sin cambios con esa versión.
+- Qué se agrega: la referencia exacta en `docs/ui/referencia/agenda/` (siete archivos y un README) y la tarea activable `CRM-AGENDA-3-LOOK` (clase A, con despliegue y
+  revisión visual humana). Solo estética: no cambian reglas, permisos, privacidad de los leads ajenos ni CSRF.
+- Qué cambia: la página Agenda (cuadrícula por horas con carriles para reuniones simultáneas, línea de «ahora», leyenda de responsables que también filtra, resumen de la
+  semana, lista por día para celular), la tarjeta Reunión y el formulario de agendar, y el fondo `--surface-soft` de `.timeline-item`. La tarjeta Reunión ahora lleva relleno interno
+  (antes el texto quedaba pegado al borde).
+- Detalle técnico a vigilar: en Jinja una clave de diccionario llamada `items` choca con el método `dict.items`; por eso la agrupación por día usa `reuniones`.
+
 ### 2026-10-26 - Harness: tarea CRM-AGENDA-2-CALENDARIO cerrada (DONE)
 
 - Titulo: CRM agenda 2: calendario comun, agendar desde el lead y estados de la reunion

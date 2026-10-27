@@ -1,0 +1,53 @@
+{% from "agenda_macros.html" import icono, iniciales %}
+<div class="form-grid">
+  <div class="field">
+    <label for="fecha">Fecha</label>
+    <input id="fecha" name="fecha" type="date" required>
+  </div>
+  <div class="field">
+    <label for="hora">Hora</label>
+    <input id="hora" name="hora" type="time" min="09:00" max="19:00" step="900" required>
+    <small class="field-hint">Lunes a viernes, de 09:00 a 19:00.</small>
+  </div>
+</div>
+
+<fieldset class="field">
+  <legend>Duración</legend>
+  <div class="choice-row">
+    {% for d in (30, 45, 60) %}
+      <label class="choice"><input type="radio" name="duracion" value="{{ d }}" {% if d == 30 %}checked{% endif %}><span>{{ d }} min</span></label>
+    {% endfor %}
+  </div>
+</fieldset>
+
+<fieldset class="field">
+  <legend>Responsable de la asesoría</legend>
+  <div class="choice-cards">
+    {% for r in agenda.responsables %}
+      <label class="choice-card tone-{{ r.color }}">
+        <input type="radio" name="responsable_id" value="{{ r.id_asesor }}" required>
+        <span class="avatar" aria-hidden="true">{{ iniciales(r.nombre) }}</span>
+        <span class="choice-text"><strong>{{ r.nombre }}</strong><small>{{ 'Socio' if r.rol == 'socio' else 'Coordinador' }}</small></span>
+      </label>
+    {% endfor %}
+  </div>
+</fieldset>
+
+<fieldset class="field">
+  <legend>Modalidad</legend>
+  <div class="choice-row">
+    {% for m, ic in (('Google Meet', 'video'), ('Llamada', 'telefono'), ('Presencial', 'lugar')) %}
+      <label class="choice"><input type="radio" name="modalidad" value="{{ m }}" {% if loop.first %}checked{% endif %}><span>{{ icono(ic) }} {{ m }}</span></label>
+    {% endfor %}
+  </div>
+</fieldset>
+
+<div class="field">
+  <label for="enlace">Enlace de la reunión <span class="optional">(opcional)</span></label>
+  <input id="enlace" name="enlace" type="text" maxlength="2000" placeholder="https://meet.google.com/…">
+</div>
+
+<div class="field">
+  <label for="nota">Nota <span class="optional">(opcional, hasta 500 caracteres)</span></label>
+  <textarea id="nota" name="nota" rows="2" maxlength="500" placeholder="Qué conviene saber antes de la reunión"></textarea>
+</div>
