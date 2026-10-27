@@ -41,7 +41,7 @@ items:
   category: functional
   status: pending
   change_class: D
-  summary: 'Requisito de produccion con fecha limite: la Ley 21.719 rige desde el 2026-12-01 y el protocolo
+  summary: 'Requisito de produccion con fecha limite: la Ley 21.719 rige desde el 2027-10-01 (el humano lo confirmo el 2026-10-27; antes se creia 2026-12-01) y el protocolo
     de runners dice que, si el cliente pide no ser contactado o que se borren sus datos, se respeta de
     inmediato y se avisa al socio el mismo dia. Incluye una marca ''no contactar'' visible y bloqueante
     en el lead (con fecha, quien la registro y motivo), el estado ''No interesado'' asociado, un registro
@@ -50,7 +50,7 @@ items:
     hay que acordar con el asesor legal que se borra, que se conserva por obligacion legal y los plazos.'
   evidence:
   - TPI_Protocolo_Runners_Canal_Web.pdf, paginas 7 y 14 (respeto al no, Ley 21.719 desde el 1 de diciembre
-    de 2026)
+    de 2026; el humano confirmo el 2026-10-27 que rige desde el 1 de octubre de 2027)
   - docs/ADJUNTOS_REVISION_PREPROD.md, punto 4 (retencion y borrado a solicitud del titular)
 - id: CRM-AGENDAMIENTO
   title: 'CRM: seguimiento del protocolo (intentos, cadencia, calificacion y panel) y agenda v2'

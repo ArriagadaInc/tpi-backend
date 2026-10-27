@@ -154,7 +154,7 @@ Respuestas del humano del 2026-10-26 («de acuerdo con todo»), con sus cambios:
 4. **Quién hace qué** (F): confirmado.
 5. **Avisos** (G): confirmado, sin avisos automáticos en la v1.
 6. **Orden**: `CRM-NO-CONTACTAR-1` queda para después (decisión 10). Mientras tanto la agenda no debe usarse con datos reales: la ley obliga a esa tarea antes de cargarlos
-   (2026-12-01).
+   (la ley rige desde el 2027-10-01, según confirmó el humano el 2026-10-27; antes se creía 2026-12-01).
 
 También quedó resuelto el punto J (quién puede ser responsable): ver el supuesto J de la sección 3. No quedan preguntas abiertas.
 

@@ -123,7 +123,7 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 ### 🔄 Cambiado
 
 - **Nuevo aspecto de la agenda, contraste del historial y logo como acceso al sitio** (CRM-AGENDA-3-LOOK)
-  - La página Agenda reproduce la referencia visual aprobada (`docs/ui/referencia/agenda/`): vista de semana como
+  - La página Agenda reproduce la referencia visual aprobada (la carpeta `docs/ui/referencia/agenda/` se retiró de `main` al cerrar la tarea): vista de semana como
     cuadrícula por horas (lunes a viernes, 09:00–19:00, reuniones simultáneas en carriles, día de hoy resaltado con la
     línea de la hora actual), leyenda de responsables con tonos que filtra, resumen de la semana (agendadas, realizadas,
     no asistidas y canceladas) y lista de próximas reuniones agrupada por día.
