@@ -1044,7 +1044,7 @@ def test_dark_theme_has_light_logo_variant() -> None:
     assert '[data-theme="dark"] .brand-logo' in css
 
 
-def test_detail_renders_volver_al_sitio_when_approved_and_authenticated() -> None:
+def test_detail_renders_logo_link_when_approved_and_authenticated() -> None:
     client = _build_client(
         settings=Settings(
             _env_file=None,
@@ -1056,11 +1056,15 @@ def test_detail_renders_volver_al_sitio_when_approved_and_authenticated() -> Non
 
     detail = client.get("/leads/11111111-1111-1111-1111-111111111111")
     assert detail.status_code == 200
-    assert "Home" in detail.text
+    # El botón Home desapareció: el logo es ahora el enlace al sitio público.
+    assert "Home" not in detail.text
+    assert 'class="brand-link"' in detail.text
     assert 'href="https://dev.tupensioninteligente.cl/"' in detail.text
+    assert 'target="_blank"' in detail.text
+    assert 'rel="noopener noreferrer"' in detail.text
 
 
-def test_login_page_does_not_render_volver_al_sitio() -> None:
+def test_login_page_does_not_render_logo_link() -> None:
     client = _build_client(
         settings=Settings(
             _env_file=None,
@@ -1072,13 +1076,16 @@ def test_login_page_does_not_render_volver_al_sitio() -> None:
     login = client.get("/login")
     assert login.status_code == 200
     assert "Home" not in login.text
+    # Sin sesión el logo queda sin enlace.
+    assert 'class="brand-link"' not in login.text
 
 
-def test_detail_hides_volver_al_sitio_when_url_missing_or_invalid() -> None:
+def test_detail_hides_logo_link_when_url_missing_or_invalid() -> None:
     missing = _build_client(settings=Settings(_env_file=None, APP_ENV="aws-dev"))
     _login(missing)
     missing_detail = missing.get("/leads/11111111-1111-1111-1111-111111111111")
     assert "Home" not in missing_detail.text
+    assert 'class="brand-link"' not in missing_detail.text
 
     invalid = _build_client(
         settings=Settings(
@@ -1090,6 +1097,7 @@ def test_detail_hides_volver_al_sitio_when_url_missing_or_invalid() -> None:
     _login(invalid)
     invalid_detail = invalid.get("/leads/11111111-1111-1111-1111-111111111111")
     assert "Home" not in invalid_detail.text
+    assert 'class="brand-link"' not in invalid_detail.text
 
 
 def test_detail_timeline_merges_event_and_note_with_badge() -> None:

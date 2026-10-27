@@ -93,6 +93,12 @@ Cortes responsive (no admiten variables): **640, 900 y 1200 px**. Ancho de pági
 | Vacío / alerta / aviso | un patrón para cada uno (icono opcional, texto breve, acción); los avisos usan los tonos semánticos |
 | Barra superior | compacta; en móvil, una fila con menú que agrupa navegación y usuario |
 
+Los patrones nuevos de la agenda (CRM-AGENDA-3-LOOK, aprobados el 2026-10-26) salen de los mismos tokens y componentes:
+**cuadrícula por horas** (lunes a viernes con carriles para reuniones simultáneas y línea de «ahora»), **tonos por
+responsable** (`accent`, `info`, `violet`, `warning` desde `PALETA`, con el neutro `slate` como respaldo) y **ficha de
+fecha** de la tarjeta Reunión. El fondo del historial del lead (`.timeline-item`) usa `--surface-soft`, el mismo de la
+solicitud original (`.original-request-box`); en el tema oscuro no cambia.
+
 ## 6. Reglas para quien programa la interfaz
 
 - Reutilizar antes de crear: si un componente de la sección 5 hace el trabajo, se usa; una clase nueva se justifica por escrito.

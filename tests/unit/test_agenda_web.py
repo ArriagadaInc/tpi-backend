@@ -12,6 +12,7 @@ import base64
 import json
 import re
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, cast
 from uuid import UUID
 
@@ -409,6 +410,54 @@ def test_agenda_get_socio_ve_todos(role: str, vista: str):
     assert response.status_code == 200
     assert "Juan Perez" in response.text
     assert "Pedro Soto" in response.text
+
+
+def test_agenda_conserva_parametros_en_los_enlaces():
+    # El filtro por responsable, la navegacion por semanas y el selector Semana/Lista
+    # conservan los parametros de la URL (fecha, responsable y vista).
+    client, _ = _client("ceo")
+    response = client.get(f"/agenda?vista=lista&responsable={SOCIO_A}&fecha=2026-10-26")
+    assert response.status_code == 200
+    text = response.text
+    # El selector Semana/Lista conserva fecha y responsable (el HTML escapa & como &amp;).
+    assert f"/agenda?fecha=2026-10-26&amp;responsable={SOCIO_A}&amp;vista=semana" in text
+    assert f"/agenda?fecha=2026-10-26&amp;responsable={SOCIO_A}&amp;vista=lista" in text
+    # La navegacion por semanas conserva responsable y vista.
+    assert f"/agenda?fecha=2026-10-19&amp;responsable={SOCIO_A}&amp;vista=lista" in text
+    assert f"/agenda?fecha=2026-11-02&amp;responsable={SOCIO_A}&amp;vista=lista" in text
+    # El chip "Todos" conserva fecha y vista (sin responsable).
+    assert "/agenda?fecha=2026-10-26&amp;vista=lista" in text
+
+
+# ------------------------------------------------------------------ CSS del historial
+
+
+def _ultimo_background_de_regla(css: str, selector: str) -> str | None:
+    """Devuelve el ``background`` de la ultima regla cuyo selector abre una linea.
+
+    Se ancla al inicio de linea para no confundir ``.timeline-item`` con
+    ``[data-theme="dark"] .timeline-item``.
+    """
+    patron = re.compile(rf"(?m)^{re.escape(selector)}\s*\{{([^}}]*)\}}")
+    bloques = patron.findall(css)
+    if not bloques:
+        return None
+    m = re.search(r"background:\s*([^;]+)", bloques[-1])
+    return m.group(1).strip() if m else None
+
+
+def test_timeline_item_usa_surface_soft_en_tema_claro():
+    # AC-4: en el tema claro el historial usa el mismo fondo que la solicitud original.
+    css = Path("app/web/static/css/app.css").read_text(encoding="utf-8")
+    assert _ultimo_background_de_regla(css, ".timeline-item") == "var(--surface-soft)"
+    assert _ultimo_background_de_regla(css, ".original-request-box") == "var(--surface-soft)"
+
+
+def test_timeline_item_tema_oscuro_sin_cambios():
+    css = Path("app/web/static/css/app.css").read_text(encoding="utf-8")
+    assert _ultimo_background_de_regla(css, '[data-theme="dark"] .timeline-item') == (
+        "var(--surface-soft)"
+    )
 
 
 # ------------------------------------------------------------------ escritura basica

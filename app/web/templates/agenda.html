@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "agenda_macros.html" import icono, icono_modalidad, icono_estado %}
 {% block content %}
   <section class="hero">
     <div>
@@ -6,121 +7,127 @@
       <h1>Agenda</h1>
       <p class="subline">Calendario común de reuniones de asesoría.</p>
     </div>
-    <div class="hero-badges">
-      <span class="pill pill-muted">Semana del {{ semana_label }}</span>
-    </div>
   </section>
 
   {% if unavailable %}
     <div class="notice alert-error">La agenda no está disponible en este momento (revisa que la migración de la agenda esté aplicada). El resto del CRM sigue funcionando.</div>
   {% endif %}
 
-  <section class="filters card">
-    <form method="get" action="/agenda" class="filters-grid">
-      <label>
-        Responsable
-        <select name="responsable">
-          <option value="">Todos los responsables</option>
-          {% for r in responsables %}
-            <option value="{{ r.id_asesor }}" {% if responsable_id == r.id_asesor|string %}selected{% endif %}>{{ r.nombre }}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <label>
-        Vista
-        <select name="vista">
-          <option value="semana" {% if vista != 'lista' %}selected{% endif %}>Semana</option>
-          <option value="lista" {% if vista == 'lista' %}selected{% endif %}>Lista</option>
-        </select>
-      </label>
-      <div class="filters-actions">
-        <button class="primary" type="submit">Actualizar</button>
-      </div>
-    </form>
-  </section>
-
-  <div class="agenda-views {% if vista == 'lista' %}vista-lista{% endif %}">
-    <section class="card agenda-list-view">
-      <div class="story-card-head">
-        <div>
-          <p class="section-kicker">Próximas reuniones</p>
-          <h2>Lista de reuniones agendadas</h2>
-        </div>
-      </div>
-      {% if proximas %}
-        <table class="board-table">
-          <thead>
-            <tr>
-              <th>Hora</th>
-              <th>Responsable</th>
-              <th>Lead</th>
-              <th>Agendada por</th>
-              <th>Modalidad</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for cita in proximas %}
-              <tr>
-                <td class="num">{{ cita.fecha_hora.strftime('%d/%m/%Y %H:%M') }}</td>
-                <td>{{ cita.asesor_nombre }}</td>
-                <td>
-                  {% if cita.lead_fuera_de_alcance %}
-                    <span class="empty-inline">De otra cartera</span>
-                  {% else %}
-                    <a href="/leads/{{ cita.id_lead }}">{{ cita.lead_nombre }}</a>
-                  {% endif %}
-                </td>
-                <td>{{ cita.agendada_por_nombre or '—' }}</td>
-                <td>{{ cita.canal }}</td>
-                <td><span class="pill cita-state cita-{{ cita.estado_cita }}">{{ cita.estado_cita|cita_estado_label }}</span></td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      {% else %}
-        <div class="empty-followup">No hay reuniones agendadas próximas.</div>
-      {% endif %}
-    </section>
-
-    <section class="card agenda-week-card agenda-week-view">
+  <section class="card agenda-shell">
+    <header class="agenda-toolbar">
       <div class="agenda-nav">
-        <a class="secondary" href="{{ semana_anterior }}">← Anterior</a>
+        <a class="icon-button" href="{{ semana_anterior }}" aria-label="Semana anterior" title="Semana anterior">{{ icono('izquierda') }}</a>
         <a class="secondary" href="{{ semana_hoy }}">Hoy</a>
-        <a class="secondary" href="{{ semana_siguiente }}">Siguiente →</a>
+        <a class="icon-button" href="{{ semana_siguiente }}" aria-label="Semana siguiente" title="Semana siguiente">{{ icono('derecha') }}</a>
+        <h2 class="agenda-range">{{ rango_label }}</h2>
       </div>
-      <div class="agenda-week">
-        {% for dia in dias_semana %}
-          <div class="agenda-day">
-            <div class="agenda-day-head">
-              <span class="agenda-day-label">{{ dia.label }}</span>
-              <span class="agenda-day-date">{{ dia.fecha.strftime('%d/%m') }}</span>
-            </div>
-            <div class="agenda-day-body">
-              {% for cita in dia.citas %}
-                <div class="agenda-block">
-                  <div class="agenda-block-time">{{ cita.fecha_hora.strftime('%H:%M') }}–{{ cita.fecha_hora_fin.strftime('%H:%M') }}</div>
-                  <div class="agenda-block-title">{{ cita.asesor_nombre }}</div>
-                  <div class="agenda-block-meta">
-                    <span>{{ cita.canal }}</span>
-                    <span class="pill cita-state cita-{{ cita.estado_cita }}">{{ cita.estado_cita|cita_estado_label }}</span>
-                  </div>
-                  <div class="agenda-block-lead">
-                    {% if cita.lead_fuera_de_alcance %}
-                      <span class="empty-inline">De otra cartera</span>
-                    {% else %}
-                      <a href="/leads/{{ cita.id_lead }}">{{ cita.lead_nombre }}</a>
-                    {% endif %}
-                  </div>
-                  <div class="agenda-block-footer">Agendada por {{ cita.agendada_por_nombre or '—' }}</div>
-                </div>
-              {% else %}
-                <div class="agenda-day-empty">—</div>
-              {% endfor %}
-            </div>
-          </div>
+      <div class="segmented" role="group" aria-label="Vista de la agenda">
+        <a href="{{ vista_urls.semana }}" {% if vista_actual == 'semana' %}aria-current="page"{% endif %}>Semana</a>
+        <a href="{{ vista_urls.lista }}" {% if vista_actual == 'lista' %}aria-current="page"{% endif %}>Lista</a>
+      </div>
+    </header>
+
+    <div class="agenda-filters">
+      <div class="agenda-legend" role="group" aria-label="Filtrar por responsable">
+        {% for chip in chips_responsable %}
+          <a class="legend-chip{% if chip.color %} tone-{{ chip.color }}{% endif %}" href="{{ chip.url }}" {% if chip.activo %}aria-current="true"{% endif %}>
+            {% if chip.color %}<span class="dot" aria-hidden="true"></span>{% endif %}{{ chip.label }}
+          </a>
         {% endfor %}
       </div>
-    </section>
-  </div>
+      <p class="agenda-summary" aria-label="Resumen de la semana">
+        {% if resumen.agendada or resumen.realizada or resumen.no_asistio or resumen.cancelada %}
+          {% if resumen.agendada %}<span class="count cita-agendada">{{ icono_estado('agendada') }} {{ resumen.agendada }} {{ 'agendada' if resumen.agendada == 1 else 'agendadas' }}</span>{% endif %}
+          {% if resumen.realizada %}<span class="count cita-realizada">{{ icono_estado('realizada') }} {{ resumen.realizada }} {{ 'realizada' if resumen.realizada == 1 else 'realizadas' }}</span>{% endif %}
+          {% if resumen.no_asistio %}<span class="count cita-no_asistio">{{ icono_estado('no_asistio') }} {{ resumen.no_asistio }} no asistió</span>{% endif %}
+          {% if resumen.cancelada %}<span class="count cita-cancelada">{{ icono_estado('cancelada') }} {{ resumen.cancelada }} {{ 'cancelada' if resumen.cancelada == 1 else 'canceladas' }}</span>{% endif %}
+        {% else %}
+          <span class="count-empty">Sin reuniones esta semana</span>
+        {% endif %}
+      </p>
+    </div>
+
+    <div class="agenda-views {% if vista_actual == 'lista' %}vista-lista{% endif %}">
+      <div class="agenda-list-view">
+        {% if grupos_proximas %}
+          {% for grupo in grupos_proximas %}
+            <section class="day-group">
+              <h3 class="day-title{% if grupo.es_hoy %} is-today{% endif %}">{{ grupo.label }} <small>{{ grupo.fecha.strftime('%d/%m/%Y') }}</small></h3>
+              <ul class="row-list">
+                {% for it in grupo.reuniones %}
+                  {% set c = it.cita %}
+                  <li class="row tone-{{ it.color }} ev-{{ c.estado_cita }}">
+                    <span class="row-time">{{ c.fecha_hora.strftime('%H:%M') }}<small>{{ it.dur }} min</small></span>
+                    <span class="row-main">
+                      <strong class="row-title">
+                        {% if c.lead_fuera_de_alcance %}
+                          <span class="empty-inline">{{ icono('candado') }} De otra cartera</span>
+                        {% else %}
+                          <a href="/leads/{{ c.id_lead }}">{{ c.lead_nombre }}</a>
+                        {% endif %}
+                      </strong>
+                      <span class="row-meta">
+                        <span class="dot" aria-hidden="true"></span>{{ c.asesor_nombre }}
+                        <span class="sep" aria-hidden="true">·</span>{{ icono_modalidad(c.canal) }} {{ c.canal }}
+                        <span class="sep" aria-hidden="true">·</span>Agendada por {{ c.agendada_por_nombre or '—' }}
+                      </span>
+                    </span>
+                    <span class="pill cita-state cita-{{ c.estado_cita }}">{{ icono_estado(c.estado_cita) }} {{ c.estado_cita|cita_estado_label }}</span>
+                  </li>
+                {% endfor %}
+              </ul>
+            </section>
+          {% endfor %}
+        {% else %}
+          <div class="agenda-empty">
+            {{ icono('calendario') }}
+            <strong>No hay reuniones próximas</strong>
+            <span>Cuando un lead quiera asesoría, agenda la reunión desde su ficha.</span>
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="agenda-week-view">
+        <div class="week-scroll">
+          <div class="week-grid">
+            <div class="week-corner" aria-hidden="true"></div>
+            {% for d in dias_semana %}
+              <div class="week-dayhead{% if d.es_hoy %} is-today{% endif %}">
+                <span class="dow">{{ d.dow }}</span>
+                <span class="num">{{ d.dia }}</span>
+              </div>
+            {% endfor %}
+            <div class="week-hours" aria-hidden="true">
+              {% for h in horas %}<span>{{ '%02d:00'|format(h) }}</span>{% endfor %}
+            </div>
+            {% for d in dias_semana %}
+              <div class="week-col{% if d.es_hoy %} is-today{% endif %}">
+                {% if d.ahora is not none %}<span class="now-line" style="--start: {{ d.ahora }}" aria-hidden="true"></span>{% endif %}
+                {% for e in d.eventos %}
+                  {% set c = e.cita %}
+                  {% set resumen_cita = c.fecha_hora.strftime('%H:%M') ~ '–' ~ c.fecha_hora_fin.strftime('%H:%M') ~ ' · ' ~ c.asesor_nombre ~ ' · ' ~ c.canal ~ ' · ' ~ (c.estado_cita|cita_estado_label) ~ ' · Agendada por ' ~ (c.agendada_por_nombre or '—') %}
+                  {% set cuerpo %}
+                    <span class="ev-top">
+                      <span class="ev-time">{{ c.fecha_hora.strftime('%H:%M') }}</span>
+                      <span class="ev-state" title="{{ c.estado_cita|cita_estado_label }}">{{ icono_estado(c.estado_cita) }}<span class="sr-only">{{ c.estado_cita|cita_estado_label }}</span></span>
+                    </span>
+                    <span class="ev-title">
+                      {% if c.lead_fuera_de_alcance %}{{ icono('candado') }} De otra cartera{% else %}{{ c.lead_nombre }}{% endif %}
+                    </span>
+                    <span class="ev-meta">{{ icono_modalidad(c.canal) }} {{ c.asesor_nombre }}</span>
+                  {% endset %}
+                  {% if c.lead_fuera_de_alcance %}
+                    <div class="ev tone-{{ e.color }} ev-{{ c.estado_cita }}{% if e.dur <= 30 %} ev-short{% endif %}" style="--start: {{ e.start }}; --dur: {{ e.dur }}; --lane: {{ e.lane }}; --lanes: {{ e.lanes }}" title="{{ resumen_cita }}">{{ cuerpo }}</div>
+                  {% else %}
+                    <a class="ev tone-{{ e.color }} ev-{{ c.estado_cita }}{% if e.dur <= 30 %} ev-short{% endif %}" style="--start: {{ e.start }}; --dur: {{ e.dur }}; --lane: {{ e.lane }}; --lanes: {{ e.lanes }}" href="/leads/{{ c.id_lead }}" title="{{ resumen_cita }}">{{ cuerpo }}</a>
+                  {% endif %}
+                {% endfor %}
+                {% if not d.eventos %}<span class="col-empty">Sin reuniones</span>{% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 {% endblock %}

@@ -122,6 +122,20 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ### 🔄 Cambiado
 
+- **Nuevo aspecto de la agenda, contraste del historial y logo como acceso al sitio** (CRM-AGENDA-3-LOOK)
+  - La página Agenda reproduce la referencia visual aprobada (`docs/ui/referencia/agenda/`): vista de semana como
+    cuadrícula por horas (lunes a viernes, 09:00–19:00, reuniones simultáneas en carriles, día de hoy resaltado con la
+    línea de la hora actual), leyenda de responsables con tonos que filtra, resumen de la semana (agendadas, realizadas,
+    no asistidas y canceladas) y lista de próximas reuniones agrupada por día.
+  - La tarjeta «Reunión» y el formulario de agendar/reagendar usan el nuevo diseño (ficha de fecha, responsable con su
+    tono, duración y modalidad como botones).
+  - El historial del lead (Seguimiento y Notas Internas) usa `--surface-soft`, el mismo fondo de la solicitud original,
+    para que contraste; el tema oscuro no cambia.
+  - La barra superior pierde el botón «Home»: el logo de TPI pasa a ser el enlace al sitio público (solo con sesión y
+    con la URL aprobada, en pestaña nueva con `rel="noopener noreferrer"`).
+  - Solo estética: las reglas de la agenda, los permisos, la privacidad de los leads ajenos y el CSRF no cambian.
+    Documentación en `docs/AGENDA_USO.md` y `docs/UI_DESIGN_SYSTEM.md`.
+
 - **Armonía visual del CRM aplicada desde la referencia aprobada** (CRM-UI-1-ARMONIA-VISUAL)
   - Se reproduce en `app/web/` la referencia aprobada por el humano (`docs/ui/referencia/ui1/`): un solo estilo de botones, campos, tarjetas y chips de estado; iconos de sol/luna (tema), cerrar sesión y exportar XLSX; logo más grande; y los textos que el humano pidió retirar (la bajada de la lista de leads, la bajada técnica del dashboard y el aviso de la migración 008 del detalle del lead).
   - Tipografía **Plus Jakarta Sans alojada en el propio sitio** (`app/web/static/fonts/PlusJakartaSans-latin.woff2` + `OFL.txt`), con `@font-face { font-display: swap; }` y sin pedidos a `fonts.googleapis.com` ni `fonts.gstatic.com`.

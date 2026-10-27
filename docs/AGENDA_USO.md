@@ -64,14 +64,25 @@ agenda una nueva. La reunión nunca se borra.
 
 ## 5. Dónde se usa
 
-- **Página Agenda** (`/agenda`, en el menú superior para todos los perfiles): vista de
-  semana con navegación anterior/siguiente/hoy y vista de lista de las próximas reuniones;
-  filtro por responsable. Cada bloque muestra hora, responsable, quién agendó, modalidad y
-  estado; en pantalla de celular se usa la vista de lista.
-- **Detalle del lead**: la tarjeta «Reunión» muestra la reunión agendada (o la última) y
-  los botones para agendar, reagendar, cancelar y marcar realizada o no asistió, según el
-  perfil. El formulario pide fecha, hora, duración, responsable, modalidad, enlace y nota,
+- **Página Agenda** (`/agenda`, en el menú superior para todos los perfiles):
+  - **Vista Semana**: cuadrícula de lunes a viernes con una fila por hora (09:00 a 19:00);
+    cada reunión se ubica según su hora y duración, y las reuniones simultáneas se reparten
+    en carriles lado a lado. El día de hoy se resalta y, dentro del horario, muestra una
+    línea con la hora actual. La cabecera tiene navegación anterior/siguiente/hoy y el
+    selector Semana/Lista, que conservan el filtro y la fecha en la URL.
+  - **Leyenda de responsables**: chips con un tono por responsable que filtran el calendario
+    (con «Todos» para quitar el filtro).
+  - **Resumen de la semana**: contador de reuniones agendadas, realizadas, no asistidas y
+    canceladas de la semana visible.
+  - **Vista Lista**: las próximas reuniones agrupadas por día (Hoy, Mañana o la fecha), con
+    hora, duración, responsable, modalidad y estado. En pantalla de celular se usa esta vista.
+- **Detalle del lead**: la tarjeta «Reunión» muestra la reunión agendada (o la última) con una
+  ficha de fecha y el responsable con su tono, además de los botones para agendar, reagendar,
+  cancelar y marcar realizada o no asistió, según el perfil. El formulario de agendar y
+  reagendar ofrece los responsables como tarjetas y la duración y la modalidad como botones,
   con el token CSRF y las mismas protecciones del cambio de estado.
+- **Barra superior**: el logo de TPI lleva al sitio público (solo con sesión y con la URL
+  aprobada, en pestaña nueva); se retiró el botón «Home».
 
 ## 6. Auditoría
 
