@@ -129,6 +129,12 @@ documentación en `docs/database/` (se actualizan `02_PHYSICAL_SCHEMA.md` y `08_
 - Cada acción deja un evento en `tpi.auditoria` (append-only): `cita_agendada`, `cita_reagendada`, `cita_cancelada`, `cita_realizada` y `cita_no_asistio`, con
   `tabla_afectada = 'tpi.citas'`, el sujeto que actuó y los datos de la reunión (id, responsable, hora anterior y nueva). **Sin nombre ni datos personales del lead**
   en el detalle.
+- El historial del lead no lee `tpi.auditoria` directamente: lee la vista de solo lectura
+  `tpi.v_historial_agenda` (migración `011`, `change_class D`), que expone únicamente esos cinco
+  eventos de la agenda con sus columnas sanitizadas (`id_auditoria`, `id_lead`, `fecha_hora`,
+  `accion`, `actor_subject`, `id_cita`, `responsable_id`, `estado_anterior`, `estado_nuevo`,
+  `fecha_hora_anterior` y `fecha_hora_nueva`) y sin el detalle crudo, `id_persona`, `id_usuario`
+  ni `ip_origen`.
 - El calendario común es el único lugar donde alguien ve filas de leads que no son suyos: por eso la consulta del servidor **ya entrega los datos recortados** (no se
   envía el nombre al navegador para luego ocultarlo), y la prueba lo verifica leyendo la respuesta, no solo la pantalla.
 - Fechas y horas: se guardan en `TIMESTAMPTZ` y se calculan con `zoneinfo` (`America/Santiago`), con pruebas en los dos cambios de hora del año.

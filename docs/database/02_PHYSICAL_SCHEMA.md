@@ -276,6 +276,38 @@ Notas:
   coinciden con el filtro de la vista.
 - **No aplicada en AWS RDS DEV al cierre de la etapa de desarrollo.**
 
+### `tpi.v_historial_agenda` (vista de la migracion 011)
+
+Read model de solo lectura sobre `tpi.auditoria` (migracion 011, change_class D).
+Contrato versionado:
+
+| Columna | Tipo | Origen | Proposito |
+| ------- | ---- | ------ | --------- |
+| `id_auditoria` | UUID | `tpi.auditoria.id_auditoria` | Identificador del evento |
+| `id_lead` | UUID | `tpi.auditoria.id_lead` | Lead afectado |
+| `fecha_hora` | TIMESTAMPTZ | `tpi.auditoria.fecha_hora` | Momento del evento |
+| `accion` | TEXT | `tpi.auditoria.accion` | Accion de la agenda (`cita_agendada`, `cita_reagendada`, `cita_cancelada`, `cita_realizada`, `cita_no_asistio`) |
+| `actor_subject` | TEXT | `detalle->>'actor_subject'` | Identidad historica del actor |
+| `id_cita` | UUID | `detalle->>'id_cita'` validado con CASE + regex canonica case-insensitive | Reunion; `NULL` si el valor no es UUID canonico |
+| `responsable_id` | UUID | `detalle->>'responsable_id'` validado con CASE + regex canonica case-insensitive | Responsable de la reunion; puede ser `NULL` |
+| `estado_anterior` | TEXT | `detalle->>'estado_anterior'` | Estado previo de la reunion |
+| `estado_nuevo` | TEXT | `detalle->>'estado_nuevo'` | Estado posterior de la reunion |
+| `fecha_hora_anterior` | TIMESTAMPTZ | `detalle->>'fecha_hora_anterior'` convertido a timestamptz | Hora previa; puede ser `NULL` |
+| `fecha_hora_nueva` | TIMESTAMPTZ | `detalle->>'fecha_hora_nueva'` convertido a timestamptz | Hora nueva; puede ser `NULL` |
+
+Notas:
+
+- Filtro fijo: `accion IN ('cita_agendada', 'cita_reagendada', 'cita_cancelada', 'cita_realizada',
+  'cita_no_asistio')` AND `tabla_afectada = 'tpi.citas'`.
+- `security_barrier = true`.
+- `REVOKE ALL ... FROM PUBLIC`; `GRANT SELECT` unicamente a `tpi_app`.
+- No expone `detalle` crudo, `id_persona`, `id_usuario` ni `ip_origen`; la nota y el motivo de
+  cancelacion de la reunion no se registran en la auditoria de la agenda y no llegan a la vista.
+- Sin indice nuevo: la consulta queda servida por el indice de apoyo `auditoria_state_history_idx
+  (accion, tabla_afectada, id_lead, fecha_hora)` de la migracion 008, cuyas columnas lideres
+  coinciden con el filtro de la vista.
+- **No aplicada en AWS RDS DEV al cierre de la etapa de desarrollo.**
+
 ### `tpi.consentimientos`
 
 Contrato versionado:

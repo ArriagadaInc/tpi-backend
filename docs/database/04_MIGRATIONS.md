@@ -29,6 +29,8 @@ scripts versionados, debe tratarse como drift.
 | `scripts/sql/009_create_historial_simulaciones.sql` | Crear la trusted view `tpi.v_historial_simulaciones` (read model sanitizado del historial de simulaciones de renta vitalicia) con `security_barrier`, exponiendo la evidencia completa (`entradas` y `resultado` en JSONB) y `GRANT SELECT` solo a `tpi_app`; sin indice nuevo (reutiliza el de 008) | `tpi.auditoria`, `tpi_app` | Versionado; **NO aplicado en AWS RDS DEV al cierre de la etapa de desarrollo** (change_class D requiere Human Gate explicito) | AWS DEV (post-merge, Human Gate) | `scripts/sql/009_drop_historial_simulaciones.sql` |
 | `scripts/sql/010_extend_citas_agenda.sql` | Ampliar `tpi.citas` (responsable obligatorio, `fecha_hora_fin`, quien agendo, nota, motivo de cancelacion, `updated_at`, estados permitidos, una agendada por lead y exclusion de superposicion por responsable) y `tpi.asesores.atiende_reuniones`; `tpi_app` recibe `SELECT, INSERT, UPDATE` sobre `tpi.citas` (sin `DELETE`) | `tpi.citas`, `tpi.asesores`, `btree_gist`, `tpi_app` | Versionado; **NO aplicado en AWS RDS DEV al cierre de la etapa de desarrollo** (change_class D requiere Human Gate explicito) | AWS DEV (post-merge, Human Gate) | `scripts/sql/010_drop_citas_agenda.sql` |
 | `scripts/sql/010_drop_citas_agenda.sql` | Revertir la ampliacion de `tpi.citas` y `tpi.asesores` (columnas, restricciones, indices y privilegios nuevos) | `tpi.citas`, `tpi.asesores` | Versionado | AWS DEV (solo tras evaluar el rollback) | Re-aplicar el forward |
+| `scripts/sql/011_create_historial_agenda.sql` | Crear la trusted view `tpi.v_historial_agenda` (read model sanitizado de los eventos de la agenda) con `security_barrier`, filtro fijo sobre las cinco acciones de agenda, columnas tipadas (`id_cita` y `responsable_id` como UUID, fechas como TIMESTAMPTZ) y `GRANT SELECT` solo a `tpi_app`; sin indice nuevo (reutiliza el de 008) | `tpi.auditoria`, `tpi_app` | Versionado; **NO aplicado en AWS RDS DEV al cierre de la etapa de desarrollo** (change_class D requiere Human Gate explicito) | AWS DEV (post-merge, Human Gate) | `scripts/sql/011_drop_historial_agenda.sql` |
+| `scripts/sql/011_drop_historial_agenda.sql` | Revertir la vista `tpi.v_historial_agenda` (REVOKE SELECT + DROP VIEW idempotente) | `tpi.v_historial_agenda` | Versionado | AWS DEV (solo tras evaluar el rollback) | Re-aplicar el forward |
 | `scripts/sql/dev/002_enable_test_cleanup.sql` | Conceder DELETE solo para limpieza controlada en DEV | `tpi.leads`, `tpi.consentimientos` | Ayuda DEV-only | AWS DEV solamente | `scripts/sql/dev/002_disable_test_cleanup.sql` |
 | `scripts/sql/dev/002_disable_test_cleanup.sql` | Revocar el DELETE DEV-only | Script de habilitacion previo | Ayuda DEV-only | AWS DEV solamente | Revocar DELETE |
 
@@ -247,6 +249,59 @@ Estado de aplicacion:
 - El forward/rollback se probaron en PostgreSQL local/integracion
   (`tests/integration/test_citas_agenda_migration.py`), incluidas las restricciones de
   superposicion, una agendada por lead, estados permitidos y `fecha_hora_fin > fecha_hora`.
+
+## Notas sobre `011`
+
+La migracion `011` crea un read model SQL sanitizado (vista, no tabla) sobre
+`tpi.auditoria` para exponer la trazabilidad de los eventos de la agenda de reuniones
+(`CRM-AGENDA-4-HISTORIAL`) sin conceder acceso directo a la tabla y sin duplicar estado
+en `tpi.citas`.
+
+Contrato versionado:
+
+- Vista `tpi.v_historial_agenda` con `security_barrier`.
+- Filtro fijo: `accion IN ('cita_agendada', 'cita_reagendada', 'cita_cancelada',
+  'cita_realizada', 'cita_no_asistio')` y `tabla_afectada = 'tpi.citas'`.
+- Columnas: `id_auditoria`, `id_lead`, `fecha_hora`, `accion`, `actor_subject`, `id_cita`
+  (UUID), `responsable_id` (UUID, puede ser NULL), `estado_anterior`, `estado_nuevo`,
+  `fecha_hora_anterior` (TIMESTAMPTZ, puede ser NULL) y `fecha_hora_nueva` (TIMESTAMPTZ,
+  puede ser NULL). `id_cita` y `responsable_id` se validan con `CASE` + expresion regular
+  canonica de UUID case-insensitive antes del cast; las fechas se proyectan como TIMESTAMPTZ
+  (el escritor `AgendaRepository._insert_cita_audit` las guarda como ISO 8601 con zona horaria
+  o JSON null).
+- `REVOKE ALL ... FROM PUBLIC` y `GRANT SELECT` unicamente a `tpi_app`.
+- No amplia los privilegios de `tpi_app` sobre `tpi.auditoria`
+  (`SELECT/UPDATE/DELETE` continuan `false`; append-only vigente desde `006`).
+- No expone `detalle` crudo, `id_persona`, `id_usuario` ni `ip_origen`; la nota y el motivo
+  de cancelacion no se registran en la auditoria de la agenda y no llegan a la vista.
+- Sin indice nuevo: la consulta queda servida por el indice de apoyo
+  `auditoria_state_history_idx (accion, tabla_afectada, id_lead, fecha_hora)` de la migracion
+  `008`, cuyas columnas lideres coinciden con el filtro de la vista.
+- Orden estable aplicado por la consulta del repositorio
+  (`fecha_hora DESC, id_auditoria DESC`), no por la vista.
+
+Procedimiento de aplicacion y reversa en AWS DEV (para el humano):
+
+1. Con el migration candidate congelado (SHA exacto de `main`), verificar que `011` esta
+   libre y que no se han reejecutado `005`/`006`.
+2. Preflight (tpi_admin): `psql ... -f scripts/sql/011_create_historial_agenda.sql`.
+   El preflight aborta si `tpi_app` posee `SELECT`/`UPDATE`/`DELETE` directo sobre
+   `tpi.auditoria` o si falta `USAGE` sobre `tpi`.
+3. Postflight: confirmar que la vista existe con `security_barrier`, `SELECT` solo a
+   `tpi_app` sobre la vista, `PUBLIC` sin privilegios y `tpi_app` sin `SELECT`/`UPDATE`/`DELETE`
+   directo sobre `tpi.auditoria`.
+4. Reversa (solo tras evaluar el rollback conforme al Harness):
+   `psql ... -f scripts/sql/011_drop_historial_agenda.sql` (idempotente:
+   `REVOKE SELECT` + `DROP VIEW IF EXISTS`; no elimina datos de auditoria ni afecta las
+   vistas de `007`/`008`/`009`).
+
+Estado de aplicacion:
+
+- **No aplicada en AWS RDS DEV** al cierre de la etapa de desarrollo. La aplicacion
+  en AWS DEV es `change_class D` (db_path) y requiere Human Gate explicito.
+- El forward/rollback se probaron en PostgreSQL local/integracion
+  (`tests/integration/test_agenda_historial_view.py`), con las filas de auditoria producidas
+  por el flujo real de la agenda (`AgendaRepository`).
 
 ## Bootstrap vs migracion incremental
 
