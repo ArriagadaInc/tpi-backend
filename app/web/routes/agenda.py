@@ -26,7 +26,16 @@ from app.models.agenda import (
     AgendaPermissionError,
     AgendaValidationError,
 )
-from app.web.agenda_presentation import resolve_agenda_service
+from app.web.agenda_presentation import (
+    HORA_FIN,
+    HORA_INI,
+    agrupar_por_dia,
+    build_week_grid,
+    color_map,
+    rango_label,
+    resolve_agenda_service,
+    resumen_semana,
+)
 from app.web.routes.leads import (
     _build_detail_redirect_url_from_value,
     _build_query_url,
@@ -107,18 +116,33 @@ def agenda_page(request: Request):
         proximas = []
         unavailable = True
 
-    dias_semana = [
+    colores = color_map(responsables)
+    dias_semana = build_week_grid(citas_semana, monday, hoy, now, colores)
+    grupos_proximas = agrupar_por_dia(proximas, hoy, colores)
+    vista_actual = "lista" if vista == "lista" else "semana"
+    base = {
+        "fecha": monday.isoformat(),
+        "responsable": str(responsable_id) if responsable_id else None,
+    }
+    chips_responsable = [
         {
-            "label": _DIAS_SEMANA[i],
-            "fecha": monday + timedelta(days=i),
-            "citas": [
-                c
-                for c in citas_semana
-                if isinstance(c.get("fecha_hora"), datetime)
-                and c["fecha_hora"].astimezone(AGENDA_TZ).date() == monday + timedelta(days=i)
-            ],
+            "label": "Todos",
+            "color": None,
+            "activo": responsable_id is None,
+            "url": _build_query_url(
+                "/agenda", {**base, "responsable": None, "vista": vista_actual}
+            ),
         }
-        for i in range(7)
+    ] + [
+        {
+            "label": r.get("nombre"),
+            "color": colores.get(str(r.get("nombre")), "slate"),
+            "activo": responsable_id is not None and str(r.get("id_asesor")) == str(responsable_id),
+            "url": _build_query_url(
+                "/agenda", {**base, "responsable": str(r.get("id_asesor")), "vista": vista_actual}
+            ),
+        }
+        for r in responsables
     ]
 
     context: dict[str, Any] = {
@@ -136,13 +160,28 @@ def agenda_page(request: Request):
         "responsables": responsables,
         "responsable_id": str(responsable_id) if responsable_id else None,
         "semana_label": f"{monday:%d/%m/%Y}",
+        "rango_label": rango_label(monday),
+        "vista_actual": vista_actual,
+        "grupos_proximas": grupos_proximas,
+        "resumen": resumen_semana(citas_semana),
+        "chips_responsable": chips_responsable,
+        "horas": list(range(HORA_INI, HORA_FIN)),
+        "hora_ini": HORA_INI,
+        "vista_urls": {
+            "semana": _build_query_url("/agenda", {**base, "vista": "semana"}),
+            "lista": _build_query_url("/agenda", {**base, "vista": "lista"}),
+        },
         "semana_anterior": _build_query_url(
-            "/agenda", {"fecha": (monday - timedelta(days=7)).isoformat()}
+            "/agenda",
+            {**base, "fecha": (monday - timedelta(days=7)).isoformat(), "vista": vista_actual},
         ),
         "semana_siguiente": _build_query_url(
-            "/agenda", {"fecha": (monday + timedelta(days=7)).isoformat()}
+            "/agenda",
+            {**base, "fecha": (monday + timedelta(days=7)).isoformat(), "vista": vista_actual},
         ),
-        "semana_hoy": _build_query_url("/agenda", {"fecha": hoy.isoformat()}),
+        "semana_hoy": _build_query_url(
+            "/agenda", {**base, "fecha": hoy.isoformat(), "vista": vista_actual}
+        ),
         "unavailable": unavailable,
         "flash_message": _pop_flash(request),
     }

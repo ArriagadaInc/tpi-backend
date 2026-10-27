@@ -13,8 +13,16 @@
   <body>
     <header class="topbar">
       <div class="brand-wrap" role="banner" aria-label="Tu Pensión Inteligente CRM">
-        <img class="brand-logo" src="/static/img/official-logo-on-light.png" alt="Tu Pensión Inteligente">
-        <img class="brand-logo brand-logo-dark" src="/static/img/official-logo-on-dark.png" alt="Tu Pensión Inteligente">
+        {% set brand_logos %}
+          <img class="brand-logo" src="/static/img/official-logo-on-light.png" alt="Tu Pensión Inteligente">
+          <img class="brand-logo brand-logo-dark" src="/static/img/official-logo-on-dark.png" alt="Tu Pensión Inteligente">
+        {% endset %}
+        {# El logo lleva al sitio público (antes lo hacía el botón Home). Solo con sesión y con la URL aprobada. #}
+        {% if selected_user and public_site_url %}
+          <a class="brand-link" href="{{ public_site_url }}" target="_blank" rel="noopener noreferrer" aria-label="Ir al sitio de Tu Pensión Inteligente" title="Ir al sitio de Tu Pensión Inteligente">{{ brand_logos }}</a>
+        {% else %}
+          {{ brand_logos }}
+        {% endif %}
         <div class="brand-copy">
           <div class="brand-badge">CRM</div>
         </div>
@@ -44,9 +52,6 @@
               <span class="env-pill">{{ web_env_label }}</span>
             {% endif %}
           </div>
-          {% if public_site_url %}
-            <a class="link-button" href="{{ public_site_url }}" target="_blank" rel="noopener noreferrer">Home</a>
-          {% endif %}
           <a class="icon-button" href="/logout" aria-label="Cerrar sesión" title="Cerrar sesión"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></a>
         {% else %}
           <span class="topbar-muted">Acceso local</span>

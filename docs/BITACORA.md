@@ -22,6 +22,20 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-27 - Agenda: implementado el nuevo aspecto (CRM-AGENDA-3-LOOK)
+
+- Qué se hizo: se copiaron los ocho archivos de `docs/ui/referencia/agenda/` a sus rutas de destino en `app/web/`
+  (`base.html`, `agenda.html`, `agenda_form_fields.html`, `agenda_macros.html`, `reunion_card.html`, `app.css`,
+  `agenda_presentation.py` y `routes/agenda.py`), idénticos a la referencia ignorando fines de línea (AC-1).
+- Pruebas nuevas: `tests/unit/test_agenda_presentation.py` (helpers de presentación: `color_map`, `rango_label`,
+  `etiqueta_dia`, `_asignar_carriles`, `build_week_grid`, `resumen_semana`, `agrupar_por_dia` y `meeting_tile`);
+  pruebas de conservación de los parámetros de la URL en `/agenda` (filtro por responsable, navegación por semanas y
+  selector Semana/Lista); y pruebas del CSS de `.timeline-item` (claro con `--surface-soft`, oscuro sin cambios).
+- Pruebas actualizadas: `tests/unit/test_web_app.py` (el botón Home pasa a ser el logo `a.brand-link`, sin debilitar la
+  protección de la URL aprobada: `target="_blank"` y `rel="noopener noreferrer"`).
+- Las 101 pruebas de agenda existentes siguen pasando. Sin dependencias, tipografías, scripts ni librerías nuevas.
+- Documentación: `docs/AGENDA_USO.md` (vistas nuevas) y `docs/UI_DESIGN_SYSTEM.md` (nota de los patrones nuevos).
+
 ### 2026-10-26 - Agenda: el logo sustituye al botón Home (se suma a CRM-AGENDA-3-LOOK)
 
 - Pedido del humano: quitar el botón **Home** de la barra superior y llegar al home presionando el logo de TPI.
