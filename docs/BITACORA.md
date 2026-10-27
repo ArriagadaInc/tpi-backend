@@ -22,6 +22,15 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-27 - Agenda: definidas las tareas del historial del lead y de los casos por asesor
+
+- Pedido del humano (2026-10-27): (1) en el dashboard, la tabla de casos por asesor debe separar coordinadores de runners (los socios no van: no tienen cartera asignada); (2) quitar el botón
+  Continuar del simulador y mejorar su aspecto (pendiente, va después); (3) los eventos del agendamiento deben quedar en el historial del lead. Orden acordado: 3, luego 1, luego 2.
+- Los puntos 3 y 1 se definen como dos tareas porque la aplicación no lee `tpi.auditoria` (solo vistas sanitizadas, migraciones 007 a 009), así que el historial necesita una vista nueva:
+  - `CRM-AGENDA-4-HISTORIAL-MIGRACION` (clase D, `deploy_required: false`): migración 011, vista `tpi.v_historial_agenda`. La aplica el humano en DEV.
+  - `CRM-AGENDA-4-HISTORIAL` (clase A): eventos de la agenda en el historial del lead y casos por asesor separados en Coordinadores y Runners. Se activa cuando la migración esté aplicada.
+- Sin activar ninguna todavía.
+
 ### 2026-10-27 - Se retira la referencia visual de la agenda y cambia la fecha de vigencia de la Ley 21.719
 
 - Se retira `docs/ui/referencia/agenda/` de `main`: la tarea `CRM-AGENDA-3-LOOK` está cerrada (PR 144 y cierre en el PR 145) y su README pedía retirarla al cerrar. El resultado vive en `app/web/` y las
