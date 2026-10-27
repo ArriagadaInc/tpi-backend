@@ -59,6 +59,8 @@ class LeadBoardService(Protocol):
 
     def get_lead_simulation_events(self, id_lead: Any) -> list[dict[str, Any]]: ...
 
+    def get_lead_agenda_events(self, id_lead: Any) -> list[dict[str, Any]]: ...
+
 
 @dataclass(frozen=True, slots=True)
 class WebLeadOption:
@@ -276,6 +278,9 @@ class _MockLeadBoardService:
         return []
 
     def get_lead_simulation_events(self, id_lead: Any) -> list[dict[str, Any]]:
+        return []
+
+    def get_lead_agenda_events(self, id_lead: Any) -> list[dict[str, Any]]:
         return []
 
 

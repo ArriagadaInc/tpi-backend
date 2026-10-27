@@ -24,6 +24,7 @@ from app.attachments.validation import (
     validate_attachment_content,
 )
 from app.auth.models import AuthenticatedUser, UserRole, is_superuser
+from app.database.errors import DatabaseAppError
 from app.models.crm_states import normalize_crm_state_for_display
 from app.models.lead_assignment import (
     LeadAssignmentConflictError,
@@ -493,6 +494,20 @@ def _attach_attachment_scan_statuses(
             queries += 1
 
 
+def _load_agenda_events(service: Any, lead_id: str) -> list[dict[str, Any]]:
+    """Eventos de la agenda para la linea de tiempo del historial, fail-soft (AC-4).
+
+    Solo se consulta cuando el lead ya es visible: el detalle aplico antes el mismo
+    control de alcance (``selected_lead`` no None). Si el id no es un UUID valido o la
+    lectura de la vista falla, se devuelve lista vacia sin registrar el error ni datos
+    personales y el resto del historial sigue intacto.
+    """
+    try:
+        return cast(list[dict[str, Any]], service.get_lead_agenda_events(lead_id))
+    except (DatabaseAppError, ValueError, TypeError):
+        return []
+
+
 def _resolve_detail_context(
     request: Request,
     lead_id: str,
@@ -520,8 +535,9 @@ def _resolve_detail_context(
         events = service.get_lead_assignment_events(lead_id)
         state_changes = service.get_lead_state_change_events(lead_id)
         simulations = service.get_lead_simulation_events(lead_id)
+        agenda_events = _load_agenda_events(service, lead_id)
         timeline_items = build_timeline_items(
-            events, parsed_comments.notes, state_changes, simulations
+            events, parsed_comments.notes, state_changes, simulations, agenda_events
         )
         if _attachments_enabled(request):
             _attach_attachment_scan_statuses(service, lead_id, timeline_items)

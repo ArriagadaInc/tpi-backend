@@ -531,3 +531,88 @@ def test_completar_reunion_no_agendada_se_rechaza(world: Any) -> None:
 
     with pytest.raises(AgendaValidationError):
         repo.complete_cita(cita_id=cita_id, actor=_actor("ceo"))
+
+
+def _cita_agendada_id(lead_id: str) -> str:
+    """Id de la reunion agendada actual del lead (la unica con estado 'agendada')."""
+    with get_db_connection(operation="agenda.integration.cita_agendada_id") as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id_cita FROM tpi.citas WHERE id_lead = %s AND estado_cita = 'agendada' "
+                "ORDER BY created_at DESC, id_cita DESC LIMIT 1",
+                (lead_id,),
+            )
+            return str(cur.fetchone()["id_cita"])
+
+
+def test_get_lead_agenda_events_devuelve_cinco_acciones_con_responsable(world: Any) -> None:
+    repo = AgendaRepository()
+    with get_db_connection(operation="agenda.integration.nombre_socio") as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT nombre FROM tpi.asesores WHERE id_asesor = %s", (world["socio"],))
+            nombre_socio = str(cur.fetchone()["nombre"])
+
+    actor = _actor("ceo")
+    repo.create_cita(
+        lead_id=world["lead"],
+        responsable_id=world["socio"],
+        inicio=_inicio(9, 0),
+        fin=_inicio(9, 30),
+        modalidad="Google Meet",
+        link=None,
+        nota=None,
+        actor=actor,
+    )
+    cita_a = _cita_agendada_id(world["lead"])
+    repo.update_cita(
+        cita_id=cita_a,
+        responsable_id=world["socio"],
+        inicio=_inicio(9, 30),
+        fin=_inicio(10, 0),
+        modalidad="Google Meet",
+        link=None,
+        nota=None,
+        actor=actor,
+    )
+    repo.cancel_cita(cita_id=cita_a, motivo="motivo de prueba", actor=actor)
+
+    repo.create_cita(
+        lead_id=world["lead"],
+        responsable_id=world["socio"],
+        inicio=_inicio(10, 0),
+        fin=_inicio(10, 30),
+        modalidad="Llamada",
+        link=None,
+        nota=None,
+        actor=actor,
+    )
+    cita_b = _cita_agendada_id(world["lead"])
+    repo.complete_cita(cita_id=cita_b, actor=actor)
+
+    repo.create_cita(
+        lead_id=world["lead"],
+        responsable_id=world["socio"],
+        inicio=_inicio(11, 0),
+        fin=_inicio(11, 30),
+        modalidad="Presencial",
+        link=None,
+        nota=None,
+        actor=actor,
+    )
+    cita_c = _cita_agendada_id(world["lead"])
+    repo.no_show_cita(cita_id=cita_c, actor=actor)
+
+    eventos = repo.get_lead_agenda_events(UUID(world["lead"]))
+    acciones = {e["accion"] for e in eventos}
+    assert acciones == {
+        "cita_agendada",
+        "cita_reagendada",
+        "cita_cancelada",
+        "cita_realizada",
+        "cita_no_asistio",
+    }
+    # Cada evento trae el nombre del responsable por el LEFT JOIN con tpi.asesores.
+    assert all(e["responsable_nombre"] == nombre_socio for e in eventos)
+    # Orden estable: fecha_hora DESC, id_auditoria DESC.
+    fechas = [e["fecha_hora"] for e in eventos]
+    assert fechas == sorted(fechas, reverse=True)

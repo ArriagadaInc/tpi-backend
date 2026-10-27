@@ -140,6 +140,14 @@ class AgendaService:
     def get_cita_for_lead(self, lead_id: UUID) -> dict[str, Any] | None:
         return self.repository.get_cita_for_lead(lead_id)
 
+    def get_lead_agenda_events(self, lead_id: UUID) -> list[dict[str, Any]]:
+        """Eventos de la agenda de un lead para la linea de tiempo del historial.
+
+        Lectura de solo el read model ``tpi.v_historial_agenda`` (migracion 011) a traves
+        del repositorio; nunca lee ``tpi.auditoria`` ni ``tpi.citas``.
+        """
+        return self.repository.get_lead_agenda_events(lead_id)
+
     def list_responsables(self) -> list[dict[str, Any]]:
         """Todos los responsables validos (para el filtro del calendario)."""
         return self.repository.get_responsables()

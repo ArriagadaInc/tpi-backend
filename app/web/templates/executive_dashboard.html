@@ -354,33 +354,84 @@
       {% if dashboard.section_failed('asesores') %}
         {{ ui.section_error('No fue posible calcular el resumen por asesor. El resto del dashboard no se ve afectado.') }}
       {% elif asesor_rows %}
-        <div class="table-wrap">
-          <table class="board-table asesor-table">
-            <caption class="sr-only">Resumen de cartera y tiempos por asesor</caption>
-            <thead>
-              <tr>
-                <th scope="col">Asesor</th>
-                <th scope="col">Cartera total</th>
-                <th scope="col">Cartera activa</th>
-                <th scope="col">Estancados</th>
-                <th scope="col">Tiempo a asignación</th>
-                <th scope="col">Tiempo a primera gestión</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for row in asesor_rows %}
-                <tr>
-                  <th scope="row">{{ row.nombre }}</th>
-                  <td class="num">{{ row.cartera_total|format_int }}</td>
-                  <td class="num">{{ row.cartera_activa|format_int }}</td>
-                  <td class="num">{{ row.estancados|format_int }}</td>
-                  <td class="num">{{ row.tiempo_asignacion_dias|format_dias }}</td>
-                  <td class="num">{{ row.tiempo_primera_gestion_dias|format_dias }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+        {% for group in asesor_groups %}
+          <div class="asesor-group">
+            <h4 class="asesor-group-title">{{ group.titulo }}</h4>
+            {% if group.rows %}
+              <div class="table-wrap">
+                <table class="board-table asesor-table">
+                  <caption class="sr-only">Resumen de {{ group.titulo }} por asesor</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Asesor</th>
+                      <th scope="col">Cartera total</th>
+                      <th scope="col">Cartera activa</th>
+                      <th scope="col">Estancados</th>
+                      <th scope="col">Tiempo a asignación</th>
+                      <th scope="col">Tiempo a primera gestión</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in group.rows %}
+                      <tr>
+                        <th scope="row">{{ row.nombre }}</th>
+                        <td class="num">{{ row.cartera_total|format_int }}</td>
+                        <td class="num">{{ row.cartera_activa|format_int }}</td>
+                        <td class="num">{{ row.estancados|format_int }}</td>
+                        <td class="num">{{ row.tiempo_asignacion_dias|format_dias }}</td>
+                        <td class="num">{{ row.tiempo_primera_gestion_dias|format_dias }}</td>
+                      </tr>
+                    {% endfor %}
+                    <tr class="asesor-subtotal">
+                      <th scope="row">Subtotal</th>
+                      <td class="num">{{ group.subtotal_cartera_total|format_int }}</td>
+                      <td class="num">{{ group.subtotal_cartera_activa|format_int }}</td>
+                      <td class="num">{{ group.subtotal_estancados|format_int }}</td>
+                      <td class="num">—</td>
+                      <td class="num">—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              {{ ui.empty_state(group.empty_label, 'Ajusta los filtros para ver este grupo.') }}
+            {% endif %}
+          </div>
+        {% endfor %}
+
+        {% if sin_asesor_rows %}
+          <div class="asesor-group">
+            <h4 class="asesor-group-title">Sin asesor</h4>
+            <div class="table-wrap">
+              <table class="board-table asesor-table">
+                <caption class="sr-only">Resumen de leads sin asesor</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Asesor</th>
+                    <th scope="col">Cartera total</th>
+                    <th scope="col">Cartera activa</th>
+                    <th scope="col">Estancados</th>
+                    <th scope="col">Tiempo a asignación</th>
+                    <th scope="col">Tiempo a primera gestión</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in sin_asesor_rows %}
+                    <tr>
+                      <th scope="row">{{ row.nombre }}</th>
+                      <td class="num">{{ row.cartera_total|format_int }}</td>
+                      <td class="num">{{ row.cartera_activa|format_int }}</td>
+                      <td class="num">{{ row.estancados|format_int }}</td>
+                      <td class="num">{{ row.tiempo_asignacion_dias|format_dias }}</td>
+                      <td class="num">{{ row.tiempo_primera_gestion_dias|format_dias }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {% endif %}
+
         <p class="table-foot-note">
           «Sin asesor» agrupa los leads sin asignación activa. «N/D» indica que el evento aún no
           ocurre para ningún lead del asesor: nunca se reporta como cero.
@@ -388,21 +439,44 @@
         {% if dashboard.current_snapshot.casos_por_estado_y_asesor %}
           <details class="chart-table">
             <summary>Ver casos por estado y asesor</summary>
-            <table class="data-table">
-              <caption>Casos por estado y asesor</caption>
-              <thead>
-                <tr><th scope="col">Asesor</th><th scope="col">Estado</th><th scope="col">Leads</th></tr>
-              </thead>
-              <tbody>
-                {% for cell in dashboard.current_snapshot.casos_por_estado_y_asesor %}
-                  <tr>
-                    <th scope="row">{{ cell.nombre }}</th>
-                    <td>{{ cell.estado_label or cell.estado }}</td>
-                    <td class="num">{{ cell.n|format_int }}</td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+            {% for group in asesor_cell_groups %}
+              {% if group.cells %}
+                <h5 class="asesor-group-title">{{ group.titulo }}</h5>
+                <table class="data-table">
+                  <caption>Casos por estado y asesor — {{ group.titulo }}</caption>
+                  <thead>
+                    <tr><th scope="col">Asesor</th><th scope="col">Estado</th><th scope="col">Leads</th></tr>
+                  </thead>
+                  <tbody>
+                    {% for cell in group.cells %}
+                      <tr>
+                        <th scope="row">{{ cell.nombre }}</th>
+                        <td>{{ cell.estado_label or cell.estado }}</td>
+                        <td class="num">{{ cell.n|format_int }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              {% endif %}
+            {% endfor %}
+            {% if sin_asesor_cells %}
+              <h5 class="asesor-group-title">Sin asesor</h5>
+              <table class="data-table">
+                <caption>Casos por estado y asesor — Sin asesor</caption>
+                <thead>
+                  <tr><th scope="col">Asesor</th><th scope="col">Estado</th><th scope="col">Leads</th></tr>
+                </thead>
+                <tbody>
+                  {% for cell in sin_asesor_cells %}
+                    <tr>
+                      <th scope="row">{{ cell.nombre }}</th>
+                      <td>{{ cell.estado_label or cell.estado }}</td>
+                      <td class="num">{{ cell.n|format_int }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            {% endif %}
           </details>
         {% endif %}
       {% else %}

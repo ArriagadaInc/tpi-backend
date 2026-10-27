@@ -73,6 +73,7 @@ class FakeAgendaRepo:
         self.citas = citas if citas is not None else {}
         self.ownership = ownership if ownership is not None else {LEAD: RUNNER}
         self.calls: list[tuple[str, dict[str, Any]]] = []
+        self.agenda_events: list[dict[str, Any]] = []
 
     def get_responsables(self) -> list[dict[str, Any]]:
         return list(self.responsables)
@@ -91,6 +92,9 @@ class FakeAgendaRepo:
 
     def list_citas(self, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:
         return []
+
+    def get_lead_agenda_events(self, id_lead: UUID) -> list[dict[str, Any]]:
+        return list(self.agenda_events)
 
     def lead_active_assignment_owner(self, id_lead: UUID) -> UUID | None:
         return self.ownership.get(id_lead)
@@ -297,6 +301,16 @@ def test_get_proximas_citas_y_list_responsables():
     assert len(proximas) == 1
     assert proximas[0]["lead_nombre"] == "Juan Perez"
     assert len(service.list_responsables()) == 3
+
+
+def test_get_lead_agenda_events_delega_en_el_repositorio():
+    service, repo = _service()
+    repo.agenda_events = [
+        {"id_lead": str(LEAD), "accion": "cita_agendada", "responsable_nombre": "Socio A"}
+    ]
+    eventos = service.get_lead_agenda_events(LEAD)
+    assert eventos == repo.agenda_events
+    assert eventos[0]["accion"] == "cita_agendada"
 
 
 # ------------------------------------------------------------------ escritura

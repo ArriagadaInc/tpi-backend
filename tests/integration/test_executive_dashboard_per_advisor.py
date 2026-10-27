@@ -372,3 +372,65 @@ def test_metricas_operacionales_por_asesor_stuck_assignment_and_first_management
             with conn.cursor() as cur:
                 _cleanup(cur, lead_ids, asesor_ids)
                 conn.commit()
+
+
+def _make_asesor_perfil(cur, nombre: str, rol: str, atiende: bool) -> str:
+    cur.execute(
+        "INSERT INTO tpi.asesores (nombre, email, rol, estado_disponibilidad, atiende_reuniones) "
+        "VALUES (%s, %s, %s, 'activo', %s) RETURNING id_asesor",
+        (nombre, f"{nombre.replace(' ', '').casefold()}@example.com", rol, atiende),
+    )
+    return str(cur.fetchone()["id_asesor"])
+
+
+def test_cartera_por_asesor_trae_rol_y_atiende_reuniones() -> None:
+    """AC-5: las tres consultas por asesor traen ``rol`` y ``atiende_reuniones``."""
+    marker = _marker()
+    lead_ids: list[str] = []
+    asesor_ids: list[str] = []
+    now = _now()
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            coord = _make_asesor_perfil(cur, f"Coord Perfil {uuid4().hex[:6]}", "asesor", True)
+            runner = _make_asesor_perfil(cur, f"Runner Perfil {uuid4().hex[:6]}", "asesor", False)
+            socio = _make_asesor_perfil(cur, f"Socio Perfil {uuid4().hex[:6]}", "socio", True)
+            asesor_ids.extend([coord, runner, socio])
+
+            lead_ids.append(
+                _make_lead(cur, marker=marker, rut=_rut("p"), estado="nuevo", fecha_ingreso=now)
+            )
+            _assign(cur, lead_ids[-1], coord, now)
+            lead_ids.append(
+                _make_lead(cur, marker=marker, rut=_rut("p"), estado="nuevo", fecha_ingreso=now)
+            )
+            _assign(cur, lead_ids[-1], runner, now)
+            conn.commit()
+    try:
+        filters = _filters(marker)
+        cartera = _by_asesor(_REPO.get_cartera_por_asesor(filters))
+        assert cartera[coord]["rol"] == "asesor"
+        assert cartera[coord]["atiende_reuniones"] is True
+        assert cartera[runner]["rol"] == "asesor"
+        assert cartera[runner]["atiende_reuniones"] is False
+
+        metricas = _by_asesor(
+            _REPO.get_metricas_operacionales_por_asesor(filters, estancamiento_dias_default(), None)
+        )
+        assert metricas[coord]["rol"] == "asesor"
+        assert metricas[coord]["atiende_reuniones"] is True
+        assert metricas[runner]["atiende_reuniones"] is False
+
+        casos = _by_asesor(_REPO.get_casos_por_estado_y_asesor(filters))
+        assert casos[coord]["rol"] == "asesor"
+        assert casos[coord]["atiende_reuniones"] is True
+        assert casos[runner]["atiende_reuniones"] is False
+
+        # El Socio no tiene cartera asignada, no aparece en ninguna consulta.
+        assert socio not in cartera
+        assert socio not in metricas
+        assert socio not in casos
+    finally:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                _cleanup(cur, lead_ids, asesor_ids)
+                conn.commit()

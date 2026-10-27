@@ -22,6 +22,30 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-27 - CRM agenda 4b: eventos de la agenda en el historial y casos por asesor por perfil (CRM-AGENDA-4-HISTORIAL)
+
+- Desarrollo (clase A): los eventos de la agenda (agendada, reagendada, cancelada, realizada y no asistio) aparecen en
+  la linea de tiempo del historial del lead, leidos solo de `tpi.v_historial_agenda` (migracion 011) unida a
+  `tpi.asesores` por `responsable_id` (LEFT JOIN) para el nombre del responsable, ordenados por `fecha_hora DESC,
+  id_auditoria DESC`. Cadena: `AgendaRepository.get_lead_agenda_events` (la consulta no menciona `tpi.auditoria` ni
+  `tpi.citas`), `AgendaService.get_lead_agenda_events`, `SolicitudService.get_lead_agenda_events` (protocolo
+  `LeadBoardService` y su fake en `app/web/dependencies.py`), y `build_timeline_items` con `kind='agenda'` (rank entre
+  `state_change` y `note`). El detalle muestra los cinco textos con la insignia «Automatico» y el actor; «responsable
+  no disponible» si el responsable no se resuelve; sin ids internos, nota ni motivo de cancelacion.
+- Alcance y degradacion (AC-4): los eventos se cargan solo cuando el lead es visible (mismo control del detalle); un
+  Runner no obtiene eventos de un lead ajeno y, si la lectura de la vista falla, el detalle responde 200 con el resto
+  del historial, sin lineas de agenda y sin volcar el error.
+- Dashboard ejecutivo (AC-5): el Resumen por asesor y su detalle «Ver casos por estado y asesor» agrupan a los asesores
+  por perfil (Coordinador = `rol='asesor'` + `atiende_reuniones=true`; Runner = `rol='asesor'` + `atiende_reuniones=false`;
+  Socios defensivo). El repositorio trae `rol` y `atiende_reuniones` en las mismas consultas; el servicio calcula el
+  grupo; la presentacion arma los grupos con subtotal de conteos (los tiempos muestran «—») y estado vacio por grupo.
+  «Sin asesor» sigue aparte.
+- Pruebas: unitarias de presentacion (`test_agenda_historial_timeline_presentation.py`,
+  `test_asesor_groups_presentation.py`, `test_asesor_groups_render.py`), repositorio (`test_agenda_historial_repository.py`),
+  servicio (`test_agenda_service.py`, `test_executive_dashboard_service.py`) y web (`test_agenda_historial_web.py`), y de
+  integracion (`test_agenda_repository.py`, `test_executive_dashboard_per_advisor.py`). Documentacion en
+  `docs/AGENDA_USO.md` (seccion 7), `docs/H3_3_4_DASHBOARD_DESIGN.md` y `CHANGELOG.md`.
+
 ### 2026-10-27 - Harness: tarea CRM-AGENDA-4-HISTORIAL-MIGRACION cerrada (DONE)
 
 - Titulo: CRM agenda 4a: vista de solo lectura con los eventos de la agenda para el historial del lead

@@ -125,6 +125,40 @@ class AgendaRepository:
                 return dict(row) if row else None
 
     @staticmethod
+    def get_lead_agenda_events(id_lead: UUID) -> list[dict[str, Any]]:
+        """Eventos de la agenda de un lead desde el read model sanitizado (migracion 011).
+
+        Lee UNICAMENTE ``tpi.v_historial_agenda`` (nunca ``tpi.auditoria`` ni ``tpi.citas``)
+        y une ``tpi.asesores`` por ``responsable_id`` (LEFT JOIN) solo para el nombre del
+        responsable. Orden estable ``fecha_hora DESC, id_auditoria DESC`` (el mismo contrato
+        de los eventos 007/008/009).
+        """
+        query = """
+            SELECT
+                v.id_auditoria,
+                v.id_lead,
+                v.fecha_hora,
+                v.accion,
+                v.actor_subject,
+                v.id_cita,
+                v.responsable_id,
+                v.estado_anterior,
+                v.estado_nuevo,
+                v.fecha_hora_anterior,
+                v.fecha_hora_nueva,
+                ases.nombre AS responsable_nombre
+            FROM tpi.v_historial_agenda v
+            LEFT JOIN tpi.asesores ases ON ases.id_asesor = v.responsable_id
+            WHERE v.id_lead = %s
+            ORDER BY v.fecha_hora DESC, v.id_auditoria DESC
+        """
+        with get_db_connection(operation="agenda.historial") as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (str(id_lead),))
+                rows = cur.fetchall()
+                return [dict(row) for row in rows]
+
+    @staticmethod
     def list_citas(
         desde: datetime,
         hasta: datetime | None = None,

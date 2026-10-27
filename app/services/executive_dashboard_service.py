@@ -18,6 +18,10 @@ from app.auth.models import AuthenticatedUser, is_superuser
 from app.config import Settings, get_settings
 from app.models.crm_states import crm_state_label, iter_crm_state_options
 from app.models.executive_dashboard import (
+    GRUPO_COORDINADOR,
+    GRUPO_RUNNER,
+    GRUPO_SIN_ASESOR,
+    GRUPO_SOCIO,
     SECTION_ANTIGUEDAD,
     SECTION_ASESORES,
     SECTION_CATEGORIAS,
@@ -219,6 +223,7 @@ class ExecutiveDashboardService:
                     estado=str(row["estado"]),
                     estado_label=crm_state_label(row["estado"]),
                     n=int(row["n"]),
+                    grupo=self._grupo_de_row(row),
                 )
                 for row in self.repository.get_casos_por_estado_y_asesor(filters)
             ],
@@ -283,6 +288,7 @@ class ExecutiveDashboardService:
                     tiempo_primera_gestion_dias=self._media(
                         extra.get("tiempo_primera_gestion_dias")
                     ),
+                    grupo=self._grupo_de_row(row),
                 )
             )
         return rows
@@ -415,3 +421,25 @@ class ExecutiveDashboardService:
         if nombre is None:
             return _SIN_ASESOR_LABEL
         return str(nombre)
+
+    @staticmethod
+    def _grupo(rol: Any, atiende_reuniones: Any) -> str:
+        """Clasifica un asesor por su perfil (AC-5).
+
+        Coordinador = ``rol='asesor'`` y ``atiende_reuniones=true``; Runner =
+        ``rol='asesor'`` y ``atiende_reuniones=false``; Socio = ``rol='socio'``.
+        Cualquier otro valor cae en Runner para no ocultar filas inesperadas.
+        """
+        rol_n = str(rol or "").strip().casefold()
+        if rol_n == "socio":
+            return GRUPO_SOCIO
+        if rol_n == "asesor":
+            return GRUPO_COORDINADOR if bool(atiende_reuniones) else GRUPO_RUNNER
+        return GRUPO_RUNNER
+
+    @classmethod
+    def _grupo_de_row(cls, row: dict[str, Any]) -> str:
+        """Grupo de una fila del repositorio (``sin_asesor`` cuando no hay asignacion)."""
+        if row.get("id_asesor") is None:
+            return GRUPO_SIN_ASESOR
+        return cls._grupo(row.get("rol"), row.get("atiende_reuniones"))

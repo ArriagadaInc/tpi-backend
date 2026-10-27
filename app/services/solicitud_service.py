@@ -54,6 +54,7 @@ from app.models.solicitud import (
 from app.models.test_lead_cleanup import TestLeadCleanupResult
 from app.notifications import LeadCreatedEvent, LeadEventPublisher, build_lead_event_publisher
 from app.repositories import SolicitudRepository
+from app.repositories.agenda_repository import AgendaRepository
 from app.security.masking import mask_row_for_display
 from app.services.xlsx_export import (
     EXPORT_MAX_ROWS,
@@ -689,6 +690,16 @@ class SolicitudService:
         """
         lead_id = self._normalize_uuid(id_lead, "lead")
         return self.repository.get_lead_simulation_events(lead_id)
+
+    def get_lead_agenda_events(self, id_lead: UUID | str) -> list[dict[str, Any]]:
+        """Return sanitized agenda traceability events for one lead (AC-1).
+
+        The read goes through ``AgendaRepository``, which reads only the migration-011
+        view ``tpi.v_historial_agenda`` (never ``tpi.auditoria`` nor ``tpi.citas``) joined
+        with ``tpi.asesores`` for the responsible name.
+        """
+        lead_id = self._normalize_uuid(id_lead, "lead")
+        return AgendaRepository.get_lead_agenda_events(lead_id)
 
     def get_asesores_disponibles_para_asignacion(self) -> list[dict[str, Any]]:
         return self.repository.get_asesores_disponibles_para_asignacion()

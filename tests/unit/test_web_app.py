@@ -187,6 +187,9 @@ class _FakeWebService:
     def get_lead_simulation_events(self, id_lead):
         return list(self.simulations)
 
+    def get_lead_agenda_events(self, id_lead):
+        return []
+
     def update_lead_status(self, id_lead, estado_lead, *, actor=None):
         if str(id_lead) != str(self._full_detail["id_lead"]):
             return False

@@ -110,19 +110,22 @@ def build_timeline_items(
     notes: list[FollowUpNote],
     state_changes: list[dict] | None = None,
     simulations: list[dict] | None = None,
+    agenda_events: list[dict] | None = None,
 ) -> list[dict]:
-    """Merge assignment, state-change, simulation events and human notes into one timeline.
+    """Merge assignment, state-change, simulation, agenda events and human notes into one timeline.
 
-    Assignment events (migration 007), state-change events (migration 008) and simulation
-    events (migration 009) carry full-precision ``fecha_hora`` (TIMESTAMPTZ); human notes
-    carry minute-precision ``dd/mm/YYYY HH:MM`` strings generated in America/Santiago. All
-    are normalized to aware datetimes in America/Santiago for a stable descending sort.
+    Assignment events (migration 007), state-change events (migration 008), simulation
+    events (migration 009) and agenda events (migration 011) carry full-precision
+    ``fecha_hora`` (TIMESTAMPTZ); human notes carry minute-precision ``dd/mm/YYYY HH:MM``
+    strings generated in America/Santiago. All are normalized to aware datetimes in
+    America/Santiago for a stable descending sort.
 
     The sort is deterministic: primary key is the timestamp (descending) and, on an exact
     tie, a fixed source rank keeps assignment events before simulation events before
-    state-change events before notes (``event`` < ``simulation`` < ``state_change`` <
-    ``note``). Python's stable sort then preserves the repository's own deterministic
-    ordering (``fecha_hora DESC, id_auditoria DESC``) for ties within a single source.
+    state-change events before agenda events before notes (``event`` < ``simulation`` <
+    ``state_change`` < ``agenda`` < ``note``). Python's stable sort then preserves the
+    repository's own deterministic ordering (``fecha_hora DESC, id_auditoria DESC``) for
+    ties within a single source.
     """
     items: list[dict] = []
 
@@ -185,6 +188,28 @@ def build_timeline_items(
             }
         )
 
+    for agenda in agenda_events or []:
+        timestamp = _to_santiago(agenda.get("fecha_hora"))
+        if timestamp is None:
+            continue
+        fecha_hora_nueva = agenda.get("fecha_hora_nueva")
+        fecha_hora_anterior = agenda.get("fecha_hora_anterior")
+        # La fecha de la reunion es la nueva si existe; si no, la anterior
+        # (cancelada/realizada/no asistio no tienen fecha nueva).
+        reunion = fecha_hora_nueva if fecha_hora_nueva is not None else fecha_hora_anterior
+        items.append(
+            {
+                "kind": "agenda",
+                "timestamp": timestamp,
+                "display_time": timestamp.strftime("%d/%m/%Y %H:%M"),
+                "actor": agenda.get("actor_subject"),
+                "accion": agenda.get("accion"),
+                "responsable": agenda.get("responsable_nombre"),
+                "fecha_reunion": _format_agenda_time(reunion),
+                "fecha_anterior": _format_agenda_time(fecha_hora_anterior),
+            }
+        )
+
     for note in notes:
         items.append(
             {
@@ -215,7 +240,13 @@ def build_timeline_items(
     return items
 
 
-_SOURCE_RANK: dict[str, int] = {"event": 0, "simulation": 1, "state_change": 2, "note": 3}
+_SOURCE_RANK: dict[str, int] = {
+    "event": 0,
+    "simulation": 1,
+    "state_change": 2,
+    "agenda": 3,
+    "note": 4,
+}
 
 
 def _timeline_sort_key(item: dict) -> tuple[datetime, int]:
@@ -281,6 +312,14 @@ def _to_santiago(value: object) -> datetime | None:
     if value.tzinfo is None:
         return value.replace(tzinfo=_CRM_TZ)
     return value.astimezone(_CRM_TZ)
+
+
+def _format_agenda_time(value: object) -> str | None:
+    """Format an agenda meeting timestamp as ``DD/MM/YYYY HH:MM`` in America/Santiago."""
+    ts = _to_santiago(value)
+    if ts is None:
+        return None
+    return ts.strftime("%d/%m/%Y %H:%M")
 
 
 def _parse_note_timestamp(value: str) -> datetime:
