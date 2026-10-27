@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page_title or "Tu Pensión Inteligente" }}</title>
+    {# Synchronous on purpose: applies the stored theme before first paint. #}
+    <script src="/static/js/theme.js"></script>
+    <link rel="stylesheet" href="/static/css/app.css">
+    <script defer src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script defer src="/static/js/app.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand-wrap" role="banner" aria-label="Tu Pensión Inteligente CRM">
+        {% set brand_logos %}
+          <img class="brand-logo" src="/static/img/official-logo-on-light.png" alt="Tu Pensión Inteligente">
+          <img class="brand-logo brand-logo-dark" src="/static/img/official-logo-on-dark.png" alt="Tu Pensión Inteligente">
+        {% endset %}
+        {# El logo lleva al sitio público (antes lo hacía el botón Home). Solo con sesión y con la URL aprobada. #}
+        {% if selected_user and public_site_url %}
+          <a class="brand-link" href="{{ public_site_url }}" target="_blank" rel="noopener noreferrer" aria-label="Ir al sitio de Tu Pensión Inteligente" title="Ir al sitio de Tu Pensión Inteligente">{{ brand_logos }}</a>
+        {% else %}
+          {{ brand_logos }}
+        {% endif %}
+        <div class="brand-copy">
+          <div class="brand-badge">CRM</div>
+        </div>
+        {% if selected_user %}
+          {# Hiding the link is a convenience, never the access control: /dashboard
+             returns a real server-side 403 for any role other than ceo/cto. #}
+          <nav class="topbar-nav" aria-label="Navegación principal">
+            <a href="/leads" {% if active_nav == 'leads' %}aria-current="page"{% endif %}>Leads</a>
+            <a href="/agenda" {% if active_nav == 'agenda' %}aria-current="page"{% endif %}>Agenda</a>
+            {% if can_view_executive_dashboard %}
+              <a href="/dashboard" {% if active_nav == 'dashboard' %}aria-current="page"{% endif %}>Dashboard Ejecutivo</a>
+            {% endif %}
+          </nav>
+        {% endif %}
+      </div>
+      <div class="topbar-user">
+        {# aria-pressed is kept in sync by theme.js; the server always renders light. #}
+        <button type="button" class="icon-button theme-toggle" data-theme-toggle aria-pressed="false" aria-label="Cambiar entre tema claro y oscuro" title="Cambiar tema">
+          <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        </button>
+        {% if selected_user %}
+          <div class="user-meta">
+            <span class="user-name">{{ selected_user.display_name }}</span>
+            <span class="pill pill-muted">{{ selected_user.role|profile_label }}</span>
+            {% if web_env_label %}
+              <span class="env-pill">{{ web_env_label }}</span>
+            {% endif %}
+          </div>
+          <a class="icon-button" href="/logout" aria-label="Cerrar sesión" title="Cerrar sesión"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></a>
+        {% else %}
+          <span class="topbar-muted">Acceso local</span>
+        {% endif %}
+      </div>
+    </header>
+    <main class="page-shell">
+      {% block content %}{% endblock %}
+    </main>
+    <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+  </body>
+</html>
