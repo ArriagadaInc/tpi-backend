@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "kind": "approval",
+  "task_id": "CRM-AGENDA-3-LOOK",
+  "created_at": "2026-10-27T02:18:04Z",
+  "role": "human",
+  "created_by": "scripts/harness/approve.py",
+  "interactive": true,
+  "actor": {
+    "name": "Alvaro Arriagada",
+    "email": "37077654+ArriagadaInc@users.noreply.github.com"
+  },
+  "approved_commit": "d8b8eeccb90314191bc74fb1c7276e74f938a208",
+  "app_digest": "sha256:d284330be1c76f04370aa312d0e0feba2e984cb600264bbedca1b05e37c5e39e",
+  "caddy_digest": "sha256:5f575722d197abe6522f9f9536cb294f045eeef4a3c8912f8ff2e2856160b25f",
+  "bundle_sha256": "8adec16a980bd6aa0da395cfb24e9034226f11d8093e7e21824730f55c283bb3",
+  "s3_key": "tpi-backoffice/dev-releases/h3-crm-agenda-3-look-d8b8eec-domainlocked-r1/8adec16a980bd6aa0da395cfb24e9034226f11d8093e7e21824730f55c283bb3.zip",
+  "application_version": "h3-crm-agenda-3-look-d8b8eec-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "lkg_version_label": "h3-crm-agenda-2-calendario-a4a5bee-domainlocked-r1",
+  "candidate_evidence": {
+    "path": "evidence/CRM-AGENDA-3-LOOK/deployment/candidate-01.json",
+    "sha256": "7554a8ee0a71ea90ce76d194b66932b5afc9c038d7a37779f90dedb971b89ff7"
+  },
+  "rollback_authorization": {
+    "scope": "single_version_only_rollback_to_named_lkg",
+    "max_attempts": 1,
+    "lkg_version_label": "h3-crm-agenda-2-calendario-a4a5bee-domainlocked-r1",
+    "conditions": [
+      "update_environment_accepted",
+      "environment_degraded_inconsistent_or_not_expected_state",
+      "lkg_application_version_usable",
+      "lkg_images_present_in_ecr",
+      "no_option_settings_required",
+      "not_purely_functional_defect",
+      "no_previous_rollback_attempt"
+    ]
+  },
+  "decision": "approved"
+}

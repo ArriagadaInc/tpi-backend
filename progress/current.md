@@ -6,16 +6,16 @@
 - Tarea: ninguna
 - Proximo paso: Humano elige tarea: python scripts/harness/approve.py activate --task <ID>
 - Ultima transicion: close (DONE -> IDLE)
-- Actualizado: 2026-10-26T23:08:24Z
+- Actualizado: 2026-10-27T12:21:37Z
 <!-- harness:projection:end -->
-- Ultima sesion archivada: progress/sessions/2026-10-26-CRM-AGENDA-2-CALENDARIO-closure.md
+- Ultima sesion archivada: progress/sessions/2026-10-27-CRM-AGENDA-3-LOOK-closure.md
 
 ## Estado reciente
-- DECISION (DEPLOYER, 2026-10-26, claude-202610262240-deployer-sup827bbb): cutover de CRM-AGENDA-2-CALENDARIO exitoso. Preflight PASS (cuenta/region, env Ready/Green/Ok en LKG, AV candidata y LKG presentes, 4 digests en ECR, Promote deshabilitado); un unico update-environment version-only a h3-crm-agenda-2-calendario-a4a5bee-domainlocked-r1 (22:42:54Z -> completed 22:43:38Z, solo eventos INFO). Final Ready/Green/Ok; cadena VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests verificada. Evidencia: evidence/CRM-AGENDA-2-CALENDARIO/deployment/deployment-01.json. Siguiente: VERIFYING (smoke HTTP, conteos de logs desde 22:42:54Z, AC-9 humano).
-- DECISION (DEPLOYER, 2026-10-26, claude-202610262240-deployer-sup827bbb): verificacion previa a la aceptacion humana PASS. Smoke HTTP no autenticado 8/8 (incluye /agenda -> 307 /login), conteos de logs desde 22:42:54Z: indicadores fuertes y debiles 0, Traceback 0, GET 58 (log vivo). AC-1..AC-8 met (automatizados). Evidencia: evidence/CRM-AGENDA-2-CALENDARIO/deployment/verification-01.json. Sin transicion: esperando al humano.
-- AC-9 aceptado por el humano con approve.py (acceptance-01, 2026-10-26T23:04:04Z, "agenda probada en DEV con los tres perfiles").
-- DECISION (DEPLOYER, 2026-10-26, claude-202610262304-deployer-sup4cc533): verificacion final PASS. Env Ready/Green/Ok en h3-crm-agenda-2-calendario-a4a5bee-domainlocked-r1, sin eventos nuevos desde el cutover; smoke HTTP no autenticado 8/8; conteos de logs desde 22:42:54Z hasta esta sesion: fuertes y debiles 0, Traceback 0, GET 272 (incluye smoke humano). AC-1..AC-8 met, AC-9 met (humano). Evidencia: evidence/CRM-AGENDA-2-CALENDARIO/deployment/verification-02.json. Transicion `verified` -> DONE.
-- 2026-10-26: Tarea CRM-AGENDA-2-CALENDARIO cerrada; resumen en tasks/completed/CRM-AGENDA-2-CALENDARIO.yaml
+- DECISION (DEPLOYER, 2026-10-27, claude-202610270219-deployer-sup112aad): cutover version-only exitoso. Preflight PASS (cuenta/region, env Ready/Green/Ok en LKG, AV candidata y LKG presentes, 4 digests ACTIVE, Promote deshabilitado). update-environment x1 aceptado (02:21:34Z -> 02:22:17Z, solo eventos INFO); final Ready/Green/Ok en h3-crm-agenda-3-look-d8b8eec-domainlocked-r1; cadena de identidad 4/4 (AV SourceBundle, ChecksumSHA256 S3, digests del bundle = approval-01). Evidencia: evidence/CRM-AGENDA-3-LOOK/deployment/deployment-01.json. Transicion `deploy_succeeded` -> VERIFYING (smoke, conteos de logs y AC-7 humano pendientes).
+- DECISION (DEPLOYER, 2026-10-27, claude-202610270219-deployer-sup112aad): verificacion automatica PASS. Smoke no autenticado 10/10 (publico, API, login, CSS, /leads y /agenda 307 -> /login, /dashboard 403, login sin enlace en el logo ni Home, app.css con .brand-link y .timeline-item claro en --surface-soft; CSS servido identico al release; sin redirect legacy). Conteos de logs desde 02:21:34Z: indicadores fuertes y debiles 0, Traceback 0, GET 32 (ingesta viva). AC-1..AC-6 met; AC-7 pending_human. Evidencia: evidence/CRM-AGENDA-3-LOOK/deployment/verification-01.json. Sin transicion: se espera la aceptacion humana.
+- HUMANO (2026-10-27T12:12:19Z): AC-7 aceptado con approve.py (evidence/CRM-AGENDA-3-LOOK/approvals/acceptance-01.json).
+- DECISION (DEPLOYER, 2026-10-27, claude-202610271218-deployer-sup13df5c): verificacion final PASS. Env Ready/Green/Ok en h3-crm-agenda-3-look-d8b8eec-domainlocked-r1, DateUpdated 02:22:17Z y sin eventos nuevos tras el cutover; origin/main = d8b8eec. Smoke no autenticado 10/10. Conteos de logs desde 02:21:34Z hasta esta sesion: fuertes y debiles 0, Traceback 0, GET 422 (ingesta viva). AC-1..AC-7 met. Evidencia: evidence/CRM-AGENDA-3-LOOK/deployment/verification-02.json. Transicion `verified` -> DONE.
+- 2026-10-27: Tarea CRM-AGENDA-3-LOOK cerrada; resumen en tasks/completed/CRM-AGENDA-3-LOOK.yaml
 
 ## Bloqueos
 - Ninguno.
