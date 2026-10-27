@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "CRM-AGENDA-3-LOOK",
+  "created_at": "2026-10-27T01:46:25Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610270144-deployer-sup9fc349",
+  "pr_number": 144,
+  "reviewed_sha": "d3028532de760ba19638e75968d7540cc2bf1662",
+  "reviewed_tree": "2952dee36729145d09646da6ae80a323add4a64b",
+  "release_sha": "d8b8eeccb90314191bc74fb1c7276e74f938a208",
+  "release_tree": "2952dee36729145d09646da6ae80a323add4a64b",
+  "main_parent_sha": "a81bf8171e7aa520d80b1da8355e5c803fc450cb",
+  "method": "squash",
+  "match_head_commit_used": true
+}

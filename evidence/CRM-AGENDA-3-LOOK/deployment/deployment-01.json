@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "kind": "deployment",
+  "task_id": "CRM-AGENDA-3-LOOK",
+  "created_at": "2026-10-27T02:23:26Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610270219-deployer-sup112aad",
+  "approved_commit": "d8b8eeccb90314191bc74fb1c7276e74f938a208",
+  "deployed_commit": "d8b8eeccb90314191bc74fb1c7276e74f938a208",
+  "application_version": "h3-crm-agenda-3-look-d8b8eec-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "update_accepted": true,
+  "result": "success",
+  "started_at": "2026-10-27T02:21:34Z",
+  "finished_at": "2026-10-27T02:22:17Z",
+  "failure_class": null,
+  "previous_version_label": "h3-crm-agenda-2-calendario-a4a5bee-domainlocked-r1",
+  "final_state": {
+    "version_label": "h3-crm-agenda-3-look-d8b8eec-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "observed_at": "2026-10-27T02:23Z"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-crm-agenda-3-look-d8b8eec-domainlocked-r1/8adec16a980bd6aa0da395cfb24e9034226f11d8093e7e21824730f55c283bb3.zip",
+    "s3_checksum_sha256_b64": "it7BapgL1qoNo5XPsk6QNCJvEdgJPn4hgkcw9VwoO7M=",
+    "s3_content_length": 4917,
+    "bundle_sha256": "8adec16a980bd6aa0da395cfb24e9034226f11d8093e7e21824730f55c283bb3",
+    "app_digest": "sha256:d284330be1c76f04370aa312d0e0feba2e984cb600264bbedca1b05e37c5e39e",
+    "caddy_digest": "sha256:5f575722d197abe6522f9f9536cb294f045eeef4a3c8912f8ff2e2856160b25f",
+    "digests_equal_approval_01": true,
+    "note": "Observado en esta sesion: describe-environments VersionLabel = aprobada, Ready/Green/Ok, sin operacion abortable; describe-application-versions SourceBundle = key de approval-01 (UNPROCESSED); head-object ChecksumSHA256 = base64 del bundle_sha256 aprobado, 4917 bytes, FULL_OBJECT; el ZIP local .harness-release/<label>.zip tiene sha256 8adec16a... y su compose (unica entrada) fija app d284330b... / caddy 5f575722..., iguales a approval-01. sha256 de candidate-01.json = el registrado en approval-01."
+  },
+  "preflight": {
+    "at": "2026-10-27T02:20Z",
+    "result": "PASS",
+    "checks": [
+      "origin/main = release_sha d8b8eecc tras git fetch",
+      "sts get-caller-identity: cuenta 821656895812, region us-east-2",
+      "environment tpi-backoffice-dev-green Ready/Green/Ok, VersionLabel = LKG h3-crm-agenda-2-calendario-a4a5bee-domainlocked-r1, sin operacion abortable",
+      "AV candidata existe (UNPROCESSED, SourceBundle = key aprobada); AV del LKG existe (UNPROCESSED)",
+      "ECR: digests del candidate (app d284330b..., caddy 5f575722...) y del LKG (app d0a50c85..., caddy 5ddd81e5...) ACTIVE",
+      "CodePipeline tpi-backoffice-dev-promotion: transicion inbound de Promote deshabilitada"
+    ]
+  },
+  "cutover": {
+    "mechanism": "aws_guard update-environment version-label only",
+    "executed_by": "deployer (sesion claude-202610270219-deployer-sup112aad)",
+    "updates_applied": 1,
+    "retries": 0,
+    "option_settings": false,
+    "restart_app_server": false,
+    "rollback_executed": false,
+    "convergence": "exitosa en ~43 s (Environment update is starting 02:21:34Z, Environment update completed successfully 02:22:17Z)"
+  },
+  "events": {
+    "levels_observed": [
+      "INFO"
+    ],
+    "errors": 0,
+    "note": "Environment update is starting -> Deploying new version to instance(s) -> health Ok to Info (application update in progress) -> Instance deployment completed successfully -> New application version was deployed -> Environment update completed successfully; describe-environments posterior: Ready/Green/Ok."
+  },
+  "warnings": [
+    "AC-7 (revision visual humana en DEV, escritorio y celular, claro y oscuro, con Runner, Coordinador y Socio) sigue pendiente; smoke HTTP y conteos de logs corresponden a VERIFYING (ventana desde started_at 2026-10-27T02:21:34Z)."
+  ]
+}

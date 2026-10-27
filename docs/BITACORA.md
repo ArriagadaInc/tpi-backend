@@ -22,6 +22,35 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-27 - Harness: tarea CRM-AGENDA-3-LOOK cerrada (DONE)
+
+- Titulo: CRM agenda 3: nuevo aspecto de la agenda, contraste del historial y logo como acceso al sitio
+- Evidencia: `evidence/CRM-AGENDA-3-LOOK/` y `tasks/completed/CRM-AGENDA-3-LOOK.yaml`.
+- release_sha: `d8b8eeccb90314191bc74fb1c7276e74f938a208`
+- pr_number: `144`
+- application_version: `h3-crm-agenda-3-look-d8b8eec-domainlocked-r1`
+- bundle_sha256: `8adec16a980bd6aa0da395cfb24e9034226f11d8093e7e21824730f55c283bb3`
+- lkg: `h3-crm-agenda-2-calendario-a4a5bee-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `d8b8eeccb90314191bc74fb1c7276e74f938a208`
+- verification: `PASS`
+
+**Resultado.** El nuevo aspecto de la agenda está en DEV: semana por horas con reuniones simultáneas lado a lado, leyenda de responsables que filtra, lista por día, tarjeta Reunión y
+formulario rediseñados, historial del lead con fondo `--surface-soft` (más contraste) y barra superior sin el botón Home, con el logo de TPI como enlace al sitio público (solo con sesión y
+con la URL aprobada, en pestaña nueva y con `rel="noopener noreferrer"`). Sin dependencias ni librerías nuevas. El humano aceptó el AC-7 (revisión visual en DEV) el 2026-10-27 (12:12Z).
+
+**Una sola ronda, sin rework.** El Reviewer aprobó a la primera. Observaciones: dos archivos Python de la referencia (`agenda_presentation.py` y `routes/agenda.py`) no pasaban `black --check`, así que el
+Developer los formateó y difieren de la referencia solo en saltos de línea (AST idéntico, verificado por el Reviewer); la falla fue mía al armar la referencia sin formatear. Los seis templates y el CSS
+quedaron idénticos a la referencia.
+
+**Lecciones de operación.**
+
+1. *Los archivos Python de una referencia visual deben pasar `black` antes de publicarse como referencia*; si no, el criterio de identidad literal choca con el gate de formato del CI.
+2. *La sesión AWS (`tpi-dev`) caduca a las 12 h*: la aceptación humana llegó tras ese plazo y el preflight del Deployer devolvió `expired` hasta renovarla con `aws login --profile tpi-dev --remote`. Mientras el
+   orquestador espera la aceptación no lanza turnos nuevos ni gasta saldo de la API.
+
+**Pendiente.** Retirar de `main` la carpeta `docs/ui/referencia/agenda/` (su README lo indica al cerrar la tarea).
+
 ### 2026-10-27 - Agenda: implementado el nuevo aspecto (CRM-AGENDA-3-LOOK)
 
 - Qué se hizo: se copiaron los ocho archivos de `docs/ui/referencia/agenda/` a sus rutas de destino en `app/web/`

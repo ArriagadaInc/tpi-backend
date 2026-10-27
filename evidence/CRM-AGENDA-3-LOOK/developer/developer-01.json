@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "CRM-AGENDA-3-LOOK",
+  "created_at": "2026-10-27T01:39:58Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610270109-developer-supe05548",
+  "head_sha": "d3028532de760ba19638e75968d7540cc2bf1662",
+  "branch": "harness/CRM-AGENDA-3-LOOK-look",
+  "pr_number": 144,
+  "change_class": "A",
+  "tests": {
+    "command": "Local (worktree, sin PostgreSQL): python -m pytest tests/unit/test_agenda_presentation.py tests/unit/test_agenda_web.py tests/unit/test_agenda_service.py tests/unit/test_agenda_domain.py --no-cov -q -> 128 passed (101 de agenda existentes + 24 helpers nuevos + 3 nuevos en test_agenda_web). Suite completa local: python -m pytest tests/unit --no-cov -q -> 1192 passed, 12 failed (los 12 fallos son de entorno, no de esta tarea: 11 de executive dashboard requieren PostgreSQL local y 1 test_typography_..._font_requests falla por el MIME type de .woff2 en Windows; los 3 tests del boton Home actualizados pasan). CI PR #144 sobre d3028532de76: Lint & Format SUCCESS, Tests SUCCESS (con cobertura --cov-fail-under=85 y PostgreSQL), Security Audit SUCCESS, Docker Build SUCCESS, Release Tooling Validation SUCCESS (conclusion success).",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "ci": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "Los ocho archivos de docs/ui/referencia/agenda/ se copiaron a sus rutas destino en app/web/ (base.html, agenda.html, agenda_form_fields.html, agenda_macros.html y reunion_card.html en app/web/templates; app.css en app/web/static/css; agenda_presentation.py en app/web; agenda.py en app/web/routes). git diff --no-index --ignore-cr-at-eol <referencia> <destino> sin diferencias para los ocho. app.css no cambio en main desde dae6d58 (git diff dae6d58..HEAD -- app/web/static/css/app.css vacio), por lo que se reemplazo el archivo entero. Los dos archivos Python de la referencia tenian lineas de mas de 100 columnas; se aplico black (transformacion que preserva el AST, solo saltos de linea) para que el gate de formato quede verde. Los templates y el CSS quedan byte-identicos a la referencia."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "Nuevo tests/unit/test_agenda_presentation.py (24 pruebas, sin base de datos): color_map (orden alfabetico, ciclo de la paleta, neutro 'slate' para nombre desconocido), rango_label (semana dentro de un mes '26 – 30 oct 2026' y semana que cruza dos meses '28 sep – 2 oct 2026'), etiqueta_dia (Hoy, Mañana y 'Mié 28 oct'), _asignar_carriles (sin solapamiento, dos simultaneas, tres encadenadas y un grupo que termina antes del siguiente), build_week_grid (lunes a viernes, posicion y duracion en minutos desde las 09:00, dia actual y linea de ahora solo dentro del horario, reuniones de otros dias excluidas, color por responsable con neutro), resumen_semana, agrupar_por_dia y meeting_tile (hoy, mañana, 'En 3 días' y 'Ya pasó')."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "Las 101 pruebas de agenda existentes (tests/unit/test_agenda_web.py, test_agenda_service.py, test_agenda_domain.py) pasan sin debilitarlas. Las pruebas de privacidad ya presentes siguen pasando y leen response.text de GET /agenda en vista semana y lista: test_agenda_get_recorta_lead_ajeno_runner y test_agenda_get_recorta_lead_ajeno_coordinador (sin nombre, sin id, sin /leads/<id>, con 'De otra cartera') y test_agenda_get_socio_ve_todos (ceo/cto ven ambos nombres). Se agrego test_agenda_conserva_parametros_en_los_enlaces: con vista=lista&responsable=<SOCIO_A>&fecha=2026-10-26, el selector Semana/Lista, la navegacion por semanas (anterior/siguiente) y los chips de responsable conservan fecha, responsable y vista en la URL."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "Pruebas sobre app.css en tests/unit/test_agenda_web.py: test_timeline_item_usa_surface_soft_en_tema_claro (la ultima regla .timeline-item y .original-request-box usan background: var(--surface-soft)) y test_timeline_item_tema_oscuro_sin_cambios ([data-theme='dark'] .timeline-item sigue con var(--surface-soft)). No se cambia ningun otro estilo del detalle del lead."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "Sin dependencias, tipografias, scripts ni librerias nuevas (pyproject.toml y requirements sin cambios). ruff check app/ tests/ scripts/ deployment/ PASS; black --check app/ tests/ scripts/ deployment/ PASS (277 archivos); mypy app/ --ignore-missing-imports PASS (77 archivos); bandit -r app/ --severity-level medium --confidence-level medium PASS (0 issues identificados). CI: pip-audit y docker build verdes. Documentacion: docs/AGENDA_USO.md describe las vistas nuevas (cuadricula por horas, leyenda, resumen, lista por dia, ficha de fecha y barra superior), docs/UI_DESIGN_SYSTEM.md agrega la nota breve de los patrones nuevos, CHANGELOG.md y docs/BITACORA.md actualizados. El bloque nuevo del CSS sale de tokens (tonos accent/info/violet/warning y --surface-soft); no se agregaron colores sueltos ni !important nuevos."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "evidence": "tests/unit/test_web_app.py actualizado sin debilitar la proteccion: test_detail_renders_logo_link_when_approved_and_authenticated (con sesion y URL aprobada, el detalle renderiza a.brand-link con href exactamente igual a la URL aprobada, target _blank y rel noopener noreferrer, y ya no existe 'Home'), test_login_page_does_not_render_logo_link (sin sesion no hay a.brand-link ni 'Home') y test_detail_hides_logo_link_when_url_missing_or_invalid (URL ausente o no aprobada: sin a.brand-link ni 'Home'). La lista permitida de la URL (app/components/urls.py) no se toca."
+    },
+    {
+      "id": "AC-7",
+      "status": "pending_verification",
+      "evidence": "Revision visual del humano en AWS DEV (escritorio y celular, tema claro y oscuro): semana por horas (hoy resaltado, reuniones simultaneas lado a lado, canceladas atenuadas), lista por dia, filtro por responsable, tarjeta Reunion y formulario de agendar, historial con mejor contraste y barra superior sin boton Home y con logo que abre el sitio publico. Prueba con Runner, Coordinador y Socio. requires_human_acceptance."
+    }
+  ],
+  "files_changed": [
+    "app/web/templates/base.html (logo como enlace a.brand-link, se retira el boton Home)",
+    "app/web/templates/agenda.html (cuadricula por horas, leyenda, resumen, lista por dia)",
+    "app/web/templates/agenda_macros.html (nuevo: iconos, iniciales y marcas de estado/modalidad)",
+    "app/web/templates/agenda_form_fields.html (formulario con responsables como tarjetas, duracion y modalidad como botones)",
+    "app/web/templates/reunion_card.html (ficha de fecha, responsable con tono, acciones en fila)",
+    "app/web/static/css/app.css (bloque agenda reescrito, .timeline-item con --surface-soft, bloque .brand-link)",
+    "app/web/agenda_presentation.py (helpers de presentacion; black-normalizado)",
+    "app/web/routes/agenda.py (GET /agenda arma el contexto nuevo; black-normalizado)",
+    "tests/unit/test_agenda_presentation.py (nuevo, 24 pruebas)",
+    "tests/unit/test_agenda_web.py (conservacion de parametros de URL + pruebas CSS del historial)",
+    "tests/unit/test_web_app.py (el logo sustituye al boton Home)",
+    "docs/AGENDA_USO.md (vistas nuevas)",
+    "docs/UI_DESIGN_SYSTEM.md (nota de patrones nuevos)",
+    "docs/BITACORA.md (entrada de la tarea)",
+    "CHANGELOG.md (entrada CRM-AGENDA-3-LOOK)"
+  ],
+  "assumptions": [
+    "Clase A: sin migracion ni cambio de esquema; no se tocan deployment/**, IAM, bucket ni GuardDuty; no se tocan app/services/**, app/repositories/** ni app/auth/**.",
+    "app/web/agenda_presentation.py y app/web/routes/agenda.py de la referencia tenian lineas de mas de 100 columnas; se aplico black (solo saltos de linea, preserva el AST) para el gate de formato. Los templates y el CSS quedan byte-identicos a la referencia.",
+    "Los 12 fallos de la suite unitaria local son de entorno, no de esta tarea: 11 requieren PostgreSQL local (executive dashboard render/service) y 1 es el MIME type de .woff2 en Windows (fonts). En CI (Ubuntu + PostgreSQL) todos pasan.",
+    "Sin secretos, claves ni usuarios reales en el repositorio; los ejemplos son ficticios.",
+    "La entrada de cierre en docs/BITACORA.md la genera el cierre automatico del Harness; aqui se agrega la entrada de la tarea (implementacion), no el cierre."
+  ],
+  "migrations_included": false
+}
