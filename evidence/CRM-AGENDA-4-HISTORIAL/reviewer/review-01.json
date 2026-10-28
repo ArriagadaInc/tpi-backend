@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "CRM-AGENDA-4-HISTORIAL",
+  "created_at": "2026-10-27T16:00:55Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610271556-reviewer-sup8c535d",
+  "reviewed_sha": "37ab9e44920c4a21c4d69a7a4ce211e8aa7dd644",
+  "reviewed_tree": "47cdc660313da60f999cbec7a06d44333add683b",
+  "pr_number": 150,
+  "ci": {
+    "run_id": "40534184928",
+    "conclusion": "success",
+    "head_sha": "37ab9e44920c4a21c4d69a7a4ce211e8aa7dd644",
+    "event": "pull_request",
+    "jobs": [
+      "Docker Build",
+      "Lint & Format",
+      "Release Tooling Validation",
+      "Security Audit",
+      "Tests"
+    ]
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "minor",
+      "file": "tests/unit/test_agenda_historial_web.py",
+      "summary": "AC-4 pide pruebas de los tres perfiles. Hay prueba de Socio (CEO, lead visible), de Runner en lead ajeno (404, sin consulta) y de la falla, pero no de un Coordinador (rol advisor) abriendo un lead de su propio alcance. El comportamiento queda garantizado estructuralmente porque la carga ocurre solo dentro del bloque selected_lead is not None, que es independiente del rol, y ambos caminos (visible / no visible) estan probados.",
+      "required_action": "Opcional en una tarea posterior: agregar la prueba del Coordinador (y de un Runner en su propio lead) que ve las lineas de agenda."
+    },
+    {
+      "id": "R2",
+      "severity": "minor",
+      "file": "tests/unit/test_agenda_historial_web.py",
+      "summary": "Las pruebas de HTML de AC-3 verifican los prefijos de los cinco textos y 'responsable no disponible', pero no el texto completo con las fechas DD/MM/AAAA HH:MM ni la ausencia explicita de ids internos (id_cita, id_auditoria, responsable_id) en el HTML. Por inspeccion: build_timeline_items no copia ningun id al item y la plantilla solo usa fecha_reunion, fecha_anterior, responsable, actor y display_time; el formato de fechas esta fijado en test_agenda_historial_timeline_presentation.py.",
+      "required_action": "Opcional en una tarea posterior: afirmar el texto completo y que los UUID de prueba no aparecen en el HTML."
+    },
+    {
+      "id": "R3",
+      "severity": "info",
+      "file": "app/web/templates/executive_dashboard.html",
+      "summary": "En el detalle 'Ver casos por estado y asesor' un grupo sin celdas se omite (sin titulo ni estado vacio) y no lleva subtotal. AC-5 describe subtotal y estado vacio con las columnas del Resumen por asesor; el detalle queda agrupado con titulos. Interpretacion razonable.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "R4",
+      "severity": "info",
+      "file": "app/services/executive_dashboard_service.py",
+      "summary": "_grupo clasifica cualquier rol distinto de 'asesor' o 'socio' (o nulo) como Runner para no ocultar filas. No esta en AC-5 pero cumple su objetivo de que ningun lead quede fuera de la vista.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "R5",
+      "severity": "info",
+      "file": "app/web/routes/leads.py",
+      "summary": "_load_agenda_events no registra nada; si la vista falla, get_db_connection ya registra el error clasificado (operation=agenda.historial, codigo y mensaje tecnico) como en el resto de las operaciones, sin parametros ni datos personales. La prueba de falla no usa caplog.",
+      "required_action": "Ninguna."
+    }
+  ],
+  "checks": [
+    {
+      "name": "exact_sha: PR #150 OPEN, headRefOid == 37ab9e44920c == head_sha de developer-01; worktree del reviewer en ese SHA",
+      "result": "PASS"
+    },
+    {
+      "name": "ci_green_exact_sha: run 40534184928 success sobre 37ab9e44; 5 jobs pass; Tests 2361 passed, 17 skipped, cobertura 91.75% (>= 85); las pruebas nuevas de integracion (test_get_lead_agenda_events_devuelve_cinco_acciones_con_responsable, test_cartera_por_asesor_trae_rol_y_atiende_reuniones) corren y pasan en CI",
+      "result": "PASS"
+    },
+    {
+      "name": "branch_up_to_date_with_main: origin/main d961144 es ancestro de 37ab9e44; MERGEABLE",
+      "result": "PASS"
+    },
+    {
+      "name": "scope: 29 archivos solo en app/**, tests/**, docs/** y CHANGELOG.md; sin app/auth/**, scripts/sql/**, deployment/**, dependencias ni migraciones; rutas y escritor de la agenda sin cambios",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-1: AgendaRepository.get_lead_agenda_events lee solo tpi.v_historial_agenda con LEFT JOIN tpi.asesores, ORDER BY fecha_hora DESC, id_auditoria DESC; expuesto por AgendaService, SolicitudService, protocolo y fake (lista vacia); accion y columnas coinciden con la vista 011 y con el escritor _insert_cita_audit",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-2: agenda_events opcional (None por defecto), kind agenda con hora de Santiago, rank event<simulation<state_change<agenda<note; las tres suites de orden existentes sin cambios en el diff y verdes localmente",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-3: plantilla con insignia Automatico + actor y los cinco textos exactos; 'responsable no disponible'; sin ids, nota ni motivo; autoescape de Jinja; CSS solo con tokens del CRM",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-4: carga dentro de selected_lead is not None (mismo control del detalle); Runner ajeno 404 sin consulta; falla de la vista -> 200 con el resto del historial (DatabaseAppError/ValueError/TypeError capturados; get_db_connection envuelve los errores de psycopg)",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-5: rol y atiende_reuniones en las tres consultas existentes (GROUP BY por id_asesor PK, conteos intactos); grupos Coordinadores/Runners con subtotal de conteos y '—' en tiempos; estado vacio por grupo; Socios solo si tienen filas; Sin asesor aparte; /dashboard sigue restringido a superusuarios",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-6: ruff y black limpios localmente; mypy, bandit, pip-audit, docker build verdes en CI; docs/AGENDA_USO.md, docs/H3_3_4_DASHBOARD_DESIGN.md, docs/BITACORA.md y CHANGELOG.md actualizados; sin dependencias nuevas",
+      "result": "PASS"
+    },
+    {
+      "name": "tests_local: 76 pruebas relevantes pasan; 9 fallas locales en test_executive_dashboard_service.py son pruebas preexistentes que exigen configuracion de base de datos ausente en local; en CI pasan",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "AC-7 (revision visual autenticada en AWS DEV) queda pendiente para el humano tras el despliegue.",
+    "El despliegue requiere que la migracion 011 este aplicada en AWS DEV; si la vista no existe, el historial degrada sin lineas de agenda (probado) y el dashboard no depende de ella.",
+    "La separacion Coordinador/Runner depende de tpi.asesores.atiende_reuniones; un asesor mal marcado aparece en el grupo equivocado, sin perder leads."
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "kind": "deployment",
+  "task_id": "CRM-AGENDA-4-HISTORIAL",
+  "created_at": "2026-10-27T16:31:47Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610271626-deployer-sup08576b",
+  "approved_commit": "35f693be19da50ff7611520a5ba326a62e21d142",
+  "deployed_commit": "35f693be19da50ff7611520a5ba326a62e21d142",
+  "application_version": "h3-crm-agenda-4-historial-35f693b-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "update_accepted": true,
+  "result": "success",
+  "started_at": "2026-10-27T16:29:23Z",
+  "finished_at": "2026-10-27T16:30:05Z",
+  "failure_class": null,
+  "previous_version_label": "h3-crm-agenda-3-look-d8b8eec-domainlocked-r1",
+  "final_state": {
+    "version_label": "h3-crm-agenda-4-historial-35f693b-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "observed_at": "2026-10-27T16:31Z"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-crm-agenda-4-historial-35f693b-domainlocked-r1/655141e1cff44ff3fd9066e4bef2c0108813a1a03e691c5133be650146f2d6fc.zip",
+    "s3_checksum_sha256_b64": "ZVFB4c/0T/P9kGbkvvLAEIgToaA+aRxRM75lAUby1vw=",
+    "s3_content_length": 4917,
+    "bundle_sha256": "655141e1cff44ff3fd9066e4bef2c0108813a1a03e691c5133be650146f2d6fc",
+    "app_digest": "sha256:89520a971ba88c7f9f9ad7cf11140a0949fa331f963007b9b676050cd779d7ba",
+    "caddy_digest": "sha256:379dc167c102f0eeda8c83d37362d1cf00911019e3543c1a423068cc45fbfd7b",
+    "digests_equal_approval_01": true,
+    "note": "Observado en esta sesion: describe-environments VersionLabel = aprobada, Ready/Green/Ok, sin operacion abortable; describe-application-versions SourceBundle = key de approval-01 (UNPROCESSED); head-object ChecksumSHA256 decodificado = bundle_sha256 aprobado, 4917 bytes, FULL_OBJECT; el ZIP local .harness-release/<label>.zip tiene sha256 655141e1... y su compose (unica entrada) fija app 89520a97... / caddy 379dc167..., iguales a approval-01. sha256 de candidate-01.json = el registrado en approval-01 (c3021363...)."
+  },
+  "preflight": {
+    "at": "2026-10-27T16:28Z",
+    "result": "PASS",
+    "checks": [
+      "origin/main = release_sha 35f693be tras git fetch",
+      "sts get-caller-identity: cuenta 821656895812, region us-east-2",
+      "environment tpi-backoffice-dev-green Ready/Green/Ok, VersionLabel = LKG h3-crm-agenda-3-look-d8b8eec-domainlocked-r1, sin operacion abortable",
+      "AV candidata existe (UNPROCESSED, SourceBundle = key aprobada); AV del LKG existe (UNPROCESSED)",
+      "ECR: digests del candidate (app 89520a97..., caddy 379dc167...) y del LKG (app d284330b..., caddy 5f575722...) ACTIVE",
+      "S3 head-object del candidate: ChecksumSHA256 = bundle_sha256 aprobado",
+      "CodePipeline tpi-backoffice-dev-promotion: transicion inbound de Promote deshabilitada"
+    ]
+  },
+  "cutover": {
+    "mechanism": "aws_guard update-environment version-label only",
+    "executed_by": "deployer (sesion claude-202610271626-deployer-sup08576b)",
+    "updates_applied": 1,
+    "retries": 0,
+    "option_settings": false,
+    "restart_app_server": false,
+    "rollback_executed": false,
+    "convergence": "exitosa en ~42 s (Environment update is starting 16:29:23Z, Environment update completed successfully 16:30:05Z); HealthStatus Ok observado 16:31:02Z"
+  },
+  "events": {
+    "levels_observed": [
+      "INFO"
+    ],
+    "errors": 0,
+    "note": "Environment update is starting -> Deploying new version to instance(s) -> Instance deployment completed successfully -> New application version was deployed -> Environment update completed successfully; describe-environments posterior: Ready/Green/Ok."
+  },
+  "warnings": [
+    "AC-7 (revision visual humana en DEV, escritorio y celular, claro y oscuro; historial con eventos de agenda y dashboard con Coordinadores/Runners separados) sigue pendiente; el humano confirma la migracion 011 en DEV durante AC-7 (CR-3). Smoke HTTP y conteos de logs corresponden a VERIFYING (ventana desde started_at 2026-10-27T16:29:23Z)."
+  ]
+}
