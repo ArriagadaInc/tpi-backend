@@ -1,9 +1,9 @@
-"""Asistente de 3 pasos del simulador (SIM-WIZARD-3-PASOS): flujo, validación por paso y marca.
+"""Simulador de una sola página (CRM-SIM-1): formulario, panel de resultado y marca.
 
-Cubre los AC-1..AC-5 del asistente: el indicador de 3 pasos, la validación del paso 1 en el
-servidor (``continuar``), el cálculo en pantalla sin persistir ni auditar (``simular``), la
-descarga del PDF con auditoría (``descargar_pdf``), el rechazo del cónyuge inválido, la
-conservación de datos al volver y la marca TPI (JS propio, sin CDN nuevos, azul marino de la ficha).
+Cubre la estructura de la página única (sin «Continuar» ni pasos), el cálculo en pantalla sin
+persistir ni auditar (``simular``), la descarga del PDF con auditoría (``descargar_pdf``), el
+rechazo del cónyuge inválido, la conservación de lo ingresado y la marca TPI (JS propio, sin CDN
+nuevos, azul marino de la ficha). Antes era el asistente de 3 pasos (SIM-WIZARD-3-PASOS).
 """
 
 from __future__ import annotations
@@ -134,55 +134,88 @@ def _valid_form(csrf: str) -> dict[str, str]:
     }
 
 
-# --- AC-1: estructura del asistente -------------------------------------------
+# --- AC-1: estructura de la página única --------------------------------------
 
 
-def test_wizard_muestra_tres_pasos_y_continuar() -> None:
+def test_pagina_unica_muestra_formulario_y_resultado_vacio() -> None:
     body = _client().get(f"/leads/{LEAD_ID_STR}/simulador").text
     assert "Datos de la simulación" in body
     assert "Grupo familiar" in body
-    assert "Resultado" in body
-    assert 'name="intent" value="continuar"' in body
-    # El paso 1 es el activo por defecto.
-    assert 'data-step="1"' in body
-    assert 'data-step="2" hidden' in body
+    assert "Aún no hay resultado" in body
+    assert 'name="intent" value="simular"' in body
+    # Sin asistente: ni «Continuar», ni «Volver», ni pasos ocultos.
+    assert 'value="continuar"' not in body
+    assert "volver_paso" not in body
+    assert "data-step" not in body
+    assert "wizard-step" not in body
+    assert "Continuar" not in body
+    # El PDF solo se ofrece cuando ya hay un resultado.
+    assert 'value="descargar_pdf"' not in body
 
 
-def test_wizard_muestra_aviso_referencial_y_logo_base() -> None:
+def test_pagina_muestra_aviso_referencial_y_logo_base() -> None:
     body = _client().get(f"/leads/{LEAD_ID_STR}/simulador").text
     assert "valores referenciales (no vinculantes)" in body
     # La marca se muestra a través del topbar compartido (logo oficial en base.html).
     assert "official-logo-on-light.png" in body
 
 
-# --- AC-2: validación del paso 1 en el servidor --------------------------------
+def test_opciones_de_la_renta_empiezan_cerradas_y_se_abren_si_hay_valores() -> None:
+    cerrado = _client().get(f"/leads/{LEAD_ID_STR}/simulador").text
+    assert re.search(r'<details class="sim-options"\s*>', cerrado)
+    client = _client()
+    csrf = _csrf_token(client)
+    abierto = client.post(
+        f"/leads/{LEAD_ID_STR}/simulador",
+        data={**_valid_form(csrf), "intent": "simular", "anios_diferidos": "3"},
+    ).text
+    assert re.search(r'<details class="sim-options"\s+open>', abierto)
 
 
-def test_continuar_valida_paso1_y_avanza_al_paso2() -> None:
+# --- AC-2: «Simular» es la acción principal y valida todo en el servidor --------
+
+
+def test_simular_es_el_primer_boton_de_envio_del_formulario() -> None:
+    """Enter en un campo envía el primer botón del formulario: debe ser «Simular», nunca el PDF."""
+    client = _client()
+    csrf = _csrf_token(client)
+    vacio = client.get(f"/leads/{LEAD_ID_STR}/simulador").text
+    assert 'value="descargar_pdf"' not in vacio
+    con_resultado = client.post(
+        f"/leads/{LEAD_ID_STR}/simulador",
+        data={**_valid_form(csrf), "intent": "simular"},
+    ).text
+    assert con_resultado.index('value="simular"') < con_resultado.index('value="descargar_pdf"')
+
+
+def test_simular_invalido_422_conserva_valor_y_no_muestra_resultado() -> None:
     client = _client()
     csrf = _csrf_token(client)
     response = client.post(
         f"/leads/{LEAD_ID_STR}/simulador",
-        data={**_valid_form(csrf), "intent": "continuar"},
-    )
-    assert response.status_code == 200
-    assert 'name="intent" value="simular"' in response.text
-    assert 'data-step="1" hidden' in response.text
-    assert 'data-step="2" hidden' not in response.text
-
-
-def test_continuar_paso1_invalido_422_y_conserva_valor() -> None:
-    client = _client()
-    csrf = _csrf_token(client)
-    response = client.post(
-        f"/leads/{LEAD_ID_STR}/simulador",
-        data={**_valid_form(csrf), "intent": "continuar", "saldo_uf": "0"},
+        data={**_valid_form(csrf), "intent": "simular", "saldo_uf": "0"},
     )
     assert response.status_code == 422
     assert "El saldo en UF debe estar entre 500 y 100.000." in response.text
     assert 'name="saldo_uf" value="0"' in response.text
-    # El error se muestra en el paso 1, que sigue activo.
-    assert 'data-step="2" hidden' in response.text
+    assert "Aún no hay resultado" in response.text
+    assert "Pensión mensual estimada" not in response.text
+
+
+def test_intent_desconocido_no_genera_pdf_ni_audita() -> None:
+    """Un formulario viejo (con «continuar») o manipulado se trata como «simular»."""
+    for intent in ("continuar", "volver_paso1", "volver_paso2", "cualquier-cosa"):
+        client = _client()
+        csrf = _csrf_token(client)
+        with patch("app.services.simulador_service.record_simulacion_event") as audit:
+            response = client.post(
+                f"/leads/{LEAD_ID_STR}/simulador",
+                data={**_valid_form(csrf), "intent": intent},
+            )
+        assert response.status_code == 200, intent
+        assert response.headers["content-type"].startswith("text/html"), intent
+        assert "Pensión mensual estimada" in response.text, intent
+        audit.assert_not_called()
 
 
 # --- AC-4: calcular en pantalla no persiste ni audita --------------------------
@@ -197,10 +230,14 @@ def test_simular_muestra_resultado_sin_auditar() -> None:
             data={**_valid_form(csrf), "intent": "simular"},
         )
     assert response.status_code == 200
-    assert "Monto pensión" in response.text
+    assert "Pensión mensual estimada" in response.text
     assert "Saldo total" in response.text
     assert "Tasa de venta" in response.text
-    assert "Valores referenciales, no vinculantes" in response.text
+    assert "valores referenciales (no vinculantes)" in response.text
+    # El resultado vive en el panel de la misma página, con lo ingresado conservado.
+    assert 'id="resultado"' in response.text
+    assert 'data-has-result="1"' in response.text
+    assert 'name="saldo_uf" value="3000"' in response.text
     assert 'name="intent" value="descargar_pdf"' in response.text
     audit.assert_not_called()
 
@@ -250,27 +287,15 @@ def test_simular_rechaza_conyuge_invalido() -> None:
     assert "cónyuge inválido" in response.text
 
 
-def test_volver_paso1_conserva_datos_ingresados() -> None:
-    client = _client()
-    csrf = _csrf_token(client)
-    response = client.post(
-        f"/leads/{LEAD_ID_STR}/simulador",
-        data={**_valid_form(csrf), "intent": "volver_paso1", "saldo_uf": "2500"},
-    )
-    assert response.status_code == 200
-    assert 'name="saldo_uf" value="2500"' in response.text
-    assert 'data-step="1" hidden' not in response.text
-
-
-def test_wizard_preserva_beneficiarios_ocultos() -> None:
-    """El formulario conserva los inputs ocultos de cónyuge e hijos entre pasos."""
+def test_simular_conserva_beneficiarios_en_el_formulario() -> None:
+    """El formulario conserva los inputs ocultos de cónyuge e hijos tras simular."""
     client = _client()
     csrf = _csrf_token(client)
     response = client.post(
         f"/leads/{LEAD_ID_STR}/simulador",
         data={
             **_valid_form(csrf),
-            "intent": "volver_paso2",
+            "intent": "simular",
             "conyuge_sexo": "M",
             "conyuge_nacimiento": "1962-05-20",
             "hijo_sexo_1": "H",

@@ -104,12 +104,12 @@
     return td;
   }
 
-  function botonAccion(icono, etiqueta, onClick) {
+  function botonAccion(texto, etiqueta, onClick, peligro) {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "wizard-row-action";
+    btn.className = "sim-row-action" + (peligro ? " sim-row-action-danger" : "");
     btn.setAttribute("aria-label", etiqueta);
-    btn.textContent = icono;
+    btn.textContent = texto;
     btn.addEventListener("click", onClick);
     return btn;
   }
@@ -124,7 +124,6 @@
     const nacimientoLabel = formatearFecha(b.nacimiento);
     const edad = edadEnAnios(b.nacimiento, fechaSimulacion);
 
-    tr.appendChild(celda(String(numero)));
     tr.appendChild(celda(b.tipo === "conyuge" ? "Cónyuge" : "Hijo/a"));
     tr.appendChild(celda(nacimientoLabel));
     tr.appendChild(celda(SEXO_LABEL[b.sexo] || ""));
@@ -133,12 +132,12 @@
     tr.appendChild(celda(edad === null ? "" : String(edad)));
 
     const acciones = document.createElement("td");
-    acciones.className = "wizard-row-actions";
+    acciones.className = "sim-row-actions";
     acciones.appendChild(
-      botonAccion("✎", "Editar beneficiario", () => abrirEditar(b.tipo, b.index))
+      botonAccion("Editar", "Editar beneficiario", () => abrirEditar(b.tipo, b.index), false)
     );
     acciones.appendChild(
-      botonAccion("🗑", "Eliminar beneficiario", () => borrar(b.tipo, b.index))
+      botonAccion("Quitar", "Quitar beneficiario", () => borrar(b.tipo, b.index), true)
     );
     tr.appendChild(acciones);
 
@@ -378,4 +377,10 @@
   });
 
   render();
+
+  /* En pantallas angostas el resultado queda debajo del formulario: se lleva a la vista. */
+  const resultado = document.getElementById("resultado");
+  if (resultado && resultado.dataset.hasResult && window.matchMedia("(max-width: 1100px)").matches) {
+    resultado.scrollIntoView({ block: "start" });
+  }
 })();

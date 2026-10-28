@@ -1,6 +1,6 @@
 # Simulador de renta vitalicia: uso, límites y mantención
 
-**Versión del modelo:** 1.0.0 · **Revisado sobre** `origin/main` en `4ee5fad` (asistente de 3 pasos), 2026-10-19.
+**Versión del modelo:** 1.0.0 · **Revisado sobre** `origin/main` en `cddd3be` (página única), 2026-10-28.
 
 Este documento responde tres preguntas: qué casos soporta el simulador, qué casos quedan fuera y qué hay que hacer para
 que siga siendo confiable con el paso del tiempo. Complementa a `docs/SIM_RV_V1_MODELO.md` (las ecuaciones),
@@ -24,11 +24,15 @@ simula leads que puede ver; si no, 404.
 **Dónde:** detalle de un lead → «Simulador». El causante es el propio lead: su **sexo y fecha de nacimiento** salen de
 su ficha (sin ellos no se puede simular).
 
-| Paso | Qué se hace |
+**Cómo está organizada (una sola página):** a la izquierda el formulario en dos tarjetas («Datos de la simulación» con
+«Opciones de la renta» plegable, y «Grupo familiar»); a la derecha el panel de resultado, fijo al desplazarse (en celular,
+debajo del formulario). No hay «Continuar» ni «Volver».
+
+| Zona | Qué se hace |
 |---|---|
-| 1. Datos de la simulación | Fecha (solo lectura: hoy, hora de Chile), tipo de pensión, tasa de venta, saldo AFP en UF, valor UF (opcional), meses garantizados, años de diferimiento, meses y % de aumento temporal. «Continuar» valida este paso. |
-| 2. Grupo familiar | El causante aparece fijo en la primera fila. Se agregan, editan o eliminan un cónyuge y hasta 4 hijos (sexo, fecha de nacimiento, invalidez; en hijos, relación común o no común). |
-| 3. Resultado | Tarjetas (Monto pensión, Saldo total, Tasa de venta; con renta temporal, también meses de diferimiento y renta temporal), resumen y grupo familiar. «Descargar PDF» genera el PDF y registra la auditoría. |
+| Datos de la simulación | Fecha (solo lectura: hoy, hora de Chile), tipo de pensión, tasa de venta, saldo AFP en UF, valor UF (opcional), meses garantizados, años de diferimiento, meses y % de aumento temporal. «Opciones de la renta» está plegada y se abre sola solo si algún valor es distinto de cero. |
+| Grupo familiar | El causante aparece fijo en la primera fila. Se agregan, editan o eliminan un cónyuge y hasta 4 hijos (sexo, fecha de nacimiento, invalidez; en hijos, relación común o no común). |
+| Panel de resultado | Empieza con «Aún no hay resultado». «Simular» valida y calcula en el servidor y muestra las tarjetas (Pensión mensual estimada, Saldo total, Tasa de venta; con renta temporal, también meses de diferimiento y renta temporal) conservando lo ingresado. «Descargar PDF» aparece solo cuando hay resultado y genera el PDF registrando la auditoría. |
 
 **Lo que el ejecutivo debe aportar y no se calcula solo:**
 
@@ -142,7 +146,7 @@ rescate total = pensión × meses garantizados; valor futuro con **inflación fi
 garantizados − meses del aumento).
 
 **Lo que el PDF no muestra, por decisión del humano (2026-10-19):** el grupo familiar. Solo imprime «CÓNYUGE: Sí»; no
-recibe la lista de hijos ni sus datos. Quedan en pantalla (paso 3) y en la auditoría.
+recibe la lista de hijos ni sus datos. Quedan en pantalla (panel de resultado) y en la auditoría.
 
 ## 7. Precisión conocida
 

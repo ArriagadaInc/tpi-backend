@@ -1,5 +1,10 @@
 # Especificación: simulador en 3 pasos (tarea `SIM-WIZARD-3-PASOS`)
 
+> **Superada por `CRM-SIM-1-PAGINA-UNICA` (2026-10-28).** Desde esa tarea el simulador ya no es un asistente de 3 pasos:
+> es una sola página con el formulario a la izquierda y el panel de resultado a la derecha, sin «Continuar» ni «Volver».
+> Esta especificación se conserva como histórico del flujo original; el diseño vigente está en
+> `docs/ui/referencia/simulador/` y en `docs/SIMULADOR_USO.md`.
+
 Origen: capturas del flujo de un simulador de referencia entregadas por el humano el 2026-10-15
 (5 pantallas: datos de la simulación, grupo familiar vacío, modal «Agregar beneficiario», grupo
 familiar con filas y resultado). Esta especificación traduce esas capturas a texto, porque el
