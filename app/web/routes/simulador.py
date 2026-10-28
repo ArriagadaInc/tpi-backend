@@ -1,14 +1,15 @@
-"""Rutas web del simulador de renta vitalicia (SIM-RV-V1, asistente de 3 pasos).
+"""Rutas web del simulador de renta vitalicia (SIM-RV-V1, una sola página).
 
-GET muestra el asistente de 3 pasos (Datos de la simulación, Grupo familiar, Resultado) precargado
-con el sexo y la fecha de nacimiento del lead. POST despacha por ``intent``:
+GET muestra el formulario (Datos de la simulación y Grupo familiar) junto al panel de resultado,
+precargado con el sexo y la fecha de nacimiento del lead. POST despacha por ``intent``:
 
-- ``continuar``: valida en el servidor el paso 1 y pasa al paso 2 (o muestra los errores en el paso 1).
-- ``volver_paso1`` / ``volver_paso2``: re-renderiza el paso indicado conservando lo ingresado.
-- ``simular``: valida todo y calcula el resultado en el servidor, mostrándolo en el paso 3 sin
-  persistir ni auditar nada (AC-4).
+- ``simular``: valida todo y calcula el resultado en el servidor, mostrándolo en el panel de
+  resultado de la misma página (con lo ingresado conservado) sin persistir ni auditar nada (AC-4).
 - ``descargar_pdf`` (también el valor por defecto, sin ``intent``): valida todo, genera el PDF
   efímero en memoria y registra el evento append-only de auditoría (AC-9, AC-11).
+
+Cualquier otro valor de ``intent`` (un formulario viejo o manipulado) se trata como ``simular``:
+nunca genera PDF ni auditoría.
 
 La autorización es server-side y fail-closed: solo ``executive`` y los superusuarios ``ceo``/``cto``
 pueden simular; el resto recibe 403 real (el anónimo conserva el flujo canónico de login). La
@@ -261,22 +262,6 @@ def _parse_simulador_form(raw: Mapping[str, Any]) -> SimuladorForm:
     return SimuladorForm(**data)
 
 
-def _parse_paso1_form(raw: Mapping[str, Any]) -> SimuladorForm:
-    """Valida solo los campos del paso 1 (datos de la simulación), sin beneficiarios."""
-    data: dict[str, Any] = {
-        "saldo_uf": raw.get("saldo_uf"),
-        "tasa_venta_pct": raw.get("tasa_venta_pct"),
-        "valor_uf": raw.get("valor_uf") or None,
-        "meses_garantizados": raw.get("meses_garantizados") or 0,
-        "meses_aumento_temporal": raw.get("meses_aumento_temporal") or 0,
-        "porcentaje_aumento_temporal": raw.get("porcentaje_aumento_temporal") or 0,
-        "anios_diferidos": raw.get("anios_diferidos") or 0,
-        "porcentaje_rvd": raw.get("porcentaje_rvd") or 100.0,
-        "tipo_pension": raw.get("tipo_pension") or "vejez_edad",
-    }
-    return SimuladorForm(**data)
-
-
 def _familia_desde(
     lead: dict[str, Any] | None,
     form_values: Mapping[str, Any] | None,
@@ -285,7 +270,7 @@ def _familia_desde(
     """Grupo familiar para la tabla (causante primero, luego cónyuge e hijos), leniente.
 
     Se construye desde el lead (causante) y desde los valores crudos del formulario (cónyuge e
-    hijos), sin validar: sirve para mostrar la tabla en los pasos 2 y 3 tal como el usuario la
+    hijos), sin validar: sirve para mostrar la tabla tal como el usuario la
     dejó. El servidor valida por separado con ``SimuladorForm`` y ``SimuladorService.simular``.
     """
     filas: list[dict[str, Any]] = []
@@ -402,7 +387,6 @@ def _form_context(
     *,
     form_values: Mapping[str, Any] | None = None,
     simulador_errores: list[str] | None = None,
-    active_step: int = 1,
     fecha_simulacion: date | None = None,
     resumen: dict[str, Any] | None = None,
     resultado: dict[str, Any] | None = None,
@@ -425,7 +409,6 @@ def _form_context(
         "return_to_url": f"/leads/{lead_id}",
         "form_values": dict(form_values) if form_values else {},
         "simulador_errores": simulador_errores or [],
-        "active_step": active_step,
         "fecha_simulacion": fecha,
         "fecha_simulacion_label": fecha.strftime("%d/%m/%Y"),
         "tipo_pension_options": _TIPOS_PENSION,
@@ -466,7 +449,6 @@ def _render_simulador(
     lead: dict[str, Any] | None,
     form: Mapping[str, Any],
     *,
-    active_step: int,
     fecha_simulacion: date,
     errores: list[str] | None = None,
     resumen: dict[str, Any] | None = None,
@@ -480,7 +462,6 @@ def _render_simulador(
         lead,
         form_values=dict(form),
         simulador_errores=errores,
-        active_step=active_step,
         fecha_simulacion=fecha_simulacion,
         resumen=resumen,
         resultado=resultado,
@@ -509,7 +490,7 @@ def simulador_form(request: Request, lead_id: str):
         )
 
     return _render_simulador(
-        request, lead_id, lead, {}, active_step=1, fecha_simulacion=datetime.now(CRM_TZ).date()
+        request, lead_id, lead, {}, fecha_simulacion=datetime.now(CRM_TZ).date()
     )
 
 
@@ -534,36 +515,10 @@ async def simulador_accion(request: Request, lead_id: str):
         )
 
     intent = str(form.get("intent") or "descargar_pdf").strip()
+    if intent not in {"simular", "descargar_pdf"}:
+        # Un formulario viejo (p. ej. con «continuar») o manipulado nunca genera PDF ni auditoría.
+        intent = "simular"
     fecha_simulacion = datetime.now(CRM_TZ).date()
-
-    # Navegación hacia atrás: conserva los datos sin validar ni calcular.
-    if intent == "volver_paso1":
-        return _render_simulador(
-            request, lead_id, lead, form, active_step=1, fecha_simulacion=fecha_simulacion
-        )
-    if intent == "volver_paso2":
-        return _render_simulador(
-            request, lead_id, lead, form, active_step=2, fecha_simulacion=fecha_simulacion
-        )
-
-    # Paso 1 → 2: valida solo el paso 1 en el servidor.
-    if intent == "continuar":
-        try:
-            _parse_paso1_form(form)
-        except ValidationError as exc:
-            return _render_simulador(
-                request,
-                lead_id,
-                lead,
-                form,
-                active_step=1,
-                fecha_simulacion=fecha_simulacion,
-                errores=_validation_error_messages(exc),
-                status_code=422,
-            )
-        return _render_simulador(
-            request, lead_id, lead, form, active_step=2, fecha_simulacion=fecha_simulacion
-        )
 
     # «Simular» y «Descargar PDF» validan todo el formulario y calculan en el servidor.
     try:
@@ -574,7 +529,6 @@ async def simulador_accion(request: Request, lead_id: str):
             lead_id,
             lead,
             form,
-            active_step=2,
             fecha_simulacion=fecha_simulacion,
             errores=_validation_error_messages(exc),
             status_code=422,
@@ -589,7 +543,6 @@ async def simulador_accion(request: Request, lead_id: str):
             lead_id,
             lead,
             form,
-            active_step=2,
             fecha_simulacion=fecha_simulacion,
             errores=[str(exc)],
             status_code=422,
@@ -639,20 +592,18 @@ async def simulador_accion(request: Request, lead_id: str):
             lead_id,
             lead,
             form,
-            active_step=2,
             fecha_simulacion=fecha_simulacion,
             errores=[str(exc)],
             status_code=422,
         )
 
-    # «Simular»: muestra el resultado en el paso 3, sin persistir ni auditar (AC-4).
+    # «Simular»: muestra el resultado en la misma pagina, sin persistir ni auditar (AC-4).
     if intent == "simular":
         return _render_simulador(
             request,
             lead_id,
             lead,
             form,
-            active_step=3,
             fecha_simulacion=fecha_simulacion,
             resumen=_resumen_desde(simulador_form, fecha_simulacion),
             resultado=_resultado_desde(resultado, simulador_form),

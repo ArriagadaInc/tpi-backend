@@ -99,6 +99,12 @@ responsable** (`accent`, `info`, `violet`, `warning` desde `PALETA`, con el neut
 fecha** de la tarjeta Reunión. El fondo del historial del lead (`.timeline-item`) usa `--surface-soft`, el mismo de la
 solicitud original (`.original-request-box`); en el tema oscuro no cambia.
 
+Los patrones nuevos del simulador (CRM-SIM-1-PAGINA-UNICA, aprobados el 2026-10-28) también salen de los mismos tokens y
+componentes: **formulario con panel de resultado fijo** (dos tarjetas a la izquierda y el resultado a la derecha, que se
+mantiene al desplazarse y en celular pasa debajo con desplazamiento automático), **tarjeta de resultado destacada** (azul
+marino `#0f243e` de la ficha, con texto claro `#b8cce4` y `#ffffff`) y **opciones plegables** (`<details>` para «Opciones
+de la renta», abierta solo cuando algún valor es distinto de cero).
+
 ## 6. Reglas para quien programa la interfaz
 
 - Reutilizar antes de crear: si un componente de la sección 5 hace el trabajo, se usa; una clase nueva se justifica por escrito.

@@ -133,6 +133,14 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ### 🔄 Cambiado
 
+- **Simulador en una sola página, sin «Continuar», con panel de resultado fijo** (CRM-SIM-1-PAGINA-UNICA)
+  - El simulador deja de ser un asistente de 3 pasos y pasa a una sola página: a la izquierda el formulario en dos tarjetas («Datos de la simulación» con «Opciones de la renta» plegable, y «Grupo familiar»); a la derecha el panel de resultado, fijo al desplazarse (en celular, debajo del formulario y con desplazamiento automático hasta el resultado).
+  - «Simular» ejecuta el proceso: valida y calcula en el servidor, muestra el resultado en el panel conservando lo ingresado y no persiste ni audita. «Descargar PDF» vive en el panel de resultado, aparece solo cuando hay resultado y sigue generando el PDF efímero y registrando el evento append-only de auditoría exactamente una vez.
+  - Se eliminan «Continuar» y «Volver», los `intent` `continuar`, `volver_paso1` y `volver_paso2`, la función `_parse_paso1_form` y el parámetro `active_step`; un `intent` desconocido (un formulario viejo abierto durante el despliegue) se trata como `simular`, así nunca genera PDF ni auditoría.
+  - «Opciones de la renta» empieza cerrada y se abre sola solo cuando algún valor es distinto de cero; Enter en un campo ejecuta «Simular» (el primer botón de envío del formulario), nunca el PDF.
+  - Solo presentación y navegación: el motor `app/simulador_pension/**`, las validaciones, la autorización, el CSRF, el PDF y la auditoría no cambian. Sin dependencias, tipografías, scripts ni librerías nuevas.
+  - Documentación en `docs/SIMULADOR_USO.md`, `docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md`, `docs/specs/SIM_WIZARD_SPEC.md` y `docs/UI_DESIGN_SYSTEM.md`.
+
 - **Nuevo aspecto de la agenda, contraste del historial y logo como acceso al sitio** (CRM-AGENDA-3-LOOK)
   - La página Agenda reproduce la referencia visual aprobada (la carpeta `docs/ui/referencia/agenda/` se retiró de `main` al cerrar la tarea): vista de semana como
     cuadrícula por horas (lunes a viernes, 09:00–19:00, reuniones simultáneas en carriles, día de hoy resaltado con la

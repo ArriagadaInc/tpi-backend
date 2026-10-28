@@ -78,16 +78,21 @@ personal del ejecutivo y la comparativa de varias opciones (ver `docs/SIM_RV_V1_
 **Rechazos incondicionales de la V1 (422):** bono de reconocimiento, vejez anticipada, invalidez y sobrevivencia como tipo
 de pensión, otros parentescos, cónyuge inválido, renta temporal con cónyuge/hijos/garantía/aumento.
 
-## 5. Nota sobre el asistente de 3 pasos (SIM-WIZARD-3-PASOS)
+## 5. Nota sobre el asistente de 3 pasos (SIM-WIZARD-3-PASOS, superado por CRM-SIM-1)
 
-Desde `SIM-WIZARD-3-PASOS` la pantalla del simulador es un asistente de 3 pasos (ver
-`docs/specs/SIM_WIZARD_SPEC.md`); los componentes y las rutas no cambian de nombre:
+Desde `CRM-SIM-1-PAGINA-UNICA` la pantalla del simulador deja de ser un asistente de 3 pasos y pasa a una sola página
+(formulario a la izquierda y panel de resultado a la derecha), sin «Continuar» ni «Volver»; el `POST` solo reconoce
+`simular` y `descargar_pdf` (cualquier otro `intent` se trata como `simular`). Lo siguiente describe la transición
+original de `SIM-WIZARD-3-PASOS` (ver `docs/specs/SIM_WIZARD_SPEC.md`), vigente hasta `CRM-SIM-1`; los componentes y las
+rutas no cambian de nombre:
 
-- `app/web/templates/simulador.html` pasa de un formulario único a un asistente de 3 pasos (datos, grupo familiar,
-  resultado) con modal de beneficiario gestionado por `app/web/static/js/simulador_wizard.js` (JavaScript propio, sin CDN).
-- `app/web/routes/simulador.py` conserva `GET`/`POST` bajo la misma ruta; el `POST` despacha por `intent` (`continuar`,
-  `volver_paso1`/`volver_paso2`, `simular`, `descargar_pdf`). `simular` calcula sin persistir ni auditar; `descargar_pdf`
-  conserva el PDF efímero y el evento append-only de auditoría.
+- `app/web/templates/simulador.html` pasó de un formulario único a un asistente de 3 pasos (datos, grupo familiar,
+  resultado) con modal de beneficiario gestionado por `app/web/static/js/simulador_wizard.js` (JavaScript propio, sin
+  CDN); con `CRM-SIM-1` vuelve a una sola página con el panel de resultado fijo y «Opciones de la renta» plegable.
+- `app/web/routes/simulador.py` conserva `GET`/`POST` bajo la misma ruta; el `POST` despacha por `intent`. Hasta
+  `SIM-WIZARD-3-PASOS` eran `continuar`, `volver_paso1`/`volver_paso2`, `simular` y `descargar_pdf`; desde `CRM-SIM-1`
+  solo quedan `simular` y `descargar_pdf` (un `intent` desconocido se trata como `simular`). `simular` calcula sin
+  persistir ni auditar; `descargar_pdf` conserva el PDF efímero y el evento append-only de auditoría.
 - El motor `app/simulador_pension/**`, la autorización (403 fuera de executive/ceo/cto), la validación, el cálculo y el
   escape del PDF no cambian. La relación RVD/RT queda oculta en 100 en el asistente (el motor y la API siguen aceptando
   50/51–99).

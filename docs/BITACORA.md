@@ -22,6 +22,14 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-28 - Simulador: página única implementada (CRM-SIM-1-PAGINA-UNICA)
+
+- Qué se hizo: se reprodujo la referencia aprobada en `docs/ui/referencia/simulador/` en sus rutas de destino (plantilla, hoja de estilos, JavaScript del modal, ruta y pruebas reescritas), idéntica a la referencia ignorando diferencias de fin de línea.
+- Qué cambia: una sola página con el formulario a la izquierda (dos tarjetas, «Opciones de la renta» plegable) y el panel de resultado fijo a la derecha; «Simular» ejecuta el proceso y muestra el resultado sin persistir ni auditar; «Descargar PDF» sigue auditado y aparece solo con resultado; se eliminan «Continuar», «Volver», los `intent` de pasos, `_parse_paso1_form` y `active_step`; un `intent` desconocido se trata como `simular`.
+- Documentación: `docs/SIMULADOR_USO.md` (página única), `docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md` (nota de transición), `docs/specs/SIM_WIZARD_SPEC.md` (marcada como superada), `docs/UI_DESIGN_SYSTEM.md` (patrones nuevos) y `CHANGELOG.md`.
+- Pruebas: `tests/unit/test_sim_wizard.py` reescrito para la página única (15 pruebas); pasan sin cambios `test_sim_rv_web` (unitaria e integración) y `test_sim_rv_regresion_portal`. Los quality gates (ruff, black, mypy, bandit y la auditoría de CSS) pasan; la suite completa con cobertura queda al CI.
+- No cambia: el motor de cálculo, las validaciones, la autorización, el CSRF, el PDF ni la auditoría.
+
 ### 2026-10-28 - Simulador: página única aprobada y tarea CRM-SIM-1-PAGINA-UNICA definida
 
 - Contexto: el humano pidió rediseñar el simulador quitando «Continuar» para que «Simular» ejecute el proceso, con mejor look and feel y armónico con la UX del CRM.
