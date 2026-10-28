@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "CRM-AGENDA-4-HISTORIAL",
+  "created_at": "2026-10-27T16:24:35Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610271619-reviewer-sup924203",
+  "release_sha": "35f693be19da50ff7611520a5ba326a62e21d142",
+  "reviewed_tree": "47cdc660313da60f999cbec7a06d44333add683b",
+  "release_tree": "47cdc660313da60f999cbec7a06d44333add683b",
+  "decision": "APPROVED",
+  "cause": null,
+  "candidate_evidence": "evidence/CRM-AGENDA-4-HISTORIAL/deployment/candidate-01.json",
+  "application_version": "h3-crm-agenda-4-historial-35f693b-domainlocked-r1",
+  "lkg_version_label": "h3-crm-agenda-3-look-d8b8eec-domainlocked-r1",
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse 35f693b^{tree} = 47cdc660 = reviewed_tree de review-01 (APPROVED sobre 37ab9e4, PR #150) y de merge-01"
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "tras git fetch origin main, origin/main = 35f693b (merge-base --is-ancestor exit 0); padre d961144; squash de PR #150 con match-head-commit"
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "gh run view 40537379108: completed/success, headSha 35f693b, workflow Publish immutable DEV images to ECR (workflow_dispatch); manifest del artifact descargado: runtime_git_sha = release_sha, app_image y caddy_image por digest iguales a los del candidate"
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "ecr describe-images: tpi-dev-app sha256:89520a97... y tpi-dev-caddy sha256:379dc167... ACTIVE, tag unico = release_sha, manifest Docker v2; describe-repositories: ambos IMMUTABLE, scanOnPush true"
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "describe-image-scan-findings: COMPLETE en ambos digests (16:14:52Z / 16:14:55Z), findings vacios, findingSeverityCounts vacio"
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "git diff --quiet 35f693b sobre template domainlocked y build_eb_ecr_bundle.py (exit 0); reconstruccion independiente en tempfile.mkdtemp con build_domain_locked_bundle y los digests del manifest del publish: sha256 655141e1cff44ff3fd9066e4bef2c0108813a1a03e691c5133be650146f2d6fc, 4917 bytes, igual al del candidate"
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "zip con una sola entrada docker-compose.yml; sin clave build; sin genialabs; dominios literales dev.tupensioninteligente.cl y backoffice.dev.tupensioninteligente.cl; 3 lineas image por digest (app x2, caddy x1)"
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "head-object --checksum-mode ENABLED: ChecksumSHA256 ZVFB4c/0T/P9kGbkvvLAEIgToaA+aRxRM75lAUby1vw= (= base64 del sha256 reconstruido), FULL_OBJECT, ContentLength 4917; key content-addressed con el sha256"
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "describe-application-versions (un label): h3-crm-agenda-4-historial-35f693b-domainlocked-r1 UNPROCESSED, SourceBundle = bucket/key S3 del candidate"
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "reviewed_tree 47cdc660 -> release 35f693b -> publish 40537379108 -> digests app 89520a97 / caddy 379dc167 -> bundle 655141e1 -> S3 key + checksum -> AV h3-crm-agenda-4-historial-35f693b-domainlocked-r1"
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "describe-environments en esta sesion: tpi-backoffice-dev-green VersionLabel = h3-crm-agenda-3-look-d8b8eec-domainlocked-r1, Ready/Green/Ok, AbortableOperationInProgress false, DateUpdated 2026-10-27T02:22:17Z (environment sin mutar)"
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "AV LKG existe (UNPROCESSED, como todas las del fast path), SourceBundle key content-addressed 8adec16a...; head-object ChecksumSHA256 it7BapgL1qoNo5XPsk6QNCJvEdgJPn4hgkcw9VwoO7M= = base64 de 8adec16a..., 4917 bytes"
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "digests del LKG (app d284330b..., caddy 5f575722..., segun evidence/CRM-AGENDA-3-LOOK/deployment/candidate-01.json): ambos ACTIVE en ECR, tag d8b8eec"
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "inspeccion estructural del compose (con forma enmascarada): 4 lineas con nombre de variable sensible, todas interpolaciones con mensaje de requerido, 0 valores literales; no se leyeron archivos de credenciales. candidate-01 y esta evidencia solo contienen IDs, digests, hashes, labels y URLs publicas"
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "11 entradas: HTTPS publico, login, catalogos API, app.css, /leads, /agenda y /dashboard con auth, sin dominio legado, identidad runtime, conteos de logs y AC-7 humano"
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "un unico update-environment con --environment-name y --version-label; sin option settings, template, platform ni tier"
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "policies.yaml: DEPLOYING -> deployer cutover = @read + elasticbeanstalk update-environment; rollback igual; los comandos van por aws_guard.py"
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "note": "un solo comando de cutover; espera por describe-environments cada 30 s con limite de 30 min, sin reintentos"
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "rollback version-only a h3-crm-agenda-3-look-d8b8eec-domainlocked-r1, max_attempts 1, condicionado a rollback_authorization"
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": "sin IAM, Route53, secretos ni migraciones; database_changes ninguna (change_class A); depende de la vista de la migracion 011 ya aplicada fuera del Harness"
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "note": "el plan solo registra labels, estado y eventos acotados; logs solo por conteo"
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS",
+      "note": "residuos declarados: imagenes ECR tag 35f693b, objeto S3 content-addressed y AV UNPROCESSED inertes; environment sin mutar"
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "note": "rollback_plan.conditions: un defecto puramente funcional o visual no autoriza rollback"
+    }
+  ],
+  "findings": [
+    {
+      "id": "CR-1",
+      "severity": "info",
+      "file": null,
+      "summary": "El checkout local esta en d961144, atrasado respecto de origin/main (35f693b); las comparaciones se hicieron contra el release_sha (git diff --quiet sobre template y constructor, exit 0), no contra el arbol de trabajo.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "CR-2",
+      "severity": "info",
+      "file": null,
+      "summary": "No se ejecuto dry-run de update-environment (el modo candidate_read no lo permite); los checks del plan se demostraron inspeccionando los comandos y harness/policies.yaml.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "CR-3",
+      "severity": "info",
+      "file": null,
+      "summary": "El release depende de la vista tpi.v_historial_agenda (migracion 011, CRM-AGENDA-4-HISTORIAL-MIGRACION). El Harness no puede verificar su presencia en la BD de DEV (sin acceso RDS); si faltara, el detalle del lead degrada sin lineas de agenda (AC-4).",
+      "required_action": "Humano: confirmar en AC-7 que la migracion 011 esta aplicada en DEV."
+    },
+    {
+      "id": "CR-4",
+      "severity": "info",
+      "file": null,
+      "summary": "Siguen abiertos los hallazgos minor R1 y R2 de review-01 (cobertura de pruebas del Coordinador en AC-4 y del texto completo del HTML en AC-3). No afectan al artefacto.",
+      "required_action": "Humano: opcionalmente reforzar esas pruebas en una tarea futura."
+    }
+  ],
+  "risks": [
+    "ECR lifecycle keep-100 podria expirar imagenes del LKG a futuro; hoy presentes.",
+    "AC-7 requiere revision visual humana en DEV (escritorio y celular, claro/oscuro; historial del lead y dashboard por perfil) tras el cutover.",
+    "Riesgo aceptado por el humano: posible falsa alarma del indicador fuerte de logs por lineas de acceso de Caddy (HARNESS-LOGS-FALSOS-POSITIVOS-CADDY)."
+  ]
+}

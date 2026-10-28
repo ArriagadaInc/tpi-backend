@@ -6,16 +6,16 @@
 - Tarea: ninguna
 - Proximo paso: Humano elige tarea: python scripts/harness/approve.py activate --task <ID>
 - Ultima transicion: close (DONE -> IDLE)
-- Actualizado: 2026-10-27T14:26:58Z
+- Actualizado: 2026-10-28T01:11:50Z
 <!-- harness:projection:end -->
-- Ultima sesion archivada: progress/sessions/2026-10-27-CRM-AGENDA-4-HISTORIAL-MIGRACION-closure.md
+- Ultima sesion archivada: progress/sessions/2026-10-28-CRM-AGENDA-4-HISTORIAL-closure.md
 
 ## Estado reciente
-- DECISION (DEPLOYER, 2026-10-27, claude-202610271218-deployer-sup13df5c): verificacion final PASS. Env Ready/Green/Ok en h3-crm-agenda-3-look-d8b8eec-domainlocked-r1, DateUpdated 02:22:17Z y sin eventos nuevos tras el cutover; origin/main = d8b8eec. Smoke no autenticado 10/10. Conteos de logs desde 02:21:34Z hasta esta sesion: fuertes y debiles 0, Traceback 0, GET 422 (ingesta viva). AC-1..AC-7 met. Evidencia: evidence/CRM-AGENDA-3-LOOK/deployment/verification-02.json. Transicion `verified` -> DONE.
-- 2026-10-27: Tarea CRM-AGENDA-3-LOOK cerrada; resumen en tasks/completed/CRM-AGENDA-3-LOOK.yaml
-- DECISION (REVIEWER, 2026-10-27, claude-202610271421-reviewer-sup473120): CRM-AGENDA-4-HISTORIAL-MIGRACION APPROVED en PR #148, SHA 57406d5 (tree b5d95fe). CI run 40518838168 verde en el SHA exacto (2331 passed, cobertura 91.62%; las 5 pruebas de integracion y las 8 de texto nuevas corren). Rama al dia con origin/main 736c7e4. AC-1..AC-5 cumplidos; migracion 011 alineada con 009 y con AgendaRepository._insert_cita_audit; sin cambios en app/**. Hallazgos solo info (R1 cast directo de fechas; R2 pytest.raises generico). AC-6 queda para el humano en AWS DEV. Evidencia: evidence/CRM-AGENDA-4-HISTORIAL-MIGRACION/reviewer/review-01.json. Transicion `review_approve` -> REVIEW_APPROVED.
-- DECISION (DEPLOYER, 2026-10-27, claude-202610271424-deployer-supadcef0): PR #148 mergeado con merge_reviewed_pr.py (squash, match-head-commit 57406d5). release_sha bfa288f, tree b5d95fe == reviewed_tree; padre 736c7e4; origin/main = bfa288f. Evidencia: evidence/CRM-AGENDA-4-HISTORIAL-MIGRACION/deployment/merge-01.json. deploy_required=false (clase D): transicion `merged` -> DONE. AC-6 (aplicar la migracion 011 en AWS DEV desde bfa288f) queda para el humano; el Harness no aplica migraciones.
-- 2026-10-27: Tarea CRM-AGENDA-4-HISTORIAL-MIGRACION cerrada; resumen en tasks/completed/CRM-AGENDA-4-HISTORIAL-MIGRACION.yaml
+- DECISION (DEPLOYER, 2026-10-27, claude-202610271626-deployer-sup08576b): cutover OK. Preflight PASS (origin/main 35f693b, cuenta 821656895812, us-east-2, env en LKG h3-crm-agenda-3-look-d8b8eec-domainlocked-r1 Ready/Green/Ok, AV candidata y LKG presentes, digests candidate y LKG ACTIVE, S3 checksum = bundle 655141e1, Promote deshabilitado, sha256 candidate-01 = approval-01). Un unico update-environment version-only a h3-crm-agenda-4-historial-35f693b-domainlocked-r1 aceptado (16:29:23Z -> 16:30:05Z, solo INFO); estado final Ready/Green/Ok, cadena de identidad completa en true. Sin rollback. Evidencia: evidence/CRM-AGENDA-4-HISTORIAL/deployment/deployment-01.json. Transicion `deploy_succeeded` -> VERIFYING. AC-7 pendiente para el humano.
+- DECISION (DEPLOYER, 2026-10-27, claude-202610271626-deployer-sup08576b): verificacion automatica PASS. Ready/Green/Ok en la version aprobada; identidad de runtime completa; smoke no autenticado 9/9 PASS (app.css servido = release, sha256 fe0a62ea); conteos de logs desde 16:29:23Z: 0 fuertes, 0 debiles, Traceback 0 (GET 13, log vivo). AC-1..AC-6 met; AC-7 pending_human. Evidencia: evidence/CRM-AGENDA-4-HISTORIAL/deployment/verification-01.json. No se aplica `verified` hasta la aceptacion humana.
+- HUMANO (2026-10-28T00:55:22Z): AC-7 aceptado con approve.py (evidence/CRM-AGENDA-4-HISTORIAL/approvals/acceptance-01.json).
+- DECISION (DEPLOYER, 2026-10-28, claude-202610280105-deployer-sup4a6c37): verificacion final PASS. Env Ready/Green/Ok en h3-crm-agenda-4-historial-35f693b-domainlocked-r1, sin eventos desde 16:31:20Z; cadena de identidad revalidada (AV SourceBundle = key aprobada, S3 checksum = 655141e1, digests app 89520a97 / caddy 379dc167); smoke 9/9 PASS; conteos de logs 16:29:23Z -> 01:07Z: 0 fuertes, 0 debiles, Traceback 0 (GET 179, log vivo). AC-1..AC-7 met. Evidencia: evidence/CRM-AGENDA-4-HISTORIAL/deployment/verification-02.json. Transicion `verified` -> DONE.
+- 2026-10-28: Tarea CRM-AGENDA-4-HISTORIAL cerrada; resumen en tasks/completed/CRM-AGENDA-4-HISTORIAL.yaml
 
 ## Bloqueos
 - Ninguno.

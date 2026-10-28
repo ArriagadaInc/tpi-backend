@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "CRM-AGENDA-4-HISTORIAL",
+  "created_at": "2026-10-27T15:55:56Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610271457-developer-supde4bc3",
+  "head_sha": "37ab9e44920c4a21c4d69a7a4ce211e8aa7dd644",
+  "branch": "harness/CRM-AGENDA-4-HISTORIAL-historial-dashboard",
+  "pr_number": 150,
+  "change_class": "A",
+  "tests": {
+    "command": "pytest tests/unit -q --no-cov (local, 1228 passed; los unicos fallos locales son preexistentes por falta de PostgreSQL/entorno) + pytest tests/ --cov=app --cov-fail-under=85 (CI del PR #150, verde, incluye integracion PostgreSQL)",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "docker_compose_config": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "AgendaRepository.get_lead_agenda_events lee UNICAMENTE tpi.v_historial_agenda unida a tpi.asesores por responsable_id (LEFT JOIN) con ORDER BY fecha_hora DESC, id_auditoria DESC; la consulta no menciona tpi.auditoria ni tpi.citas. Expuesto por AgendaService.get_lead_agenda_events, SolicitudService.get_lead_agenda_events y el protocolo LeadBoardService + fake (_MockLeadBoardService devuelve []) en app/web/dependencies.py. tests/unit/test_agenda_historial_repository.py fija la consulta y tests/integration/test_agenda_repository.py produce las cinco acciones con el flujo real y verifica el nombre del responsable."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "build_timeline_items gana agenda_events opcional (None por defecto) y produce kind='agenda' con timestamp America/Santiago, display_time, actor, accion, responsable, fecha_reunion (fecha_hora_nueva si existe, si no fecha_hora_anterior) y fecha_anterior para reagendada. Rank 'agenda' entre state_change y note sin alterar el orden relativo. tests/unit/test_agenda_historial_timeline_presentation.py cubre campos, fallback de fecha, reagendada, hora de Santiago, salto de timestamp, empate exacto y mezcla con notas."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "lead_detail_panel.html renderiza kind='agenda' con la insignia 'Automatico' y el actor, y los cinco textos exactos (agendada/reagendada/cancelada/realizada/no asistio) con fecha DD/MM/AAAA HH:MM en hora de Santiago; 'responsable no disponible' si el responsable no se resuelve; sin ids internos ni nota/motivo. tests/unit/test_agenda_historial_web.py lee el HTML renderizado de las cinco acciones, del caso sin responsable y del orden junto a notas."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "Los eventos se cargan solo dentro del bloque 'selected_lead is not None' (el mismo control de alcance del detalle); _load_agenda_events es fail-soft (DatabaseAppError/ValueError/TypeError -> [] sin log). tests/unit/test_agenda_historial_web.py verifica Runner ajeno (404, sin consulta y sin lineas), lead visible (consulta y render) y falla de la vista (200 con el resto del historial, sin lineas de agenda)."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "evidence": "El repositorio trae rol y atiende_reuniones en get_cartera_por_asesor, get_metricas_operacionales_por_asesor y get_casos_por_estado_y_asesor (sin consultas nuevas); el servicio calcula el grupo (Coordinador/Runner/Socio/sin_asesor); build_asesor_groups/build_asesor_cell_groups arman los grupos con subtotal de conteos (tiempos '—') y estado vacio por grupo; 'Sin asesor' aparte. tests/unit/test_asesor_groups_presentation.py, test_asesor_groups_render.py, test_executive_dashboard_service.py (grupo) y tests/integration/test_executive_dashboard_per_advisor.py."
+    },
+    {
+      "id": "AC-6",
+      "status": "met",
+      "evidence": "ruff/black/mypy limpios; suite completa verde en CI (cobertura >= 85%). Documentacion: docs/AGENDA_USO.md (seccion 7 historial), docs/H3_3_4_DASHBOARD_DESIGN.md (grupos), docs/BITACORA.md y CHANGELOG.md. Sin dependencias, tipografias, scripts ni librerias nuevas."
+    },
+    {
+      "id": "AC-7",
+      "status": "pending_verification",
+      "evidence": "Revision visual en AWS DEV (escritorio y celular, tema claro y oscuro) tras aplicar la migracion 011 y desplegar este cambio: historial del lead con las cinco acciones y el Runner sin eventos en lead ajeno; dashboard con CEO/CTO mostrando Coordinadores y Runners por separado con subtotales y sin Socios. Requiere Human Gate/verificacion autenticada."
+    }
+  ],
+  "files_changed": [
+    "app/repositories/agenda_repository.py",
+    "app/services/agenda_service.py",
+    "app/services/solicitud_service.py",
+    "app/web/dependencies.py",
+    "app/web/presentation.py",
+    "app/web/routes/leads.py",
+    "app/web/templates/lead_detail_panel.html",
+    "app/repositories/executive_dashboard_repository.py",
+    "app/services/executive_dashboard_service.py",
+    "app/web/dashboard_presentation.py",
+    "app/web/routes/dashboard.py",
+    "app/web/templates/executive_dashboard.html",
+    "app/web/static/css/app.css",
+    "app/models/executive_dashboard.py",
+    "tests/unit/test_agenda_historial_repository.py",
+    "tests/unit/test_agenda_historial_timeline_presentation.py",
+    "tests/unit/test_agenda_historial_web.py",
+    "tests/unit/test_asesor_groups_presentation.py",
+    "tests/unit/test_asesor_groups_render.py",
+    "tests/unit/test_agenda_service.py",
+    "tests/unit/test_agenda_web.py",
+    "tests/unit/test_web_app.py",
+    "tests/unit/test_executive_dashboard_service.py",
+    "tests/integration/test_agenda_repository.py",
+    "tests/integration/test_executive_dashboard_per_advisor.py",
+    "docs/AGENDA_USO.md",
+    "docs/H3_3_4_DASHBOARD_DESIGN.md",
+    "docs/BITACORA.md",
+    "CHANGELOG.md"
+  ],
+  "assumptions": [
+    "La vista tpi.v_historial_agenda ya existe (migracion 011, aplicada en DEV antes de activar esta tarea); no se modifica ni se requiere DDL nuevo (change_class A).",
+    "Los eventos de la agenda se exponen por AgendaService (dominio) y por SolicitudService (protocolo LeadBoardService que usa la ruta, consistente con los otros eventos de la linea de tiempo); ambos delegan en AgendaRepository.get_lead_agenda_events.",
+    "Las pruebas de integracion requieren PostgreSQL y corren en CI (verde en el PR #150); localmente no hay base de datos.",
+    "La fecha de la reunion se resuelve como fecha_hora_nueva si existe y si no fecha_hora_anterior, tal como lo exige AC-2; la nota y el motivo de cancelacion no estan en la vista (no se registran en la auditoria de la agenda).",
+    "El nombre del asesor en el dashboard sigue visible solo para CEO/CTO porque la ruta /dashboard ya esta gateada a superusuarios (403 para el resto)."
+  ],
+  "migrations_included": false
+}

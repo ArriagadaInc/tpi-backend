@@ -22,6 +22,20 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-28 - Harness: tarea CRM-AGENDA-4-HISTORIAL cerrada (DONE)
+
+- Titulo: CRM agenda 4b: eventos de la agenda en el historial del lead y casos por asesor separados en coordinadores y runners
+- Evidencia: `evidence/CRM-AGENDA-4-HISTORIAL/` y `tasks/completed/CRM-AGENDA-4-HISTORIAL.yaml`.
+- release_sha: `35f693be19da50ff7611520a5ba326a62e21d142`
+- pr_number: `150`
+- application_version: `h3-crm-agenda-4-historial-35f693b-domainlocked-r1`
+- bundle_sha256: `655141e1cff44ff3fd9066e4bef2c0108813a1a03e691c5133be650146f2d6fc`
+- lkg: `h3-crm-agenda-3-look-d8b8eec-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `35f693be19da50ff7611520a5ba326a62e21d142`
+- verification: `PASS`
+- Aceptación humana AC-7 en DEV (historial del lead con eventos de agenda y dashboard por perfil). Una ronda, sin rework. La migración 011 se aplicó antes en DEV (script humano con simulación previa).
+
 ### 2026-10-27 - CRM agenda 4b: eventos de la agenda en el historial y casos por asesor por perfil (CRM-AGENDA-4-HISTORIAL)
 
 - Desarrollo (clase A): los eventos de la agenda (agendada, reagendada, cancelada, realizada y no asistio) aparecen en

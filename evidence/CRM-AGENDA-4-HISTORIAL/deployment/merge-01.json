@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "CRM-AGENDA-4-HISTORIAL",
+  "created_at": "2026-10-27T16:02:58Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610271601-deployer-sup0e924e",
+  "pr_number": 150,
+  "reviewed_sha": "37ab9e44920c4a21c4d69a7a4ce211e8aa7dd644",
+  "reviewed_tree": "47cdc660313da60f999cbec7a06d44333add683b",
+  "release_sha": "35f693be19da50ff7611520a5ba326a62e21d142",
+  "release_tree": "47cdc660313da60f999cbec7a06d44333add683b",
+  "main_parent_sha": "d961144c4d82b82c14fa2467732ce184e5854b40",
+  "method": "squash",
+  "match_head_commit_used": true
+}
