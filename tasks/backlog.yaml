@@ -53,6 +53,122 @@ items:
   - TPI_Protocolo_Runners_Canal_Web.pdf, paginas 7 y 14 (respeto al no, Ley 21.719 desde el 1 de diciembre
     de 2026; el humano confirmo el 2026-10-27 que rige desde el 1 de octubre de 2027)
   - docs/ADJUNTOS_REVISION_PREPROD.md, punto 4 (retencion y borrado a solicitud del titular)
+- id: CRM-SIM-1-PAGINA-UNICA
+  title: 'CRM simulador 1: pagina unica sin Continuar, con panel de resultado y nuevo aspecto'
+  priority: P3
+  category: functional
+  status: pending
+  change_class: A
+  summary: 'El simulador deja de ser un asistente de 3 pasos y pasa a una sola pagina: formulario a la izquierda,
+    panel de resultado fijo a la derecha, y el boton Simular ejecuta el proceso (se eliminan Continuar y Volver). Corrige
+    ademas el defecto por el que en DEV se veian los tres pasos a la vez. Solo presentacion y navegacion: motor, validaciones,
+    autorizacion, CSRF, PDF y auditoria no cambian. Referencia exacta en docs/ui/referencia/simulador. Tarea definida y activable.'
+  evidence:
+  - docs/ui/referencia/simulador/README.md
+  - 'pedido del humano del 2026-10-27: rediseñar el simulador quitando Continuar para que Simular ejecute el proceso,
+    con mejor look and feel y armonico con la UX del CRM; vista previa local aprobada el 2026-10-28'
+  - 'hallazgo del 2026-10-27: la regla .wizard-pane { display: block } anulaba el atributo hidden, por eso en DEV los tres
+    pasos se veian juntos y Continuar parecia no hacer nada'
+  task:
+    id: CRM-SIM-1-PAGINA-UNICA
+    title: 'CRM simulador 1: pagina unica sin Continuar, con panel de resultado y nuevo aspecto'
+    objective: 'Aplicar el diseno aprobado por el humano el 2026-10-28 (referencia exacta en docs/ui/referencia/simulador/):
+      el simulador deja de ser un asistente de 3 pasos y pasa a una sola pagina con el formulario (Datos de la simulacion,
+      Opciones de la renta plegable y Grupo familiar) a la izquierda y el panel de resultado a la derecha. El boton Simular
+      calcula y muestra el resultado en ese panel (conservando lo ingresado), Descargar PDF sigue generando el PDF y registrando
+      la auditoria, y desaparecen Continuar y Volver. Es solo presentacion y navegacion: el motor de calculo, las validaciones,
+      la autorizacion, el CSRF, el PDF y la auditoria no cambian.'
+    source:
+      type: story
+      ref: Pedido del humano del 2026-10-27 (rediseñar el simulador quitando Continuar para que Simular ejecute el proceso, con
+        mejor look and feel y armonico con la UX del CRM) y vista previa aprobada el 2026-10-28 (docs/ui/referencia/simulador/README.md).
+    change_class: A
+    deploy_required: true
+    requires_human_acceptance: true
+    acceptance_criteria:
+    - id: AC-1
+      verification: automated
+      description: Fidelidad a la referencia. Los cinco archivos de docs/ui/referencia/simulador/ (simulador.html en app/web/templates;
+        app.css en app/web/static/css; simulador_wizard.js en app/web/static/js; simulador.py en app/web/routes y test_sim_wizard.py
+        en tests/unit) quedan en sus rutas destino IDENTICOS a la referencia ignorando fines de linea (git diff --no-index
+        --ignore-cr-at-eol sin diferencias). Si app.css cambio en main desde 950e8fa, se reaplican solo el bloque Simulador
+        de pension (CRM-SIM-1) y el borrado de las reglas .wizard-* sin uso, sin reemplazar el archivo entero. El Developer
+        no modifica el diseno.
+    - id: AC-2
+      verification: automated
+      description: 'Comportamiento del servidor en la pagina unica, probado con response.text. (a) GET muestra Datos de la simulacion,
+        Grupo familiar, Aun no hay resultado y un unico boton de envio Simular; no aparecen Continuar, volver_paso, data-step
+        ni wizard-step, y el boton Descargar PDF solo existe cuando hay resultado. (b) POST con intent simular valida todo,
+        calcula, responde 200 con el resultado en el panel (Pension mensual estimada, Saldo total, Tasa de venta), conserva
+        lo ingresado y NO audita ni persiste (el evento de auditoria no se llama). (c) POST con datos invalidos responde 422,
+        conserva los valores, muestra el error y no muestra resultado. (d) intent descargar_pdf, o sin intent, sigue generando
+        el PDF y registrando el evento de auditoria exactamente una vez. (e) Un intent desconocido (continuar, volver_paso1,
+        volver_paso2 u otro valor) se trata como simular: responde HTML, nunca PDF y nunca llama a la auditoria. (f) Enter
+        en un campo envia Simular: en la respuesta con resultado el boton Simular aparece antes que Descargar PDF. (g) Opciones
+        de la renta empieza cerrado y se abre solo cuando algun valor es distinto de cero. (h) Se conservan la frase exacta
+        valores referenciales (no vinculantes), el CSRF (403 sin token), el 404 del lead inexistente, el 403 por rol y el escape
+        del PDF. Se elimina de simulador.py la funcion _parse_paso1_form y el parametro active_step (no quedan referencias en
+        app/ ni tests/). Cobertura del proyecto sin bajar (85%).'
+    - id: AC-3
+      verification: automated
+      description: 'Las pruebas existentes no se debilitan. Siguen pasando sin cambios tests/unit/test_sim_rv_web.py, tests/integration/test_sim_rv_web.py
+        y tests/unit/test_sim_rv_regresion_portal.py, mas las demas pruebas del simulador y de la web. En tests/unit/test_sim_wizard.py
+        solo cambian las pruebas que dependian de los pasos (se reemplazan por las de la referencia, igual de estrictas);
+        se mantienen sin cambios las de PDF con auditoria, renta temporal, conyuge invalido, sin CDN ni URLs externas, JS
+        propio local, azul marino de la ficha y sin naranja de marca.'
+    - id: AC-4
+      verification: automated
+      description: 'Calidad y documentacion. Sin dependencias, tipografias, scripts ni librerias nuevas; sin !important nuevos
+        y sin colores sueltos nuevos salvo el azul marino de la ficha que ya trae la referencia (scripts/ui_css_audit.py: important
+        sigue en 4 y los usos de colores sueltos no suben de 126). Pasan el formato y el lint del proyecto (black, isort, ruff,
+        mypy segun la configuracion del repositorio) y la auditoria de seguridad. Documentacion: docs/SIMULADOR_USO.md describe
+        la pagina unica en lugar de los tres pasos, docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md agrega una nota de que desde CRM-SIM-1
+        el asistente de 3 pasos pasa a pagina unica, docs/specs/SIM_WIZARD_SPEC.md indica al inicio que la superó CRM-SIM-1,
+        docs/UI_DESIGN_SYSTEM.md agrega una nota breve de los patrones nuevos (formulario con panel de resultado fijo, tarjeta
+        de resultado destacada, opciones plegables), CHANGELOG.md y docs/BITACORA.md.'
+    - id: AC-5
+      verification: human
+      description: 'Revision visual del humano en AWS DEV, en escritorio y celular, con tema claro y oscuro: (a) la pagina abre
+        sin Continuar, con el formulario y el panel Aun no hay resultado; (b) Simular muestra la pension mensual estimada
+        en el panel de la derecha (en celular, debajo y con la vista desplazada hasta el) y conserva lo ingresado; (c) Enter
+        en un campo ejecuta Simular; (d) Opciones de la renta se pliega y se abre sola cuando hay valores; (e) agregar, editar
+        y quitar un beneficiario con el modal, y que el grupo familiar se refleje en el resultado; (f) Descargar PDF baja
+        el PDF; (g) un dato invalido muestra el error arriba y conserva los valores. Prueba con un usuario que pueda simular
+        (CEO/CTO, ejecutivo o coordinador segun la autorizacion vigente) y comprueba que los demas siguen recibiendo 403.'
+    constraints:
+    - 'Baseline: revalidar SHA y tree de origin/main al activar y al iniciar DEVELOPING; no desarrollar desde ramas o worktrees
+      antiguos.'
+    - 'change_class A: sin migracion ni cambio de esquema de base de datos, sin tocar deployment/**, IAM, bucket ni GuardDuty.
+      Solo presentacion y navegacion: no cambies el motor app/simulador_pension/**, app/services/**, app/repositories/** ni
+      app/auth/**, ni las validaciones, la autorizacion, el CSRF, el PDF o la auditoria del simulador.'
+    - 'REPRODUCE la referencia, no la reinterpretes: la fuente exacta esta en docs/ui/referencia/simulador/ (README.md explica
+      cada archivo). Si algo de la referencia te parece un error, no lo corrijas: detente y reporta.'
+    - 'No debilites pruebas: las que dependian de los pasos se reemplazan por las de la referencia, y las que siguen vigentes
+      no se tocan. La frase exacta valores referenciales (no vinculantes) debe seguir en la pagina.'
+    - 'Privacidad: el simulador sigue sin persistir entradas ni resultados (la unica escritura es el evento append-only de
+      auditoria del PDF) y sin mostrar RUT, correo ni telefono del lead.'
+    - 'No agregues secretos, claves ni usuarios reales al repositorio: los ejemplos son ficticios.'
+    - 'Lecciones del guard de las tareas anteriores: (1) .env.example no esta en tu alcance; documenta solo en docs/**. (2)
+      El payload de evidencia se escribe con Write en la ruta ABSOLUTA de la raiz de control (C:\desarrollos\TPI\tpi_deep_agents\tpi-backend\.harness-runtime\payloads\developer.json),
+      nunca dentro del worktree. (3) progress/current.md se edita con Edit o Write, no con Python ni heredocs. (4) Ningun
+      comando de shell nombra paquetes o textos denegados por policies.yaml y no se crean archivos sueltos en la raiz del
+      worktree. (5) git commit va solo, sin encadenar otros comandos. (6) Si el guard registra mas de un worktree de Developer,
+      retira el viejo con scripts/harness/worktree.py remove antes de commitear. Un DENIED es definitivo: detenerse y reportar.'
+    dependencies: []
+    risk:
+      level: low
+      notes: 'Solo presentacion y navegacion sobre una pantalla ya aceptada. Riesgos: que un cambio de marcado rompa pruebas
+        que leen el HTML, que un formulario viejo abierto durante el despliegue envie un intent que ya no existe (mitigado:
+        un intent desconocido se trata como simular y nunca genera PDF ni auditoria) y que Enter dispare el PDF en lugar
+        de Simular (mitigado: Simular es el primer boton de envio y una prueba lo comprueba); todo cubierto por la referencia
+        exacta y por las pruebas de la propia referencia.'
+    scope:
+      paths:
+      - app/web/**
+      - tests/**
+      - docs/**
+      - CHANGELOG.md
+    status: active
 - id: CRM-AGENDAMIENTO
   title: 'CRM: seguimiento del protocolo (intentos, cadencia, calificacion y panel) y agenda v2'
   priority: P2
