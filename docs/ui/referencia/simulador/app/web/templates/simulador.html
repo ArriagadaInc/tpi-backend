@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="detail-page sim-page">
+    <div class="nav-back-row">
+      <a class="secondary btn-back" href="{{ return_to_url or '/leads' }}">← Volver al lead</a>
+    </div>
+
+    {% if lead_not_found %}
+      <section class="card empty-detail">
+        <h3>No encontramos el lead solicitado</h3>
+        <p>Revisa la bandeja o vuelve a aplicar los filtros desde la lista principal.</p>
+        <a class="secondary" href="/leads">Volver a Leads</a>
+      </section>
+    {% else %}
+      {% set causante = familia[0] if familia else none %}
+      <header class="sim-head">
+        <div class="sim-head-copy">
+          <p class="section-kicker">Simulador de renta vitalicia</p>
+          <h2>Simulador de pensión mensual</h2>
+          {% if selected_lead %}
+            <p class="sim-client">
+              <span class="sim-client-name">{{ selected_lead.nombre_completo }}</span>
+              {% if causante and causante.sexo_label %}<span class="pill pill-muted">{{ causante.sexo_label }}</span>{% endif %}
+              {% if causante and causante.edad is not none %}<span class="pill pill-muted">{{ causante.edad }} años</span>{% endif %}
+              <span class="pill pill-muted">Simulación al {{ fecha_simulacion_label }}</span>
+            </p>
+          {% endif %}
+        </div>
+        <p class="sim-disclaimer">Los resultados de esta simulación son valores referenciales (no vinculantes).</p>
+      </header>
+
+      {% if simulador_errores %}
+        <div class="notice alert-error" role="alert">
+          <strong>No se pudo simular.</strong>
+          <ul class="error-list">
+            {% for error in simulador_errores %}
+              <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      <form method="post" action="/leads/{{ lead_id }}/simulador" class="wizard-form sim-layout"
+            data-fecha-simulacion="{{ fecha_simulacion.isoformat() }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="porcentaje_rvd" value="{{ form_values.get('porcentaje_rvd', '100') }}">
+
+        {# ------------------------------------------------ Formulario ---------- #}
+        <div class="sim-main">
+          <section class="sim-card" aria-labelledby="sim-datos-title">
+            <div class="sim-card-head">
+              <span class="sim-step" aria-hidden="true">1</span>
+              <div>
+                <h3 id="sim-datos-title">Datos de la simulación</h3>
+                <p class="sim-card-hint">Tipo de pensión, tasa y saldo de la cuenta del cliente.</p>
+              </div>
+            </div>
+
+            <div class="sim-grid sim-grid-2">
+              <label class="wizard-field">
+                <span class="wizard-field-label">Tipo de pensión <b aria-hidden="true">*</b></span>
+                <select name="tipo_pension">
+                  {% for value, label in tipo_pension_options %}
+                    <option value="{{ value }}" {% if form_values.get('tipo_pension', 'vejez_edad') == value %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="wizard-field">
+                <span class="wizard-field-label">Tasa de venta (%) <b aria-hidden="true">*</b></span>
+                <input type="number" step="any" min="0.5" max="8" name="tasa_venta_pct" value="{{ form_values.get('tasa_venta_pct', '') }}" required inputmode="decimal">
+                <span class="field-hint">Entre 0,5 y 8</span>
+              </label>
+              <label class="wizard-field">
+                <span class="wizard-field-label">Saldo cuenta AFP (UF) <b aria-hidden="true">*</b></span>
+                <input type="number" step="any" min="500" max="100000" name="saldo_uf" value="{{ form_values.get('saldo_uf', '') }}" required inputmode="decimal">
+                <span class="field-hint">Entre 500 y 100.000 UF</span>
+              </label>
+              <label class="wizard-field">
+                <span class="wizard-field-label">Valor UF ($) <span class="optional">opcional</span></span>
+                <input type="number" step="any" min="0" name="valor_uf" value="{{ form_values.get('valor_uf', '') }}" inputmode="decimal">
+              </label>
+            </div>
+
+            {% set opciones_activas = form_values.get('meses_garantizados', '0') not in ['', '0']
+               or form_values.get('anios_diferidos', '0') not in ['', '0']
+               or form_values.get('meses_aumento_temporal', '0') not in ['', '0']
+               or form_values.get('porcentaje_aumento_temporal', '0') not in ['', '0'] %}
+            <details class="sim-options" {% if opciones_activas %}open{% endif %}>
+              <summary>
+                <span>Opciones de la renta</span>
+                <span class="sim-options-hint">Meses garantizados, período diferido y aumento temporal</span>
+              </summary>
+              <div class="sim-grid sim-grid-4">
+                <label class="wizard-field">
+                  <span class="wizard-field-label">Meses garantizados</span>
+                  <input type="number" step="1" min="0" max="480" name="meses_garantizados" value="{{ form_values.get('meses_garantizados', '0') }}" inputmode="numeric">
+                </label>
+                <label class="wizard-field">
+                  <span class="wizard-field-label">Años período diferido</span>
+                  <input type="number" step="1" min="0" max="10" name="anios_diferidos" value="{{ form_values.get('anios_diferidos', '0') }}" inputmode="numeric">
+                </label>
+                <label class="wizard-field">
+                  <span class="wizard-field-label">Meses de aumento temporal</span>
+                  <input type="number" step="1" min="0" max="600" name="meses_aumento_temporal" value="{{ form_values.get('meses_aumento_temporal', '0') }}" inputmode="numeric">
+                </label>
+                <label class="wizard-field">
+                  <span class="wizard-field-label">% aumento temporal</span>
+                  <input type="number" step="any" min="0" max="100" name="porcentaje_aumento_temporal" value="{{ form_values.get('porcentaje_aumento_temporal', '0') }}" inputmode="decimal">
+                </label>
+              </div>
+            </details>
+          </section>
+
+          <section class="sim-card" aria-labelledby="sim-familia-title">
+            <div class="sim-card-head">
+              <span class="sim-step" aria-hidden="true">2</span>
+              <div>
+                <h3 id="sim-familia-title">Grupo familiar</h3>
+                <p class="sim-card-hint">Cónyuge e hijos que se consideran como beneficiarios.</p>
+              </div>
+              <button type="button" class="secondary sim-add" id="btn-agregar-beneficiario">+ Agregar beneficiario</button>
+            </div>
+
+            <p class="wizard-empty" id="familia-empty" hidden>
+              Sin beneficiarios: se simula solo con el causante. Usa «Agregar beneficiario» si corresponde.
+            </p>
+
+            <div class="table-wrap">
+              <table class="board-table wizard-table sim-table" id="familia-tabla">
+                <thead>
+                  <tr>
+                    <th>Parentesco</th>
+                    <th>Nacimiento</th>
+                    <th>Sexo</th>
+                    <th>Invalidez</th>
+                    <th>Relación</th>
+                    <th>Edad</th>
+                    <th><span class="sr-only">Acciones</span></th>
+                  </tr>
+                </thead>
+                <tbody id="familia-causante">
+                  <tr class="row-causante">
+                    <td>Causante</td>
+                    <td>{{ fecha_nacimiento_precargada.strftime('%d/%m/%Y') if fecha_nacimiento_precargada else '' }}</td>
+                    <td>{{ 'Masculino' if sexo_precargado == 'H' else ('Femenino' if sexo_precargado == 'M' else '') }}</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>{{ familia[0].edad if familia and familia[0].edad is not none else '' }}</td>
+                    <td>—</td>
+                  </tr>
+                </tbody>
+                <tbody id="familia-beneficiarios"></tbody>
+              </table>
+            </div>
+
+            {# Estado de beneficiarios (fuente de verdad del DOM para el modal). #}
+            <input type="hidden" name="conyuge_sexo" id="conyuge_sexo" value="{{ form_values.get('conyuge_sexo', '') }}">
+            <input type="hidden" name="conyuge_nacimiento" id="conyuge_nacimiento" value="{{ form_values.get('conyuge_nacimiento', '') }}">
+            <input type="hidden" name="conyuge_invalidez" id="conyuge_invalidez" value="{{ form_values.get('conyuge_invalidez', 'no') }}">
+            {% for i in [1, 2, 3, 4] %}
+              <input type="hidden" name="hijo_sexo_{{ i }}" id="hijo_sexo_{{ i }}" value="{{ form_values.get('hijo_sexo_' ~ i, '') }}">
+              <input type="hidden" name="hijo_nacimiento_{{ i }}" id="hijo_nacimiento_{{ i }}" value="{{ form_values.get('hijo_nacimiento_' ~ i, '') }}">
+              <input type="hidden" name="hijo_comun_{{ i }}" id="hijo_comun_{{ i }}" value="{{ form_values.get('hijo_comun_' ~ i, '') }}">
+              <input type="hidden" name="hijo_invalidez_{{ i }}" id="hijo_invalidez_{{ i }}" value="{{ form_values.get('hijo_invalidez_' ~ i, 'no') }}">
+            {% endfor %}
+          </section>
+
+          <div class="sim-submit-bar">
+            <p class="sim-submit-hint">Revisa los datos y presiona <strong>Simular</strong> para calcular la pensión.</p>
+            <button class="primary sim-submit" type="submit" name="intent" value="simular">Simular</button>
+          </div>
+        </div>
+
+        {# ------------------------------------------------ Resultado ---------- #}
+        <aside class="sim-result {% if resultado %}has-result{% endif %}" id="resultado" aria-live="polite"
+               {% if resultado %}data-has-result="1"{% endif %}>
+          {% if resultado %}
+            <div class="sim-result-head">
+              <p class="section-kicker">Resultado de la simulación</p>
+              {% if escenario_descripcion %}<span class="pill pill-accent">{{ escenario_descripcion }}</span>{% endif %}
+            </div>
+
+            <div class="sim-hero">
+              <span class="sim-hero-label">Pensión mensual estimada</span>
+              <span class="sim-hero-value">{{ resultado.pension_mensual }} <small>UF</small></span>
+            </div>
+
+            <div class="sim-stats">
+              <div class="sim-stat">
+                <span class="sim-stat-label">Saldo total</span>
+                <span class="sim-stat-value">{{ resultado.saldo_total }} <small>UF</small></span>
+              </div>
+              <div class="sim-stat">
+                <span class="sim-stat-label">Tasa de venta</span>
+                <span class="sim-stat-value">{{ resultado.tasa_venta }} <small>%</small></span>
+              </div>
+              {% if resultado.es_renta_temporal %}
+                <div class="sim-stat">
+                  <span class="sim-stat-label">Renta temporal</span>
+                  <span class="sim-stat-value">{{ resultado.renta_temporal }} <small>UF</small></span>
+                </div>
+                <div class="sim-stat">
+                  <span class="sim-stat-label">Meses de diferimiento</span>
+                  <span class="sim-stat-value">{{ resultado.meses_diferidos }} <small>meses</small></span>
+                </div>
+              {% endif %}
+            </div>
+
+            <dl class="sim-resumen">
+              <div><dt>Tipo de pensión</dt><dd>{{ resumen.tipo_pension }}</dd></div>
+              <div><dt>Meses garantizados</dt><dd>{{ resumen.meses_garantizados }}</dd></div>
+              <div><dt>Años diferidos</dt><dd>{{ resumen.anios_diferidos }}</dd></div>
+              <div><dt>Aumento temporal</dt><dd>{{ resumen.meses_aumento_temporal }} meses · {{ resumen.porcentaje_aumento_temporal }}%</dd></div>
+            </dl>
+
+            <p class="sim-family-line">
+              <span class="sim-family-label">Grupo familiar considerado</span>
+              {% for fila in familia %}
+                <span class="pill pill-muted">{{ fila.parentesco }}{% if fila.edad is not none %} · {{ fila.edad }}{% endif %}</span>
+              {% endfor %}
+            </p>
+
+            <button class="primary sim-pdf" type="submit" name="intent" value="descargar_pdf">Descargar PDF</button>
+            <p class="sim-result-note">Si cambias algún dato, vuelve a presionar Simular. El PDF recalcula con los datos del formulario.</p>
+          {% else %}
+            <div class="sim-empty">
+              <svg class="sim-empty-icon" viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="4" y="3" width="16" height="18" rx="2.5"></rect>
+                <path d="M8 7.5h8M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01"></path>
+              </svg>
+              <h3>Aún no hay resultado</h3>
+              <p>Completa los datos y presiona <strong>Simular</strong>: aquí verás la pensión mensual estimada y el resumen del escenario.</p>
+            </div>
+          {% endif %}
+        </aside>
+      </form>
+    {% endif %}
+  </div>
+
+  {% if not lead_not_found %}
+    {# Modal de beneficiario: los datos viven en los inputs ocultos del formulario. #}
+    <div class="modal" id="beneficiario-modal" hidden role="dialog" aria-modal="true" aria-labelledby="beneficiario-modal-title">
+      <div class="modal-card modal-card-dev wizard-modal">
+        <div class="wizard-modal-head">
+          <p class="section-kicker">Grupo familiar</p>
+          <h3 id="beneficiario-modal-title">Agregar beneficiario</h3>
+          <button type="button" class="wizard-modal-close" id="btn-modal-cerrar" aria-label="Cerrar">×</button>
+        </div>
+
+        <div class="wizard-modal-body">
+          <div class="wizard-modal-error notice alert-error" id="modal-error" hidden role="alert"></div>
+
+          <label class="wizard-field">
+            <span class="wizard-field-label">Parentesco *</span>
+            <select id="modal-parentesco">
+              <option value="conyuge">Cónyuge</option>
+              <option value="hijo" selected>Hijo/a</option>
+            </select>
+          </label>
+
+          <label class="wizard-field" id="modal-relacion-field">
+            <span class="wizard-field-label">Tipo de relación con padre/madre</span>
+            <select id="modal-relacion">
+              <option value="comun">Común</option>
+              <option value="no-comun" selected>No común</option>
+            </select>
+          </label>
+
+          <label class="wizard-field">
+            <span class="wizard-field-label">Sexo *</span>
+            <select id="modal-sexo">
+              <option value="H" selected>Masculino</option>
+              <option value="M">Femenino</option>
+            </select>
+          </label>
+
+          <label class="wizard-field">
+            <span class="wizard-field-label">Condición de invalidez *</span>
+            <select id="modal-invalidez">
+              <option value="no" selected>No inválido</option>
+              <option value="parcial">Inválido parcial</option>
+              <option value="total">Inválido total</option>
+            </select>
+          </label>
+
+          <label class="wizard-field">
+            <span class="wizard-field-label">Fecha de nacimiento *</span>
+            <input type="date" id="modal-nacimiento">
+          </label>
+
+          <label class="wizard-field">
+            <span class="wizard-field-label">Edad</span>
+            <input type="text" id="modal-edad" readonly class="wizard-readonly">
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button class="secondary" type="button" id="btn-modal-cancelar">Cancelar</button>
+          <button class="primary" type="button" id="btn-modal-guardar">Agregar</button>
+        </div>
+      </div>
+    </div>
+
+    <script defer src="/static/js/simulador_wizard.js"></script>
+  {% endif %}
+{% endblock %}

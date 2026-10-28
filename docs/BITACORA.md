@@ -22,6 +22,20 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-10-28 - Simulador: página única aprobada y tarea CRM-SIM-1-PAGINA-UNICA definida
+
+- Contexto: el humano pidió rediseñar el simulador quitando «Continuar» para que «Simular» ejecute el proceso, con mejor look and feel y armónico con la UX del CRM.
+  Al revisarlo apareció la causa de que «Continuar» pareciera no hacer nada: la regla `.wizard-pane { display: block }` anulaba el atributo `hidden` y en DEV los tres pasos se
+  veían a la vez.
+- Qué se hizo: una vista previa local con datos ficticios (tres perfiles, escritorio y celular, claro y oscuro), construida con la skill `ui-ux-pro-max` sobre el sistema visual
+  existente. El humano la aprobó el mismo día.
+- Qué se agrega: la referencia exacta en `docs/ui/referencia/simulador/` (plantilla, hoja de estilos, JavaScript del modal, ruta, pruebas reescritas y un README) y la tarea
+  activable `CRM-SIM-1-PAGINA-UNICA` (clase A, con despliegue y revisión visual humana).
+- Qué cambia: una sola página con el formulario a la izquierda y el panel de resultado fijo a la derecha; «Simular» muestra el resultado en el panel; «Descargar PDF» sigue
+  auditado; «Opciones de la renta» es plegable; se eliminan `continuar`, `volver_paso1`, `volver_paso2`, `_parse_paso1_form` y `active_step`, y las reglas CSS `.wizard-*` sin uso.
+- Decisión de robustez: un `intent` desconocido (un formulario viejo abierto durante el despliegue) se trata como `simular`, así nunca genera un PDF ni un evento de auditoría por error.
+- No cambia: el motor de cálculo, las validaciones, la autorización, el CSRF, el PDF ni la auditoría.
+
 ### 2026-10-28 - Harness: tarea CRM-AGENDA-4-HISTORIAL cerrada (DONE)
 
 - Titulo: CRM agenda 4b: eventos de la agenda en el historial del lead y casos por asesor separados en coordinadores y runners
