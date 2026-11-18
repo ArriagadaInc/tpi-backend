@@ -22,6 +22,13 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-11-18 - Docs: se retira la referencia visual del simulador
+
+- Contexto: `docs/ui/referencia/simulador/` era la fuente exacta de `CRM-SIM-1-PAGINA-UNICA` y se había comprometido a retirarla de `main` al cerrar la tarea (README de la carpeta). La tarea cerró el 2026-11-18 (DONE, PR 153 release `6a2c46c`, cierre PR 155), igual que se hizo con la referencia de la agenda (PR 146).
+- Cambios: se eliminan los 6 archivos de la carpeta (plantilla, hoja de estilos, JavaScript del modal, ruta, pruebas reescritas y README). `docs/specs/SIM_WIZARD_SPEC.md` deja de apuntar a ella como diseño vigente (ahora remite a `docs/SIMULADOR_USO.md` y al código) y `CHANGELOG.md` registra el retiro. Ningún código ni prueba de `app/` o `tests/` dependía de la carpeta (verificado con `git grep`).
+- Se conservan sin cambios las menciones históricas en esta bitácora, en `tasks/completed/CRM-SIM-1-PAGINA-UNICA.yaml` y en `evidence/CRM-SIM-1-PAGINA-UNICA/` (la evidencia es inmutable). La referencia sigue disponible en el historial de Git (commit `cddd3be`).
+- Rollback: revertir el PR restaura la carpeta.
+
 ### 2026-11-18 - Imagen de la aplicación: pin de zlib a 1.4-r0 (Docker Build roto desde 2026-11-06)
 
 - Contexto: el job `Docker Build` del CI falló en `RUN apk add --no-cache libuuid=2.42.3-r1 zlib=1.3.2-r1` con `unable to select packages: zlib-1.3.2-r0 breaks world[zlib=1.3.2-r1]`. El índice de Alpine 3.24 (`main`, x86_64) solo conserva la versión vigente de cada paquete: `zlib` es `1.4-r0` (compilado el 2026-11-06) y `libuuid` sigue en `2.42.3-r1`. Se vio al mergear el PR 154 y el PR 155 (ambos con ese check en rojo, sin relación con sus cambios).
