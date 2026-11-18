@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "kind": "review",
+  "task_id": "CRM-SIM-1-PAGINA-UNICA",
+  "created_at": "2026-10-28T15:06:35Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610281459-reviewer-sup9e5957",
+  "reviewed_sha": "d5cc4eff8e2cfdd04be31853511190ff67276109",
+  "reviewed_tree": "eb42e6f08e097733471c29b9e3a422846f955f2d",
+  "pr_number": 153,
+  "ci": {
+    "run_id": "40709720777",
+    "conclusion": "success",
+    "head_sha": "d5cc4eff8e2cfdd04be31853511190ff67276109",
+    "event": "pull_request",
+    "jobs": [
+      "Docker Build",
+      "Lint & Format",
+      "Release Tooling Validation",
+      "Security Audit",
+      "Tests"
+    ]
+  },
+  "decision": "APPROVED",
+  "findings": [
+    {
+      "id": "R1",
+      "severity": "info",
+      "file": "app/web/static/js/simulador_wizard.js",
+      "summary": "filaBeneficiario conserva el parametro numero aunque ya no pinta la columna de numero (la quito la referencia). Es codigo identico a la referencia aprobada; sin efecto funcional.",
+      "required_action": "Ninguna (no se corrige la referencia en esta tarea)."
+    },
+    {
+      "id": "R2",
+      "severity": "info",
+      "file": "docs/specs/SIM_WIZARD_SPEC.md",
+      "summary": "La nota de superacion apunta a docs/ui/referencia/simulador/ como diseno vigente, pero la evidencia del Developer asume que esa carpeta se retira de main al cerrar la tarea. Si se retira, la nota quedara con un puntero obsoleto (docs/SIMULADOR_USO.md sigue siendo valido).",
+      "required_action": "Opcional al retirar la referencia: ajustar el puntero de la nota."
+    },
+    {
+      "id": "R3",
+      "severity": "info",
+      "file": "app/web/templates/simulador.html",
+      "summary": "La clase wizard-form se conserva en el form porque el JS la usa como selector; las reglas .wizard-* sin uso se borraron de app.css segun la referencia. Coherente.",
+      "required_action": "Ninguna."
+    }
+  ],
+  "checks": [
+    {
+      "name": "exact_sha: PR #153 OPEN, headRefOid == d5cc4eff == head_sha de developer-01; worktree del reviewer en ese SHA",
+      "result": "PASS"
+    },
+    {
+      "name": "ci_green_exact_sha: run 40709720777 success sobre d5cc4eff; 5 jobs pass; Tests 2362 passed, 17 skipped, cobertura 91.74% (>= 85)",
+      "result": "PASS"
+    },
+    {
+      "name": "branch_up_to_date_with_main: origin/main cddd3be es ancestro de d5cc4eff (un solo commit encima); MERGEABLE",
+      "result": "PASS"
+    },
+    {
+      "name": "scope: 11 archivos solo en app/web/**, tests/**, docs/** y CHANGELOG.md; sin cambios en app/simulador_pension, app/services, app/repositories, app/auth, deployment, requirements ni pyproject.toml; sin migraciones",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-1: git diff --no-index --ignore-cr-at-eol --quiet entre docs/ui/referencia/simulador/<ruta> y la ruta destino = exit 0 para simulador.html, app.css, simulador_wizard.js, simulador.py y test_sim_wizard.py; app.css sin cambios en main entre 950e8fa y cddd3be, asi que la copia completa es correcta",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-2: simulador.py solo elimina intents continuar/volver_paso*, _parse_paso1_form y active_step; intent desconocido -> simular (nunca PDF ni auditoria); validacion, autorizacion, CSRF (csrf_token oculto en el form), calculo, PDF y auditoria intactos; un solo form con Simular (linea 170) antes de Descargar PDF (linea 223, solo con resultado); grep de _parse_paso1_form/active_step en app/ y tests/ vacio; IDs usados por el JS presentes en la plantilla; sin |safe ni URLs externas",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-3: tests/unit/test_sim_rv_web.py, tests/integration/test_sim_rv_web.py y tests/unit/test_sim_rv_regresion_portal.py sin diff; en test_sim_wizard.py solo se reemplazan las pruebas de pasos por las de la referencia (incluye intent desconocido sin auditoria, Opciones cerradas/abiertas, orden Simular antes que PDF, 422 sin resultado)",
+      "result": "PASS"
+    },
+    {
+      "name": "AC-4: ruff, black y mypy limpios localmente; bandit sin hallazgos en simulador.py; scripts/ui_css_audit.py important 4 y colores sueltos usos 124 (<= 126); sin dependencias nuevas; docs SIMULADOR_USO, SIM_RV_V1_REQUIREMENTS_MATRIX (seccion 5), SIM_WIZARD_SPEC (nota superada), UI_DESIGN_SYSTEM, CHANGELOG y BITACORA actualizados",
+      "result": "PASS"
+    },
+    {
+      "name": "tests_local: tests/unit 1229 passed, 12 failed; las 12 fallas (executive_dashboard por configuracion de base de datos ausente y tipografia por tipo MIME woff2 de Windows) fallan igual en la base cddd3be y no tocan el simulador; en CI pasan",
+      "result": "PASS"
+    }
+  ],
+  "risks": [
+    "AC-5 (revision visual autenticada en AWS DEV, escritorio y celular, tema claro y oscuro) queda pendiente para el humano tras el despliegue.",
+    "Un formulario viejo abierto durante el despliegue envia un intent que ya no existe; queda mitigado y probado: se trata como simular, sin PDF ni auditoria."
+  ]
+}
