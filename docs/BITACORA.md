@@ -22,6 +22,18 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-11-18 - Harness: indicadores de logs, exclusión de las líneas de acceso de la app (HARNESS-LOGS-FALSOS-POSITIVOS-APP)
+
+- Contexto: la verificación de `CRM-SIM-1-PAGINA-UNICA` quedó bloqueada en VERIFYING porque el indicador fuerte `secret -bytes_read` dio 8 coincidencias desde el cutover. Las leí enmascaradas:
+  eran líneas de acceso de uvicorn de robots que piden `/secrets.json`, `/client_secrets.json` o `/.streamlit/secrets.toml` (13, 14 y 16 de noviembre), todas con 404 y sin datos sensibles.
+  El PR 134 solo había excluido las líneas de acceso de Caddy (`bytes_read`).
+- Qué se hizo: el humano abrió un alcance de mantenimiento (`logs-app`) y lanzó una sesión acotada. Medido contra 7 días de logs reales de DEV: `secret -bytes_read` = 8 y `secret -bytes_read -HTTP` = 0; una muestra
+  de líneas con `HTTP` y sin `HTTP/1.1` eran todas de acceso de Caddy, ya excluidas. Se eligió `-HTTP` y no `-"HTTP/1.1"` porque las comillas internas son frágiles al pasar por PowerShell y `aws_guard.py`.
+- Qué cambia: en `harness/policies.yaml`, `password`, `cookie`, `secret` y `token` pasan de `... -bytes_read` a `... -bytes_read -HTTP` (Authorization, Bearer, raw_payload y `weak` no cambian);
+  la guía `aws-observability` y `tests/harness/test_log_scan.py` se ajustan (los patrones anteriores siguen fallando cerrado).
+- Riesgo aceptado, igual que con Caddy: un valor sensible puesto en la URL de una petición no lo detecta este escaneo; las demás líneas de la app siguen vigiladas.
+- Pendiente: sincronizar `main` en la raíz de control y relanzar el orquestador para que el Deployer reverifique `CRM-SIM-1-PAGINA-UNICA` con los patrones nuevos.
+
 ### 2026-10-28 - Simulador: página única implementada (CRM-SIM-1-PAGINA-UNICA)
 
 - Qué se hizo: se reprodujo la referencia aprobada en `docs/ui/referencia/simulador/` en sus rutas de destino (plantilla, hoja de estilos, JavaScript del modal, ruta y pruebas reescritas), idéntica a la referencia ignorando diferencias de fin de línea.

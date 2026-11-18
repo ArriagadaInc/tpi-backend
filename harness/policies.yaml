@@ -312,5 +312,11 @@ observability:
     # solo en esas lineas; Caddy ya redacta Authorization y Cookie en ellas. Las lineas de la app
     # siguen vigiladas con el termino completo. Validado contra los logs reales de DEV el
     # 2026-10-25 (716 de 716 lineas de acceso, ninguna otra).
-    strong: ["Authorization -REDACTED", Bearer, "password -bytes_read", "cookie -bytes_read", raw_payload, "secret -bytes_read", "token -bytes_read"]
+    # "-HTTP": las lineas de acceso de uvicorn de la app tambien llevan la URL elegida por el
+    # cliente (robots que piden /secrets.json, /client_secrets.json o /.streamlit/secrets.toml).
+    # El termino HTTP de "HTTP/1.1" esta en esas lineas. Validado contra los logs reales de DEV el
+    # 2026-11-18 (secret -bytes_read = 8; con -HTTP = 0). Las lineas de la app que no son de
+    # acceso siguen vigiladas. Riesgo aceptado: un valor sensible puesto en la URL de una
+    # peticion no lo detecta este escaneo.
+    strong: ["Authorization -REDACTED", Bearer, "password -bytes_read -HTTP", "cookie -bytes_read -HTTP", raw_payload, "secret -bytes_read -HTTP", "token -bytes_read -HTTP"]
     weak: [hash, "hash -ACME"]
