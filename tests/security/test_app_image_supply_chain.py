@@ -7,7 +7,7 @@ PINNED_BASE = (
     "python:3.12.14-alpine3.24@"
     "sha256:b64631e04e4920160c50fbe8d8df828f7f35f06f425cb44aa09bca53e708a35a"
 )
-EXPECTED_PACKAGES = "libuuid=2.42.3-r1 zlib=1.3.2-r1"
+EXPECTED_PACKAGES = "libuuid=2.42.3-r1 zlib=1.4-r0"
 
 
 def test_app_image_keeps_the_pinned_python_31214_alpine324_base() -> None:

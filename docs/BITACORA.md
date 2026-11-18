@@ -22,6 +22,14 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-11-18 - Imagen de la aplicación: pin de zlib a 1.4-r0 (Docker Build roto desde 2026-11-06)
+
+- Contexto: el job `Docker Build` del CI falló en `RUN apk add --no-cache libuuid=2.42.3-r1 zlib=1.3.2-r1` con `unable to select packages: zlib-1.3.2-r0 breaks world[zlib=1.3.2-r1]`. El índice de Alpine 3.24 (`main`, x86_64) solo conserva la versión vigente de cada paquete: `zlib` es `1.4-r0` (compilado el 2026-11-06) y `libuuid` sigue en `2.42.3-r1`. Se vio al mergear el PR 154 y el PR 155 (ambos con ese check en rojo, sin relación con sus cambios).
+- Decisión: mantener el pin exacto de la imagen (política de supply chain vigente) y subirlo a `zlib=1.4-r0`. La CVE-2026-85091 (heap overflow en `gz_write()` tras un `write()` fallido) afecta a zlib 1.2.11 a 1.3.2, y la corrección de Alpine era `1.3.2-r1`; la 1.4-r0 es posterior al rango afectado. El escaneo de ECR de la próxima imagen lo confirma.
+- Cambios: `Dockerfile`, `.github/workflows/ci.yml` (diff de paquetes `-zlib-1.3.2-r0 +zlib-1.4-r0` y `apk info -e zlib=1.4-r0`) y `tests/security/test_app_image_supply_chain.py` (`EXPECTED_PACKAGES`). La imagen de Caddy usa `apk upgrade zlib` sin pin y no cambia.
+- Riesgo conocido: un pin exacto vuelve a romperse cada vez que Alpine publica otra versión. Alternativas a evaluar aparte (por ejemplo, un chequeo semanal que avise antes de que falle un PR) si se repite.
+- Rollback: revertir el PR; la imagen ya desplegada en DEV no se ve afectada (se reconstruye solo en el próximo release).
+
 ### 2026-11-18 - Harness: tarea CRM-SIM-1-PAGINA-UNICA cerrada (DONE)
 
 - Titulo: CRM simulador 1: pagina unica sin Continuar, con panel de resultado y nuevo aspecto
