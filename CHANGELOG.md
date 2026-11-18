@@ -25,6 +25,8 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ### ♻️ Retirado
 
+- **Referencia visual del simulador** (`docs/ui/referencia/simulador/`)
+  - La tarea `CRM-SIM-1-PAGINA-UNICA` está cerrada (DONE, aceptada por el humano el 2026-11-18), así que la carpeta con la referencia aprobada (plantilla, hoja de estilos, JavaScript, ruta, pruebas y README) sale de `main`. El diseño vigente está en el código y en `docs/SIMULADOR_USO.md`; el historial de Git conserva la referencia (commit `cddd3be`).
 - **Retirada de Streamlit del runtime y Pillow 13** (SEG-DESACOPLAR-STREAMLIT)
   - Se elimina el código legado de Streamlit: `app/streamlit_app.py`, `app/backoffice_app.py`, `app/pages/`, `app/presentation/`, `app/internal_tools/`, `app/components/ui.py`, `app/auth/guards.py` y `app/runtime.py`, junto con las pruebas que solo los ejercitaban.
   - Los helpers que la web y la API sí usaban se movieron sin reescribirlos a módulos sin Streamlit: `get_public_site_url`/`get_public_simulator_url` a `app/components/urls.py`, `format_currency_clp` a `app/components/formatting.py` y `log_health_status` a `app/database/healthcheck.py`.

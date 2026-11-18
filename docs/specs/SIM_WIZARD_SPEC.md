@@ -3,7 +3,8 @@
 > **Superada por `CRM-SIM-1-PAGINA-UNICA` (2026-10-28).** Desde esa tarea el simulador ya no es un asistente de 3 pasos:
 > es una sola página con el formulario a la izquierda y el panel de resultado a la derecha, sin «Continuar» ni «Volver».
 > Esta especificación se conserva como histórico del flujo original; el diseño vigente está en
-> `docs/ui/referencia/simulador/` y en `docs/SIMULADOR_USO.md`.
+> `docs/SIMULADOR_USO.md` y en el código (`app/web/templates/simulador.html`). La referencia visual aprobada
+> (`docs/ui/referencia/simulador/`) se retiró de `main` el 2026-11-18 y sigue en el historial de Git (commit `cddd3be`).
 
 Origen: capturas del flujo de un simulador de referencia entregadas por el humano el 2026-10-15
 (5 pantallas: datos de la simulación, grupo familiar vacío, modal «Agregar beneficiario», grupo
