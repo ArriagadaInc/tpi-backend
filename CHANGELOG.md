@@ -10,6 +10,9 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y est
 
 ### 🐛 Corregido
 
+- **Build de la imagen de la aplicación: pin de `zlib` desactualizado** (`Docker Build` del CI en rojo desde 2026-11-06)
+  - Alpine 3.24 solo publica la versión vigente de cada paquete y `zlib` pasó de `1.3.2-r1` a `1.4-r0`, así que `apk add zlib=1.3.2-r1` dejó de resolverse y la imagen no se construía. El `Dockerfile` fija ahora `zlib=1.4-r0` (`libuuid=2.42.3-r1` sigue vigente). La CVE-2026-85091 afecta a zlib hasta la 1.3.2, por lo que la 1.4-r0 queda fuera del rango afectado.
+  - Se actualizan las expectativas del CI (`Verify runtime Alpine package contracts`: diff de paquetes y `apk info -e`) y `EXPECTED_PACKAGES` de `tests/security/test_app_image_supply_chain.py`.
 - **Falsos positivos de los indicadores de logs del Harness** (`HARNESS-LOGS-FALSOS-POSITIVOS-CADDY`)
   - Los robots de internet que piden rutas como `/secrets.json` o `/token` dejaban la palabra en el registro de acceso de Caddy y bloqueaban `verified` (indicadores fuertes, que nunca se degradan). En `harness/policies.yaml`, `password`, `cookie`, `secret` y `token` pasan a `"<palabra> -bytes_read"`: `bytes_read` aparece solo en las líneas de acceso de Caddy (validado contra los logs reales de DEV: 1.641 de 1.641, ninguna otra), así que la app y los eventos TLS siguen vigilados. `Authorization -REDACTED`, `Bearer` y `raw_payload` no cambian.
   - Se actualizan la guía del Deployer (`aws-observability`) y las pruebas de `test_log_scan.py`, que fijan los patrones declarados y que los antiguos, sin exclusión, siguen fallando cerrado.
