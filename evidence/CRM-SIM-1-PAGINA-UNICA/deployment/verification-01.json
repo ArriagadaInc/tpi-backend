@@ -1,0 +1,181 @@
+{
+  "schema_version": 1,
+  "kind": "verification",
+  "task_id": "CRM-SIM-1-PAGINA-UNICA",
+  "created_at": "2026-11-18T03:30:57Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202611180319-deployer-sup0f9954",
+  "verification_scope": "Verificacion final tras la aceptacion humana de AC-5 (acceptance-01, 2026-11-18T02:35:08Z): estado EB, eventos, salud de instancia, cadena de identidad de runtime (deployment-01), smoke HTTP no autenticado y conteos de logs desde el cutover (2026-10-28T20:37:48Z) con los patrones vigentes de harness/policies.yaml. Solo lecturas AWS via aws_guard.",
+  "state_at_record": "VERIFYING",
+  "approved_commit": "6a2c46ce6826d8d6b1a7f62e37e8f25e2c5cc6ce",
+  "deployed_commit": "6a2c46ce6826d8d6b1a7f62e37e8f25e2c5cc6ce",
+  "application_version": "h3-crm-sim-1-pagina-unica-6a2c46c-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "result": "PASS",
+  "failure_class": null,
+  "final_state": {
+    "version_label": "h3-crm-sim-1-pagina-unica-6a2c46c-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "date_updated": "2026-10-28T20:38:30Z",
+    "observed_at": "2026-11-18T03:20Z"
+  },
+  "events": {
+    "observed": 20,
+    "levels": {
+      "INFO": 10,
+      "WARN": 10
+    },
+    "errors": 0,
+    "note": "Los 20 eventos recientes (01:12Z a 03:20Z del 2026-11-18) son pares Ok -> Warning (1 de 1 instancias) y Warning -> Ok al minuto o pocos minutos, con la VersionLabel aprobada. Sin abortos, AccessDenied, rollback ni degradacion sostenida."
+  },
+  "health_flapping_classification": {
+    "classification": "no atribuible al release; no es defecto de autorizacion, PII ni persistencia; causa no confirmada",
+    "reasoning": "El primer Warning es de 2026-11-17T03:30:47Z, 19 dias despues del cutover; entre el cutover y esa hora no hubo eventos de salud con el mismo codigo desplegado. Cada Warning vuelve a Ok en 1 a pocos minutos. describe-instances-health (03:28Z): instancia Ok/Green, sin Causes, CPU 98,4% idle, carga 0,1, Deployment Deployed de la version aprobada. Smoke PASS y AC-5 aceptado por el humano con la pagina en uso.",
+    "follow_up": "Investigar la causa del flapping fuera de esta tarea (instance health / logs de eb-engine); no requiere rollback ni bloquea verified (contrato seccion 9: sin rollback por defecto no funcional)."
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "note": "VersionLabel observada = aprobada (describe-environments y Deployment de describe-instances-health). SourceBundle, ChecksumSHA256 y digests: verificados en deployment-01 (sesion claude-202611180201-deployer-supb3dbff) contra approval-01; el release no ha cambiado desde entonces (mismo VersionLabel, DeploymentId 41 desde 2026-10-28T20:38:26Z)."
+  },
+  "smoke_client": "python urllib (cliente independiente), TLS por defecto, sin seguir redirects (.harness-release/smoke_sim1.py)",
+  "smoke": [
+    {
+      "name": "public_https",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "api_catalogs",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "backoffice_login",
+      "result": "PASS",
+      "observed": "200"
+    },
+    {
+      "name": "static_css",
+      "result": "PASS",
+      "observed": "200 text/css; charset=utf-8"
+    },
+    {
+      "name": "static_css_matches_release",
+      "result": "PASS",
+      "observed": "sha256 servido e8fd762d... = app.css del release 6a2c46c"
+    },
+    {
+      "name": "static_js_matches_release",
+      "result": "PASS",
+      "observed": "sha256 servido 4232e1d1... = simulador_wizard.js del release 6a2c46c"
+    },
+    {
+      "name": "leads_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "root_requires_auth",
+      "result": "PASS",
+      "observed": "307 -> /login"
+    },
+    {
+      "name": "dashboard_requires_auth",
+      "result": "PASS",
+      "observed": "403 anonimo (fail closed por diseno)"
+    },
+    {
+      "name": "no_legacy_domain_redirect",
+      "result": "PASS",
+      "observed": "ninguna respuesta redirige a dominios legacy"
+    }
+  ],
+  "logs": {
+    "log_group": "/aws/elasticbeanstalk/tpi-backoffice-dev-green/var/log/eb-docker/containers/eb-current-app/stdouterr.log",
+    "window_start": "2026-10-28T20:37:48Z",
+    "window_end": "2026-11-18T03:30Z",
+    "method": "aws_guard logs filter-log-events con --query length(events); solo conteos; no se leyeron lineas; patrones exactos vigentes de harness/policies.yaml (password|cookie|secret|token -bytes_read -HTTP). Control de vida del log group: patron GET = 4622 eventos en la ventana (los ceros no son por falta de ingesta)."
+  },
+  "pii_log_scan": {
+    "matches": 0,
+    "raw_pattern_hits": {
+      "Authorization -REDACTED": 0,
+      "Bearer": 0,
+      "password -bytes_read -HTTP": 0,
+      "cookie -bytes_read -HTTP": 0,
+      "raw_payload": 0,
+      "secret -bytes_read -HTTP": 0,
+      "token -bytes_read -HTTP": 0,
+      "hash -ACME": 0
+    },
+    "strong_matches": 0,
+    "strong_hits": {},
+    "weak_matches": {},
+    "classification_required": false,
+    "patterns": [
+      "Authorization -REDACTED",
+      "Bearer",
+      "password -bytes_read -HTTP",
+      "cookie -bytes_read -HTTP",
+      "raw_payload",
+      "secret -bytes_read -HTTP",
+      "token -bytes_read -HTTP",
+      "hash -ACME"
+    ]
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada (PR #153, CI verde en el SHA exacto); release tree eb42e6f0 == reviewed_tree; en DEV app.css y simulador_wizard.js servidos son identicos a los del release 6a2c46c."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada con CI verde (intent desconocido -> simular sin PDF ni auditoria; CSRF, autorizacion, PDF y auditoria intactos)."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada; pruebas protegidas sin diff."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "method": "automated",
+      "evidence": "review-01 aprobada; css audit 4/124, documentacion actualizada, gates del publish run en verde."
+    },
+    {
+      "id": "AC-5",
+      "status": "met",
+      "method": "human",
+      "evidence": "Aceptado por el humano con approve.py (evidence/CRM-SIM-1-PAGINA-UNICA/approvals/acceptance-01.json, 2026-11-18T02:35:08Z, decision accepted): simulador en una sola pagina revisado en DEV."
+    }
+  ],
+  "warnings": [
+    "Flapping de salud Ok -> Warning -> Ok sin causa confirmada (ver health_flapping_classification); se recomienda investigarlo aparte."
+  ],
+  "rollback_executed": false,
+  "safety": {
+    "aws_writes": [],
+    "update_environment_in_this_session": false,
+    "secrets_accessed": false,
+    "log_lines_read": false,
+    "credentials_used_in_smoke": false
+  }
+}

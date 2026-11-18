@@ -22,6 +22,19 @@ La idea es que cualquier desarrollador pueda abrir este archivo y entender:
 - Si una tarea toca base de datos o infraestructura, documentar impacto y rollback.
 - En lo posible, enlazar archivos y documentos relevantes del repo.
 
+### 2026-11-18 - Harness: tarea CRM-SIM-1-PAGINA-UNICA cerrada (DONE)
+
+- Titulo: CRM simulador 1: pagina unica sin Continuar, con panel de resultado y nuevo aspecto
+- Evidencia: `evidence/CRM-SIM-1-PAGINA-UNICA/` y `tasks/completed/CRM-SIM-1-PAGINA-UNICA.yaml`.
+- release_sha: `6a2c46ce6826d8d6b1a7f62e37e8f25e2c5cc6ce`
+- pr_number: `153`
+- application_version: `h3-crm-sim-1-pagina-unica-6a2c46c-domainlocked-r1`
+- bundle_sha256: `8bac2ac6170120e384c0bf52b263a6b3675a4ee85b9f054578506069c4484ae8`
+- lkg: `h3-crm-agenda-4-historial-35f693b-domainlocked-r1`
+- deployment: `success`
+- deployed_commit: `6a2c46ce6826d8d6b1a7f62e37e8f25e2c5cc6ce`
+- verification: `PASS`
+
 ### 2026-11-18 - Harness: indicadores de logs, exclusión de las líneas de acceso de la app (HARNESS-LOGS-FALSOS-POSITIVOS-APP)
 
 - Contexto: la verificación de `CRM-SIM-1-PAGINA-UNICA` quedó bloqueada en VERIFYING porque el indicador fuerte `secret -bytes_read` dio 8 coincidencias desde el cutover. Las leí enmascaradas:

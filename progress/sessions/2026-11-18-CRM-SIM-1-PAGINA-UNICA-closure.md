@@ -1,0 +1,26 @@
+# Sesion archivada: CRM-SIM-1-PAGINA-UNICA-closure
+
+- Archivada: 2026-11-18T03:31:36Z
+- Estado: IDLE
+
+# Progreso actual
+
+## Estado
+<!-- harness:projection:begin (autogenerado desde harness/state.json por transition.py; no editar a mano) -->
+- Estado del Harness: DONE (rol: system)
+- Tarea: CRM-SIM-1-PAGINA-UNICA
+- Proximo paso: Sistema: transition.py close (automatico)
+- Ultima transicion: verified (VERIFYING -> DONE)
+- Actualizado: 2026-11-18T03:31:12Z
+<!-- harness:projection:end -->
+- Ultima sesion archivada: progress/sessions/2026-11-18-CRM-SIM-1-PAGINA-UNICA-verified.md
+
+## Estado reciente
+- Nota para VERIFYING: los eventos del environment muestran flapping recurrente Ok -> Warning -> Ok (1 de 1 instancias, ~cada 20-30 min). Clasificar con aws-observability (y comparar con el LKG) antes de `verified`.
+- DECISION (DEPLOYER, 2026-11-18, claude-202611180205-deployer-sup9fba39): VERIFYING parcial, sin transicion. EB Ready/Green/Ok con la VersionLabel aprobada; smoke HTTP sin credenciales PASS (publico/login/catalogos 200, leads y simulador 307 a /login, dashboard 403; app.css y simulador_wizard.js servidos == release 6a2c46c). Conteos de logs desde 2026-10-28T20:37:48Z: todos 0 salvo `secret -bytes_read` = 8 (patron fuerte; GET control = 5155). Flapping Ok->Warning->Ok (1 min, cada 20-30 min) solo con la version nueva; en octubre solo hay INFO.
+- DECISION (DEPLOYER, 2026-11-18, claude-202611180235-deployer-sup821bee): AC-5 ya aceptado por el humano (acceptance-01.json, 02:35:08Z). Reconteo `secret -bytes_read` desde 20:37:48Z = 8 (sin cambio; indicador fuerte, no se degrada). Sin transicion ni verification-*.json.
+- ORQUESTADOR INTERACTIVO (2026-11-18, tras el PR 154 mergeado en 0e749e2, sincronizado en esta raiz de control): el BLOCKER de abajo queda SUPERADO por un cambio de regla, no por degradar un indicador. `harness/policies.yaml` y la guia `aws-observability` ya declaran los cuatro patrones fuertes como `password|cookie|secret|token -bytes_read -HTTP` (HUMANO abrio el alcance de mantenimiento `logs-app`; Authorization, Bearer, raw_payload y weak no cambian). Al retomar: reverifica con los patrones NUEVOS exactos de `policies.yaml` desde 2026-10-28T20:37:48Z; el conteo anterior `secret -bytes_read` = 8 ya no es un patron declarado. Contexto verificado por el orquestador (lineas leidas enmascaradas, solo lectura): las 8 eran lineas de acceso de uvicorn de robots que piden /secrets.json, /client_secrets.json o /.streamlit/secrets.toml (13, 14 y 16 de noviembre), todas 404; con `-HTTP` el conteo medido fue 0. Sobre el flapping Ok->Warning->Ok, datos objetivos (la clasificacion sigue siendo tuya): el primer Warning es de 2026-11-17T03:30:47Z, 19 dias despues del cutover (entre 2026-10-28T20:39Z y esa hora no hubo eventos de salud); cada Warning dura ~1 min y vuelve a Ok; el entorno estaba Ok/Green sin Causes, CPU 99,5% libre y carga 0,24; las rafagas de robots (404) fueron el 13, 14 y 16 y no coinciden en hora con los Warning; el humano acepto el AC-5 tras probar la pagina. La causa del flapping no esta confirmada. No repitas `update-environment` ni rollback.
+- DECISION (DEPLOYER, 2026-11-18, claude-202611180319-deployer-sup0f9954): VERIFYING PASS. EB Ready/Green/Ok con la VersionLabel aprobada (instancia Ok, sin Causes). Conteos desde 2026-10-28T20:37:48Z con los patrones vigentes de policies.yaml: todos 0 (control GET = 4622). Smoke PASS; app.css y simulador_wizard.js servidos == release 6a2c46c. AC-5 aceptado por el humano. Flapping Ok->Warning->Ok: clasificado como no atribuible al release (primer Warning 19 dias despues del cutover, vuelve a Ok en ~1 min, sin causas, sin impacto en smoke); causa no confirmada, se recomienda investigarlo aparte. Evidencia: evidence/CRM-SIM-1-PAGINA-UNICA/deployment/verification-01.json. Transicion `verified`.
+
+## Bloqueos
+- Ninguno.

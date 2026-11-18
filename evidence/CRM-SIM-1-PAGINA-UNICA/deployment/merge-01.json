@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "merge",
+  "task_id": "CRM-SIM-1-PAGINA-UNICA",
+  "created_at": "2026-10-28T15:09:17Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202610281507-deployer-sup314641",
+  "pr_number": 153,
+  "reviewed_sha": "d5cc4eff8e2cfdd04be31853511190ff67276109",
+  "reviewed_tree": "eb42e6f08e097733471c29b9e3a422846f955f2d",
+  "release_sha": "6a2c46ce6826d8d6b1a7f62e37e8f25e2c5cc6ce",
+  "release_tree": "eb42e6f08e097733471c29b9e3a422846f955f2d",
+  "main_parent_sha": "cddd3bed3b496ec800db2b0439bc6dec249a687a",
+  "method": "squash",
+  "match_head_commit_used": true
+}

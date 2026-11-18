@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "kind": "deployment",
+  "task_id": "CRM-SIM-1-PAGINA-UNICA",
+  "created_at": "2026-11-18T02:02:41Z",
+  "role": "deployer",
+  "runtime": "claude",
+  "session_id": "claude-202611180201-deployer-supb3dbff",
+  "approved_commit": "6a2c46ce6826d8d6b1a7f62e37e8f25e2c5cc6ce",
+  "deployed_commit": "6a2c46ce6826d8d6b1a7f62e37e8f25e2c5cc6ce",
+  "application_version": "h3-crm-sim-1-pagina-unica-6a2c46c-domainlocked-r1",
+  "environment": "tpi-backoffice-dev-green",
+  "account_id": "821656895812",
+  "region": "us-east-2",
+  "update_accepted": true,
+  "result": "success",
+  "started_at": "2026-10-28T20:37:48Z",
+  "finished_at": "2026-10-28T20:38:30Z",
+  "failure_class": null,
+  "previous_version_label": "h3-crm-agenda-4-historial-35f693b-domainlocked-r1",
+  "final_state": {
+    "version_label": "h3-crm-sim-1-pagina-unica-6a2c46c-domainlocked-r1",
+    "status": "Ready",
+    "health": "Green",
+    "health_status": "Ok",
+    "abortable_operation_in_progress": false,
+    "observed_at": "2026-11-18T01:51:00Z"
+  },
+  "runtime_identity": {
+    "version_label_matches": true,
+    "source_bundle_matches": true,
+    "s3_checksum_matches": true,
+    "bundle_digests_match": true
+  },
+  "runtime_identity_detail": {
+    "chain": "VersionLabel -> AV SourceBundle -> S3 ChecksumSHA256 -> digests ECR",
+    "application_version_status": "UNPROCESSED",
+    "s3_key": "tpi-backoffice/dev-releases/h3-crm-sim-1-pagina-unica-6a2c46c-domainlocked-r1/8bac2ac6170120e384c0bf52b263a6b3675a4ee85b9f054578506069c4484ae8.zip",
+    "s3_checksum_sha256_b64": "i6wqxhcBIOOEwL9SsmOms2daTuhbnwVFeFBgacRISug=",
+    "s3_content_length": 4917,
+    "bundle_sha256": "8bac2ac6170120e384c0bf52b263a6b3675a4ee85b9f054578506069c4484ae8",
+    "digests_equal_approval_01": true,
+    "note": "describe-environments en esta sesion: VersionLabel = aprobada. describe-application-versions: SourceBundle = key de approval-01. head-object: ChecksumSHA256 = base64 del bundle_sha256 aprobado, cuyo compose fija los digests app 41314c9e... / caddy cefbeef4... segun approval-01 y candidate-01 (ACTIVE en ECR en el preflight del cutover de 20:37Z)."
+  },
+  "preflight": {
+    "at": "2026-10-28T20:36Z",
+    "result": "PASS",
+    "checks": [
+      "preflight del cutover registrado en aws-audit.jsonl (AV del LKG, head-object, digests app/caddy de candidato y LKG en ECR) antes del update-environment",
+      "approval-01 coincide con candidate-01"
+    ]
+  },
+  "cutover": {
+    "mechanism": "aws_guard update-environment version-label only",
+    "executed_by": "deployer (sesion claude-202610282035-deployer-sup641707; registrado en aws-audit.jsonl a las 20:37:48Z)",
+    "updates_applied": 1,
+    "retries": 0,
+    "option_settings": false,
+    "restart_app_server": false,
+    "rollback_executed": false,
+    "convergence": "exitosa en ~42 s (aceptado 20:37:48Z, Environment update completed successfully 20:38:30Z)"
+  },
+  "events": {
+    "levels_observed": [
+      "INFO",
+      "WARN"
+    ],
+    "errors": 0,
+    "note": "Esta sesion no ejecuto escrituras AWS; solo lecturas. Los eventos recientes (describe-events, ultimos 10) muestran un patron recurrente de transiciones de salud Ok -> Warning (1 de 1 instancias) seguido de Warning -> Ok al minuto, cada ~20-30 min, con la VersionLabel aprobada. Estado observado final Ready/Green/Ok."
+  },
+  "warnings": [
+    "Esta sesion retoma tras un corte: el unico update-environment lo ejecuto una sesion previa (ver aws-audit.jsonl y progress/current.md); no se repitio.",
+    "Patron recurrente de salud Ok -> Warning -> Ok (1 min) observado en eventos del environment; VERIFYING debe clasificarlo con observabilidad (logs/instance health) y compararlo con el LKG antes de verificar.",
+    "AC-5 (revision visual humana) sigue pendiente; smoke HTTP y conteos de logs corresponden a VERIFYING."
+  ]
+}

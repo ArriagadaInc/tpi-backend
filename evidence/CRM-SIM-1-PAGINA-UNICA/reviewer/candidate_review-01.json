@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "kind": "candidate_review",
+  "task_id": "CRM-SIM-1-PAGINA-UNICA",
+  "created_at": "2026-10-28T20:31:12Z",
+  "role": "reviewer",
+  "runtime": "claude",
+  "session_id": "claude-202610282025-reviewer-sup533adc",
+  "release_sha": "6a2c46ce6826d8d6b1a7f62e37e8f25e2c5cc6ce",
+  "reviewed_tree": "eb42e6f08e097733471c29b9e3a422846f955f2d",
+  "release_tree": "eb42e6f08e097733471c29b9e3a422846f955f2d",
+  "decision": "APPROVED",
+  "cause": null,
+  "candidate_evidence": "evidence/CRM-SIM-1-PAGINA-UNICA/deployment/candidate-01.json",
+  "application_version": "h3-crm-sim-1-pagina-unica-6a2c46c-domainlocked-r1",
+  "lkg_version_label": "h3-crm-agenda-4-historial-35f693b-domainlocked-r1",
+  "checks": [
+    {
+      "name": "release_tree_equals_reviewed_tree",
+      "result": "PASS",
+      "note": "git rev-parse 6a2c46c^{tree} = eb42e6f0 = reviewed_tree de review-01 (APPROVED sobre d5cc4ef, PR #153) y de merge-01"
+    },
+    {
+      "name": "release_sha_on_main",
+      "result": "PASS",
+      "note": "tras git fetch origin main, origin/main = 6a2c46c (merge-base --is-ancestor exit 0); padre cddd3be; squash de PR #153 con match-head-commit"
+    },
+    {
+      "name": "publish_run_success_for_release_sha",
+      "result": "PASS",
+      "note": "gh run view 40732564147: completed/success, headSha 6a2c46c, workflow Publish immutable DEV images to ECR (workflow_dispatch); manifest del artifact descargado en directorio temporal: runtime_git_sha = release_sha, app_image y caddy_image por digest iguales a los del candidate"
+    },
+    {
+      "name": "digests_exist_and_immutable",
+      "result": "PASS",
+      "note": "ecr describe-images: tpi-dev-app sha256:41314c9e... y tpi-dev-caddy sha256:cefbeef4... ACTIVE, tag unico = release_sha, manifest Docker v2; describe-repositories: ambos IMMUTABLE, scanOnPush true"
+    },
+    {
+      "name": "ecr_scan_high_critical_zero",
+      "result": "PASS",
+      "note": "describe-image-scan-findings: COMPLETE en ambos digests (17:20:04Z / 17:20:47Z), findings vacios, findingSeverityCounts vacio"
+    },
+    {
+      "name": "bundle_reproducible_sha256_match",
+      "result": "PASS",
+      "note": "git diff --quiet 6a2c46c sobre template domainlocked y build_eb_ecr_bundle.py (exit 0); reconstruccion independiente en tempfile.mkdtemp con build_domain_locked_bundle y los digests del manifest del publish: sha256 8bac2ac6170120e384c0bf52b263a6b3675a4ee85b9f054578506069c4484ae8, 4917 bytes, igual al del candidate"
+    },
+    {
+      "name": "bundle_only_compose_no_build_no_legacy_domain",
+      "result": "PASS",
+      "note": "zip con una sola entrada docker-compose.yml; sin clave build; sin genialabs; dominios literales dev.tupensioninteligente.cl y backoffice.dev.tupensioninteligente.cl; 3 lineas image por digest (app x2, caddy x1)"
+    },
+    {
+      "name": "s3_object_checksum_matches_bundle",
+      "result": "PASS",
+      "note": "head-object --checksum-mode ENABLED: ChecksumSHA256 i6wqxhcBIOOEwL9SsmOms2daTuhbnwVFeFBgacRISug= (= base64 del sha256 reconstruido), FULL_OBJECT, ContentLength 4917; key content-addressed con el sha256"
+    },
+    {
+      "name": "application_version_source_bundle_matches",
+      "result": "PASS",
+      "note": "describe-application-versions (un label): h3-crm-sim-1-pagina-unica-6a2c46c-domainlocked-r1 UNPROCESSED, SourceBundle = bucket/key S3 del candidate"
+    },
+    {
+      "name": "identity_chain_complete",
+      "result": "PASS",
+      "note": "reviewed_tree eb42e6f0 -> release 6a2c46c -> publish 40732564147 -> digests app 41314c9e / caddy cefbeef4 -> bundle 8bac2ac6 -> S3 key + checksum -> AV h3-crm-sim-1-pagina-unica-6a2c46c-domainlocked-r1"
+    },
+    {
+      "name": "lkg_is_observed_healthy_version",
+      "result": "PASS",
+      "note": "describe-environments en esta sesion: tpi-backoffice-dev-green VersionLabel = h3-crm-agenda-4-historial-35f693b-domainlocked-r1, Ready/Green/Ok, AbortableOperationInProgress false, DateUpdated 2026-10-27T16:30:05Z (environment sin mutar); cuenta 821656895812 verificada con sts"
+    },
+    {
+      "name": "lkg_application_version_usable",
+      "result": "PASS",
+      "note": "AV LKG existe (UNPROCESSED, como todas las del fast path), SourceBundle key content-addressed 655141e1...; head-object ChecksumSHA256 ZVFB4c/0T/P9kGbkvvLAEIgToaA+aRxRM75lAUby1vw= = checksum registrado, 4917 bytes"
+    },
+    {
+      "name": "lkg_all_digests_present_in_ecr",
+      "result": "PASS",
+      "note": "digests del LKG (app 89520a97..., caddy 379dc167..., segun evidence/CRM-AGENDA-4-HISTORIAL/deployment/candidate-01.json): ambos ACTIVE en ECR, tag 35f693b"
+    },
+    {
+      "name": "no_secrets_in_bundle_or_evidence",
+      "result": "PASS",
+      "note": "inspeccion estructural del compose reconstruido: las variables sensibles aparecen solo como interpolaciones con mensaje de requerido, 0 valores literales; no se leyeron archivos de credenciales. candidate-01 y esta evidencia solo contienen IDs, digests, hashes, labels y URLs publicas"
+    },
+    {
+      "name": "smoke_plan_present",
+      "result": "PASS",
+      "note": "10 entradas: HTTPS publico, login, catalogos API, app.css y simulador_wizard.js del release, /leads con auth, sin dominio legado, identidad runtime, conteos de logs y AC-5 humano"
+    },
+    {
+      "name": "cutover_is_version_label_only",
+      "result": "PASS",
+      "note": "un unico update-environment con --environment-name y --version-label; sin option settings, template, platform ni tier"
+    },
+    {
+      "name": "plan_commands_in_state_allowlist",
+      "result": "PASS",
+      "note": "policies.yaml: DEPLOYING -> deployer cutover = @read + elasticbeanstalk update-environment; rollback igual; los comandos van por aws_guard.py"
+    },
+    {
+      "name": "single_promotion_no_retries",
+      "result": "PASS",
+      "note": "un solo comando de cutover; espera por describe-environments cada 30 s con limite de 30 min, sin reintentos"
+    },
+    {
+      "name": "rollback_version_only_to_named_lkg_single_attempt",
+      "result": "PASS",
+      "note": "rollback version-only a h3-crm-agenda-4-historial-35f693b-domainlocked-r1, max_attempts 1, condicionado a las 7 condiciones de rollback_authorization"
+    },
+    {
+      "name": "no_iam_dns_secrets_migrations_in_plan",
+      "result": "PASS",
+      "note": "sin IAM, Route53, secretos ni migraciones; database_changes ninguna (change_class A)"
+    },
+    {
+      "name": "outputs_redacted_safe_to_log",
+      "result": "PASS",
+      "note": "el plan solo registra labels, estado y eventos acotados; logs solo por conteo"
+    },
+    {
+      "name": "residue_classification_by_phase",
+      "result": "PASS",
+      "note": "residuos declarados: imagenes ECR tag 6a2c46c, objeto S3 content-addressed y AV UNPROCESSED inertes; environment sin mutar. aws-audit.jsonl: solo 2 mutaciones (put-object y create-application-version, sesion sup011a1c, exit 0)"
+    },
+    {
+      "name": "functional_failure_does_not_trigger_rollback",
+      "result": "PASS",
+      "note": "rollback_plan.conditions: un defecto puramente funcional o visual no autoriza rollback"
+    }
+  ],
+  "findings": [
+    {
+      "id": "CR-1",
+      "severity": "info",
+      "file": null,
+      "summary": "El checkout local esta en cddd3be, atrasado respecto de origin/main (6a2c46c); las comparaciones se hicieron contra el release_sha (git diff --quiet sobre template y constructor, exit 0), no contra el arbol de trabajo.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "CR-2",
+      "severity": "info",
+      "file": null,
+      "summary": "No se ejecuto dry-run de update-environment (el modo candidate_read no lo permite); los checks del plan se demostraron inspeccionando los comandos y harness/policies.yaml.",
+      "required_action": "Ninguna."
+    },
+    {
+      "id": "CR-3",
+      "severity": "info",
+      "file": null,
+      "summary": "El publish run 40732564147 lo despacho una sesion Deployer intermedia (sup69bd28) que se corto sin notas; es el unico run para el release SHA, su manifest coincide con los digests del candidate y aws-audit.jsonl no registra mutaciones de esa sesion.",
+      "required_action": "Ninguna."
+    }
+  ],
+  "risks": [
+    "ECR lifecycle keep-100 podria expirar imagenes del LKG a futuro; hoy presentes.",
+    "AC-5 requiere revision visual humana en DEV (escritorio y celular, claro/oscuro) tras el cutover.",
+    "Riesgo aceptado por el humano: posible falsa alarma del indicador fuerte de logs por lineas de acceso de Caddy (HARNESS-LOGS-FALSOS-POSITIVOS-CADDY)."
+  ]
+}

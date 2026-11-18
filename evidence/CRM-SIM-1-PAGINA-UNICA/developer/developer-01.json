@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "kind": "developer",
+  "task_id": "CRM-SIM-1-PAGINA-UNICA",
+  "created_at": "2026-10-28T14:58:58Z",
+  "role": "developer",
+  "runtime": "other",
+  "session_id": "other-202610281442-developer-supaa84f6",
+  "head_sha": "d5cc4eff8e2cfdd04be31853511190ff67276109",
+  "branch": "harness/CRM-SIM-1-PAGINA-UNICA-pagina-unica",
+  "pr_number": 153,
+  "change_class": "A",
+  "tests": {
+    "command": "python -m pytest tests/unit/test_sim_wizard.py tests/unit/test_sim_rv_web.py tests/unit/test_sim_rv_regresion_portal.py tests/unit/test_sim_rv_auditoria.py tests/unit/test_sim_rv_codigo_verificacion.py tests/unit/test_sim_rv_evidencia_entradas.py tests/unit/test_sim_rv_pdf.py tests/unit/test_sim_rv_validacion.py tests/unit/test_sim_rv_ventana.py tests/unit/test_sim_historial_migration_scripts.py tests/unit/test_sim_historial_timeline_presentation.py tests/unit/test_simple_dev_auth.py --no-cov (local, 148 passed) + pytest tests/ --cov=app --cov-fail-under=85 (CI del PR #153, verde, incluye integracion PostgreSQL)",
+    "result": "PASS"
+  },
+  "quality_gates": {
+    "ruff": "PASS",
+    "black": "PASS",
+    "mypy": "PASS",
+    "pytest_coverage": "PASS",
+    "bandit": "PASS",
+    "pip_audit": "PASS",
+    "docker_build": "PASS",
+    "docker_compose_config": "PASS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "status": "met",
+      "evidence": "Los cinco archivos de docs/ui/referencia/simulador/ quedan IDENTICOS a la referencia: git diff --no-index --ignore-cr-at-eol <referencia> <destino> sin diferencias (exit 0) para simulador.html, app.css, simulador_wizard.js, simulador.py y test_sim_wizard.py. app.css no cambio en main desde 950e8fa (git diff 950e8fa HEAD -- app/web/static/css/app.css vacio), asi que la copia completa del archivo es correcta y no reemplaza cambios ajenos. El Developer no modifico el diseno."
+    },
+    {
+      "id": "AC-2",
+      "status": "met",
+      "evidence": "tests/unit/test_sim_wizard.py (15 pruebas, las de la referencia) cubre el comportamiento con response.text: (a) GET con 'Datos de la simulacion', 'Grupo familiar', 'Aun no hay resultado' y un unico boton de envio 'Simular', sin 'Continuar'/'volver_paso'/'data-step'/'wizard-step', y 'Descargar PDF' solo con resultado; (b) POST intent=simular valida, calcula, responde 200 con el resultado (Pension mensual estimada, Saldo total, Tasa de venta), conserva lo ingresado y NO llama al evento de auditoria; (c) POST invalido responde 422, conserva valores y no muestra resultado; (d) intent=descargar_pdf (o sin intent) genera el PDF y registra la auditoria exactamente una vez; (e) intent desconocido se trata como simular (HTML, nunca PDF ni auditoria); (f) Simular aparece antes que Descargar PDF en la respuesta con resultado; (g) Opciones de la renta cerrado y se abre solo con valores distintos de cero; (h) CSRF 403, 404 del lead, 403 por rol, escape del PDF y la frase 'valores referenciales (no vinculantes)'. grep confirma que no quedan _parse_paso1_form ni active_step en app/ ni tests/."
+    },
+    {
+      "id": "AC-3",
+      "status": "met",
+      "evidence": "tests/unit/test_sim_rv_web.py (13 pruebas) y tests/unit/test_sim_rv_regresion_portal.py (2 pruebas) pasan SIN cambios; el resto de pruebas del simulador (auditoria, codigo de verificacion, evidencia, pdf, validacion, ventana, historial) tambien pasan. tests/unit/test_sim_wizard.py solo cambia las pruebas que dependian de los pasos (reescritas por las de la referencia, igual de estrictas: 15 pasan); se mantienen sin cambios las de PDF con auditoria, renta temporal, conyuge invalido, sin CDN ni URLs externas, JS propio local, azul marino de la ficha y sin naranja de marca."
+    },
+    {
+      "id": "AC-4",
+      "status": "met",
+      "evidence": "ruff check, black --check y mypy pasan (local); bandit no reporta issues. scripts/ui_css_audit.py: important en 4 y colores sueltos usos en 124 (no sube de 126); sin !important nuevos y sin colores sueltos nuevos (solo el azul marino de la ficha que trae la referencia). Sin dependencias, tipografias, scripts ni librerias nuevas (requirements/** y pyproject.toml no se tocan). Documentacion: docs/SIMULADOR_USO.md (pagina unica), docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md (nota de transicion), docs/specs/SIM_WIZARD_SPEC.md (marcada superada), docs/UI_DESIGN_SYSTEM.md (patrones nuevos), CHANGELOG.md y docs/BITACORA.md. CI del PR #153 verde (Lint & Format, Tests, Security Audit, Docker Build, Release Tooling Validation)."
+    },
+    {
+      "id": "AC-5",
+      "status": "pending_verification",
+      "evidence": "Revision visual del humano en AWS DEV tras el despliegue (escritorio y celular, tema claro y oscuro): pagina sin Continuar, Simular muestra la pension en el panel, Enter ejecuta Simular, Opciones de la renta plegable, modal de beneficiario, Descargar PDF y error que conserva valores; y 403 para perfiles sin permiso. Requiere Human Gate de despliegue y verificacion autenticada."
+    }
+  ],
+  "files_changed": [
+    "app/web/templates/simulador.html",
+    "app/web/static/css/app.css",
+    "app/web/static/js/simulador_wizard.js",
+    "app/web/routes/simulador.py",
+    "tests/unit/test_sim_wizard.py",
+    "docs/SIMULADOR_USO.md",
+    "docs/SIM_RV_V1_REQUIREMENTS_MATRIX.md",
+    "docs/specs/SIM_WIZARD_SPEC.md",
+    "docs/UI_DESIGN_SYSTEM.md",
+    "docs/BITACORA.md",
+    "CHANGELOG.md"
+  ],
+  "assumptions": [
+    "La carpeta docs/ui/referencia/simulador/ esta commitada en main (cddd3be) y es la fuente exacta; se retira de main cuando la tarea se cierre.",
+    "app/web/static/css/app.css no cambio en main desde 950e8fa, asi que copiar el archivo entero de la referencia es correcto (verificado con git diff 950e8fa HEAD).",
+    "Las pruebas de integracion requieren PostgreSQL y corren en el CI (verde en el PR #153); localmente solo se corrieron las pruebas unitarias del simulador (148 passed) con --no-cov.",
+    "Los enlaces 'Volver al lead' y 'Volver a Leads' son navegacion (no el boton 'Volver' del asistente de pasos), por lo que se conservan.",
+    "change_class A: sin migracion ni cambio de esquema, sin tocar deployment/**, IAM, bucket ni GuardDuty."
+  ],
+  "migrations_included": false
+}
